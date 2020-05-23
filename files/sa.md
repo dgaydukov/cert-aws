@@ -1,0 +1,3 @@
+# Solutions Architect Tips
+
+### Content

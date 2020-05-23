@@ -10,5 +10,5 @@ There are 2 main reasons to get it.
 2. It may help your career
 
 ### Contents
-* [Spring Tips](https://github.com/dgaydukov/cert-spring5/blob/master/files/spring5.md)
+* [Solutions Architect Tips](https://github.com/dgaydukov/cert-aws-sa/blob/master/files/sa.md)
 
