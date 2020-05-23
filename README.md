@@ -12,3 +12,5 @@ There are 2 main reasons to get it.
 ### Contents
 * [Solutions Architect Tips](https://github.com/dgaydukov/cert-aws-sa/blob/master/files/sa.md)
 
+### Links
+1. read about aws free tier apps
