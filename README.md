@@ -21,15 +21,8 @@ There are 2 main reasons to get it.
 1. read about aws free tier apps
 2. [Mock exams](https://www.whizlabs.com/aws-solutions-architect-associate)
 3. [AWS Well-Architected](https://aws.amazon.com/architecture/well-architected)
-4. [EC2](https://aws.amazon.com/ec2/faqs)
-   [S3](https://aws.amazon.com/s3/faqs)
-   [VPC](https://aws.amazon.com/vpc/faqs)
-   [Route 53](https://aws.amazon.com/route53/faqs)
-   [rds](https://aws.amazon.com/rds/faqs)
-   [sqs](https://aws.amazon.com/sqs/faqs)
-5. https://aws.amazon.com/certification/certified-machine-learning-specialty/
- https://aws.amazon.com/certification/certified-advanced-networking-specialty/ 
- https://www.codechef.com/certification/data-structures-and-algorithms/prepare - add to certification list
+4. [EC2](https://aws.amazon.com/ec2/faqs), [S3](https://aws.amazon.com/s3/faqs), [VPC](https://aws.amazon.com/vpc/faqs), [Route 53](https://aws.amazon.com/route53/faqs), [rds](https://aws.amazon.com/rds/faqs), [sqs](https://aws.amazon.com/sqs/faqs)
+5. https://aws.amazon.com/certification/certified-machine-learning-specialty/ ,https://aws.amazon.com/certification/certified-advanced-networking-specialty/ , https://www.codechef.com/certification/data-structures-and-algorithms/prepare - add to certification list
 6. cloudformation vs terraform
 7. https://aws.amazon.com/about-aws/whats-new/2019/02/new-aws-certification-policies-offer-more-choices-flexibility/ - 50% off for next exam
 8. https://aws.amazon.com/about-aws/whats-new/2018/10/announcing-more-flexibility-for-aws-certification-exams/ - no need to pass associate before professional (but since you get 50% off the price is the same)
