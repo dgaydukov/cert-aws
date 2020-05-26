@@ -33,7 +33,8 @@ There are 2 main reasons to get it.
 * read aws whitepapers,  https://jayendrapatil.com , https://aws.amazon.com/whitepapers
 * [AWS Well-Architected](https://aws.amazon.com/architecture/well-architected)
 * [AWS Serverless Application Model](https://aws.amazon.com/serverless/sam/)
-* [AWS Key Management Service](https://aws.amazon.com/kms/)
+* [iam](https://aws.amazon.com/iam/faqs/)
+* [kms](https://aws.amazon.com/kms/)
 * [EC2](https://aws.amazon.com/ec2/faqs)
 * [S3](https://aws.amazon.com/s3/faqs)
 * [VPC](https://aws.amazon.com/vpc/faqs)
@@ -46,7 +47,7 @@ There are 2 main reasons to get it.
 * aws loadbalancing vs app loadbalancing
 * aws cloudformation vs terraform
 * cogntio user pool vs identity pool
-* aws codepipeline/codebuild vs jenkins
+* aws codepipeline/codebuild/codedeploy vs jenkins
 * aws cloudwatch vs cloudfront vs config
 
 
