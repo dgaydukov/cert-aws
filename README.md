@@ -54,4 +54,10 @@ There are 2 main reasons to get it.
 
 
 
-
+* queue actions (рядом с create queue) => view/delete message => start polling for messages => more details
+* serverless - create api without programming/using framework. just api gateway => sns=> sqs => send email - good for small startups or poc
+* https://aws.amazon.com/blogs/apn/the-5-pillars-of-the-aws-well-architected-framework/
+* availability zones
+* aws efs
+* how vpn works
+* how firewall works
