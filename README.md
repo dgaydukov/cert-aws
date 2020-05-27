@@ -31,6 +31,8 @@ There are 2 main reasons to get it.
 * read about aws free tier apps
 * network articles: https://habr.com/ru/post/134892/  https://habr.com/ru/post/307252/ https://habr.com/ru/post/326574
 * read aws whitepapers,  https://jayendrapatil.com , https://aws.amazon.com/whitepapers
+* [Availability Zones](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-regions-availability-zones.html)
+* [5 pillars](https://aws.amazon.com/blogs/apn/the-5-pillars-of-the-aws-well-architected-framework)
 * [AWS Well-Architected](https://aws.amazon.com/architecture/well-architected)
 * [AWS Serverless Application Model](https://aws.amazon.com/serverless/sam/)
 * [iam](https://aws.amazon.com/iam/faqs/)
@@ -42,6 +44,7 @@ There are 2 main reasons to get it.
 * [rds](https://aws.amazon.com/rds/faqs)
 * [sqs](https://aws.amazon.com/sqs/faqs)
 * [Amazon API Gateway](https://aws.amazon.com/api-gateway)
+* [efs](https://aws.amazon.com/efs/faq/)
 * aws beanstack
 * aws cloudfront service
 * aws loadbalancing vs app loadbalancing
@@ -49,15 +52,4 @@ There are 2 main reasons to get it.
 * cogntio user pool vs identity pool
 * aws codepipeline/codebuild/codedeploy vs jenkins
 * aws cloudwatch vs cloudfront vs config
-
-
-
-
-
-* queue actions (рядом с create queue) => view/delete message => start polling for messages => more details
-* serverless - create api without programming/using framework. just api gateway => sns=> sqs => send email - good for small startups or poc
-* https://aws.amazon.com/blogs/apn/the-5-pillars-of-the-aws-well-architected-framework/
-* availability zones
-* aws efs
-* how vpn works
-* how firewall works
+* 
