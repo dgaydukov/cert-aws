@@ -53,4 +53,8 @@ There are 2 main reasons to get it.
 * 
 
 
-Олиферов «Компьютерные сети», читать Таненбаума «Компьютерные сети», move it to github - add to "to read" list
+add to how spring force to you be a good dev => solid best practices already included in spring (l - included in java itself)
+what is nat
+why it's better to store terraform in s3 and not in github
+aws organizatioins
+aws well architected tool
