@@ -28,10 +28,8 @@ There are 2 main reasons to get it.
 
 ### TODO
 * add kubernetes basic example
-* read about aws free tier apps
-* network articles: https://habr.com/ru/post/134892/  https://habr.com/ru/post/307252/ https://habr.com/ru/post/326574
-* read aws whitepapers,  https://jayendrapatil.com , https://aws.amazon.com/whitepapers
 * [Availability Zones](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-regions-availability-zones.html)
+* [custom whitepapers](https://jayendrapatil.com) / [aws whitepapers](https://aws.amazon.com/whitepapers) 
 * [5 pillars](https://aws.amazon.com/blogs/apn/the-5-pillars-of-the-aws-well-architected-framework)
 * [AWS Well-Architected](https://aws.amazon.com/architecture/well-architected)
 * [AWS Serverless Application Model](https://aws.amazon.com/serverless/sam/)
@@ -53,3 +51,6 @@ There are 2 main reasons to get it.
 * aws codepipeline/codebuild/codedeploy vs jenkins
 * aws cloudwatch vs cloudfront vs config
 * 
+
+
+Олиферов «Компьютерные сети», читать Таненбаума «Компьютерные сети», move it to github - add to "to read" list
