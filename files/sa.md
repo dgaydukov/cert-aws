@@ -8,6 +8,8 @@
 * 3.1 [Hub, Switch, Router](#hub-switch-router)
 * 3.2 [Network Topology](#network-topology)
 * 3.3 [OSI Network Model](#osi-network-model)
+* 3.4 [High Level Protocols](#high-level-protocols)
+* 3.5 [Low Level Protocols](#low-level-protocols)
 4. [Miscellaneous](#miscellaneous)
 * 4.1 [IaaC vs IaaS vs PaaS vs SaaS](#iaac-vs-iaas-vs-paas-vs-saas)
 * 4.2 [Virtualization and Containerization](#virtualization-and-containerization)
@@ -81,6 +83,35 @@ OSI model is not used in practice, only for education purpose, cause it has been
 * Link layer - Data Link + Physical in OSI
 
 There were other models like AppleTalk or IPX/SPX, but they were outdated and nowdays only TCP/IP is mostly used. It also called sometimes DoD (department of defense) cause it was originally developed by USA defense department.
+
+
+###### High Level Protocols
+These protocols include: HTTP, DNS, DHCP, SMTP, POP3, Telnet, SSH, FTP.
+To better understand these protocols you can download [Cisco Packet Tracer](https://www.netacad.com/courses/packet-tracer) that can help you build networks and see how it all works.
+
+* HTTP(HyperText Transport Protocol, 80)/HTTPS(HyperText Transport Protocol Secure, 443) - client-server data exchange. headers are
+```
+GET / HTTP/1.1
+Host: 192.168.1.10
+```
+* DNS(Domain Name System, 53) - hostname-to-ip resolver. In linux we have `/etc/hosts` - basically same local dns that resolve hostnames. It has priority over external dns server.
+* DHCP(Dynamic Host Configuration Protocol) - allows to dynamically set IP-address, subnet, dns name to remote hosts.
+* POP3(Post Office Protocol Version 3, 110, POP3S-995) - work on get-and-delete principle. Client connect to server, download new mails, and sent delete message to server.
+* IMAP(Internet Message Access Protocol, 143) - more complex analogy of pop3, don't remove messages from server.
+* SMTP(Simple Mail Transfer Protocol, 25) - send mail to mail server.
+* Telnet(terminal network, 23) - allows to communicate with remote OS by sending unencrypted text data. Nowdays mostly outdated and replaced by ssh.
+* SSH(Secure Shell, 22) - like telnet, but exchange encrypted data
+* FTP(File Transfer Protocol, 20) - transfer file to server
+
+
+###### Low Level Protocols
+* Mac address - unique address of every network device, consists of 48 bits (12 symbols), first 24 - set by IEEE, another 24 - by manufacturer (example: 005555.001234).
+* ARP (Address Resolution Protocol) - used to discover link layer address (mac-address) associated with given network layer address (ip-address). For for IPv4
+* NDP (Neighbor Discovery Protocol) - same as ARP, only for IPv6
+* NAT (Network Address Translation) - if you have 1 public IP address that's visible to whole world, and also have a private network with lots of computers there, and you want to route specific request to some computer in your network your router will use NAT. It will change headers in packet and resend it to particular IP address inside private network.
+* IP address
+* Subnet mask
+* Default Gateway 
 
 
 ### Miscellaneous

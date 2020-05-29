@@ -23,15 +23,18 @@ There are 2 main reasons to get it.
 
 
 ### Useful Links
-* [Mock exams](https://www.whizlabs.com/aws-solutions-architect-associate)
+* [Mock exam SAA](https://www.whizlabs.com/aws-solutions-architect-associate)
+* [Mock exam SAP](https://www.whizlabs.com/aws-solutions-architect-professional)
 
 
 ### TODO
 * add kubernetes basic example
 * [Availability Zones](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-regions-availability-zones.html)
+* [AWS Organizations](https://aws.amazon.com/organizations/faqs/)
 * [custom whitepapers](https://jayendrapatil.com) / [aws whitepapers](https://aws.amazon.com/whitepapers) 
 * [5 pillars](https://aws.amazon.com/blogs/apn/the-5-pillars-of-the-aws-well-architected-framework)
 * [AWS Well-Architected](https://aws.amazon.com/architecture/well-architected)
+* [AWS Well-Architected Tool](https://aws.amazon.com/well-architected-tool/faqs/)
 * [AWS Serverless Application Model](https://aws.amazon.com/serverless/sam/)
 * [iam](https://aws.amazon.com/iam/faqs/)
 * [kms](https://aws.amazon.com/kms/)
@@ -51,10 +54,3 @@ There are 2 main reasons to get it.
 * aws codepipeline/codebuild/codedeploy vs jenkins
 * aws cloudwatch vs cloudfront vs config
 * 
-
-
-add to how spring force to you be a good dev => solid best practices already included in spring (l - included in java itself)
-what is nat
-why it's better to store terraform in s3 and not in github
-aws organizatioins
-aws well architected tool
