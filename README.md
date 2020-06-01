@@ -29,9 +29,9 @@ There are 2 main reasons to get it.
 
 ### TODO
 * add kubernetes basic example
-* [Availability Zones](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-regions-availability-zones.html)
+* [aws whitepapers](https://aws.amazon.com/whitepapers)
+* [custom whitepapers](https://jayendrapatil.com)
 * [AWS Organizations](https://aws.amazon.com/organizations/faqs/)
-* [custom whitepapers](https://jayendrapatil.com) / [aws whitepapers](https://aws.amazon.com/whitepapers) 
 * [5 pillars](https://aws.amazon.com/blogs/apn/the-5-pillars-of-the-aws-well-architected-framework)
 * [AWS Well-Architected](https://aws.amazon.com/architecture/well-architected)
 * [AWS Well-Architected Tool](https://aws.amazon.com/well-architected-tool/faqs/)

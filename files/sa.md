@@ -1,8 +1,10 @@
 # Solutions Architect Tips
 
 ### Content
-1. [Basics](#basics)
-* 1.1 [Aws Free Tier](#aws-free-tier)
+1. [AWS Basics](#aws-basics)
+* 1.1 [Free Tier](#free-tier)
+* 1.2 [Region and AZ](#region-and-az)
+* 1.3 [AWS Well-Architected Framework](#aws-well-architected-framework)
 2. [Services](#services)
 3. [Networking](#networking)
 * 3.1 [Hub, Switch, Router](#hub-switch-router)
@@ -16,9 +18,9 @@
 * 4.3 [Docker and Kubernetes](#docker-and-kubernetes)
 * 4.4 [Pure Serverless](#pure-serverless)
 
-### Basics
+### AWS Basics
 
-###### Aws Free Tier 
+###### Free Tier 
 To pass cert and more generally to understand how it works you should get some hands-on experience. But aws can be costly at times, so aws provide so called [free tier](https://aws.amazon.com/free) to play and see how it works.
 Basically there are a few options:
 * always free - services that always would be free
@@ -29,10 +31,26 @@ So to start I would suggest to create aws account (it's free) and play with free
 
 
 
+###### Region and AZ 
+There are different geographic regions across the globe where aws data centers are located. One region is divided between several AZ (availability zone).
+Each regions is completely independent. Each AZ is isolated within a regions, but connected through low-latency links.
+AZ is regions + az identifier like `us-east-1a`.
+LZ (local zone) - extension of region closer to your users.
+
+
+###### AWS Well-Architected Framework 
+It describes best practices to deliver app to aws cloud. Based on 5 pillars:
+* operational excellence
+* security
+* reliability
+* performance efficiency
+* cost optimization
+
+
+
 
 
 ### Services
-
 
 
 ### Networking
@@ -111,8 +129,10 @@ Host: 192.168.1.10
 * Mac address - unique address of every network device, consists of 48 bits (12 symbols), first 24 - set by IEEE, another 24 - by manufacturer (example: 005555.001234).
 * ARP (Address Resolution Protocol) - used to discover link layer address (mac-address) associated with given network layer address (ip-address). For for IPv4. You can play with in in linux by `arp --help`.
 * NDP (Neighbor Discovery Protocol) - same as ARP, only for IPv6
-* NAT (Network Address Translation) - if you have 1 public IP address that's visible to whole world, and also have a private network with lots of computers there, and you want to route specific request to some computer in your network your router will use NAT. It will change headers in packet and resend it to particular IP address inside private network.
-* IP address - divided between public and private (used for local networks)
+* NAT (Network Address Translation) - if you have 1 public IP address that's visible to whole world, and also have a private network with lots of computers there, and you want to route specific request to some computer in your network your router will use NAT. 
+It will change headers in packet and resend it to particular IP address inside private network.
+When you make request from your private ip address 192.168.0.1 to google.com, your router will substitute your ip with it's public ip address. Google will respond to router public ip address and router will got this response, and then will redirect this response back to your machine.
+* IP address - divided between public and private (used for local networks) 
 Private networks:
 10.0.0.0 — 10.255.255.255, subnet mask => 255.0.0.0 (10/8), mostly used in work-related networks.
 172.16.0.0 — 172.31.255.255, subnet mask => 255.240.0.0 (172.16/12), mostly not used anywhere.
