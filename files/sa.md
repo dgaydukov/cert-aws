@@ -38,9 +38,12 @@ So to start I would suggest to create aws account (it's free) and play with free
 ### Networking
 
 ###### Hub, Switch, Router
-* Hub (концентратор) - device that connects multiple computers in LAN (local area network) and propagate any packet sent from one computer to all other. Today mostly outdated, people use switch instead. Works on the physical layer (Layer 1) of OSI.
-* Switch (коммутатор) - device that connects multiple computers in LAN, but knows exactly where to send packet of data. Works on the data link layer (Layer 2) of OSI.
+* Hub (концентратор) - device that connects multiple computers in LAN (local area network) and propagate any packet sent from one computer to all other. Today mostly outdated, people use switch instead. Works on the physical layer (Layer 1) of OSI. 
+* Bridge (мост) - connect several hubs into single network. Works on OSI layer 2. As hubs mostly outdated today.
+* Switch (коммутатор) - device that connects multiple computers in LAN, but knows exactly where to send packet of data, 
+it has internal table where it store which port takes which mac address, and at first it sends ARP to get mac addresses, but once table is full it just send packet to desired node. Works on the data link layer (Layer 2) of OSI.
 * Router (маршрутизатор) - small computer that can route the network traffic. Usually used to connect not computers, but networks such as LAN/WAN. Works on (Layer 3).
+* L3 Switch (L3 коммутатор) - switch that can route traffic, work fater than router.
 
 
 ###### Network Topology
@@ -60,7 +63,7 @@ Types of topology
 ###### OSI Network Model
 There are 7 levels in OSI model, here is the list from lowest to upper
 * Physical layer - how data are physically transferred. Basically they are translated from electrical/light signals into sequence of bits. There are 3 ways exists
-    * Twisted pair (copper) - data transferred by means of electrical signals
+    * Twisted pair (медная витая пара) - data transferred by means of electrical signals in copper
     * Optical Fiber - transfer data by light inside cable
     * WiFi - transfer data without cable using radio waves
 * Data Link layer - transfer data inside local network, validate packets. Ethernet and Mac-addresses are on this level.
@@ -106,12 +109,38 @@ Host: 192.168.1.10
 
 ###### Low Level Protocols
 * Mac address - unique address of every network device, consists of 48 bits (12 symbols), first 24 - set by IEEE, another 24 - by manufacturer (example: 005555.001234).
-* ARP (Address Resolution Protocol) - used to discover link layer address (mac-address) associated with given network layer address (ip-address). For for IPv4
+* ARP (Address Resolution Protocol) - used to discover link layer address (mac-address) associated with given network layer address (ip-address). For for IPv4. You can play with in in linux by `arp --help`.
 * NDP (Neighbor Discovery Protocol) - same as ARP, only for IPv6
 * NAT (Network Address Translation) - if you have 1 public IP address that's visible to whole world, and also have a private network with lots of computers there, and you want to route specific request to some computer in your network your router will use NAT. It will change headers in packet and resend it to particular IP address inside private network.
-* IP address
-* Subnet mask
-* Default Gateway 
+* IP address - divided between public and private (used for local networks)
+Private networks:
+10.0.0.0 — 10.255.255.255, subnet mask => 255.0.0.0 (10/8), mostly used in work-related networks.
+172.16.0.0 — 172.31.255.255, subnet mask => 255.240.0.0 (172.16/12), mostly not used anywhere.
+192.168.0.0 — 192.168.255.255 subnet mask => 255.255.0.0 (192.168/16), mostly used in home-related networks.
+* Subnet mask - used to divide ip address into 2 parts: network + host. 
+192.168.0.0/16 - first 16 bytes - network, last - ip address, totally there can be 2**16=65536 ip addresses.
+192.168.0.0/24 - first 24 bytes - network, last 8 - ip address totally 2**8 = 256 ip addresses.
+192.168.0.0/28 - first 28 bytes - network, last 4 - ip address, totally 2**5 = 16 ip addresses.
+So by knowing subnet mask we can determine if 2 ip addresses are on the same network.
+There are 5 classes of network:
+A - subnet /8, first octet => 0-127
+B - subnet /16, first octet => 128-191
+C - subnet /24, first octet => 192-223
+In every network first(all zeros) and last (all ones) are 
+0 - specifies network
+255 - broadcast a message to every host on a network (ARP)
+* Default Gateway - router specified on a host, which links the host's subnet to other networks.
+When you send packet, tcp/ip will use subnet mask to determine if ip address in the same subnet, it this is the case it will send packet futrher, if false - it will send it to default gateway.
+* CIDR (Classless Inter-Domain Routing) - replace classful network (A-D classes) and allocate ip-addresses without bind it to any class network. Based on VLSM.
+* VLSM (Variable Length Subnet Mask) - when we divide a network into subnet with different length.
+Suppose we have a network 192.168.0.1/24 - totally 254 addresses(actually total - 256, but first and last are reserved)
+We need to divide it into 4 subnets with 10, 50, 2 and 20 hosts. Although we can equally divide our network on 4 and have 64 ip-addresses in each, it's better not to give way more than needed
+In this case we can divide it on min power 2. 
+10 => 16(2**4)
+2 => 4 (2**2)
+50 => 64(2**6)
+20 => 32(2**5)
+
 
 
 ### Miscellaneous
