@@ -160,8 +160,9 @@ In this case we can divide it on min power 2.
 2 => 4 (2**2)
 50 => 64(2**6)
 20 => 32(2**5)
-
-
+* Routing table - a list of ip-addresses and subnet masks of all networks connected to the router, stored in router RAM.
+* VPN (Virtual Private Network) - encrypted connection(also called tunnel) over public network (usually Internet) between 2 or more private networks.
+It encrypt packet, add new headers.
 
 ### Miscellaneous
 ###### SaaS vs PaaS vs IaaS/IAC 
