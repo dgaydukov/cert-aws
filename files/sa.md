@@ -6,6 +6,7 @@
 * 1.2 [Region and AZ](#region-and-az)
 * 1.3 [AWS Well-Architected Framework](#aws-well-architected-framework)
 2. [Services](#services)
+* 2.1 [Amazon Corretto](#amazon-corretto)
 3. [Networking](#networking)
 * 3.1 [Hub, Switch, Router](#hub-switch-router)
 * 3.2 [Network Topology](#network-topology)
@@ -17,6 +18,8 @@
 * 4.2 [Virtualization and Containerization](#virtualization-and-containerization)
 * 4.3 [Docker and Kubernetes](#docker-and-kubernetes)
 * 4.4 [Pure Serverless](#pure-serverless)
+
+
 
 ### AWS Basics
 
@@ -34,7 +37,7 @@ So to start I would suggest to create aws account (it's free) and play with free
 ###### Region and AZ 
 There are different geographic regions across the globe where aws data centers are located. One region is divided between several AZ (availability zone).
 Each regions is completely independent. Each AZ is isolated within a regions, but connected through low-latency links.
-AZ is regions + az identifier like `us-east-1a`.
+AZ is regions + az identifier like `us-east-1a`. AZ consists of one or more discrete data centers.
 LZ (local zone) - extension of region closer to your users.
 
 
@@ -51,7 +54,16 @@ It describes best practices to deliver app to aws cloud. Based on 5 pillars:
 
 
 ### Services
-
+###### Amazon Corretto 
+[Amazon Corretto](https://aws.amazon.com/corretto/) - free amazon implementation of Java SE specification.
+As you know there are confusion around java SE. Oracle provides 2 java se implementations
+* OpenJDK - free
+* OracleJDK - paid
+Yet there are some features in OpenJDK that can be of charge. that's why you may want to use other java se implementations like
+* Amazon Corretto
+* AdoptOpenJDK
+* Azul Zulu
+If you are still confuse you can take a look at [java is still free](https://www.infoq.com/news/2018/09/java-support-options-sept18/)
 
 ### Networking
 
@@ -167,7 +179,7 @@ It encrypt packet, add new headers.
 ### Miscellaneous
 ###### SaaS vs PaaS vs IaaS/IAC 
 SaaS (Software as a Service) - if you want to use third-party software like some crm, but don't want to have it staff to install it to every computer in your office you can just use web-service of such crm. In this case crm completely managed by someone else,
-you just can access it from web browser without need to run it and support.
+you just can access it from web browser without need to run it and support. Usually it refers to end-user applications.
 
 PaaS (Platform as a Service) - in this case you develop you application (writing code) and just deploy your code without worry about infrastructure. For example if you are using spring framework, you can use [cloud foundry](https://cloud.spring.io/spring-cloud-cloudfoundry/reference/html/)
 and just deploy your code, and it will provide everything else (container, java, spring framework).
@@ -176,6 +188,11 @@ and just deploy your code, and it will provide everything else (container, java,
 IaaS (Infrastructure as a Service) - good example is aws that provides infrastructure (like container/networking/storage/database) as services to end users. Compare to other 2 PaaS/SaaS users of IaaS responsible for managing infrastructure themselves. 
 The best practice is to use IAC (Infrastructure as a code) - is an idea that you should code how you want to build your infrastructure. For example to run you microservice app you need to have 3 containers. 
 Of course you can manually create all of them, install all needed software there and deploy it. But you can also add script file that would do it all automatically. Most popular tools is Aws CloudFormation and Terraform.
+
+AWS incompass all 3 of them
+SaaS - mail service, ELK (elasticsearch, logstash, kibana) stack
+PaaS - beanstalk
+IaaS - almost all other services under networking, computing, storage
 
 ###### Virtualization and Containerization
 Hyperviser is Virtual Machine Monitor (VMM), that runs VM. It works as mediator between virtual OS and hardware. By acting as mediator we can run several virtual OS on one hardware. This is the main advantage, cause one OS can run on one hardware only.

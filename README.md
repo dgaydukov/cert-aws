@@ -49,13 +49,13 @@ There are 2 main reasons to get it.
 * aws beanstack (vs spring cloudfoundry for spring boot app)
 * aws cloudfront service
 * aws loadbalancing vs app loadbalancing
+* aws nlb vs aws elb
 * aws cloudformation vs terraform
 * cogntio user pool vs identity pool
 * aws codepipeline(codecommit/codebuild/codedeploy) vs jenkins
 * aws cloudwatch(and it's events/alarms) vs cloudfront vs config
-* aws ssm
-* aws network load balancer
 * aws dms (data migration service)
 * aws deployment strategy (blue-green evn)
 * vpc peering connection vs vpn connection
 * aws Nat gateway
+* aws cost explorer / aws budget
