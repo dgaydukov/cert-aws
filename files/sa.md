@@ -161,7 +161,9 @@ C - subnet /24, first octet => 192-223
 In every network first(all zeros) and last (all ones) are 
 0 - specifies network
 255 - broadcast a message to every host on a network (ARP)
-* Default Gateway - router specified on a host, which links the host's subnet to other networks.
+* Gateway - router specified on a host, which links the host's subnet to other networks. For ordinary users gateway - is Internet provider, cause it connects them to Internet.
+Gateways regulate traffic between two dissimilar networks, while routers regulate traffic between similar networks
+Default gateway - ip address in router for particular network (for every network including Internet router will have it's own ip address)
 When you send packet, tcp/ip will use subnet mask to determine if ip address in the same subnet, it this is the case it will send packet futrher, if false - it will send it to default gateway.
 * CIDR (Classless Inter-Domain Routing) - replace classful network (A-D classes) and allocate ip-addresses without bind it to any class network. Based on VLSM.
 * VLSM (Variable Length Subnet Mask) - when we divide a network into subnet with different length.
