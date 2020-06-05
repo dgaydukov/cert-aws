@@ -5,8 +5,11 @@
 * 1.1 [Free Tier](#free-tier)
 * 1.2 [Region and AZ](#region-and-az)
 * 1.3 [AWS Well-Architected Framework](#aws-well-architected-framework)
+* 1.4 [What is DevOps](#what-is-devops)
 2. [Services](#services)
 * 2.1 [Amazon Corretto](#amazon-corretto)
+* 2.2 [AWS CloudFormation](#aws-cloudformation)
+* 2.3 [AWS IAM](#aws-iam)
 3. [Networking](#networking)
 * 3.1 [Hub, Switch, Router](#hub-switch-router)
 * 3.2 [Network Topology](#network-topology)
@@ -18,6 +21,7 @@
 * 4.2 [Virtualization and Containerization](#virtualization-and-containerization)
 * 4.3 [Docker and Kubernetes](#docker-and-kubernetes)
 * 4.4 [Pure Serverless](#pure-serverless)
+
 
 
 
@@ -50,7 +54,29 @@ It describes best practices to deliver app to aws cloud. Based on 5 pillars:
 * cost optimization
 
 
+###### What is DevOps
+DevOps is implementation of agile to ops team.
+Before agile developers write code and throw it to ops team. After agile developers started to make more changes, but ops still take a lot of time to go to prod.
+Here come agile for operations, which become DevOps. Basic concepts of DevOps are:
+* Infrastructure as code (AWS CloudFormation) - treat infrastructure the same way developers treat code
+* Continuous deployment (AWS CodeCommit/CodeBuild/CodeDeploy/CodePipeline) -  enable the automated deployment of production-ready application code.
+Continuous deployment is continuous delivery that deploys to production (delivery more general term, refer to any deployment).
+* Automation (AWS Elastic Beanstalk/OpsWorks) - setup, configuration, deployment, and support of infrastructure and the applications that run on it
+* Monitoring (AWS CloudWatch/CloudTrail)
+* Security (AWS IAM)
+Dev side of DevOps is responsible for:
+* code building
+* code coverage
+* unit testing
+* packaging,
+* deployment
+Ops side of DevOps is responsible for:
+* provisioning
+* configuration
+* orchestration
+* deployment
 
+ 
 
 
 ### Services
@@ -64,6 +90,17 @@ Yet there are some features in OpenJDK that can be of charge. that's why you may
 * AdoptOpenJDK
 * Azul Zulu
 If you are still confuse you can take a look at [java is still free](https://www.infoq.com/news/2018/09/java-support-options-sept18/)
+
+###### AWS CloudFormation 
+I'ts aws solution to IAC. There are 2 concepts
+* Template - json/yaml file with desired infrastructure
+* Stack - template deployed to cloud (you can run commands like describe/list/create/update stack). If you create/update stack and errors occur all would be rolled back and you would be notified by SNS
+
+
+###### AWS IAM
+* In case you have one user who requires access to a specific resource, as a best practice, you should create a new AWS group for that access (in case new user would appear you would just assign him to this group)
+* EC2 role access - you can add (for example bucket write access) role to ec2 instance
+* Cross-account access - you can set up access for account B from account A
 
 ### Networking
 
