@@ -59,3 +59,5 @@ There are 2 main reasons to get it.
 * vpc peering connection vs vpn connection
 * aws Nat gateway
 * aws cost explorer / aws budget
+
+https://d1.awsstatic.com/whitepapers/aws-tagging-best-practices.pdf
