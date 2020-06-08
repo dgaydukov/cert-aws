@@ -3,13 +3,20 @@
 ### Content
 1. [AWS Basics](#aws-basics)
 * 1.1 [Free Tier](#free-tier)
-* 1.2 [Region and AZ](#region-and-az)
+* 1.2 [Region, AZ, Edge Location](#region-az-edge-location)
 * 1.3 [AWS Well-Architected Framework](#aws-well-architected-framework)
 * 1.4 [What is DevOps](#what-is-devops)
+* 1.5 [AWS Tagging](#aws-tagging)
 2. [Services](#services)
 * 2.1 [Amazon Corretto](#amazon-corretto)
 * 2.2 [AWS CloudFormation](#aws-cloudformation)
 * 2.3 [AWS IAM](#aws-iam)
+* 2.4 [AWS S3](#aws-s3)
+* 2.5 [Amazon Glacier](#amazon-glacier)
+* 2.6 [Amazon EFS](#amazon-efs)
+* 2.7 [Amazon EBS](#amazon-ebs)
+* 2.8 [Amazon EC2 local instance](#amazon-ec2-local-instance)
+* 2.9 [Amazon CloudFront](#amazon-cloudfront)
 3. [Networking](#networking)
 * 3.1 [Hub, Switch, Router](#hub-switch-router)
 * 3.2 [Network Topology](#network-topology)
@@ -25,9 +32,15 @@
 
 
 
+
+
+
+
+
+
 ### AWS Basics
 
-###### Free Tier 
+###### Free Tier
 To pass cert and more generally to understand how it works you should get some hands-on experience. But aws can be costly at times, so aws provide so called [free tier](https://aws.amazon.com/free) to play and see how it works.
 Basically there are a few options:
 * always free - services that always would be free
@@ -38,14 +51,14 @@ So to start I would suggest to create aws account (it's free) and play with free
 
 
 
-###### Region and AZ 
+###### Region, AZ, Edge Location
 There are different geographic regions across the globe where aws data centers are located. One region is divided between several AZ (availability zone).
 Each regions is completely independent. Each AZ is isolated within a regions, but connected through low-latency links.
 AZ is regions + az identifier like `us-east-1a`. AZ consists of one or more discrete data centers.
 LZ (local zone) - extension of region closer to your users.
+Edge location - A site that CloudFront uses to cache copies of your content for faster delivery to users at any location
 
-
-###### AWS Well-Architected Framework 
+###### AWS Well-Architected Framework
 It describes best practices to deliver app to aws cloud. Based on 5 pillars:
 * operational excellence
 * security
@@ -76,7 +89,16 @@ Ops side of DevOps is responsible for:
 * orchestration
 * deployment
 
- 
+
+
+###### AWS Tagging
+Tags - metadata that describes resources, a simple key-value pair (value can be empty), that used for:
+* organize/search/filter your resources by tags
+* cost allocation (cost explorer can use tags to break down costs by tags)
+* automation (start/stop dev env during non-business hours to reduce costs)
+* iam supports tag-based conditions
+Tags should be used consistently, otherwise there is no point.
+
 
 
 ### Services
@@ -102,6 +124,77 @@ I'ts aws solution to IAC. There are 2 concepts
 * EC2 role access - you can add (for example bucket write access) role to ec2 instance
 * Cross-account access - you can set up access for account B from account A
 
+###### AWS S3
+S3 (Simple Storage Service) used for:
+* store and distribute static web content (cause each object in s3 has unique http url)
+* origin store for CDN (content delivery network) like aws CloudFront
+* fast-growing websites to store user content (cause no storage provision is required, s3 enlarge automatically)
+* host static websites
+* data store for computation results, analytics, video transcoding
+* durable & secure storage for backups and archives
+
+When it's better not to use s3
+* standalone posix filesystem (better to use EFS)
+* when you need to search/filter data by some criteria (better to use RDS/DynamoDB/CloudSearch/ELK)
+* data updated very frequently (better to use EBS/RDS/DynamoDB)
+* archives with infrequent access (better to use Glacier)
+* dynamic web-sites (better to use EC2/EFS)
+
+S3 offers multipart upload, where your large file uploaded as parts, and on server they are assembled into single file.
+You can enable cross-region replication for every bucket
+
+S3 security
+* use s3/custom encryption to encrypt data before storing them on s3 and decrypt them when you download them
+* use versioning to preserve, retrieve, and restore every version of every object stored in your Amazon S3 bucket
+* enable MFA for bucket delete
+* use access logging to track who/which bucket/what action was executed on s3
+
+Although s3 is object-based storage, you can easily emulate OS by creating objects like `path1/path2/file1`
+
+
+###### Amazon Glacier
+Glacier - low-cost tape-drive storage value with  $0.007 per gigabyte per month. Used to store backups that you don't need frequently.
+Access to data can take from few minutes to a few hours. You store data as archives.
+
+When you should never use glacier
+* rapidly changing data (use EBS/EFS/RDS/DynamoDB)
+* immediate access (use S3)
+
+You can also use multipart upload to speed up upload by dividing large files into chunks
+Just like s3 you can use REST API to work with glacier
+You can set up s3 lifecycle, after which objects from s3 would be moved to glacier (but to view them you should use s3 api, if you use glacier api you won't see this objects)
+You can retrieve up to 5% of your average montly storage for free each month (rated daily), above this you are charged additional fee
+
+###### Amazon EFS
+EFS (Elastic File System) - delivers simple network filesystem for EC2. It supports NFSv4/4.1 (Network file system).
+System size is grow as you add more files to file system.
+It allows parallel access from multiple EC2 within the same region
+It accessed by EC2 using mount targets which are created by AZ
+If you need temporary storage EFS not the best option, look at EC2 Local Instance Store
+There are 2 performance model
+* General (if you need less then 7k file operation per second) 
+* Max I/O
+
+
+###### Amazon EBS
+EBS (Elastic Block Storage) - simple block storage for EC2. After EBS is attached to EC2 you can format it with desired file system.
+Most AMI (Amazon Machine Images) are backed by Amazon EBS, and use an EBS volume to boot EC2 instances.
+You can attach multiple EBS to single EC2, but single EBS can only be attached to 1 EC2.
+EBS allows to create point-in-time snapshots (backup) and store them in s3.
+There are 2 types of EBS
+* HDD (hard disk drive)
+* SSD (solid state drive)
+
+###### Amazon EC2 local instance
+Similar to EBS, but located on the same machine as EC2 (EBS connected through network), available only during lifetime of EC2.
+So it's not durable, once EC2 instance stop/restart/fail all data would be lost.
+
+###### Amazon CloudFront
+CloudFront is a CDN (content delivery network) - that speed up the distribution of your data using edge locations.
+When user request content, CF use nearest edge location and deliver cached version, it's faster that transfer data directly from data center.
+If content not in cache, CF retrieve it directly from s3 or HTTP and cache it.
+CF is not durable storage, it's just an edge cache
+
 ### Networking
 
 ###### Hub, Switch, Router
@@ -110,7 +203,7 @@ I'ts aws solution to IAC. There are 2 concepts
 * Switch (коммутатор) - device that connects multiple computers in LAN, but knows exactly where to send packet of data, 
 it has internal table where it store which port takes which mac address, and at first it sends ARP to get mac addresses, but once table is full it just send packet to desired node. Works on the data link layer (Layer 2) of OSI.
 * Router (маршрутизатор) - small computer that can route the network traffic. Usually used to connect not computers, but networks such as LAN/WAN. Works on (Layer 3).
-* L3 Switch (L3 коммутатор) - switch that can route traffic, work fater than router.
+* L3 Switch (L3 коммутатор) - switch that can route traffic, work faster than router.
 
 
 ###### Network Topology
