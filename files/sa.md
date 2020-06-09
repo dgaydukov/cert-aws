@@ -17,6 +17,14 @@
 * 2.7 [Amazon EBS](#amazon-ebs)
 * 2.8 [Amazon EC2 local instance](#amazon-ec2-local-instance)
 * 2.9 [Amazon CloudFront](#amazon-cloudfront)
+* 2.10 [Amazon Kinesis](#amazon-kinesis)
+* 2.10 [AWS Lambda](#aws-lambda)
+* 2.11 [Amazon EMR](#amazon-emr)
+* 2.12 [AWS Glue](#aws-glue)
+* 2.13 [Amazon DynamoDB](#amazon-dynamodb)
+* 2.14 [Amazon QuickSight](#amazon-quicksight)
+* 2.15 [Amazon EC2](#amazon-ec2)
+* 2.16 [Amazon Athena](#amazon-athena)
 3. [Networking](#networking)
 * 3.1 [Hub, Switch, Router](#hub-switch-router)
 * 3.2 [Network Topology](#network-topology)
@@ -195,8 +203,73 @@ When user request content, CF use nearest edge location and deliver cached versi
 If content not in cache, CF retrieve it directly from s3 or HTTP and cache it.
 CF is not durable storage, it's just an edge cache
 
-### Networking
 
+
+###### Amazon Kinesis
+It is a platform for streaming data on AWS, making it easy to load and analyze streaming data.
+With Kinesis, you can ingest real-time data such as application logs, website clickstreams, IoT telemetry data, and more into your databases, data lakes, and data warehouses, or build your own real-time applications using this data
+AntiPattern
+* Small scale consistent throughput (Kinesis Data Streams is designed  and optimized for large data throughputs)
+* Long-term data storage and analytics (By default Kinesis Data Streams stores data 24 hours, you can extend retention up to 7 days, if you need longer you should consired RDS/DynamoDb/S3/Glacier)
+
+
+###### AWS Lambda
+Lambda - piece of code that can be executed without any server env (just write code in javascript and it will run).
+Lambda can be directly triggered by AWS services such as Amazon S3, DynamoDB, Amazon Kinesis Data Streams, Amazon Simple Notification Service (Amazon SNS), CloudWatch
+AntiPattern
+* Long Running Applications (Lambda max time is 900sec. If you need some long running jobs you should consider EC2)
+* Dynamic Websites (although you can use Lambda to create static website, it's better to use some programming language like java/node.js and deploy it to EC2)
+* Stateful Applications (Lambda is stateless, if you need state it's better to create app in java/node.js and deploy it ot EC2 + RDS/DynamoDb)
+
+
+###### Amazon EMR
+EMR (Elastic Map Reduce) - highly distributed computing framework for data processing and storing, using Apache Hadoop.
+It reduces large workload into smaller jobs and distribute it between EC2 instances of Hadoop cluster (good for big data analyses).
+AntiPattern
+* Small data sets (EMR for large processing, if your dataset is small enough for one machine/thread it's better to use EC2 or Lambda)
+* ACID transaction requirements (if you need this it's better to use RDS istead of Hadoop)
+
+###### AWS Glue
+Glue - fully managed ETL (extract, transform, load) to catalog/clean/enrich/move your data.
+AWS Glue crawlers scan various data stores you own to automatically infer schemas and partition structure and populate the AWS Glue Data Catalog with corresponding table definitions and statistics.
+You can then directly query your data lake with Amazon Athena and Amazon Redshift Spectrum.
+AntiPattern
+* Streaming data (Glue is batch oriented, minimum interval is 5 min, so for streaming data Kinesis is better choice)
+* NoSQL Databases (Glue doesn't support NoSQL databases as source)
+
+###### Amazon DynamoDB
+DynamoDB - fully managed NoSQL database, like mongo, but aws proprietary solution
+
+###### Amazon RedShift
+RedShift - fully-managed, petabyte-scale data warehouse.
+It delivers fast query and I/O performance for virtually any size dataset by using columnar storage technology while parallelizing and distributing queries across multiple nodes.
+
+###### Amazon QuickSight
+QuickSight - BI (business intelligence) tool, for building visualizations, perform ad-hoc analysis (can connect to all aws data sources).
+
+
+###### Amazon EC2
+EC2 (Elastic Compute Cloud) - compute instance
+AntiPattern
+* Managed Service (if you need database, or some other service that is provided by aws, you would better to use it, like RDS)
+* Lack of Expertise or Resources (if your team lack expertise or resource installing and managing some service like database, again if aws provide such service it's better to use aws managed service)
+
+###### Amazon Athena
+Athena is an interactive query service that makes it easy to analyze data in Amazon S3 using standard SQL. 
+You don’t need to load your data into Athena, as it works directly with data stored in S3. Athena integrates with Amazon QuickSight for easy visualization.
+AntiPattern
+* Enterprise Reporting and Business Intelligence (for enterprise level it's better to use RedShift, query engine in Redshift has been optimized to perform especially well on data warehouse workloads)
+* ETL Workloads (for etl you should use EMR/Glue)
+
+
+
+
+
+
+
+
+
+### Networking
 ###### Hub, Switch, Router
 * Hub (концентратор) - device that connects multiple computers in LAN (local area network) and propagate any packet sent from one computer to all other. Today mostly outdated, people use switch instead. Works on the physical layer (Layer 1) of OSI. 
 * Bridge (мост) - connect several hubs into single network. Works on OSI layer 2. As hubs mostly outdated today.
