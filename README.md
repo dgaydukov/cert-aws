@@ -28,16 +28,19 @@ There are 2 main reasons to get it.
 
 
 ### TODO
-* add kubernetes basic example
-* [aws whitepapers](https://aws.amazon.com/whitepapers)
-* [custom whitepapers](https://jayendrapatil.com)
-* [AWS Organizations](https://aws.amazon.com/organizations/faqs/)
+* aws loadbalancing vs app loadbalancing
+* aws Nat gateway
+* vpc peering connection vs vpn connection
+* aws deployment strategy (blue-green evn)
+* aws codepipeline(codecommit/codebuild/codedeploy) vs jenkins
 * [5 pillars](https://aws.amazon.com/blogs/apn/the-5-pillars-of-the-aws-well-architected-framework)
 * [AWS Well-Architected](https://aws.amazon.com/architecture/well-architected)
 * [AWS Well-Architected Tool](https://aws.amazon.com/well-architected-tool/faqs/)
 * [AWS Serverless Application Model](https://aws.amazon.com/serverless/sam/)
+* [cloudwatch](https://aws.amazon.com/cloudwatch/faqs/)
 * [iam](https://aws.amazon.com/iam/faqs/)
 * [kms](https://aws.amazon.com/kms/)
+* [dms](https://aws.amazon.com/dms/faqs/)
 * [EC2](https://aws.amazon.com/ec2/faqs)
 * [S3](https://aws.amazon.com/s3/faqs)
 * [VPC](https://aws.amazon.com/vpc/faqs)
@@ -46,16 +49,10 @@ There are 2 main reasons to get it.
 * [sqs](https://aws.amazon.com/sqs/faqs)
 * [Amazon API Gateway](https://aws.amazon.com/api-gateway)
 * [efs](https://aws.amazon.com/efs/faq/)
-* aws beanstack (vs spring cloudfoundry for spring boot app)
-* aws cloudfront service
-* aws loadbalancing vs app loadbalancing
-* aws nlb vs aws elb
-* aws cloudformation vs terraform
-* cogntio user pool vs identity pool
-* aws codepipeline(codecommit/codebuild/codedeploy) vs jenkins
-* aws cloudwatch(and it's events/alarms) vs cloudfront vs config
-* aws dms (data migration service)
-* aws deployment strategy (blue-green evn)
-* vpc peering connection vs vpn connection
-* aws Nat gateway
-* aws cost explorer / aws budget
+* [beanstack](https://aws.amazon.com/elasticbeanstalk/faqs/)
+* [cloudfront](https://aws.amazon.com/cloudfront/faqs/)
+* [load balancer](https://aws.amazon.com/elasticloadbalancing/faqs/)
+* [cloudformation](https://aws.amazon.com/cloudformation/faqs/)
+* [cogntio](https://aws.amazon.com/cognito/faqs/)
+* [Custom whitepapers](https://jayendrapatil.com/)
+* add kubernetes basic example

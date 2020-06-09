@@ -25,6 +25,7 @@
 * 2.14 [Amazon QuickSight](#amazon-quicksight)
 * 2.15 [Amazon EC2](#amazon-ec2)
 * 2.16 [Amazon Athena](#amazon-athena)
+* 2.17 [AWS Organizations](#aws-organizations)
 3. [Networking](#networking)
 * 3.1 [Hub, Switch, Router](#hub-switch-router)
 * 3.2 [Network Topology](#network-topology)
@@ -61,7 +62,8 @@ So to start I would suggest to create aws account (it's free) and play with free
 
 ###### Region, AZ, Edge Location
 There are different geographic regions across the globe where aws data centers are located. One region is divided between several AZ (availability zone).
-Each regions is completely independent. Each AZ is isolated within a regions, but connected through low-latency links.
+Each regions is completely independent and connected through Internet (no private cables between regions).
+Each AZ is isolated within a regions, but connected through low-latency links (not through public Internet).
 AZ is regions + az identifier like `us-east-1a`. AZ consists of one or more discrete data centers.
 LZ (local zone) - extension of region closer to your users.
 Edge location - A site that CloudFront uses to cache copies of your content for faster delivery to users at any location
@@ -261,10 +263,14 @@ AntiPattern
 * Enterprise Reporting and Business Intelligence (for enterprise level it's better to use RedShift, query engine in Redshift has been optimized to perform especially well on data warehouse workloads)
 * ETL Workloads (for etl you should use EMR/Glue)
 
-
-
-
-
+###### AWS Organizations
+Organizations - service that allows to to tie several accounts to master account and centrally manage them (billing, services, policies)
+Organization is a collection of AWS accounts that you can organize into a hierarchy and manage centrally.
+Master Account - aws account from which you create your organization. From there you can also create/invite/delete other accounts. It's charged to pay all bills by all accounts. Once chosen, you can't change master account.
+OU (Organization Unit) - group of accounts under one name, can be used to build hierarchical structure.
+Account can be a member of only 1 organization/OU at a time. OU can be a member of only 1 OU at a time.
+SCP (Service Control Policy) - policy you can apply to a group of aws accounts, defines service actions (like run EC2 instance), it follows the same rules as IAM policies.
+You can attach a policy to the root/OU/account.
 
 
 
