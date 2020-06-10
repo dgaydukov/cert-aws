@@ -7,6 +7,7 @@
 * 1.3 [AWS Well-Architected Framework](#aws-well-architected-framework)
 * 1.4 [What is DevOps](#what-is-devops)
 * 1.5 [AWS Tagging](#aws-tagging)
+* 1.6 [AWS LoadBalancer vs App LoadBalancer](#aws-loadbalancer-vs-app-loadbalancer)
 2. [Services](#services)
 * 2.1 [Amazon Corretto](#amazon-corretto)
 * 2.2 [AWS CloudFormation](#aws-cloudformation)
@@ -19,13 +20,14 @@
 * 2.9 [Amazon CloudFront](#amazon-cloudfront)
 * 2.10 [Amazon Kinesis](#amazon-kinesis)
 * 2.10 [AWS Lambda](#aws-lambda)
-* 2.11 [Amazon EMR](#amazon-emr)
-* 2.12 [AWS Glue](#aws-glue)
-* 2.13 [Amazon DynamoDB](#amazon-dynamodb)
-* 2.14 [Amazon QuickSight](#amazon-quicksight)
-* 2.15 [Amazon EC2](#amazon-ec2)
-* 2.16 [Amazon Athena](#amazon-athena)
-* 2.17 [AWS Organizations](#aws-organizations)
+* 2.11 [AWS Step Functions](#aws-step-functions)
+* 2.12 [Amazon EMR](#amazon-emr)
+* 2.13 [AWS Glue](#aws-glue)
+* 2.14 [Amazon DynamoDB](#amazon-dynamodb)
+* 2.15 [Amazon QuickSight](#amazon-quicksight)
+* 2.16 [Amazon EC2](#amazon-ec2)
+* 2.17 [Amazon Athena](#amazon-athena)
+* 2.18 [AWS Organizations](#aws-organizations)
 3. [Networking](#networking)
 * 3.1 [Hub, Switch, Router](#hub-switch-router)
 * 3.2 [Network Topology](#network-topology)
@@ -68,13 +70,15 @@ AZ is regions + az identifier like `us-east-1a`. AZ consists of one or more disc
 LZ (local zone) - extension of region closer to your users.
 Edge location - A site that CloudFront uses to cache copies of your content for faster delivery to users at any location
 
+
+
 ###### AWS Well-Architected Framework
 It describes best practices to deliver app to aws cloud. Based on 5 pillars:
-* operational excellence
-* security
-* reliability
-* performance efficiency
-* cost optimization
+* operational excellence - running and monitoring systems to deliver business value, and continually improving processes and procedures
+* security - protecting information & systems
+* reliability - ability to prevent, and quickly recover from failures to meet business and customer demand
+* performance efficiency - using computing resources efficiently
+* cost optimization - avoiding un-needed costs
 
 
 ###### What is DevOps
@@ -108,6 +112,16 @@ Tags - metadata that describes resources, a simple key-value pair (value can be 
 * automation (start/stop dev env during non-business hours to reduce costs)
 * iam supports tag-based conditions
 Tags should be used consistently, otherwise there is no point.
+
+
+###### AWS LoadBalancer vs App LoadBalancer
+ELB (Elastic Load Balancer) - aws load balancer that includes 3 types
+* ALB (Application Load Balancer) - used for http/https request
+* NLB (Network Load Balancer) - used for any tcp request
+* CLB (Classic Load Balancer) - basic lb accross multiple EC2
+
+App loadbalancer (in our case spring app) - is EC2 instance with Eureka(Service Discovery) + Ribbon(Load Balancer) - a separate spring app 
+that discovers all instances and allows you to use human readable names instead of urls.
 
 
 
@@ -224,12 +238,17 @@ AntiPattern
 * Stateful Applications (Lambda is stateless, if you need state it's better to create app in java/node.js and deploy it ot EC2 + RDS/DynamoDb)
 
 
+###### AWS Step Functions
+Step Functions - visual tool that allows you to build complex logic based on lambda and EC2 calls.
+They can also help overcome lambda max 900sec execution time, by joining several lambdas into one execution flow.
+
+
 ###### Amazon EMR
 EMR (Elastic Map Reduce) - highly distributed computing framework for data processing and storing, using Apache Hadoop.
 It reduces large workload into smaller jobs and distribute it between EC2 instances of Hadoop cluster (good for big data analyses).
 AntiPattern
 * Small data sets (EMR for large processing, if your dataset is small enough for one machine/thread it's better to use EC2 or Lambda)
-* ACID transaction requirements (if you need this it's better to use RDS istead of Hadoop)
+* ACID transaction requirements (if you need this it's better to use RDS instead of Hadoop)
 
 ###### AWS Glue
 Glue - fully managed ETL (extract, transform, load) to catalog/clean/enrich/move your data.

@@ -25,18 +25,14 @@ There are 2 main reasons to get it.
 ### Useful Links
 * [Mock exam SAA](https://www.whizlabs.com/aws-solutions-architect-associate)
 * [Mock exam SAP](https://www.whizlabs.com/aws-solutions-architect-professional)
+* [AWS Well-Architected](https://aws.amazon.com/architecture/well-architected/) - read all whitepapers here
+* Read all FAQ & user guide for every AWS service
 
 
 ### TODO
-* aws loadbalancing vs app loadbalancing
-* aws Nat gateway
-* vpc peering connection vs vpn connection
-* aws deployment strategy (blue-green evn)
-* aws codepipeline(codecommit/codebuild/codedeploy) vs jenkins
-* [5 pillars](https://aws.amazon.com/blogs/apn/the-5-pillars-of-the-aws-well-architected-framework)
-* [AWS Well-Architected](https://aws.amazon.com/architecture/well-architected)
-* [AWS Well-Architected Tool](https://aws.amazon.com/well-architected-tool/faqs/)
 * [AWS Serverless Application Model](https://aws.amazon.com/serverless/sam/)
+* [AWS Well-Architected Tool](https://aws.amazon.com/well-architected-tool/faqs/)
+* [VPC](https://docs.aws.amazon.com/vpc/latest/userguide/what-is-amazon-vpc.html)
 * [cloudwatch](https://aws.amazon.com/cloudwatch/faqs/)
 * [iam](https://aws.amazon.com/iam/faqs/)
 * [kms](https://aws.amazon.com/kms/)
@@ -54,5 +50,7 @@ There are 2 main reasons to get it.
 * [load balancer](https://aws.amazon.com/elasticloadbalancing/faqs/)
 * [cloudformation](https://aws.amazon.com/cloudformation/faqs/)
 * [cogntio](https://aws.amazon.com/cognito/faqs/)
+* [codepipeline](https://docs.aws.amazon.com/codepipeline/latest/userguide/welcome.html)
 * [Custom whitepapers](https://jayendrapatil.com/)
 * add kubernetes basic example
+* eureka/ribbon spring app loadbalancer example vs. aws lb
