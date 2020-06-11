@@ -30,8 +30,6 @@ There are 2 main reasons to get it.
 
 
 ### TODO
-* [VPC](https://aws.amazon.com/vpc/faqs)
-* [VPC](https://docs.aws.amazon.com/vpc/latest/userguide/what-is-amazon-vpc.html)
 * [cloudwatch](https://aws.amazon.com/cloudwatch/faqs/)
 * [iam](https://aws.amazon.com/iam/faqs/)
 * [kms](https://aws.amazon.com/kms/)
