@@ -28,6 +28,7 @@
 * 2.16 [Amazon EC2](#amazon-ec2)
 * 2.17 [Amazon Athena](#amazon-athena)
 * 2.18 [AWS Organizations](#aws-organizations)
+* 2.19 [AWS Well-Architected Tool](#aws-well-architected-tool)
 3. [Networking](#networking)
 * 3.1 [Hub, Switch, Router](#hub-switch-router)
 * 3.2 [Network Topology](#network-topology)
@@ -141,6 +142,7 @@ If you are still confuse you can take a look at [java is still free](https://www
 I'ts aws solution to IAC. There are 2 concepts
 * Template - json/yaml file with desired infrastructure
 * Stack - template deployed to cloud (you can run commands like describe/list/create/update stack). If you create/update stack and errors occur all would be rolled back and you would be notified by SNS
+AWS SAM (Serverless Application Model) - framework to build serverless apps, provide a shorthand syntax to write IAC using yaml templates. Later it anyway transformed into CloudFormation full template, so you can just learn CloudFormation and stick with it.
 
 
 ###### AWS IAM
@@ -290,6 +292,19 @@ OU (Organization Unit) - group of accounts under one name, can be used to build 
 Account can be a member of only 1 organization/OU at a time. OU can be a member of only 1 OU at a time.
 SCP (Service Control Policy) - policy you can apply to a group of aws accounts, defines service actions (like run EC2 instance), it follows the same rules as IAM policies.
 You can attach a policy to the root/OU/account.
+
+
+
+###### AWS Well-Architected Tool
+Well-Architected Tool is a aws service that allows you to validate your current infrastructure against 5 pillars of well-arhitected framework.
+It works by creating a workload (collection of resources and code that make up a cloud application) and then run this workload against 5 pillars.
+The tool will evaluate your workload and provide an improvement plan with a prioritized list of issues.
+It's free of charge, you only pay for underlying aws resources.
+
+
+
+
+
 
 
 

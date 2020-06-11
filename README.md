@@ -30,20 +30,18 @@ There are 2 main reasons to get it.
 
 
 ### TODO
-* [AWS Serverless Application Model](https://aws.amazon.com/serverless/sam/)
-* [AWS Well-Architected Tool](https://aws.amazon.com/well-architected-tool/faqs/)
+* [VPC](https://aws.amazon.com/vpc/faqs)
 * [VPC](https://docs.aws.amazon.com/vpc/latest/userguide/what-is-amazon-vpc.html)
 * [cloudwatch](https://aws.amazon.com/cloudwatch/faqs/)
 * [iam](https://aws.amazon.com/iam/faqs/)
 * [kms](https://aws.amazon.com/kms/)
 * [dms](https://aws.amazon.com/dms/faqs/)
-* [EC2](https://aws.amazon.com/ec2/faqs)
-* [S3](https://aws.amazon.com/s3/faqs)
-* [VPC](https://aws.amazon.com/vpc/faqs)
-* [Route 53](https://aws.amazon.com/route53/faqs)
+* [ec2](https://aws.amazon.com/ec2/faqs)
+* [s3](https://aws.amazon.com/s3/faqs)
+* [route53](https://aws.amazon.com/route53/faqs)
 * [rds](https://aws.amazon.com/rds/faqs)
 * [sqs](https://aws.amazon.com/sqs/faqs)
-* [Amazon API Gateway](https://aws.amazon.com/api-gateway)
+* [api gateway](https://aws.amazon.com/api-gateway)
 * [efs](https://aws.amazon.com/efs/faq/)
 * [beanstack](https://aws.amazon.com/elasticbeanstalk/faqs/)
 * [cloudfront](https://aws.amazon.com/cloudfront/faqs/)
@@ -53,4 +51,3 @@ There are 2 main reasons to get it.
 * [codepipeline](https://docs.aws.amazon.com/codepipeline/latest/userguide/welcome.html)
 * [Custom whitepapers](https://jayendrapatil.com/)
 * add kubernetes basic example
-* eureka/ribbon spring app loadbalancer example vs. aws lb
