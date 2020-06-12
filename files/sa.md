@@ -278,10 +278,15 @@ QuickSight - BI (business intelligence) tool, for building visualizations, perfo
 
 
 ###### Amazon EC2
-EC2 (Elastic Compute Cloud) - compute instance
+EC2 (Elastic Compute Cloud) - web service that provides resizable compute capacity
 AntiPattern
 * Managed Service (if you need database, or some other service that is provided by aws, you would better to use it, like RDS)
 * Lack of Expertise or Resources (if your team lack expertise or resource installing and managing some service like database, again if aws provide such service it's better to use aws managed service)
+
+Type of EC2
+* On-demand (0% discount) - you got server at any time, and there is no commitment from your (you can terminate it after 10min)
+* Reserved (40-60% discount) - you commit to run a server for 1-3 years
+* Spot (50-90% discount) - not commitment from aws (you bid for a cheaper price, and if any instance is available you got it, but you pay not what you bid, but the second highest bid)
 
 ###### Amazon Athena
 Athena is an interactive query service that makes it easy to analyze data in Amazon S3 using standard SQL. 
@@ -310,9 +315,11 @@ It's free of charge, you only pay for underlying aws resources.
 ###### Amazon VPC
 VPC (Virtual private cloud) - a kind of internal network in on-premises. You can have some servers inside and they won't be accessible outside of vpc.
 You have complete control over your virtual networking environment, including selection of your own IP address ranges, creation of subnets, and configuration of route tables and network gateways.
+By default every account has default VPC (and default subnet for each AZ), so if you don't create any other, and create EC2 directly, default VPC would be used.
 Amazon VPC consists of
-* VPC - private network
-* Subnet - private sub-network inside VPC
+* VPC - private network, logically isolated from other networks in aws cloud. Can span across multiple AZ. Instances in different AZ charged $0.01 per GB for data transfer.
+* Subnet - private sub-network inside VPC. Can reside only within single AZ.
+* Route table - set of rules (routes) to determine where network traffic from your VPC is directed
 * Internet Gateway - entry point between your VPC and Internet. It allows EC2 in VPC directly access Internet. You can use public IP or elastic IP to both communicate with Internet and receive requests from outside web-servers.
 * NAT Gateway - Network address resolution service in private subnet to access the Internet. Instances without public IP use NAT gateway to access Internet. Nat allows outbound communication, but doesn't allows machines on the Internet to access instances inside VPC.
 * Virtual private gateway - VPC+VPN
@@ -329,6 +336,22 @@ Security groups (SG) vs ACL
 * SG specify which traffic is allowed to/from EC2
 * ACL operates at subnet level and evaluate traffic that enter/exit subnet. Don't filter traffic inside same subnet.
 * ACL - stateless filtering, SG - stateful (tracks the origin of a request) filtering
+
+To monitor traffic you can use
+* VPC traffic mirroring (it copies traffic and send it to NLB with a UDP listener)
+* VPC flow logs (it includes information about allowed and denied traffic, source and destination IP addresses, ports, protocol number, packet and byte counts, and an action: accept or reject)
+
+VPC peering
+* you can create peering between VPC in 2 regions or in 2 accounts (in this case one account should accept peering request from another)
+* traffic of peering within same region is not encrypted, but isolated, just like traffic between 2 EC2 in the same VPC
+* traffic of peering within different regions is encrypted
+
+VPC ClassicLink
+* before 2013 there were no default VPC and all EC2 where launched in flat network shared with other aws users
+* allows to connect your VPC with EC2 classic, EC2 becomes a member of VPC Security Group
+
+AWS PrivateLink
+* allows you to connect your VPC to aws services (traffic goes inside aws)
 
 
 ### Networking
@@ -411,9 +434,9 @@ It will change headers in packet and resend it to particular IP address inside p
 When you make request from your private ip address 192.168.0.1 to google.com, your router will substitute your ip with it's public ip address. Google will respond to router public ip address and router will got this response, and then will redirect this response back to your machine.
 * IP address - divided between public and private (used for local networks) 
 Private networks:
-10.0.0.0 — 10.255.255.255, subnet mask => 255.0.0.0 (10/8), mostly used in work-related networks.
-172.16.0.0 — 172.31.255.255, subnet mask => 255.240.0.0 (172.16/12), mostly not used anywhere.
-192.168.0.0 — 192.168.255.255 subnet mask => 255.255.0.0 (192.168/16), mostly used in home-related networks.
+10.0.0.0 — 10.255.255.255, subnet mask => 255.0.0.0 (10/8, 24 bits), mostly used in work-related networks.
+172.16.0.0 — 172.31.255.255, subnet mask => 255.240.0.0 (172.16/12, 20 bits), mostly not used anywhere.
+192.168.0.0 — 192.168.255.255 subnet mask => 255.255.0.0 (192.168/16, 16 bits), mostly used in home-related networks.
 * Subnet mask - used to divide ip address into 2 parts: network + host. 
 192.168.0.0/16 - first 16 bytes - network, last - ip address, totally there can be 2**16=65536 ip addresses.
 192.168.0.0/24 - first 24 bytes - network, last 8 - ip address totally 2**8 = 256 ip addresses.
