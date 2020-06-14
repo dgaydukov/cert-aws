@@ -48,3 +48,5 @@ There are 2 main reasons to get it.
 * [codepipeline](https://docs.aws.amazon.com/codepipeline/latest/userguide/welcome.html)
 * [Custom whitepapers](https://jayendrapatil.com/)
 * add kubernetes basic example
+* use draw.io to draw api diagram
+* use `stress` command to increase cpu load and test auto-scaling

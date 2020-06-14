@@ -114,6 +114,7 @@ Tags - metadata that describes resources, a simple key-value pair (value can be 
 * automation (start/stop dev env during non-business hours to reduce costs)
 * iam supports tag-based conditions
 Tags should be used consistently, otherwise there is no point.
+Defatut tag `Name` should be used for every resource for easier cost balance calculation
 
 
 ###### AWS LoadBalancer vs App LoadBalancer
@@ -288,6 +289,16 @@ Type of EC2
 * Reserved (40-60% discount) - you commit to run a server for 1-3 years
 * Spot (50-90% discount) - not commitment from aws (you bid for a cheaper price, and if any instance is available you got it, but you pay not what you bid, but the second highest bid)
 
+There are 3 types of IP address
+* private IP - your instance is not available from outside, only from within your VPC (base on SG)
+* public IP - you instance is available from outside. Given once to concrete instance, if you stop/restart instance it may change
+* elastic IP - public IP that you can assign to any instance
+
+source/destination checks
+* instance must be a source/destination of any traffic it sends/receive
+* each ec2 performs it by default
+* if your instance is NAT instance - it not a source/destination, it just a proxy to other instances. That's why for Nat instance you should disable it.
+
 ###### Amazon Athena
 Athena is an interactive query service that makes it easy to analyze data in Amazon S3 using standard SQL. 
 You don’t need to load your data into Athena, as it works directly with data stored in S3. Athena integrates with Amazon QuickSight for easy visualization.
@@ -322,6 +333,7 @@ Amazon VPC consists of
 * Route table - set of rules (routes) to determine where network traffic from your VPC is directed
 * Internet Gateway - entry point between your VPC and Internet. It allows EC2 in VPC directly access Internet. You can use public IP or elastic IP to both communicate with Internet and receive requests from outside web-servers.
 * NAT Gateway - Network address resolution service in private subnet to access the Internet. Instances without public IP use NAT gateway to access Internet. Nat allows outbound communication, but doesn't allows machines on the Internet to access instances inside VPC.
+With IG you have both outbound and inbound access, but with Nat gateway - only outbound (your instance can access Internet, but is unaccessable from Internet)
 * Virtual private gateway - VPC+VPN
 * Peering Connection - create private secure connection between 2 VPC
 * VPC Endpoints - private connection to AWS services without Internet Gateway/NAT/VPN. It make sure all traffic goes inside aws network.
@@ -362,7 +374,9 @@ AWS PrivateLink
 it has internal table where it store which port takes which mac address, and at first it sends ARP to get mac addresses, but once table is full it just send packet to desired node. Works on the data link layer (Layer 2) of OSI.
 * Router (маршрутизатор) - small computer that can route the network traffic. Usually used to connect not computers, but networks such as LAN/WAN. Works on (Layer 3).
 * L3 Switch (L3 коммутатор) - switch that can route traffic, work faster than router.
-
+There are 2 types of Port
+* Physical port - one inside switch/router is the nest where you plug in your network cable
+* Logical port - one inside OS, and it allows OS to route different protocols for the same IP address
 
 ###### Network Topology
 Network Topology - is how your computers are arranges and connected with each other. There are 2 types of topology:
@@ -426,6 +440,8 @@ Host: 192.168.1.10
 
 
 ###### Low Level Protocols
+* ICMP (Internet Control Message Protocol) - located at network layer - error reporting and query service.
+Ping command use ICMP echo to determine availability of some destination
 * Mac address - unique address of every network device, consists of 48 bits (12 symbols), first 24 - set by IEEE, another 24 - by manufacturer (example: 005555.001234).
 * ARP (Address Resolution Protocol) - used to discover link layer address (mac-address) associated with given network layer address (ip-address). For for IPv4. You can play with in in linux by `arp --help`.
 * NDP (Neighbor Discovery Protocol) - same as ARP, only for IPv6
