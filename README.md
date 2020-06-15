@@ -30,8 +30,6 @@ There are 2 main reasons to get it.
 
 
 ### TODO
-* [iam](https://aws.amazon.com/iam/faqs/)
-* [s3](https://aws.amazon.com/s3/faqs)
 * [efs](https://aws.amazon.com/efs/faq/)
 * [load balancer](https://aws.amazon.com/elasticloadbalancing/faqs/)
 * [cloudwatch](https://aws.amazon.com/cloudwatch/faqs/)

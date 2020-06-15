@@ -157,6 +157,11 @@ AWS SAM (Serverless Application Model) - framework to build serverless apps, pro
 * EC2 role access - you can add (for example bucket write access) role to ec2 instance
 * Cross-account access - you can set up access for account B from account A
 
+There are 2 types of permission
+* group - collection of permissions that you can assign. Used to define users. One user can belong to multiple groups.
+* role - collection of permissions for specific aws service (for example ec2 can connect to s3 without any secret key). Role can't be assign to user.
+
+
 ###### AWS S3
 S3 (Simple Storage Service) used for:
 * store and distribute static web content (cause each object in s3 has unique http url)
@@ -183,6 +188,8 @@ S3 security
 * use access logging to track who/which bucket/what action was executed on s3
 
 Although s3 is object-based storage, you can easily emulate OS by creating objects like `path1/path2/file1`
+S3/S3 IA/Glacier - replicate data across 3 AZ go guarantee data won't be lost in case of emergency.
+Price is varied across regions, so make sure you choose right region.
 
 
 ###### Amazon Glacier
@@ -364,6 +371,7 @@ VPC ClassicLink
 
 AWS PrivateLink
 * allows you to connect your VPC to aws services (traffic goes inside aws)
+
 
 
 ### Networking
