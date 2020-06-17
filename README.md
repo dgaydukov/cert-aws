@@ -30,21 +30,11 @@ There are 2 main reasons to get it.
 
 
 ### TODO
-* [efs](https://aws.amazon.com/efs/faq/)
-* [load balancer](https://aws.amazon.com/elasticloadbalancing/faqs/)
-* [cloudwatch](https://aws.amazon.com/cloudwatch/faqs/)
-* [kms](https://aws.amazon.com/kms/)
-* [dms](https://aws.amazon.com/dms/faqs/)
-* [route53](https://aws.amazon.com/route53/faqs)
 * [rds](https://aws.amazon.com/rds/faqs)
 * [sqs](https://aws.amazon.com/sqs/faqs)
 * [api gateway](https://aws.amazon.com/api-gateway)
-* [beanstack](https://aws.amazon.com/elasticbeanstalk/faqs/)
 * [cloudfront](https://aws.amazon.com/cloudfront/faqs/)
 * [cloudformation](https://aws.amazon.com/cloudformation/faqs/)
 * [cogntio](https://aws.amazon.com/cognito/faqs/)
 * [codepipeline](https://docs.aws.amazon.com/codepipeline/latest/userguide/welcome.html)
 * [Custom whitepapers](https://jayendrapatil.com/)
-* add kubernetes basic example
-* use draw.io to draw api diagram
-* use `stress` command to increase cpu load and test auto-scaling

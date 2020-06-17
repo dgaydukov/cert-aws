@@ -31,6 +31,12 @@
 * 2.18 [AWS Organizations](#aws-organizations)
 * 2.19 [AWS Well-Architected Tool](#aws-well-architected-tool)
 * 2.20 [Amazon VPC](#amazon-vpc)
+* 2.21 [AWS Elastic Beanstalk](#aws-elastic-beanstalk)
+* 2.22 [AWS Database Migration Service](#aws-database-migration-service)
+* 2.22 [Elastic Load Balancing](#elastic-load-balancing)
+* 2.23 [Amazon CloudWatch](#amazon-cloudwatch)
+* 2.23 [AWS Key Management Service](#aws-key-management-service)
+* 2.23 [Amazon Route 53](#amazon-route-53)
 3. [Networking](#networking)
 * 3.1 [Hub, Switch, Router](#hub-switch-router)
 * 3.2 [Network Topology](#network-topology)
@@ -203,7 +209,7 @@ When you should never use glacier
 You can also use multipart upload to speed up upload by dividing large files into chunks
 Just like s3 you can use REST API to work with glacier
 You can set up s3 lifecycle, after which objects from s3 would be moved to glacier (but to view them you should use s3 api, if you use glacier api you won't see this objects)
-You can retrieve up to 5% of your average montly storage for free each month (rated daily), above this you are charged additional fee
+You can retrieve up to 5% of your average monthly storage for free each month (rated daily), above this you are charged additional fee
 
 ###### Amazon EFS
 EFS (Elastic File System) - delivers simple network filesystem for EC2. It supports NFSv4/4.1 (Network file system).
@@ -214,7 +220,7 @@ If you need temporary storage EFS not the best option, look at EC2 Local Instanc
 There are 2 performance model
 * General (if you need less then 7k file operation per second) 
 * Max I/O
-
+AWS DataSync - service that make it faster transfer data between on-premise data and EFS
 
 ###### Amazon EBS
 EBS (Elastic Block Storage) - simple block storage for EC2. After EBS is attached to EC2 you can format it with desired file system.
@@ -373,6 +379,74 @@ AWS PrivateLink
 * allows you to connect your VPC to aws services (traffic goes inside aws)
 
 
+###### AWS Elastic Beanstalk
+Beanstalk - PaaS that mange deployment, provisioning, load-balancing, auto-scaling, health monitoring. Best suited when you need quickly deploy something and don't want to learn about other aws services.
+You simply upload a `.war` (in case of java) file, and beanstalk run tomcat server for you and deploy your app. Yet developer has a right to manage all infrastructure provided by beanstalk.
+Using beanstalk you can:
+* select OS
+* select EC2 instance (on-demand, reserved, spot)
+* ssh to EC2
+* select RDS and configure it
+
+Beanstalk underneath using: EC2, RDS, ELB, S3 (app files, server logs), SNS
+Beanstalk is free, you pay for underlying resources (like EC2, S3) that you are actually use
+
+###### AWS Database Migration Service
+DMS - used for easy migration between different db (like from MySql to DynamoDB), and also for data replication.
+DMS use SCT (Schema Conversion Tool) for converting between existing schemas.
+
+
+
+###### Elastic Load Balancing
+ELB - is a proxy that accept traffic (using listeners) from clients and route it to targets (usually EC2).
+Listener - is a protocol + port for which you got incomming requests.
+There are 3 types of elb:
+* Application LB - if you need to balance http/https. Also supports websocket & secure websocket
+* Network LB - if you need to balance TCP/UDP
+* Classic LB - if you need to balance classic (without VPC) EC2 instance
+
+ALB+NLB - you register target in targets group and route traffic to target groups. CLB - you register instances within LB.
+If you enable AZ for ELB, it creates lb node in AZ, after this traffic goes to this node. The best practice to have 1 node in each AZ.
+If you have not equal number of EC2 in different AZ (let's say 2 in az1, and 8 in az2) then you should enable cross-zone balancing.
+In this case each lb will route it's 50% into 10 instances, so each instances will get 10% of traffic. But if you disable cross-zone balancing, then 50% in first zone would be divided between 2 instances (so each got 25%)
+and 50% from az2 would be divided in 8 instances (so each got 8.25% traffic). With ALB cross-zone balancing enabled by default.
+
+LB can be
+* internal (having only private IP)
+* external (facing internet, having both public & private IP)
+
+
+
+###### Amazon CloudWatch
+CloudWatch - monitoring service for aws resources and apps running in aws cloud. IAM permission for CloudWatch are given to a resource as a whole (so you can't give access for only some of EC2, you give either for all EC2 instances or none).
+You can also use CloudWatch to create alarms (for example you get 5 errors, and you want to notify developer). Alarms are integrated with SNS (so you can send email, put message to SQS and so on).
+Many aws resources (EC2, RDS, and so on) automatically send metrics to CloudWatch. You can also send your custom metrics. Metrics can't be deleted, but expire automatically.
+
+###### AWS Key Management Service
+KMS - a service for generating/storing/auditing keys. If you have a lot of encryption it's better to use central key management service.
+You start working with KMS by creating CMK (customer master keys), or if you are using encryption from other aws resource, it would create CMK automatically for you.
+You can import only symmetric keys. You can't export CMK symmetric key or asymmetric private key.
+
+
+
+###### Amazon Route 53
+Route53 - is amazon DNS service that help to transform domain name into IP address. It's called 53, cause 53 - port of DNS.
+You can buy hostname from any provider and register it within Route53, after this Route53 gives you 4 TLD (Top-Level Domain) that you put into your hostname provider,
+so end user will request your domain, it will got to your provider, and from there to aws. Route53 supports wildcards (subdomains).
+Route53 also supports WRR (Weighted Round Robin) where you can assign weight ans divide your traffic (for example you have new feature and want only 25% of users to use it).
+You can also use LBR (Latency Based Routing), in case you have aws resources in multiple regions, route53 will redirect users to region with lowest latency.
+With Route53 you can also have private DNS name within your VPC, and such a name would be unaccesable outside VPC.
+Heath check - a check that requested resource is available. DNS Failover - return result only if health check is fine.
+
+
+
+
+
+
+
+
+
+
 
 ### Networking
 ###### Hub, Switch, Router
@@ -503,10 +577,10 @@ IaaS (Infrastructure as a Service) - good example is aws that provides infrastru
 The best practice is to use IAC (Infrastructure as a code) - is an idea that you should code how you want to build your infrastructure. For example to run you microservice app you need to have 3 containers. 
 Of course you can manually create all of them, install all needed software there and deploy it. But you can also add script file that would do it all automatically. Most popular tools is Aws CloudFormation and Terraform.
 
-AWS incompass all 3 of them
-SaaS - mail service, ELK (elasticsearch, logstash, kibana) stack
-PaaS - beanstalk
-IaaS - almost all other services under networking, computing, storage
+
+* SaaS - mail service, ELK (elasticsearch, logstash, kibana) stack
+* PaaS - beanstalk, spring cloudfoundry
+* IaaS - almost all other aws services under networking, computing, storage
 
 ###### Virtualization and Containerization
 Hyperviser is Virtual Machine Monitor (VMM), that runs VM. It works as mediator between virtual OS and hardware. By acting as mediator we can run several virtual OS on one hardware. This is the main advantage, cause one OS can run on one hardware only.
