@@ -30,8 +30,6 @@ There are 2 main reasons to get it.
 
 
 ### TODO
-* [rds](https://aws.amazon.com/rds/faqs)
-* [sqs](https://aws.amazon.com/sqs/faqs)
 * [api gateway](https://aws.amazon.com/api-gateway)
 * [cloudfront](https://aws.amazon.com/cloudfront/faqs/)
 * [cloudformation](https://aws.amazon.com/cloudformation/faqs/)

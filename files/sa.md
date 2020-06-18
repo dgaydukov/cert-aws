@@ -37,6 +37,8 @@
 * 2.23 [Amazon CloudWatch](#amazon-cloudwatch)
 * 2.23 [AWS Key Management Service](#aws-key-management-service)
 * 2.23 [Amazon Route 53](#amazon-route-53)
+* 2.24 [Amazon RDS](#amazon-rds)
+* 2.25 [Amazon SQS](#amazon-sqs)
 3. [Networking](#networking)
 * 3.1 [Hub, Switch, Router](#hub-switch-router)
 * 3.2 [Network Topology](#network-topology)
@@ -439,6 +441,41 @@ With Route53 you can also have private DNS name within your VPC, and such a name
 Heath check - a check that requested resource is available. DNS Failover - return result only if health check is fine.
 
 
+
+###### Amazon RDS
+RDS (Relational Database Service) - aws managed service, that make it easy install/operate relational database in the cloud.
+* you can easily scale compute resources or storage associated with your db
+* it's easy to update db software
+* it simplifies replication
+
+There are 2 ways to backup
+* automatic backup - snapshots takes by RDS daily, retained for limited period (by default 7 days)
+* db snapshot - taken by user
+
+multi-AZ deployment:
+* primary - you main db that performs read/write
+* standby - replica db that has most recent updates from primary. You can't use it for reads, the only purpose is failover - when primary fails, your standby becomes primary, so you won't even notice failure. Replication is synchronous.
+If you want to write to master and read from replica, RDS provide `read replica`. Read Replica implemented using db (mysql or other) native asynchronous replication, that's why lag can occur, comparing with multi-AZ replication
+where writes are concurrent. You can also modify read replica to execute DDL (Data Definition Language) SQL queries.
+
+Enhanced monitoring - allows you to view all metrics with 1 sec granularity
+
+RDS Proxy - database proxy that helps
+* pooling & sharing db connections (useful for serverless, when you constantly open and close connections``)
+* reduce db failover time for 66%
+* enforce IAM access to db
+
+
+###### Amazon SQS
+SQS (Simple Queue Service) - managed service that provide publisher/subscriber (queue) model. It provides FIFO (first-in, first-out) message ordering.
+It guarantee at-least-once delivery. you can use Amazon SQS Java Messaging Library that implements the JMS 1.1 specification and uses Amazon SQS as the JMS provider.
+Dead letter queue - a special queue that receives messages from other queue after some unsuccessful attempt to process it. Used to isolate messages that can't be processed for later analysis.
+You can get time-in-queue (time how long message has been in queue) by subtracting SentTimestamp attribute from current time.
+In anonymous access SenderId - IP address of sender (otherwise accountId).
+If queue is empty
+* short polling - returns immediately with no results. Only possible way if single thread poll multiple queues, in this case long polling for one empty queue would block other queues, but it generally bad design.
+* long polling - wait till message got into queue, or polling timeout (by default 20 sec) expires (save SQS cost, cause reduce number of empty receives). It's better to always use this type of polling.
+Message retention can be configured from 1 min to 14 days (by default - 4 days).
 
 
 
