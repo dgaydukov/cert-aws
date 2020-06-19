@@ -30,9 +30,4 @@ There are 2 main reasons to get it.
 
 
 ### TODO
-* [api gateway](https://aws.amazon.com/api-gateway)
-* [cloudfront](https://aws.amazon.com/cloudfront/faqs/)
-* [cloudformation](https://aws.amazon.com/cloudformation/faqs/)
-* [cogntio](https://aws.amazon.com/cognito/faqs/)
-* [codepipeline](https://docs.aws.amazon.com/codepipeline/latest/userguide/welcome.html)
 * [Custom whitepapers](https://jayendrapatil.com/)

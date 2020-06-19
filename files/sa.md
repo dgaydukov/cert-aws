@@ -39,6 +39,9 @@
 * 2.23 [Amazon Route 53](#amazon-route-53)
 * 2.24 [Amazon RDS](#amazon-rds)
 * 2.25 [Amazon SQS](#amazon-sqs)
+* 2.26 [Amazon API Gateway](#amazon-api-gateway)
+* 2.26 [Amazon Cognito](#amazon-cognito)
+* 2.27 [AWS CodePipeline(CodeCommit/CodeBuild/CodeDeploy)](#aws-codepipelinecodecommitcodebuildcodedeploy)
 3. [Networking](#networking)
 * 3.1 [Hub, Switch, Router](#hub-switch-router)
 * 3.2 [Network Topology](#network-topology)
@@ -154,10 +157,14 @@ Yet there are some features in OpenJDK that can be of charge. that's why you may
 If you are still confuse you can take a look at [java is still free](https://www.infoq.com/news/2018/09/java-support-options-sept18/)
 
 ###### AWS CloudFormation 
-I'ts aws solution to IAC. There are 2 concepts
+It's aws solution to IAC. There are 2 concepts
 * Template - json/yaml file with desired infrastructure
 * Stack - template deployed to cloud (you can run commands like describe/list/create/update stack). If you create/update stack and errors occur all would be rolled back and you would be notified by SNS
 AWS SAM (Serverless Application Model) - framework to build serverless apps, provide a shorthand syntax to write IAC using yaml templates. Later it anyway transformed into CloudFormation full template, so you can just learn CloudFormation and stick with it.
+Supported formats are JSON/YAML. Resource naming is supported not for all product, this is due to possible naming conflicts (when you update template, some resources would be recreated, but if names are not updated error would happen).
+To assign real name CloudFormation use stack + logical name, this ensures unique names.
+You can add deletion policy (for example you delete stack and want to preserve s3 buckets and take RDS snapshot).
+CloudFormation Registry - managed service that lets you register, use, and discover AWS and third party resource providers.
 
 
 ###### AWS IAM
@@ -240,10 +247,18 @@ So it's not durable, once EC2 instance stop/restart/fail all data would be lost.
 ###### Amazon CloudFront
 CloudFront is a CDN (content delivery network) - that speed up the distribution of your data using edge locations.
 When user request content, CF use nearest edge location and deliver cached version, it's faster that transfer data directly from data center.
-If content not in cache, CF retrieve it directly from s3 or HTTP and cache it.
-CF is not durable storage, it's just an edge cache
-
-
+If content not in cache, CF retrieve it directly from s3 or HTTP and cache it. CF is not durable storage, it's just an edge cache.
+To work with CF you should create origin server (s3 in case of static content, ec2 - dynamic). Then you add you origin server to CF, and CF generate link for you.
+Later when user request this link CF check the closest edge location for data, and if found in chane - return, if not request it from origin server and cache it.
+To ensure origin availability you can add backup origin and configure CF in case it get 4xx/5xx response from main origin, to use backup origin.
+Edge cache is smart, it can remove less popular content to make room for other data.
+You can also use Geo Restriction to specify at which contries content should be 403 (Forbidden), you can also add custom error code and message.
+You can control expire date (when CF will check origin server for new version) by setting cache control header (by default 24 hours).
+You can delete item from CF by
+* delete it from origin server, and when expire date come it would be deleted from CF
+* use invalidating api to remove file from CF immediately
+CF doesn't cache following requests: POST, PUT, DELETE, PATCH
+Field-Level Encryption - encrypt user's upload data and transfer these encrypted data to your origin
 
 ###### Amazon Kinesis
 It is a platform for streaming data on AWS, making it easy to load and analyze streaming data.
@@ -478,9 +493,35 @@ If queue is empty
 Message retention can be configured from 1 min to 14 days (by default - 4 days).
 
 
+###### Amazon API Gateway
+API Gateway - managed api service that makes it easy to publish/manage api at any scale. It can
+* meter/throttle traffic to your backend
+* security (allow access only to EC2 with specific IAM role, allow only specific cognito users, allow to those who pass Lambda authorizer)
+* DDoS (distributed denial-of-service) attack prevention
+* caching (you backend won't be called every time, for some request cache would be returned)
+* monitoring (integration with cloudwatch can set up some alarms)
+* all endpoints are HTTPS, you can't create unsecure http
+* send both websocket & http calls
+
+You can also use API Gateway with openApi to quickly generate api endpoints and underlying models.
+Stage - like a tag, allows your api have multiple versions, like dev stage - myapi.com/dev/users.
+You can add documentation to your api and expose it as swagger file.
+Api Gateway can generate client-side SSL certificate, and you backend can get public key, so it can verify that requests are coming from Api Gateway.
 
 
+###### Amazon Cognito
+Cognito - managed user service that add user sing-in/sign-up/management email/phone verification, 2FA logic.
+User Pool - a directory with users' profiles, you can set up password strength.
+You can migrate your users into cognito, but password won't be migrated. If you want to migrate them with password you need to add special logic to your app:
+when user signin to your app - you signin him within cognito, if user doesn't exist in cognito you sign-up him with username/password.
+Cognito also support SAML or OpenID Connect, social identity providers (such as Facebook, Twitter, Amazon) and you can also integrate your own identity provider.
+Identity Pool - where cognito stores federated identity (identity from third parties providers).
+You pay for MAU (monthly active users) - user who within a month made some identity operation signIn/singUp/tokenRefresh/passwordChange.
+Free tier - 50k MAU per month.
 
+
+###### AWS CodePipeline(CodeCommit/CodeBuild/CodeDeploy)
+CodePipeline - aws ci/cd tool, like jenkins.
 
 
 
