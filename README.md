@@ -31,3 +31,7 @@ There are 2 main reasons to get it.
 
 ### TODO
 * [Custom whitepapers](https://jayendrapatil.com/)
+* vpc with igw, public/private subnet, access each other from ec2
+which s3 class (standard, ia) are we using for obd?
+how user can view his s3 uploaded file?
+* use aws cli, make s3 presign

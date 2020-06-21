@@ -73,6 +73,9 @@ Basically there are a few options:
 
 So to start I would suggest to create aws account (it's free) and play with free tier. You can use almost 90% of what you need in free tier.
 
+There are 2 types of billing alarms
+* aws budget - has more settings than CloudWatch, can warn based on forecasted spend for a month, quarter or year
+* CloudWatch billing alarm
 
 
 ###### Region, AZ, Edge Location
@@ -205,6 +208,15 @@ S3 security
 Although s3 is object-based storage, you can easily emulate OS by creating objects like `path1/path2/file1`
 S3/S3 IA/Glacier - replicate data across 3 AZ go guarantee data won't be lost in case of emergency.
 Price is varied across regions, so make sure you choose right region.
+
+There are 2 ways to secure buckets
+* use ACL (old feature)
+* use bucket policy (json file with policies)
+
+You can also turn on lifecycle management (move you files to glacier after 30 days)
+Presign url - use cli to create url with key, that is accessible for limited time
+
+Interface is global, so you assign a region to a bucket, but you see all your buckets across all regions
 
 
 ###### Amazon Glacier
