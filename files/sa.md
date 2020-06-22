@@ -9,6 +9,7 @@
 * 1.5 [AWS Tagging](#aws-tagging)
 * 1.6 [AWS LoadBalancer vs App LoadBalancer](#aws-loadbalancer-vs-app-loadbalancer)
 * 1.7 [Egress vs Ingress](#egress-vs-ingress)
+* 1.8 [AWS CLI](#aws-cli)
 2. [Services](#services)
 * 2.1 [Amazon Corretto](#amazon-corretto)
 * 2.2 [AWS CloudFormation](#aws-cloudformation)
@@ -145,6 +146,19 @@ Egress - traffic that exits an entity, so all traffic (data) that leaves your VP
 Ingress - traffic that enters an entity, so it's a request sent from public Internet to private cloud.
 Traffic often is translated using NAT in and out of a private network like the cloud.
 So to simplify egress- response, ingress - request.
+
+
+###### AWS CLI
+CLI (Command Line Interface) - can be useful to quickly automate some aws manual tasks.
+First you need to add aws credentials `aws configure --profile awscert`, after you can run commands like `aws s3 ls --profile awscert`
+You can get accountId `aws sts get-caller-identity --profile=awscert`
+Create presign s3 file 
+```
+echo "hello world" > data.txt
+aws s3 cp data.txt s3://my-cloudformation-template-example/ --profile=awscert
+# make file public for 30 sec
+aws s3 presign s3://my-cloudformation-template-example/data.txt --expires-in 30 --profile=awscert
+```
 
 
 ### Services
