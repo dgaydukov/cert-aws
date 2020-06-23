@@ -31,7 +31,6 @@ There are 2 main reasons to get it.
 
 ### TODO
 * [Custom whitepapers](https://jayendrapatil.com/)
-* bastion-vs-jumpserver
-* add nat gateway to vpc (check that you can access internet from private ec2)
 * cloudformation tempate update
+* vpc endpoint
 * how beanstalk solves database issue (is it create db for you, or you still have to use rds)

@@ -10,6 +10,7 @@
 * 1.6 [AWS LoadBalancer vs App LoadBalancer](#aws-loadbalancer-vs-app-loadbalancer)
 * 1.7 [Egress vs Ingress](#egress-vs-ingress)
 * 1.8 [AWS CLI](#aws-cli)
+* 1.9 [Bastion vs JumpServer](#bastion-vs-jumpserver)
 2. [Services](#services)
 * 2.1 [Amazon Corretto](#amazon-corretto)
 * 2.2 [AWS CloudFormation](#aws-cloudformation)
@@ -160,6 +161,21 @@ aws s3 cp data.txt s3://my-cloudformation-template-example/ --profile=awscert
 aws s3 presign s3://my-cloudformation-template-example/data.txt --expires-in 30 --profile=awscert
 ```
 
+###### Bastion vs JumpServer
+They both serve the same purpose - to separate private network from public traffic. Usually you connect to it through SSH and from there you can connect to any private machine in the network.
+Bastion - outside your security zone (DNS/VPN/FTP server)
+JumpServer - used to manage other servers
+
+Here is example of CloudFormation stack to run jump server
+```
+ssh -i mykey.pem -o IdentitiesOnly=yes ec2-user@3.92.236.6
+ping google.com
+ping 10.100.2.33
+nano mykey.pem
+chmod 400 mykey.pem
+ssh -i mykey.pem ec2-user@10.100.2.33
+ping google.com
+```
 
 ### Services
 ###### Amazon Corretto 
