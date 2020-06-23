@@ -30,7 +30,8 @@ There are 2 main reasons to get it.
 
 
 ### TODO
-* [Custom whitepapers](https://jayendrapatil.com/)
 * cloudformation tempate update
 * vpc endpoint
-* how beanstalk solves database issue (is it create db for you, or you still have to use rds)
+* elb with auto-scaling group
+* route53 failover
+* can you see building blocks (ec2/rds/elb) when using beanstalk

@@ -44,6 +44,8 @@
 * 2.26 [Amazon API Gateway](#amazon-api-gateway)
 * 2.26 [Amazon Cognito](#amazon-cognito)
 * 2.27 [AWS CodePipeline(CodeCommit/CodeBuild/CodeDeploy)](#aws-codepipelinecodecommitcodebuildcodedeploy)
+* 2.28 [AWS Storage Gateway](#aws-storage-gateway)
+* 2.29 [Amazon Elastic Container Service](#amazon-elastic-container-service)
 3. [Networking](#networking)
 * 3.1 [Hub, Switch, Router](#hub-switch-router)
 * 3.2 [Network Topology](#network-topology)
@@ -244,7 +246,9 @@ There are 2 ways to secure buckets
 * use bucket policy (json file with policies)
 
 You can also turn on lifecycle management (move you files to glacier after 30 days)
-Presign url - use cli to create url with key, that is accessible for limited time
+Presign url - use cli to create url with key, that is accessible for limited time. Can be
+* download - anybody can download file within some time
+* upload - anybody can upload file into this url within some time
 
 Interface is global, so you assign a region to a bucket, but you see all your buckets across all regions
 
@@ -278,9 +282,18 @@ EBS (Elastic Block Storage) - simple block storage for EC2. After EBS is attache
 Most AMI (Amazon Machine Images) are backed by Amazon EBS, and use an EBS volume to boot EC2 instances.
 You can attach multiple EBS to single EC2, but single EBS can only be attached to 1 EC2.
 EBS allows to create point-in-time snapshots (backup) and store them in s3.
-There are 2 types of EBS
-* HDD (hard disk drive)
-* SSD (solid state drive)
+
+IOPS vs Throughput
+* IOPS - number of read/write operations per second
+    * General Purpose SSD (gp2)
+    * Provisioned IOPS SSD (io1)
+* Throughput - number of bits read/written per second
+    * Throughput Optimized HDD (st1)
+    * Cold HDD (sc1)
+
+EBS Volume Types
+* SSD (frequent read/write operations with small I/O size)
+* HDD (large streaming workloads where throughput (measured in MiB/s) is a better performance measure than IOPS
 
 ###### Amazon EC2 local instance
 Similar to EBS, but located on the same machine as EC2 (EBS connected through network), available only during lifetime of EC2.
@@ -440,6 +453,7 @@ AWS PrivateLink
 
 ###### AWS Elastic Beanstalk
 Beanstalk - PaaS that mange deployment, provisioning, load-balancing, auto-scaling, health monitoring. Best suited when you need quickly deploy something and don't want to learn about other aws services.
+It keeps the provisioning of building blocks (EC2/RDS/ELB/Auto Scaling/CloudWatch), deployment of applications, and health monitoring abstracted from the user so they can just focus on writing code
 You simply upload a `.war` (in case of java) file, and beanstalk run tomcat server for you and deploy your app. Yet developer has a right to manage all infrastructure provided by beanstalk.
 Using beanstalk you can:
 * select OS
@@ -565,7 +579,34 @@ Free tier - 50k MAU per month.
 ###### AWS CodePipeline(CodeCommit/CodeBuild/CodeDeploy)
 CodePipeline - aws ci/cd tool, like jenkins.
 
+###### AWS Storage Gateway
+Storage Gateway - hybrid storage that connects on-premises storage with cloud storage. The main idea is that you still use your on-premise storage (so don't lose that investment) and use cloud at the same time.
+The basic idea is that you can manage aws cloud storage the same way (by using same protocols) as you are using your on-premise storage.
+There are 3 types
+* File - store & retrieve files in S3 using NFS(Network File System)/SMB(Server Message Block) (these objects can also be directly accessed from S3). 
+You app read/write files using storage gateways as file server, which in turn translate it into S3 read/write requests.
+You should have only storage gateway to be able to modify s3, otherwise if you overwrite file added by gateway, you would get unpredictable behavior when gateway try to read it.
+File storage gateway use local disk for 2 purposes: 
+* save uploaded files there and asynchronously upload them to s3
+* store frequently accessed files for low-latency access (cache)
+The size of such disk should depend upon max possible file uploaded and how much data you want to store in cache
+* Tape - cloud base VTL (Virtual Tape Library), used by your backup apps. Tape translate your app requests into Glacier.
+* Volume - provide iSCSI target, where you can create block storage and mount it to on-premise/EC2 instances.
+    * cached model - primary data in S3, frequently accessed data in on-premise.
+    * stored mode - primary data in on-premise and in s3 full backup.
+Volume Gateways compress data before that data is transferred to AWS and while stored in AWS. Although data stored in s3, you can't directly access it through s3 api.
+Storage Gateway optimize data transfer to cloud by using
+* intelligent buffering
+* upload/bandwidth management
+* multi-part upload (in case of S3)
 
+Storage gateway available as:
+* virtual server (software) - you install it in your on-premise
+* hardware appliance - you but it and use in your on-premise
+
+
+###### Amazon Elastic Container Service
+ECS - docker container management service to run apps on a managed cluster of Amazon EC2 instances. It eliminate the need to operate container management infra (like kubernetes).
 
 
 ### Networking
@@ -683,6 +724,7 @@ In this case we can divide it on min power 2.
 * Routing table - a list of ip-addresses and subnet masks of all networks connected to the router, stored in router RAM.
 * VPN (Virtual Private Network) - encrypted connection(also called tunnel) over public network (usually Internet) between 2 or more private networks.
 It encrypt packet, add new headers.
+* iSCSI (Internet Small Computer Systems Interface) - transport layer protocol, works above TCP. Initiator (server) packages SCSI commands into network packets, and sends it to Target (remote storage).
 
 ### Miscellaneous
 ###### SaaS vs PaaS vs IaaS/IAC 
