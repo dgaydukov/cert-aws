@@ -45,7 +45,9 @@
 * 2.26 [Amazon Cognito](#amazon-cognito)
 * 2.27 [AWS CodePipeline(CodeCommit/CodeBuild/CodeDeploy)](#aws-codepipelinecodecommitcodebuildcodedeploy)
 * 2.28 [AWS Storage Gateway](#aws-storage-gateway)
-* 2.29 [Amazon Elastic Container Service](#amazon-elastic-container-service)
+* 2.29 [Amazon ECS](#amazon-ecs)
+* 2.30 [Amazon EKS](#amazon-eks)
+* 2.31 [AWS Fargate](#aws-fargate)
 3. [Networking](#networking)
 * 3.1 [Hub, Switch, Router](#hub-switch-router)
 * 3.2 [Network Topology](#network-topology)
@@ -605,9 +607,12 @@ Storage gateway available as:
 * hardware appliance - you but it and use in your on-premise
 
 
-###### Amazon Elastic Container Service
-ECS - docker container management service to run apps on a managed cluster of Amazon EC2 instances. It eliminate the need to operate container management infra (like kubernetes).
+###### Amazon ECS
+ECS (Elastic Container Service) - docker container management service to run apps on a managed cluster of Amazon EC2 instances. It eliminate the need to operate container management infra (like kubernetes).
 
+###### Amazon EKS
+EKS (Elastic Kubernetes Service)
+###### AWS Fargate
 
 ### Networking
 ###### Hub, Switch, Router
