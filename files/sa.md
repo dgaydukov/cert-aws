@@ -2,7 +2,7 @@
 
 ### Content
 1. [AWS Basics](#aws-basics)
-* 1.1 [Free Tier](#free-tier)
+* 1.1 [Free Tier & Cost Management](#free-tier--cost-management)
 * 1.2 [Region, AZ, Edge Location](#region-az-edge-location)
 * 1.3 [AWS Well-Architected Framework](#aws-well-architected-framework)
 * 1.4 [What is DevOps](#what-is-devops)
@@ -48,6 +48,7 @@
 * 2.29 [Amazon ECS](#amazon-ecs)
 * 2.30 [Amazon EKS](#amazon-eks)
 * 2.31 [AWS Fargate](#aws-fargate)
+* 2.32 [Amazon ElastiCache](#amazon-elasticache)
 3. [Networking](#networking)
 * 3.1 [Hub, Switch, Router](#hub-switch-router)
 * 3.2 [Network Topology](#network-topology)
@@ -70,7 +71,7 @@
 
 
 ### AWS Basics
-###### Free Tier
+###### Free Tier & Cost Management
 To pass cert and more generally to understand how it works you should get some hands-on experience. But aws can be costly at times, so aws provide so called [free tier](https://aws.amazon.com/free) to play and see how it works.
 Basically there are a few options:
 * always free - services that always would be free
@@ -82,6 +83,9 @@ So to start I would suggest to create aws account (it's free) and play with free
 There are 2 types of billing alarms
 * aws budget - has more settings than CloudWatch, can warn based on forecasted spend for a month, quarter or year
 * CloudWatch billing alarm
+
+You can view your costs by going to `My Billing DashBoard` => there you would see total incurred cost divided by services (for example 2$ for EC2).
+You can go to `Bills` on the left menu and thee you would see detailed info on what exactly cost and how much. 
 
 
 ###### Region, AZ, Edge Location
@@ -360,6 +364,9 @@ DynamoDB - fully managed NoSQL database, like mongo, but aws proprietary solutio
 ###### Amazon RedShift
 RedShift - fully-managed, petabyte-scale data warehouse.
 It delivers fast query and I/O performance for virtually any size dataset by using columnar storage technology while parallelizing and distributing queries across multiple nodes.
+Redshift only supports Single-AZ deployments. It uses MPP (Massively Parallel Processing) by automatically distribute data/query load across all nodes.
+Single-node can be used to quickly set up cluster and grow later. Multi-node requires leader (who gets client connection and queries) and a few compute nodes, that actually execute load.
+
 
 ###### Amazon QuickSight
 QuickSight - BI (business intelligence) tool, for building visualizations, perform ad-hoc analysis (can connect to all aws data sources).
@@ -385,6 +392,16 @@ source/destination checks
 * instance must be a source/destination of any traffic it sends/receive
 * each ec2 performs it by default
 * if your instance is NAT instance - it not a source/destination, it just a proxy to other instances. That's why for Nat instance you should disable it.
+
+ENI (elastic network interface) - logical networking component in a VPC that represents a virtual network card that has attributes:
+* primary private IPv4 (from VPC range)
+* public IPv4
+* elastic IPv4
+* IPv6, mac-address, security groups and so on...
+
+You can create ENI by going to `EC2 => Network & Security => Network interfaces` and create network interface.
+You can create ni (network interface) and attach/detach it to ec2 instance.
+Every instance in VPC has a default ni - primary network interface, you can't detach it. You can create new and attach. Number of ni that can be attached to ec2 depends on it's size (more computing power - more ni can be attached).
 
 ###### Amazon Athena
 Athena is an interactive query service that makes it easy to analyze data in Amazon S3 using standard SQL. 
@@ -609,10 +626,36 @@ Storage gateway available as:
 
 ###### Amazon ECS
 ECS (Elastic Container Service) - docker container management service to run apps on a managed cluster of Amazon EC2 instances. It eliminate the need to operate container management infra (like kubernetes).
+There are 2 ways to create cluster
+* Networking only - Fargate is managing/orchestrating your cluster
+* EC2 Linux/Windows + Networking - you manage EC2 cluster yourself
+Cluster is just a VPC, subnets (by default 2), group of EC2 instances (in case of Fargate it manages instances by itself)
+After you've created cluster you add tasks (task definition) - it just a docker containers that would run on one of your ec2 machines.
+There are several network modes:
+* awsvpc - every task get ENI with private ip address, just like any ec2 instance
+* bridge - docker's default network type. All containers connected to bridge can communicate with each other
+* host - container is exposed to host (if you docker has port 80, this port would be accessible from host)
 
 ###### Amazon EKS
-EKS (Elastic Kubernetes Service)
+EKS (Elastic Kubernetes Service) - manages service that runs kubernetes cluster (so you don't need to deploy it from scratch).
+It provisions/manages Kubernetes control plane and worker nodes for you.
+
+
 ###### AWS Fargate
+Fargate is serverless compute engine for containers running in ECS/EKS, it removes the need to provision and manage servers.
+You should use it when you don't want to manually provision your EC2 instances. 
+If you need greater control over EC2 (for security or customization), it's better to avoid using it, and istread manually provision EC2 instances.
+
+
+###### Amazon ElastiCache
+ElastiCache - manages service that runs Memcached/Redis server nodes in cloud. 
+It automates common administrative tasks required to operate a distributed in-memory key-value environment.
+It consists of
+* node - smallest building block - network-attached RAM
+* shard - primary node and zero or more read-replicas
+* cluster - group of shards
+
+
 
 ### Networking
 ###### Hub, Switch, Router
@@ -759,6 +802,9 @@ Containerization on the other hand is like os-level virtualization. Instead of c
 ###### Docker and Kubernetes
 Docker - is a tool to quickly create and manage containers (like create/stop/start/destroy). But if you have many containers and they all should interact with each other you need some system to manage all of this.
 Kubernetes - is a tool to manage a group of containers. On container level kuber can use docker or any other container tool.
+Deployed kubernetes environment - called cluster and consists of 2 parts
+* control plane - components that control cluster + cluster's state & configuration
+* compute machines - nodes where pods are running 
 
 
 ###### Pure Serverless
@@ -769,6 +815,12 @@ The reason is once your application become more complex it would be very hard to
 So the conclusion is very simple. Use aws serverless only for POC, or when you want quickly to startup, then you can also create a lot of mock api so your team can start to interact with it.
 But once your system become more complex you will definately need to use some programming like java/spring to have a good software architecture of your product and good test coverage that would ensure that nothing would be broken after changes.
 
+Moreover it can be expensive in certain cases. Consider situation where you have 1 lambda that need internet access to do some stuff (like captcha verification or ip address check).
+For this you need NAT, cause your lambda can't just get internet access from private subnet inside VPC. So you go and create nat gateway, and your lambda can now access internet.
+But in the end of the month you get a bill for 50 cents for lambda + 35$ for Nat Gateway. The reason is that Nat Gateway is prices per hour (0.045 on average, 0.065 for HK) + you also paying per GB transfer through your Nat, 
+but for the example let's imagine that you transfer tiny amount of 100mb per month. So instead of having cheap serverless you pay 35.5$ per month, just your lambda sometime can get internet access.
+When [aws support got pressed](https://forums.aws.amazon.com/thread.jspa?threadID=234959&start=0&tstart=0) over the issue, the proposed instead of Nat Gateway create custom Nat Instance (ec2 running with nat), and it would cost only 10$.
+But this idea to run additional ec2 to have internet access for single lambda upends serverless. Why do you need lambdas in the first place, when you can just put them into ec2 itself?
 
 
 

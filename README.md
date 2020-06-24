@@ -27,26 +27,23 @@ There are 2 main reasons to get it.
 * [Mock exam SAP](https://www.whizlabs.com/aws-solutions-architect-professional)
 * [Udemy Jon Bonso's exam](https://www.udemy.com/course/aws-certified-solutions-architect-associate-amazon-practice-exams-saa-c02/)
 * [AWS Well-Architected](https://aws.amazon.com/architecture/well-architected/) - read all whitepapers here
+* [SAP Exam Learning Path](https://jayendrapatil.com/aws-certified-solution-architect-professional-exam-learning-path/)
 * Read all FAQ & user guide for every AWS service
 
 
 ### TODO
-* ADD https://www.comptia.org/home  to certification list 
-* add network certification path (cisco+comptia)
-* find out charge $0.09
 * cloudformation with s3 policies
 * autoIP use subnet setting (enable) vs enable
 * run ec2 without ebs
 * snapshot-vs-ami for cross-region ec2 relocation
 * create nat-instance (main idea is for customizing nat, cause nat gateway is managed by aws). Comunity=>nat (select first ami), or configure your nat from scratch. 
-Disable source/dest check
-Add nat instance and nat gateway into separate cloudformation templates and call them from bastion
+Disable source/dest check. Add nat instance and nat gateway into separate cloudformation templates and call them from bastion
 * ec2 with public ip => reboot => check ip change. Use elastic ip (it should stay the same). Don't forget to remove after terminate ec2.
-* cloudformation tempate update
+* cloudformation template update
 * vpc endpoint (access s3 from private ec2 that's not connected to nat gateway, with public https url -> aws will determine that you are using endpoint and will direct your traffic)
 * elb with auto-scaling group
 * route53 failover
 * cross-region vpc peering
 * vpc to on-premise (imitated by vpc + openswan) vpn connection (site-to-site vpn)
-* rds cross-region replica + multi-za failover
+* rds read replica (cross-region) vs multi-az failover
 * can you see building blocks (ec2/rds/elb) when using beanstalk
