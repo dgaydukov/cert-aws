@@ -32,12 +32,18 @@ There are 2 main reasons to get it.
 
 
 ### TODO
+* https://aws.amazon.com/systems-manager/faq/
+* turn on vpc/subnet/eni flow logs and view it
+* create new NACL group (VPC=>Security=>Network ACLs) for public subnet (deny ssh in case someone misconfigure SG)
+subnet can be associated with 1 NACL at a time
 * cloudformation with s3 policies
 * autoIP use subnet setting (enable) vs enable
 * run ec2 without ebs
 * snapshot-vs-ami for cross-region ec2 relocation
 * create nat-instance (main idea is for customizing nat, cause nat gateway is managed by aws). Comunity=>nat (select first ami), or configure your nat from scratch. 
 Disable source/dest check. Add nat instance and nat gateway into separate cloudformation templates and call them from bastion
+https://www.theguild.nl/cost-saving-with-nat-instances/
+https://www.karlrupp.net/en/computer/nat_tutorial
 * ec2 with public ip => reboot => check ip change. Use elastic ip (it should stay the same). Don't forget to remove after terminate ec2.
 * cloudformation template update
 * vpc endpoint (access s3 from private ec2 that's not connected to nat gateway, with public https url -> aws will determine that you are using endpoint and will direct your traffic)

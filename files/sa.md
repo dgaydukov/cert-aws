@@ -217,6 +217,10 @@ There are 2 types of permission
 * group - collection of permissions that you can assign. Used to define users. One user can belong to multiple groups.
 * role - collection of permissions for specific aws service (for example ec2 can connect to s3 without any secret key). Role can't be assign to user.
 
+You can define permissions by assigning policies to group/user. There are 2 types of policy
+* aws managed - most common policies created by aws (for example s3/ec2 access and so on...)
+* managed by you - custom policies created by end user
+
 
 ###### AWS S3
 S3 (Simple Storage Service) used for:
@@ -385,8 +389,8 @@ Type of EC2
 
 There are 3 types of IP address
 * private IP - your instance is not available from outside, only from within your VPC (base on SG)
-* public IP - you instance is available from outside. Given once to concrete instance, if you stop/restart instance it may change
-* elastic IP - public IP that you can assign to any instance
+* public (dynamic - cause it changes) IP - you instance is available from outside. Given once to concrete instance, if you stop/start instance it may change
+* elastic(static - doesn't change) IP - public IP that you can assign to any instance
 
 source/destination checks
 * instance must be a source/destination of any traffic it sends/receive
@@ -451,7 +455,8 @@ EC2-to-EC2 communication through public IP
 Security groups (SG) vs ACL
 * SG specify which traffic is allowed to/from EC2
 * ACL operates at subnet level and evaluate traffic that enter/exit subnet. Don't filter traffic inside same subnet.
-* ACL - stateless filtering, SG - stateful (tracks the origin of a request) filtering
+* ACL - stateless filtering, SG - stateful (if traffic allowed inbound it also allowed outbound) filtering
+You can't block specific IP with SG, you need to use NACL
 
 To monitor traffic you can use
 * VPC traffic mirroring (it copies traffic and send it to NLB with a UDP listener)
@@ -468,6 +473,9 @@ VPC ClassicLink
 
 AWS PrivateLink
 * allows you to connect your VPC to aws services (traffic goes inside aws)
+
+By default ec2 instances dns name is disabled (only ip address is given). You can enable it for vpc by going to `Actions=>Edit DNS Hostname`.
+You can change subnet setting `Actions=>Modify auto-assign IP settings` and in this case when you create ec2, it would by default select subnet settings (enable/disable auto-assign public IP address). Of course you can also change it on ec2 level.
 
 
 ###### AWS Elastic Beanstalk
