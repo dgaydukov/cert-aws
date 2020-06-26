@@ -32,7 +32,7 @@ There are 2 main reasons to get it.
 
 
 ### TODO
-* https://aws.amazon.com/systems-manager/faq/
+* cloudformation divide vpc and nat (using nested stacks)
 * turn on vpc/subnet/eni flow logs and view it
 * create new NACL group (VPC=>Security=>Network ACLs) for public subnet (deny ssh in case someone misconfigure SG)
 subnet can be associated with 1 NACL at a time
@@ -45,7 +45,6 @@ Disable source/dest check. Add nat instance and nat gateway into separate cloudf
 https://www.theguild.nl/cost-saving-with-nat-instances/
 https://www.karlrupp.net/en/computer/nat_tutorial
 * ec2 with public ip => reboot => check ip change. Use elastic ip (it should stay the same). Don't forget to remove after terminate ec2.
-* cloudformation template update
 * vpc endpoint (access s3 from private ec2 that's not connected to nat gateway, with public https url -> aws will determine that you are using endpoint and will direct your traffic)
 * elb with auto-scaling group
 * route53 failover

@@ -49,6 +49,8 @@
 * 2.30 [Amazon EKS](#amazon-eks)
 * 2.31 [AWS Fargate](#aws-fargate)
 * 2.32 [Amazon ElastiCache](#amazon-elasticache)
+* 2.33 [AWS Systems Manager](#aws-systems-manager)
+* 2.34 [AWS Config](#aws-config)
 3. [Networking](#networking)
 * 3.1 [Hub, Switch, Router](#hub-switch-router)
 * 3.2 [Network Topology](#network-topology)
@@ -147,7 +149,7 @@ ELB (Elastic Load Balancer) - aws load balancer that includes 3 types
 * NLB (Network Load Balancer) - used for any tcp request
 * CLB (Classic Load Balancer) - basic lb accross multiple EC2
 
-App loadbalancer (in our case spring app) - is EC2 instance with Eureka(Service Discovery) + Ribbon(Load Balancer) - a separate spring app 
+App loadbalancer (in our case spring app) - is EC2 instance with Eureka (Service Discovery) + Ribbon (Load Balancer) - a separate spring app 
 that discovers all instances and allows you to use human readable names instead of urls.
 
 ###### Egress vs Ingress
@@ -167,6 +169,13 @@ echo "hello world" > data.txt
 aws s3 cp data.txt s3://my-cloudformation-template-example/ --profile=awscert
 # make file public for 30 sec
 aws s3 presign s3://my-cloudformation-template-example/data.txt --expires-in 30 --profile=awscert
+```
+
+* CloudFormation example
+```
+# create stack
+aws cloudformation create-stack --stack-name=stack1 --template-body file://./cloudformation/vpc-bastion-nat-instance.yml --profile=awscert --region=us-east-1
+aws cloudformation update-stack --stack-name=stack1 --template-body file://./cloudformation/vpc-bastion-nat-instance.yml --profile=awscert --region=us-east-1
 ```
 
 ###### Bastion vs JumpServer
@@ -663,6 +672,28 @@ It consists of
 * shard - primary node and zero or more read-replicas
 * cluster - group of shards
 
+
+###### AWS Systems Manager
+SM (Systems Manager) - tool that helps you to manage your aws resources and automate some tasks on them:
+* when you create ec2 with SM agent role (this will give SM permission to interact with ec2), and later manage your ec2 from SM console (without need to connecting to instance with ssh)
+SM include
+* document (json/yaml configuration as code) - allows you to set a series of actions to be performed on ec2. You can create your own documents or use provided by default,
+including collecting inventory/metrics, installing apps and so on.
+* OpsCenter - place where ops team can view/resolve ops issues. It aggregates issues by creating OpsItems. On average OpsCenter reduce mean time resolution by 50%.
+* Explorer - interactive dashboard
+* Resource Groups - you can divide all your aws resources into groups (by tags) and view/manage resource of particular group
+* AppConfig - you can test/deploy configuration into ec2/ecs/lambda
+* Inventory - information about software installed on ec2 collected by SM (including: apps, files, network configs, updates an so on...)
+* Automation - you can automate most common tasks for a group of aws resources
+* Run Command - easy way to manage your ec2 instances without ssh/bastion. All actions made here are recorded by CloudTrail, so you can easily trace what happened
+* Session Manager - browser cli that allow to interact with ec2 without ssh/bastion/opening inbound ports. 
+It improves security, cause it doesn't require you to open inbound ssh port (22) to talk with ec2. You also don't need to operate bastion host.
+
+
+###### AWS Config
+Config - manages service that provides aws resources inventory, config history, change notification.
+Config Rule - desired configuration of resource that is evaluated againt actual change (and report in case of mismatch).
+Conformance Pack - collection of config rules.
 
 
 ### Networking

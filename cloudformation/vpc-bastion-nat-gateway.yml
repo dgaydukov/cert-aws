@@ -12,7 +12,7 @@ Resources:
       EnableDnsHostnames: true
       Tags:
         - Key: Name
-          Value:  !Sub ${AWS::StackName}-VPC-JS
+          Value:  !Sub ${AWS::StackName}-VPC-Bastion
 
   InternetGateway:
     Type: AWS::EC2::InternetGateway
@@ -20,7 +20,7 @@ Resources:
     Properties:
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-VPC-JS-IGW
+          Value: !Sub ${AWS::StackName}-VPC-Bastion-IGW
   AttachGateway:
     Type: AWS::EC2::VPCGatewayAttachment
     Properties:
@@ -34,7 +34,7 @@ Resources:
       CidrBlock: 10.100.1.0/24
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-VPC-JS-Public
+          Value: !Sub ${AWS::StackName}-VPC-Bastion-Public
 
   PrivateSubnet:
     Type: AWS::EC2::Subnet
@@ -43,7 +43,7 @@ Resources:
       CidrBlock: 10.100.2.0/24
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-VPC-JS-Private
+          Value: !Sub ${AWS::StackName}-VPC-Bastion-Private
 
   PublicRT:
     Type: AWS::EC2::RouteTable
@@ -51,7 +51,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-VPC-JS-Public-RT
+          Value: !Sub ${AWS::StackName}-VPC-Bastion-Public-RT
   PublicRoute:
     Type: AWS::EC2::Route
     DependsOn: AttachGateway
@@ -66,8 +66,8 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-VPC-JS-Private-RT
-  PrivateRoute1:
+          Value: !Sub ${AWS::StackName}-VPC-Bastion-Private-RT
+  PrivateRoute:
     Type: AWS::EC2::Route
     Properties:
       RouteTableId: !Ref PrivateRT
@@ -81,7 +81,7 @@ Resources:
       SubnetId: !Ref PublicSubnet
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-VPC-JS-NAT-GW
+          Value: !Sub ${AWS::StackName}-VPC-Bastion-NAT-GW
   ElasticIPAddress:
     Type: AWS::EC2::EIP
     Properties:
@@ -114,7 +114,7 @@ Resources:
           CidrIp: 0.0.0.0/0
       Tags:
           - Key: Name
-            Value: !Sub ${AWS::StackName}-VPC-JS-Public-SG
+            Value: !Sub ${AWS::StackName}-VPC-Bastion-Public-SG
 # the !Ref function returns IDs for most resources, but it returns names for security groups, that's why we should use !GetAtt
   PublicEC2Instance:
     Type: AWS::EC2::Instance
@@ -134,7 +134,7 @@ Resources:
             VolumeSize: 8
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-VPC-JS-Public-EC2
+          Value: !Sub ${AWS::StackName}-VPC-Bastion-Public-EC2
 
   PrivateEC2InstanceSG:
     Type: AWS::EC2::SecurityGroup
@@ -152,7 +152,7 @@ Resources:
           CidrIp: 10.100.0.0/16
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-VPC-JS-Private-SG
+          Value: !Sub ${AWS::StackName}-VPC-Bastion-Private-SG
   PrivateEC2Instance:
     Type: AWS::EC2::Instance
     Properties:
@@ -168,4 +168,4 @@ Resources:
             VolumeSize: 8
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-VPC-JS-Private-EC2
+          Value: !Sub ${AWS::StackName}-VPC-Bastion-Private-EC2
