@@ -72,3 +72,12 @@ https://www.karlrupp.net/en/computer/nat_tutorial
 * cognito + api gateway + s3 serverless app (call cognito from java code from local machine vs from ec2)
 * register domain on hostgator/godaddy/aws => check it on https://whois.net/. route53 -> register domain
 * add free aws certificate to your domain
+* vpc endpoint vs private link
+* vpc endpoint gateway vs interface (for interface you need ENI)
+* transit vpc
+* vpc peering (non-transitive)
+* transit gateway (connect multiple vpc to each other)
+* client vpn (connect to vpc from you remote laptop)
+* site-to-site vpn
+* direct connect
+* close some url pattern (/internal) on elb level (by SG, allow only from inside vpc)
