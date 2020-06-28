@@ -57,11 +57,13 @@
 * 3.3 [OSI Network Model](#osi-network-model)
 * 3.4 [High Level Protocols](#high-level-protocols)
 * 3.5 [Low Level Protocols](#low-level-protocols)
+* 3.6 [SOA record](#soa-record)
 4. [Miscellaneous](#miscellaneous)
 * 4.1 [IaaC vs IaaS vs PaaS vs SaaS](#iaac-vs-iaas-vs-paas-vs-saas)
 * 4.2 [Virtualization and Containerization](#virtualization-and-containerization)
 * 4.3 [Docker and Kubernetes](#docker-and-kubernetes)
 * 4.4 [Pure Serverless](#pure-serverless)
+* 4.5 [AMI vs Snapshot](#ami-vs-snapshot)
 
 
 
@@ -227,7 +229,7 @@ There are 2 types of permission
 * role - collection of permissions for specific aws service (for example ec2 can connect to s3 without any secret key). Role can't be assign to user.
 
 You can define permissions by assigning policies to group/user. There are 2 types of policy
-* aws managed - most common policies created by aws (for example s3/ec2 access and so on...)
+* aws managed - most common policies created by aws (for example s3/ec2 access and so on...  b  )
 * managed by you - custom policies created by end user
 
 
@@ -302,24 +304,33 @@ Most AMI (Amazon Machine Images) are backed by Amazon EBS, and use an EBS volume
 You can attach multiple EBS to single EC2, but single EBS can only be attached to 1 EC2.
 EBS allows to create point-in-time snapshots (backup) and store them in s3.
 
-IOPS vs Throughput
+IOPS vs Throughput vs Bandwidth
 * IOPS - number of read/write operations per second
     * General Purpose SSD (gp2)
     * Provisioned IOPS SSD (io1)
 * Throughput - number of bits read/written per second
     * Throughput Optimized HDD (st1)
     * Cold HDD (sc1)
+* Bandwidth - pipe, throughput - water running through pipe
 
 EBS Volume Types
-* SSD (frequent read/write operations with small I/O size)
-* HDD (large streaming workloads where throughput (measured in MiB/s) is a better performance measure than IOPS
+* HDD (large streaming workloads where throughput (measured in MiB/s) is a better performance measure than IOPS - has a platter and 
+actuator arm that moves around platter and read/write (just like cd player)
+since to read/write arm should have a lots of movement - it's bad for high I/O
+* SSD (frequent read/write operations with small I/O size) - like a flash card, no moving parts
+
+Since you can't encrypt volume after you attached it to ec2, so in order to create encrypted volume for running ec2 you have to
+1. take snapshot of unencrypted volume
+2. create copy and tick `encryption option`
+3. create ami from encrypted snapshot
+4. run new ec2 from created ami & remove current ec2
 
 ###### Amazon EC2 local instance
 Similar to EBS, but located on the same machine as EC2 (EBS connected through network), available only during lifetime of EC2.
 So it's not durable, once EC2 instance stop/restart/fail all data would be lost.
 
 ###### Amazon CloudFront
-CloudFront is a CDN (content delivery network) - that speed up the distribution of your data using edge locations.
+CloudFront is a CDN (content delivery/distribution network) - that speed up the distribution of your data using edge locations.
 When user request content, CF use nearest edge location and deliver cached version, it's faster that transfer data directly from data center.
 If content not in cache, CF retrieve it directly from s3 or HTTP and cache it. CF is not durable storage, it's just an edge cache.
 To work with CF you should create origin server (s3 in case of static content, ec2 - dynamic). Then you add you origin server to CF, and CF generate link for you.
@@ -333,6 +344,20 @@ You can delete item from CF by
 * use invalidating api to remove file from CF immediately
 CF doesn't cache following requests: POST, PUT, DELETE, PATCH
 Field-Level Encryption - encrypt user's upload data and transfer these encrypted data to your origin
+Lambda Edge - lambda functions that allows you to override behavior of request/response to your cloudfront edge locations
+(for example only cognito authenticated user can view content)
+There are 4 types
+* viewer request - when CF receive request from user
+* origin request - before CF forward request to origin server
+* origin response - when CF receive response from origin server
+* viewer response - before CF responds to viewer
+You can protect CF data by using 
+* Signed url (like presigned s3 url) - temprorary access to CF data
+* Signe cookie - you can access multiple CF objects with same signed cookie
+In order for CF to serve from s3 bucket, objects in s3 should be publicly available, otherwise CF won't serve them
+You have 2 types of distribution
+* web - static web content (files/pics)
+* RTMP - streaming media
 
 ###### Amazon Kinesis
 It is a platform for streaming data on AWS, making it easy to load and analyze streaming data.
@@ -394,7 +419,11 @@ AntiPattern
 Type of EC2
 * On-demand (0% discount) - you got server at any time, and there is no commitment from your (you can terminate it after 10min)
 * Reserved (40-60% discount) - you commit to run a server for 1-3 years
+    * standard - 75% discount, can't change RI(reserved instance) attributes
+    * convertible - 54% discount, you can change RI attribute (for example after month you find out you need more compute capacity)
+    * scheduled - you reserve instance for specific time period (one day for every week)
 * Spot (50-90% discount) - not commitment from aws (you bid for a cheaper price, and if any instance is available you got it, but you pay not what you bid, but the second highest bid)
+* Dedicated (can be on-demand or reserved) - your ec2 instance runs on physically separate hardware
 
 There are 3 types of IP address
 * private IP - your instance is not available from outside, only from within your VPC (base on SG)
@@ -415,6 +444,17 @@ ENI (elastic network interface) - logical networking component in a VPC that rep
 You can create ENI by going to `EC2 => Network & Security => Network interfaces` and create network interface.
 You can create ni (network interface) and attach/detach it to ec2 instance.
 Every instance in VPC has a default ni - primary network interface, you can't detach it. You can create new and attach. Number of ni that can be attached to ec2 depends on it's size (more computing power - more ni can be attached).
+
+There are several instance types. You can get full view [here](https://www.ec2instances.info)
+* C (good for CPU load)
+* R (good for RAM load)
+* M (middle between cpu & ram)
+* I (good for I/O operations)
+* G (good for GPU)
+* T2/T3 (burstable type) - good performance for a short time (burst) - if you overuse this burst your performance will downgrade
+when you cpu not bursting, you earn `burst credit` (you can view it in CloudWatch), once it hits 100% load, burst is turned on and you pay with your credit
+once your credit is 0, performance downgrade
+* T2/T3 unlimited burst (you pay for extra burst credit)
 
 ###### Amazon Athena
 Athena is an interactive query service that makes it easy to analyze data in Amazon S3 using standard SQL. 
@@ -486,6 +526,9 @@ AWS PrivateLink
 By default ec2 instances dns name is disabled (only ip address is given). You can enable it for vpc by going to `Actions=>Edit DNS Hostname`.
 You can change subnet setting `Actions=>Modify auto-assign IP settings` and in this case when you create ec2, it would by default select subnet settings (enable/disable auto-assign public IP address). Of course you can also change it on ec2 level.
 
+Tenancy
+* multi-tenant (virtual isolation) - you share your instances on the same server as other aws clients, you instance is divided by virtualization
+* single-tenant (dedicated, physical isolation) - you get completely separate hardware for you (can be useful if you have regulatory requirements)
 
 ###### AWS Elastic Beanstalk
 Beanstalk - PaaS that mange deployment, provisioning, load-balancing, auto-scaling, health monitoring. Best suited when you need quickly deploy something and don't want to learn about other aws services.
@@ -524,6 +567,15 @@ LB can be
 * internal (having only private IP)
 * external (facing internet, having both public & private IP)
 
+CLB has stick session - you can bind user's session to specific ec2 and every time this user hit CLB he goes to the same ec2.
+It can also be enabled for ALB (for target group not for single ec2). Not available for NLB.
+
+XFF (X-Forward-For) - header of original IP address of user (cause your ec2 would see IP of load balancer)
+
+Health Check - you can monitor health of ec2 and always redirect user to healthy ec2 (ELB doesn't kill unhealthy ec2)
+
+ALB Request Routing - you can redirect user to different ec2 based on request attributes (subdomains, headers, url params..)
+
 
 
 ###### Amazon CloudWatch
@@ -546,6 +598,17 @@ Route53 also supports WRR (Weighted Round Robin) where you can assign weight ans
 You can also use LBR (Latency Based Routing), in case you have aws resources in multiple regions, route53 will redirect users to region with lowest latency.
 With Route53 you can also have private DNS name within your VPC, and such a name would be unaccesable outside VPC.
 Heath check - a check that requested resource is available. DNS Failover - return result only if health check is fine.
+routing policy
+* Simple - default policy to link domain to any aws serivce (elb/ec2/beanstalk)
+* Failover - in case one ec2 fail, to redirect traffic to second one
+* Geolocation - redirect traffic based on user location to record set with nearest geographic aws region
+* Geoproximity - you choose region and set bias value, and based on this value region border is drawn
+then traffic goes according to these drawn by you borders
+* Latency - redirect traffic to the region that provides the lowest latency.
+* Multivalue answer - simple routing policy + healthcheck. You can set up to 8 instances, and if first become unavailable
+traffic goes to random one out of other 7
+* Weighted - 90% of traffic to one ec2, 10 to second
+
 
 
 
@@ -602,12 +665,13 @@ Api Gateway can generate client-side SSL certificate, and you backend can get pu
 
 
 ###### Amazon Cognito
-Cognito - managed user service that add user sing-in/sign-up/management email/phone verification, 2FA logic.
+Cognito - managed user service that add user sing-in/sign-up/management email/phone verification/2FA logic.
 User Pool - a directory with users' profiles, you can set up password strength.
+User pool - is a IdP (Identity Provider)
 You can migrate your users into cognito, but password won't be migrated. If you want to migrate them with password you need to add special logic to your app:
 when user signin to your app - you signin him within cognito, if user doesn't exist in cognito you sign-up him with username/password.
 Cognito also support SAML or OpenID Connect, social identity providers (such as Facebook, Twitter, Amazon) and you can also integrate your own identity provider.
-Identity Pool - where cognito stores federated identity (identity from third parties providers).
+Identity Pool - temporary credentials to access aws services.
 You pay for MAU (monthly active users) - user who within a month made some identity operation signIn/singUp/tokenRefresh/passwordChange.
 Free tier - 50k MAU per month.
 
@@ -685,6 +749,7 @@ including collecting inventory/metrics, installing apps and so on.
 * AppConfig - you can test/deploy configuration into ec2/ecs/lambda
 * Inventory - information about software installed on ec2 collected by SM (including: apps, files, network configs, updates an so on...)
 * Automation - you can automate most common tasks for a group of aws resources
+you can also update/patch your ami
 * Run Command - easy way to manage your ec2 instances without ssh/bastion. All actions made here are recorded by CloudTrail, so you can easily trace what happened
 * Session Manager - browser cli that allow to interact with ec2 without ssh/bastion/opening inbound ports. 
 It improves security, cause it doesn't require you to open inbound ssh port (22) to talk with ec2. You also don't need to operate bastion host.
@@ -813,6 +878,25 @@ In this case we can divide it on min power 2.
 It encrypt packet, add new headers.
 * iSCSI (Internet Small Computer Systems Interface) - transport layer protocol, works above TCP. Initiator (server) packages SCSI commands into network packets, and sends it to Target (remote storage).
 
+###### SOA record
+SOA (Start of Authority) - record in DNS containing administrative info about zone, email, last update time.
+
+You can get it by `dig SOA +multiline google.com`, email is `root@amazon.com`
+```
+amazon.com.		900 IN SOA dns-external-master.amazon.com. root.amazon.com. (
+				2010126527 ; serial
+				180        ; refresh (3 minutes)
+				60         ; retry (1 minute)
+				3024000    ; expire (5 weeks)
+				60         ; minimum (1 minute)
+				)
+
+```
+
+
+
+
+
 ### Miscellaneous
 ###### SaaS vs PaaS vs IaaS/IAC 
 SaaS (Software as a Service) - if you want to use third-party software like some crm, but don't want to have it staff to install it to every computer in your office you can just use web-service of such crm. In this case crm completely managed by someone else,
@@ -862,8 +946,8 @@ When [aws support got pressed](https://forums.aws.amazon.com/thread.jspa?threadI
 But this idea to run additional ec2 to have internet access for single lambda upends serverless. Why do you need lambdas in the first place, when you can just put them into ec2 itself?
 
 
-
-
+###### AMI vs Snapshot
+AMI is region specific (so to use it from another region you should copy it) and same ami will have different AMI_ID in different regions
 
 
 

@@ -193,14 +193,13 @@ Resources:
       UserData:
         Fn::Base64:
           !Sub |
-            #!/bin/bash -xe
-            echo "hello" > a1
+            #!/usr/bin/env bash
+            su ec2-user
+            echo "hello world" > data.txt
+            sudo yum install httpd -y
+            sudo service httpd start
             sysctl -w net.ipv4.ip_forward=1
-            /sbin/iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
-            sudo su
-            sysctl -w net.ipv4.ip_forward=1
-            /sbin/iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
-            echo "hello" > a2
+            /sbin/iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE\
       NetworkInterfaces:
         - AssociatePublicIpAddress: true
           DeviceIndex: 0
