@@ -8,9 +8,6 @@ Resources:
     Type: AWS::CloudFormation::Stack
     Properties:
       TemplateURL: https://my-cloudformation-template-bucket.s3.amazonaws.com/vpc-bastion.yml
-      Tags:
-          - Key: Name
-            Value: vpc-bastion
 
   BastionEC2InstanceSG:
     Type: AWS::EC2::SecurityGroup
@@ -90,6 +87,6 @@ Outputs:
   PublicSubnetId:
     Value: !GetAtt VpcStack.Outputs.PublicSubnetId
   PrivateSubnetId:
-    Value: !GetAtt VpcStack.Outputs.!GetAtt
+    Value: !GetAtt VpcStack.Outputs.PrivateSubnetId
   PrivateRTId:
     Value: !GetAtt VpcStack.Outputs.PrivateRTId

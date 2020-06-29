@@ -167,7 +167,9 @@ First you need to add aws credentials `aws configure --profile awscert`, after y
 You can get accountId `aws sts get-caller-identity --profile=awscert`
 Create presign s3 file 
 ```
-aws s3 cp cloudformation/vpc-bastion.yml s3://my-cloudformation-template-bucket --profile=awscert
+aws s3 cp cloudformation/vpc/nested/vpc-bastion.yml s3://my-cloudformation-template-bucket --profile=awscert
+aws s3 cp cloudformation/vpc/nested/ec2-bastion.yml s3://my-cloudformation-template-bucket --profile=awscert
+
 # make file public for 30 sec
 aws s3 presign s3://my-cloudformation-template-example/data.txt --expires-in 30 --profile=awscert
 ```
