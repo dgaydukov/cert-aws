@@ -12,43 +12,43 @@
 * 1.8 [AWS CLI](#aws-cli)
 * 1.9 [Bastion vs JumpServer](#bastion-vs-jumpserver)
 2. [Services](#services)
-* 2.1 [Amazon Corretto](#amazon-corretto)
+* 2.1 [AWS Corretto](#aws-corretto)
 * 2.2 [AWS CloudFormation](#aws-cloudformation)
 * 2.3 [AWS IAM](#aws-iam)
 * 2.4 [AWS S3](#aws-s3)
-* 2.5 [Amazon Glacier](#amazon-glacier)
-* 2.6 [Amazon EFS](#amazon-efs)
-* 2.7 [Amazon EBS](#amazon-ebs)
-* 2.8 [Amazon EC2 local instance](#amazon-ec2-local-instance)
-* 2.9 [Amazon CloudFront](#amazon-cloudfront)
-* 2.10 [Amazon Kinesis](#amazon-kinesis)
+* 2.5 [AWS Glacier](#aws-glacier)
+* 2.6 [AWS EFS](#aws-efs)
+* 2.7 [AWS EBS](#aws-ebs)
+* 2.8 [AWS EC2 local instance](#aws-ec2-local-instance)
+* 2.9 [AWS CloudFront](#aws-cloudfront)
+* 2.10 [AWS Kinesis](#aws-kinesis)
 * 2.10 [AWS Lambda](#aws-lambda)
 * 2.11 [AWS Step Functions](#aws-step-functions)
-* 2.12 [Amazon EMR](#amazon-emr)
+* 2.12 [AWS EMR](#aws-emr)
 * 2.13 [AWS Glue](#aws-glue)
-* 2.14 [Amazon DynamoDB](#amazon-dynamodb)
-* 2.15 [Amazon QuickSight](#amazon-quicksight)
-* 2.16 [Amazon EC2](#amazon-ec2)
-* 2.17 [Amazon Athena](#amazon-athena)
+* 2.14 [AWS DynamoDB](#aws-dynamodb)
+* 2.15 [AWS QuickSight](#aws-quicksight)
+* 2.16 [AWS EC2](#aws-ec2)
+* 2.17 [AWS Athena](#aws-athena)
 * 2.18 [AWS Organizations](#aws-organizations)
 * 2.19 [AWS Well-Architected Tool](#aws-well-architected-tool)
-* 2.20 [Amazon VPC](#amazon-vpc)
+* 2.20 [AWS VPC](#aws-vpc)
 * 2.21 [AWS Elastic Beanstalk](#aws-elastic-beanstalk)
 * 2.22 [AWS Database Migration Service](#aws-database-migration-service)
 * 2.22 [Elastic Load Balancing](#elastic-load-balancing)
-* 2.23 [Amazon CloudWatch](#amazon-cloudwatch)
+* 2.23 [AWS CloudWatch](#aws-cloudwatch)
 * 2.23 [AWS Key Management Service](#aws-key-management-service)
-* 2.23 [Amazon Route 53](#amazon-route-53)
-* 2.24 [Amazon RDS](#amazon-rds)
-* 2.25 [Amazon SQS](#amazon-sqs)
-* 2.26 [Amazon API Gateway](#amazon-api-gateway)
-* 2.26 [Amazon Cognito](#amazon-cognito)
+* 2.23 [AWS Route 53](#aws-route-53)
+* 2.24 [AWS RDS](#aws-rds)
+* 2.25 [AWS SQS](#aws-sqs)
+* 2.26 [AWS API Gateway](#aws-api-gateway)
+* 2.26 [AWS Cognito](#aws-cognito)
 * 2.27 [AWS CodePipeline(CodeCommit/CodeBuild/CodeDeploy)](#aws-codepipelinecodecommitcodebuildcodedeploy)
 * 2.28 [AWS Storage Gateway](#aws-storage-gateway)
-* 2.29 [Amazon ECS](#amazon-ecs)
-* 2.30 [Amazon EKS](#amazon-eks)
+* 2.29 [AWS ECS](#aws-ecs)
+* 2.30 [AWS EKS](#aws-eks)
 * 2.31 [AWS Fargate](#aws-fargate)
-* 2.32 [Amazon ElastiCache](#amazon-elasticache)
+* 2.32 [AWS ElastiCache](#aws-elasticache)
 * 2.33 [AWS Systems Manager](#aws-systems-manager)
 * 2.34 [AWS Config](#aws-config)
 3. [Networking](#networking)
@@ -199,8 +199,8 @@ ping google.com
 ```
 
 ### Services
-###### Amazon Corretto 
-[Amazon Corretto](https://aws.amazon.com/corretto/) - free amazon implementation of Java SE specification.
+###### AWS Corretto 
+[AWS Corretto](https://aws.amazon.com/corretto/) - free amazon implementation of Java SE specification.
 As you know there are confusion around java SE. Oracle provides 2 java se implementations
 * OpenJDK - free
 * OracleJDK - paid
@@ -276,7 +276,7 @@ Presign url - use cli to create url with key, that is accessible for limited tim
 Interface is global, so you assign a region to a bucket, but you see all your buckets across all regions
 
 
-###### Amazon Glacier
+###### AWS Glacier
 Glacier - low-cost tape-drive storage value with  $0.007 per gigabyte per month. Used to store backups that you don't need frequently.
 Access to data can take from few minutes to a few hours. You store data as archives.
 
@@ -289,7 +289,7 @@ Just like s3 you can use REST API to work with glacier
 You can set up s3 lifecycle, after which objects from s3 would be moved to glacier (but to view them you should use s3 api, if you use glacier api you won't see this objects)
 You can retrieve up to 5% of your average monthly storage for free each month (rated daily), above this you are charged additional fee
 
-###### Amazon EFS
+###### AWS EFS
 EFS (Elastic File System) - delivers simple network filesystem for EC2. It supports NFSv4/4.1 (Network file system).
 System size is grow as you add more files to file system.
 It allows parallel access from multiple EC2 within the same region
@@ -300,7 +300,7 @@ There are 2 performance model
 * Max I/O
 AWS DataSync - service that make it faster transfer data between on-premise data and EFS
 
-###### Amazon EBS
+###### AWS EBS
 EBS (Elastic Block Storage) - simple block storage for EC2. After EBS is attached to EC2 you can format it with desired file system.
 Most AMI (Amazon Machine Images) are backed by Amazon EBS, and use an EBS volume to boot EC2 instances.
 You can attach multiple EBS to single EC2, but single EBS can only be attached to 1 EC2.
@@ -327,11 +327,14 @@ Since you can't encrypt volume after you attached it to ec2, so in order to crea
 3. create ami from encrypted snapshot
 4. run new ec2 from created ami & remove current ec2
 
-###### Amazon EC2 local instance
+###### AWS EC2 Instance Store
 Similar to EBS, but located on the same machine as EC2 (EBS connected through network), available only during lifetime of EC2.
 So it's not durable, once EC2 instance stop/restart/fail all data would be lost.
+It's not available for all ec2 types, only for [some of them](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/InstanceStorage.html#instance-store-volumes)
+You still have to use at lease 1 EBS + additional instance store. For some types you can select to remove instance store, but ebs should be present always.
+So you can't create ec2 without ebs.
 
-###### Amazon CloudFront
+###### AWS CloudFront
 CloudFront is a CDN (content delivery/distribution network) - that speed up the distribution of your data using edge locations.
 When user request content, CF use nearest edge location and deliver cached version, it's faster that transfer data directly from data center.
 If content not in cache, CF retrieve it directly from s3 or HTTP and cache it. CF is not durable storage, it's just an edge cache.
@@ -361,7 +364,7 @@ You have 2 types of distribution
 * web - static web content (files/pics)
 * RTMP - streaming media
 
-###### Amazon Kinesis
+###### AWS Kinesis
 It is a platform for streaming data on AWS, making it easy to load and analyze streaming data.
 With Kinesis, you can ingest real-time data such as application logs, website clickstreams, IoT telemetry data, and more into your databases, data lakes, and data warehouses, or build your own real-time applications using this data
 AntiPattern
@@ -383,7 +386,7 @@ Step Functions - visual tool that allows you to build complex logic based on lam
 They can also help overcome lambda max 900sec execution time, by joining several lambdas into one execution flow.
 
 
-###### Amazon EMR
+###### AWS EMR
 EMR (Elastic Map Reduce) - highly distributed computing framework for data processing and storing, using Apache Hadoop.
 It reduces large workload into smaller jobs and distribute it between EC2 instances of Hadoop cluster (good for big data analyses).
 AntiPattern
@@ -398,21 +401,21 @@ AntiPattern
 * Streaming data (Glue is batch oriented, minimum interval is 5 min, so for streaming data Kinesis is better choice)
 * NoSQL Databases (Glue doesn't support NoSQL databases as source)
 
-###### Amazon DynamoDB
+###### AWS DynamoDB
 DynamoDB - fully managed NoSQL database, like mongo, but aws proprietary solution
 
-###### Amazon RedShift
+###### AWS RedShift
 RedShift - fully-managed, petabyte-scale data warehouse.
 It delivers fast query and I/O performance for virtually any size dataset by using columnar storage technology while parallelizing and distributing queries across multiple nodes.
 Redshift only supports Single-AZ deployments. It uses MPP (Massively Parallel Processing) by automatically distribute data/query load across all nodes.
 Single-node can be used to quickly set up cluster and grow later. Multi-node requires leader (who gets client connection and queries) and a few compute nodes, that actually execute load.
 
 
-###### Amazon QuickSight
+###### AWS QuickSight
 QuickSight - BI (business intelligence) tool, for building visualizations, perform ad-hoc analysis (can connect to all aws data sources).
 
 
-###### Amazon EC2
+###### AWS EC2
 EC2 (Elastic Compute Cloud) - web service that provides resizable compute capacity
 AntiPattern
 * Managed Service (if you need database, or some other service that is provided by aws, you would better to use it, like RDS)
@@ -458,7 +461,7 @@ when you cpu not bursting, you earn `burst credit` (you can view it in CloudWatc
 once your credit is 0, performance downgrade
 * T2/T3 unlimited burst (you pay for extra burst credit)
 
-###### Amazon Athena
+###### AWS Athena
 Athena is an interactive query service that makes it easy to analyze data in Amazon S3 using standard SQL. 
 You don’t need to load your data into Athena, as it works directly with data stored in S3. Athena integrates with Amazon QuickSight for easy visualization.
 AntiPattern
@@ -482,7 +485,7 @@ The tool will evaluate your workload and provide an improvement plan with a prio
 It's free of charge, you only pay for underlying aws resources.
 
 
-###### Amazon VPC
+###### AWS VPC
 VPC (Virtual private cloud) - a kind of internal network in on-premises. You can have some servers inside and they won't be accessible outside of vpc.
 You have complete control over your virtual networking environment, including selection of your own IP address ranges, creation of subnets, and configuration of route tables and network gateways.
 By default every account has default VPC (and default subnet for each AZ), so if you don't create any other, and create EC2 directly, default VPC would be used.
@@ -580,7 +583,7 @@ ALB Request Routing - you can redirect user to different ec2 based on request at
 
 
 
-###### Amazon CloudWatch
+###### AWS CloudWatch
 CloudWatch - monitoring service for aws resources and apps running in aws cloud. IAM permission for CloudWatch are given to a resource as a whole (so you can't give access for only some of EC2, you give either for all EC2 instances or none).
 You can also use CloudWatch to create alarms (for example you get 5 errors, and you want to notify developer). Alarms are integrated with SNS (so you can send email, put message to SQS and so on).
 Many aws resources (EC2, RDS, and so on) automatically send metrics to CloudWatch. You can also send your custom metrics. Metrics can't be deleted, but expire automatically.
@@ -592,7 +595,7 @@ You can import only symmetric keys. You can't export CMK symmetric key or asymme
 
 
 
-###### Amazon Route 53
+###### AWS Route 53
 Route53 - is amazon DNS service that help to transform domain name into IP address. It's called 53, cause 53 - port of DNS.
 You can buy hostname from any provider and register it within Route53, after this Route53 gives you 4 TLD (Top-Level Domain) that you put into your hostname provider,
 so end user will request your domain, it will got to your provider, and from there to aws. Route53 supports wildcards (subdomains).
@@ -614,7 +617,7 @@ traffic goes to random one out of other 7
 
 
 
-###### Amazon RDS
+###### AWS RDS
 RDS (Relational Database Service) - aws managed service, that make it easy install/operate relational database in the cloud.
 * you can easily scale compute resources or storage associated with your db
 * it's easy to update db software
@@ -638,7 +641,7 @@ RDS Proxy - database proxy that helps
 * enforce IAM access to db
 
 
-###### Amazon SQS
+###### AWS SQS
 SQS (Simple Queue Service) - managed service that provide publisher/subscriber (queue) model. It provides FIFO (first-in, first-out) message ordering.
 It guarantee at-least-once delivery. you can use Amazon SQS Java Messaging Library that implements the JMS 1.1 specification and uses Amazon SQS as the JMS provider.
 Dead letter queue - a special queue that receives messages from other queue after some unsuccessful attempt to process it. Used to isolate messages that can't be processed for later analysis.
@@ -650,7 +653,7 @@ If queue is empty
 Message retention can be configured from 1 min to 14 days (by default - 4 days).
 
 
-###### Amazon API Gateway
+###### AWS API Gateway
 API Gateway - managed api service that makes it easy to publish/manage api at any scale. It can
 * meter/throttle traffic to your backend
 * security (allow access only to EC2 with specific IAM role, allow only specific cognito users, allow to those who pass Lambda authorizer)
@@ -666,7 +669,7 @@ You can add documentation to your api and expose it as swagger file.
 Api Gateway can generate client-side SSL certificate, and you backend can get public key, so it can verify that requests are coming from Api Gateway.
 
 
-###### Amazon Cognito
+###### AWS Cognito
 Cognito - managed user service that add user sing-in/sign-up/management email/phone verification/2FA logic.
 User Pool - a directory with users' profiles, you can set up password strength.
 User pool - is a IdP (Identity Provider)
@@ -707,7 +710,7 @@ Storage gateway available as:
 * hardware appliance - you but it and use in your on-premise
 
 
-###### Amazon ECS
+###### AWS ECS
 ECS (Elastic Container Service) - docker container management service to run apps on a managed cluster of Amazon EC2 instances. It eliminate the need to operate container management infra (like kubernetes).
 There are 2 ways to create cluster
 * Networking only - Fargate is managing/orchestrating your cluster
@@ -719,7 +722,7 @@ There are several network modes:
 * bridge - docker's default network type. All containers connected to bridge can communicate with each other
 * host - container is exposed to host (if you docker has port 80, this port would be accessible from host)
 
-###### Amazon EKS
+###### AWS EKS
 EKS (Elastic Kubernetes Service) - manages service that runs kubernetes cluster (so you don't need to deploy it from scratch).
 It provisions/manages Kubernetes control plane and worker nodes for you.
 
@@ -730,7 +733,7 @@ You should use it when you don't want to manually provision your EC2 instances.
 If you need greater control over EC2 (for security or customization), it's better to avoid using it, and istread manually provision EC2 instances.
 
 
-###### Amazon ElastiCache
+###### AWS ElastiCache
 ElastiCache - manages service that runs Memcached/Redis server nodes in cloud. 
 It automates common administrative tasks required to operate a distributed in-memory key-value environment.
 It consists of
