@@ -32,14 +32,8 @@ There are 2 main reasons to get it.
 
 
 ### TODO
-* add trading/prolog cert to a list
-* can we start terminated ec2 (until it dissapered from list)
-* create ec2 with instance volume only (without ebs)
-* SG anywhere vs custom
-* ssl vs tls
-* session manager login not as user (ec2 role ssm)
 * why stop ec2 long, but reboot - fast
-* use efs with militple ec2 (install sudo yum -y install nfs-utils)
+* use efs with multiple ec2 (install sudo yum -y install nfs-utils)
 * ec2/elb healthcheck based on json value (status: up)
 * https://aws.amazon.com/ec2/autoscaling/faqs/, scaling out/in/up - differences, asg vs elb
 * curl http://ip_address/latest/userdata (get userdata from ec2)
@@ -57,19 +51,15 @@ subnet can be associated with 1 NACL at a time
 * run ec2 without ebs
 * snapshot-vs-ami for cross-region ec2 relocation
 ami = snapshot + ec2 settings (launch permissions, ebs mapping)
-* create nat-instance (main idea is for customizing nat, cause nat gateway is managed by aws). Comunity=>nat (select first ami), or configure your nat from scratch. 
-Disable source/dest check. Add nat instance and nat gateway into separate cloudformation templates and call them from bastion
-https://www.theguild.nl/cost-saving-with-nat-instances/
-https://www.karlrupp.net/en/computer/nat_tutorial
 * ec2 with public ip => reboot => check ip change. Use elastic ip (it should stay the same). Don't forget to remove after terminate ec2.
 * vpc endpoint (access s3 from private ec2 that's not connected to nat gateway, with public https url -> aws will determine that you are using endpoint and will direct your traffic)
 * elb with auto-scaling group
 ```
 #!/usr/bin/env bash
-su ec2-user
 sudo yum install httpd -y
 sudo service httpd start
 ```
+For httpd to work you should supply root user, so `su ec2-user` is a must
 * route53 failover
 * cross-region vpc peering
 * vpc to on-premise (imitated by vpc + openswan) vpn connection (site-to-site vpn)

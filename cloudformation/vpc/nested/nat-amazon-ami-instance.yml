@@ -1,6 +1,7 @@
 AWSTemplateFormatVersion: 2010-09-09
 
 # Create aws ami nat instance so private ec2 has Internet access
+# !important => since our nat acts as proxy we should disable source/destination check by setting SourceDestCheck: false
 
 Resources:
   Ec2Stack:

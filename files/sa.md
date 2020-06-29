@@ -58,6 +58,7 @@
 * 3.4 [High Level Protocols](#high-level-protocols)
 * 3.5 [Low Level Protocols](#low-level-protocols)
 * 3.6 [SOA record](#soa-record)
+* 3.7 [SSL vs TLS vs HTTPS](#ssl-vs-tls-vs-https)
 4. [Miscellaneous](#miscellaneous)
 * 4.1 [IaaC vs IaaS vs PaaS vs SaaS](#iaac-vs-iaas-vs-paas-vs-saas)
 * 4.2 [Virtualization and Containerization](#virtualization-and-containerization)
@@ -754,6 +755,7 @@ you can also update/patch your ami
 * Run Command - easy way to manage your ec2 instances without ssh/bastion. All actions made here are recorded by CloudTrail, so you can easily trace what happened
 * Session Manager - browser cli that allow to interact with ec2 without ssh/bastion/opening inbound ports. 
 It improves security, cause it doesn't require you to open inbound ssh port (22) to talk with ec2. You also don't need to operate bastion host.
+For this to work you should assign a role to ec2 with policy `AmazonEC2RoleforSSM`. Internally ssh manager just ssh you as `ssm-user` with root priviledge.
 
 
 ###### AWS Config
@@ -895,7 +897,11 @@ amazon.com.		900 IN SOA dns-external-master.amazon.com. root.amazon.com. (
 ```
 
 
-
+###### SSL vs TLS vs HTTPS
+SSL (Secure Sockets Layers) - outdated protocol not used today. TLS (Transport Layer Security) - main security protocol used today.
+So you can call TLS more updated & secure version of SSL. But we still call our digital certs as SSL certificates, but in reality when you buy SSL certificate from DigiCert
+you are buying most up-to-date TLS certificate.
+HTTPS means that our HTTP traffic is secured by TLS protocol with SSL(TLS) certificate.
 
 
 ### Miscellaneous

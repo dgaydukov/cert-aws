@@ -1,6 +1,7 @@
 AWSTemplateFormatVersion: 2010-09-09
 
 # Create vpc with private & public subnet and one EC2 in each subnet
+# !important => since our nat acts as proxy we should disable source/destination check by setting SourceDestCheck: false
 
 Resources:
 
