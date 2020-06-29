@@ -1,0 +1,58 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+# Create aws ami nat instance so private ec2 has Internet access
+
+Resources:
+  Ec2Stack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://my-cloudformation-template-bucket.s3.amazonaws.com/ec2-bastion.yml
+
+  PrivateRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !GetAtt Ec2Stack.Outputs.PrivateRTId
+      DestinationCidrBlock: 0.0.0.0/0
+      InstanceId: !Ref NatEc2Instance
+
+  NatEc2InstanceSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable HTTP(S)/ICMP access from within vpc
+      VpcId: !GetAtt Ec2Stack.Outputs.VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 10.100.0.0/16
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 10.100.0.0/16
+        - IpProtocol: icmp
+          FromPort: -1
+          ToPort: -1
+          CidrIp: 10.100.0.0/16
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-VPC-B-Nat-SG
+  NatEc2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-00a9d4a05375b2763
+      SourceDestCheck: false
+      KeyName: mykey
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: 0
+          SubnetId: !GetAtt Ec2Stack.Outputs.PublicSubnetId
+          GroupSet:
+            - !GetAtt NatEc2InstanceSG.GroupId
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 8
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-VPC-B-Nat-EC2

@@ -64,6 +64,12 @@ https://www.karlrupp.net/en/computer/nat_tutorial
 * ec2 with public ip => reboot => check ip change. Use elastic ip (it should stay the same). Don't forget to remove after terminate ec2.
 * vpc endpoint (access s3 from private ec2 that's not connected to nat gateway, with public https url -> aws will determine that you are using endpoint and will direct your traffic)
 * elb with auto-scaling group
+```
+#!/usr/bin/env bash
+su ec2-user
+sudo yum install httpd -y
+sudo service httpd start
+```
 * route53 failover
 * cross-region vpc peering
 * vpc to on-premise (imitated by vpc + openswan) vpn connection (site-to-site vpn)
@@ -81,3 +87,7 @@ https://www.karlrupp.net/en/computer/nat_tutorial
 * site-to-site vpn
 * direct connect
 * close some url pattern (/internal) on elb level (by SG, allow only from inside vpc)
+
+
+
+            

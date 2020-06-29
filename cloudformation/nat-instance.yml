@@ -1,0 +1,73 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+# Create vpc with private & public subnet and one EC2 in each subnet
+
+Resources:
+  VpcStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://my-cloudformation-template-bucket.s3.amazonaws.com/vpc-bastion.yml
+  Ec2Stack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://my-cloudformation-template-bucket.s3.amazonaws.com/ec2-bastion.yml
+
+  PrivateRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !GetAtt VpcStack.Outputs.PrivateRTId
+      DestinationCidrBlock: 0.0.0.0/0
+      InstanceId: !Ref NatEc2Instance
+
+  NatEc2InstanceSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable HTTP(S)/ICMP/SSH access from within vpc
+      VpcId: !GetAtt VpcStack.Outputs.VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 10.100.0.0/16
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 10.100.0.0/16
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 10.100.0.0/16
+        - IpProtocol: icmp
+          FromPort: -1
+          ToPort: -1
+          CidrIp: 10.100.0.0/16
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-VPC-B-Nat-SG
+  NatEc2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-09d95fab7fff3776c
+      SourceDestCheck: false
+      KeyName: mykey
+      UserData:
+        Fn::Base64:
+          !Sub |
+          #!/usr/bin/env bash
+          su ec2-user
+          sysctl -w net.ipv4.ip_forward=1
+          /sbin/iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: 0
+          SubnetId: !GetAtt VpcStack.Outputs.PublicSubnetId
+          GroupSet:
+            - !GetAtt NatEc2InstanceSG.GroupId
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 8
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-VPC-B-Nat-EC2

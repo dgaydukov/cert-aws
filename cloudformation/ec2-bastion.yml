@@ -1,0 +1,95 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+# Create public & private ec2 instances within corresponding networks
+# !important => !Ref function returns IDs for most resources, but it returns names for security groups, that's why we should use !GetAtt
+
+Resources:
+  VpcStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://my-cloudformation-template-bucket.s3.amazonaws.com/vpc-bastion.yml
+      Tags:
+          - Key: Name
+            Value: vpc-bastion
+
+  BastionEC2InstanceSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH/ICMP access from internet
+      VpcId: !GetAtt VpcStack.Outputs.VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: icmp
+          FromPort: -1
+          ToPort: -1
+          CidrIp: 0.0.0.0/0
+      Tags:
+          - Key: Name
+            Value: !Sub ${AWS::StackName}-VPC-B-Bastion-SG
+  BastionEC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-09d95fab7fff3776c
+      KeyName: mykey
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: 0
+          SubnetId: !GetAtt VpcStack.Outputs.PublicSubnetId
+          GroupSet:
+            - !GetAtt BastionEC2InstanceSG.GroupId
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 8
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-VPC-B-Bastion-EC2
+
+  PrivateEC2InstanceSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH/ICMP access from within vpc
+      VpcId: !GetAtt VpcStack.Outputs.VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 10.100.0.0/16
+        - IpProtocol: icmp
+          FromPort: -1
+          ToPort: -1
+          CidrIp: 10.100.0.0/16
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-VPC-B-Private-SG
+  PrivateEC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-09d95fab7fff3776c
+      KeyName: mykey
+      SubnetId: !GetAtt VpcStack.Outputs.PrivateSubnetId
+      SecurityGroupIds:
+        - !GetAtt PrivateEC2InstanceSG.GroupId
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 8
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-VPC-B-Private-EC2
+
+
+Outputs:
+  VpcId:
+    Value: !GetAtt VpcStack.Outputs.VpcId
+  PublicSubnetId:
+    Value: !GetAtt VpcStack.Outputs.PublicSubnetId
+  PrivateSubnetId:
+    Value: !GetAtt VpcStack.Outputs.!GetAtt
+  PrivateRTId:
+    Value: !GetAtt VpcStack.Outputs.PrivateRTId
