@@ -65,6 +65,7 @@
 * 4.3 [Docker and Kubernetes](#docker-and-kubernetes)
 * 4.4 [Pure Serverless](#pure-serverless)
 * 4.5 [AMI vs Snapshot](#ami-vs-snapshot)
+* 4.6 [Useful Linux Commands](#useful-linux-commands)
 
 
 
@@ -300,6 +301,16 @@ There are 2 performance model
 * Max I/O
 AWS DataSync - service that make it faster transfer data between on-premise data and EFS
 
+When you create efs it creates mount target in each az. Instances in each az talk to efs by using this mount targets.
+To mount efs to ec2, NFS Client should be installed and running. You can install it by
+```
+sudo yum install -y amazon-efs-utils
+sudo mount -t efs fs-bc0a413f:/ ./mnt
+```
+Some AMI (Amazon Linux/RHEL/Ubuntu) it's already installed, you just need to start it. You can check the status by `sudo service nfs status`
+By default anybody can read, but root (UID 0) user can write. You can also use Access Points to create dirs in your efs for different users to read/write.
+You can also do `sudo chmod 777 /mnt/efs/` to give access to anybody to read/write. To check if directory is mounted to efs run `df /mnt/efs/`.
+
 ###### AWS EBS
 EBS (Elastic Block Storage) - simple block storage for EC2. After EBS is attached to EC2 you can format it with desired file system.
 Most AMI (Amazon Machine Images) are backed by Amazon EBS, and use an EBS volume to boot EC2 instances.
@@ -461,6 +472,8 @@ when you cpu not bursting, you earn `burst credit` (you can view it in CloudWatc
 once your credit is 0, performance downgrade
 * T2/T3 unlimited burst (you pay for extra burst credit)
 
+It usually takes longer time to stop instance then to reboot. The reason is when you stop it does some clean up by removing dns name, public IPv4, private IPv4, IPv6, ec2 instance store.
+
 ###### AWS Athena
 Athena is an interactive query service that makes it easy to analyze data in Amazon S3 using standard SQL. 
 You don’t need to load your data into Athena, as it works directly with data stored in S3. Athena integrates with Amazon QuickSight for easy visualization.
@@ -507,10 +520,12 @@ EC2-to-EC2 communication through public IP
 * When in different Regions - not guaranteed to communicate inside aws network (probably communicate through Internet)
 
 Security groups (SG) vs ACL
-* SG specify which traffic is allowed to/from EC2
+* SG operate at instance level, specify which traffic is allowed to/from EC2
 * ACL operates at subnet level and evaluate traffic that enter/exit subnet. Don't filter traffic inside same subnet.
-* ACL - stateless filtering, SG - stateful (if traffic allowed inbound it also allowed outbound) filtering
+* ACL - stateless filtering, SG - stateful (if you send request from your ec2 you will got response even if SG don't have inbound rule for this) filtering
 You can't block specific IP with SG, you need to use NACL
+
+When you create VPC, default SG created automatically. It allows inbound traffic from instances with same SG (source - SG_ID), and all outbound traffic.
 
 To monitor traffic you can use
 * VPC traffic mirroring (it copies traffic and send it to NLB with a UDP listener)
@@ -959,6 +974,9 @@ But this idea to run additional ec2 to have internet access for single lambda up
 ###### AMI vs Snapshot
 AMI is region specific (so to use it from another region you should copy it) and same ami will have different AMI_ID in different regions
 
-
-
+###### Useful Linux Commands
+* List all userNames `cut -d: -f1 /etc/passwd`
+* Get all groups by userName `groups uName`
+* Get userId `id -u uName`
+* Get groupId by groupName `cut -d: -f3 < <(getent group gName)`
 

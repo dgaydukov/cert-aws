@@ -32,25 +32,19 @@ There are 2 main reasons to get it.
 
 
 ### TODO
-* why stop ec2 long, but reboot - fast
-* use efs with multiple ec2 (install sudo yum -y install nfs-utils)
 * ec2/elb healthcheck based on json value (status: up)
 * https://aws.amazon.com/ec2/autoscaling/faqs/, scaling out/in/up - differences, asg vs elb
 * curl http://ip_address/latest/userdata (get userdata from ec2)
 * curl http://ip_address/latest/metadata (get ec2 metadata)
 * https://aws.amazon.com/certificate-manager/faqs/
-* rename all amazon=>aws titles in sa.md
 * https://aws.amazon.com/cloud9/faqs/
 * https://aws.amazon.com/rekognition/faqs/
 * cloudformation divide vpc and nat (using nested stacks)
 * turn on vpc/subnet/eni flow logs and view it
-* create new NACL group (VPC=>Security=>Network ACLs) for public subnet (deny ssh in case someone misconfigure SG)
-subnet can be associated with 1 NACL at a time
+* create new NACL group (VPC=>Security=>Network ACLs) for public subnet (deny ssh in case someone misconfigure SG). subnet can be associated with 1 NACL at a time
 * cloudformation with s3 policies
-* autoIP use subnet setting (enable) vs enable
 * run ec2 without ebs
-* snapshot-vs-ami for cross-region ec2 relocation
-ami = snapshot + ec2 settings (launch permissions, ebs mapping)
+* snapshot-vs-ami for cross-region ec2 relocation. ami = snapshot + ec2 settings (launch permissions, ebs mapping)
 * ec2 with public ip => reboot => check ip change. Use elastic ip (it should stay the same). Don't forget to remove after terminate ec2.
 * vpc endpoint (access s3 from private ec2 that's not connected to nat gateway, with public https url -> aws will determine that you are using endpoint and will direct your traffic)
 * elb with auto-scaling group

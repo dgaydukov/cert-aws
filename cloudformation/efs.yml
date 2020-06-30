@@ -1,0 +1,214 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+# create vpc with 2 public subnets and one ec2 instance in each subnet
+# create efs and mount to both ec2
+# create one access point for user ec2-user (userId/groupId - 1000 by default) - so ec2-user can write to it. It also would be as dit /data in our efs
+# !important => we add VPC.DefaultSecurityGroup to our instance and to efs, so they both in save SG and allow inbound traffic (you can mount efs from ec2)
+
+## Mounting not working, so you have to ssh and mount manually using id from /data.txt
+
+Resources:
+
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.100.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value:  !Sub ${AWS::StackName}-VPC-A
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    DependsOn: VPC
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-VPC-A-IGW
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.100.1.0/24
+      AvailabilityZone: us-east-1a
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-VPC-A-Public1
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.100.2.0/24
+      AvailabilityZone: us-east-1b
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-VPC-A-Public2
+
+  PublicRT1:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-VPC-A-Public-RT1
+  PublicRoute1:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: !Ref PublicRT1
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicRT2:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-VPC-A-Public-RT2
+  PublicRoute2:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: !Ref PublicRT2
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+
+  PublicSubnetRTAssociation1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      RouteTableId: !Ref PublicRT1
+  PublicSubnetRTAssociation2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet2
+      RouteTableId: !Ref PublicRT2
+
+  PublicEC2InstanceSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH/ICMP access from internet
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: icmp
+          FromPort: -1
+          ToPort: -1
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-VPC-A-Public-SG
+
+  PublicEC2Instance1:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-09d95fab7fff3776c
+      KeyName: mykey
+      UserData:
+        Fn::Base64:
+          !Sub |
+          #!/usr/bin/env bash
+          sudo yum install -y amazon-efs-utils
+          sudo mkdir /mnt/efs
+          sudo mkdir /mnt/pnt
+          sudo mount -t efs ${EFS}:/ /mnt/efs
+          sudo mount -t efs -o tls,accesspoint=${AccessPoint} ${EFS}: /mnt/pnt
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: 0
+          SubnetId: !Ref PublicSubnet1
+          GroupSet:
+            - !GetAtt PublicEC2InstanceSG.GroupId
+            - !GetAtt VPC.DefaultSecurityGroup
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 8
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-VPC-A-Public-EC2_1
+
+  PublicEC2Instance2:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-09d95fab7fff3776c
+      KeyName: mykey
+      UserData:
+        Fn::Base64:
+          !Sub |
+          #!/usr/bin/env bash
+          sudo yum install -y amazon-efs-utils
+          sudo mkdir /mnt/efs
+          sudo mkdir /mnt/pnt
+          sudo echo "${EFS} => ${AccessPoint}" > data.txt
+          sudo mount -t efs ${EFS}:/ /mnt/efs
+          sudo mount -t efs -o tls,accesspoint=${AccessPoint} ${EFS}: /mnt/pnt
+          echo done >> data.txt
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: 0
+          SubnetId: !Ref PublicSubnet2
+          GroupSet:
+            - !GetAtt PublicEC2InstanceSG.GroupId
+            - !GetAtt VPC.DefaultSecurityGroup
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 8
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-VPC-A-Public-EC2_2
+
+  EFS:
+    Type: AWS::EFS::FileSystem
+    Properties:
+      PerformanceMode: maxIO
+      FileSystemTags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-Efs
+
+  MountTarget1:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId: !Ref EFS
+      SubnetId: !Ref PublicSubnet1
+      SecurityGroups:
+        - !GetAtt VPC.DefaultSecurityGroup
+  MountTarget2:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId: !Ref EFS
+      SubnetId: !Ref PublicSubnet2
+      SecurityGroups:
+        - !GetAtt VPC.DefaultSecurityGroup
+
+  AccessPoint:
+    Type: AWS::EFS::AccessPoint
+    Properties:
+      FileSystemId: !Ref EFS
+      PosixUser:
+        Uid: 1000
+        Gid: 1000
+        SecondaryGids:
+          - 4
+      RootDirectory:
+        CreationInfo:
+          OwnerGid: 1000
+          OwnerUid: 1000
+          Permissions: 755
+        Path: /data
