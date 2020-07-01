@@ -51,6 +51,7 @@
 * 2.32 [AWS ElastiCache](#aws-elasticache)
 * 2.33 [AWS Systems Manager](#aws-systems-manager)
 * 2.34 [AWS Config](#aws-config)
+* 2.34 [AWS Aurora](#aws-aurora)
 3. [Networking](#networking)
 * 3.1 [Hub, Switch, Router](#hub-switch-router)
 * 3.2 [Network Topology](#network-topology)
@@ -382,6 +383,9 @@ AntiPattern
 * Small scale consistent throughput (Kinesis Data Streams is designed  and optimized for large data throughputs)
 * Long-term data storage and analytics (By default Kinesis Data Streams stores data 24 hours, you can extend retention up to 7 days, if you need longer you should consired RDS/DynamoDb/S3/Glacier)
 
+Queue vs Streaming
+* queue (not reactive) - you have to poll data, once it polled it removed from queue
+* streaming (reactive) - many consumer notify of changes, events stay for long time (not deleted)
 
 ###### AWS Lambda
 Lambda - piece of code that can be executed without any server env (just write code in javascript and it will run).
@@ -390,7 +394,10 @@ AntiPattern
 * Long Running Applications (Lambda max time is 900sec. If you need some long running jobs you should consider EC2)
 * Dynamic Websites (although you can use Lambda to create static website, it's better to use some programming language like java/node.js and deploy it to EC2)
 * Stateful Applications (Lambda is stateless, if you need state it's better to create app in java/node.js and deploy it ot EC2 + RDS/DynamoDb)
-
+Cold Start - when you first run your lambda and aws search for idle server and run your lambda on this sever, delay may happen. When you run it for
+second and consecutive time, there is no delay.
+By default lambda runs in no VPC (so it has internet access), if you want your lambda to talk with other services you should put it into 
+VPC, if your lambda need internet access you have to configure nat for it.
 
 ###### AWS Step Functions
 Step Functions - visual tool that allows you to build complex logic based on lambda and EC2 calls.
@@ -413,9 +420,14 @@ AntiPattern
 * NoSQL Databases (Glue doesn't support NoSQL databases as source)
 
 ###### AWS DynamoDB
-DynamoDB - fully managed NoSQL database, like mongo, but aws proprietary solution
+DynamoDB - fully managed NoSQL database, like mongo, but aws proprietary solution.
+Stores data across 3 regions. Row - item. Cell - attribute. Primary key - partition key + sort key.
 
 ###### AWS RedShift
+Database vs Data Warehouse
+* db (single source) - OLTP (Online Transaction Processing) - store current transactions and quick access to them
+* warehouse (multiple sources)) - OLAP (Online Analytical Processing) - store large quantities of historical data
+
 RedShift - fully-managed, petabyte-scale data warehouse.
 It delivers fast query and I/O performance for virtually any size dataset by using columnar storage technology while parallelizing and distributing queries across multiple nodes.
 Redshift only supports Single-AZ deployments. It uses MPP (Massively Parallel Processing) by automatically distribute data/query load across all nodes.
@@ -602,6 +614,9 @@ ALB Request Routing - you can redirect user to different ec2 based on request at
 CloudWatch - monitoring service for aws resources and apps running in aws cloud. IAM permission for CloudWatch are given to a resource as a whole (so you can't give access for only some of EC2, you give either for all EC2 instances or none).
 You can also use CloudWatch to create alarms (for example you get 5 errors, and you want to notify developer). Alarms are integrated with SNS (so you can send email, put message to SQS and so on).
 Many aws resources (EC2, RDS, and so on) automatically send metrics to CloudWatch. You can also send your custom metrics. Metrics can't be deleted, but expire automatically.
+By default ec2 monitoring interval is 5min, but you can enable detailed monitoring (second step when you create ec2) and data would be flow every 1 min.
+In ec2 you can create alarm too (when cpu goes above 80% - stop instance).
+If you want to track ec2 memory/cpu usage you have to install cloudwatch agent into ec2.
 
 ###### AWS Key Management Service
 KMS - a service for generating/storing/auditing keys. If you have a lot of encryption it's better to use central key management service.
@@ -657,16 +672,19 @@ RDS Proxy - database proxy that helps
 
 
 ###### AWS SQS
-SQS (Simple Queue Service) - managed service that provide publisher/subscriber (queue) model. It provides FIFO (first-in, first-out) message ordering.
+SQS (Simple Queue Service) - managed service that provide publisher/subscriber (queue) model. There are 2 types
+* standard - ordering is not guaranteed, no limit to number of messages (you should implement custom protection against duplicates)
+* FIFO (first in, first out) - ordering is guaranteed, limit - 300 messages per second
 It guarantee at-least-once delivery. you can use Amazon SQS Java Messaging Library that implements the JMS 1.1 specification and uses Amazon SQS as the JMS provider.
 Dead letter queue - a special queue that receives messages from other queue after some unsuccessful attempt to process it. Used to isolate messages that can't be processed for later analysis.
 You can get time-in-queue (time how long message has been in queue) by subtracting SentTimestamp attribute from current time.
 In anonymous access SenderId - IP address of sender (otherwise accountId).
 If queue is empty
-* short polling - returns immediately with no results. Only possible way if single thread poll multiple queues, in this case long polling for one empty queue would block other queues, but it generally bad design.
+* short polling (default) - returns immediately with no results. Only possible way if single thread poll multiple queues, in this case long polling for one empty queue would block other queues, but it generally bad design.
 * long polling - wait till message got into queue, or polling timeout (by default 20 sec) expires (save SQS cost, cause reduce number of empty receives). It's better to always use this type of polling.
 Message retention can be configured from 1 min to 14 days (by default - 4 days).
-
+Visibility Timeout (0 sec to 12 hours, default - 30sec) - once you app consume a message it becomes invisible to others. But until your app notify queue that it processed it
+message not deleted. So this timeout - is how long queue can wait.
 
 ###### AWS API Gateway
 API Gateway - managed api service that makes it easy to publish/manage api at any scale. It can
@@ -780,6 +798,12 @@ For this to work you should assign a role to ec2 with policy `AmazonEC2RoleforSS
 Config - manages service that provides aws resources inventory, config history, change notification.
 Config Rule - desired configuration of resource that is evaluated againt actual change (and report in case of mismatch).
 Conformance Pack - collection of config rules.
+
+###### AWS Aurora
+Aurora - myslq/postgres compatible aws database solution. It runs 5x faster than mysql and 3x faster than postgres. And cost 1/10 of similar solution.
+It replicates 6  copy of itself in at least 3 AZ (2 copies in each az) - so it's highly available.
+Buckups and failover are done automatically. Self-healing storage - blocks are constantly checked and restored.
+Aurora serverlsess - cheap version of aurora, pay only for what you use (aurora start up/down, scale up/down automatically base on your load).
 
 
 ### Networking

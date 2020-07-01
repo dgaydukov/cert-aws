@@ -32,6 +32,13 @@ There are 2 main reasons to get it.
 
 
 ### TODO
+* lambda in private vpc (or not in vpc) access internet
+* https://aws.amazon.com/cloudtrail/faqs/ (create trail if you need to store logs more than 90 days, management vs data evants, send events to cloudwatch)
+trail store data in s3, you have to use athena to analyse it
+log file validation - file not tampered
+* condtitions in cloudformation template
+* https://aws.amazon.com/rds/aurora/faqs/
+* efs create ec2 after efs is created (check mount script)
 * ec2/elb healthcheck based on json value (status: up)
 * https://aws.amazon.com/ec2/autoscaling/faqs/, scaling out/in/up - differences, asg vs elb
 * curl http://ip_address/latest/userdata (get userdata from ec2)
@@ -71,6 +78,7 @@ For httpd to work you should supply root user, so `su ec2-user` is a must
 * site-to-site vpn
 * direct connect
 * close some url pattern (/internal) on elb level (by SG, allow only from inside vpc)
+* ec2 app logs to cloudwatch => create custom metrics based on it
 
 
 
