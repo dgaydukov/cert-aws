@@ -4,8 +4,7 @@ AWSTemplateFormatVersion: 2010-09-09
 # create efs and mount to both ec2
 # create one access point for user ec2-user (userId/groupId - 1000 by default) - so ec2-user can write to it. It also would be as dit /data in our efs
 # !important => we add VPC.DefaultSecurityGroup to our instance and to efs, so they both in save SG and allow inbound traffic (you can mount efs from ec2)
-
-## Mounting not working, so you have to ssh and mount manually using id from /data.txt
+# !important => we add sleep 10, to wait before mounting to be sure, mount targets are available (otherwise mount may not work)
 
 Resources:
 
@@ -114,6 +113,10 @@ Resources:
 
   PublicEC2Instance1:
     Type: AWS::EC2::Instance
+    DependsOn:
+      - EFS
+      - MountTarget1
+      - AccessPoint
     Properties:
       InstanceType: t2.micro
       ImageId: ami-09d95fab7fff3776c
@@ -125,6 +128,7 @@ Resources:
           sudo yum install -y amazon-efs-utils
           sudo mkdir /mnt/efs
           sudo mkdir /mnt/pnt
+          sleep 10
           sudo mount -t efs ${EFS}:/ /mnt/efs
           sudo mount -t efs -o tls,accesspoint=${AccessPoint} ${EFS}: /mnt/pnt
       NetworkInterfaces:
@@ -144,6 +148,10 @@ Resources:
 
   PublicEC2Instance2:
     Type: AWS::EC2::Instance
+    DependsOn:
+      - EFS
+      - MountTarget2
+      - AccessPoint
     Properties:
       InstanceType: t2.micro
       ImageId: ami-09d95fab7fff3776c
@@ -155,10 +163,9 @@ Resources:
           sudo yum install -y amazon-efs-utils
           sudo mkdir /mnt/efs
           sudo mkdir /mnt/pnt
-          sudo echo "${EFS} => ${AccessPoint}" > data.txt
+          sleep 10
           sudo mount -t efs ${EFS}:/ /mnt/efs
           sudo mount -t efs -o tls,accesspoint=${AccessPoint} ${EFS}: /mnt/pnt
-          echo done >> data.txt
       NetworkInterfaces:
         - AssociatePublicIpAddress: true
           DeviceIndex: 0

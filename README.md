@@ -32,21 +32,17 @@ There are 2 main reasons to get it.
 
 
 ### TODO
-* lambda in private vpc (or not in vpc) access internet
 * https://aws.amazon.com/cloudtrail/faqs/ (create trail if you need to store logs more than 90 days, management vs data evants, send events to cloudwatch)
 trail store data in s3, you have to use athena to analyse it
 log file validation - file not tampered
-* condtitions in cloudformation template
 * https://aws.amazon.com/rds/aurora/faqs/
-* efs create ec2 after efs is created (check mount script)
-* ec2/elb healthcheck based on json value (status: up)
 * https://aws.amazon.com/ec2/autoscaling/faqs/, scaling out/in/up - differences, asg vs elb
-* curl http://ip_address/latest/userdata (get userdata from ec2)
-* curl http://ip_address/latest/metadata (get ec2 metadata)
 * https://aws.amazon.com/certificate-manager/faqs/
 * https://aws.amazon.com/cloud9/faqs/
 * https://aws.amazon.com/rekognition/faqs/
-* cloudformation divide vpc and nat (using nested stacks)
+* condtitions in cloudformation template
+* lambda in private vpc (or not in vpc) access internet
+* ec2/elb healthcheck based on json value (status: up)
 * turn on vpc/subnet/eni flow logs and view it
 * create new NACL group (VPC=>Security=>Network ACLs) for public subnet (deny ssh in case someone misconfigure SG). subnet can be associated with 1 NACL at a time
 * cloudformation with s3 policies
