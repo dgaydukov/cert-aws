@@ -32,14 +32,9 @@ There are 2 main reasons to get it.
 
 
 ### TODO
-* https://aws.amazon.com/cloudtrail/faqs/ (create trail if you need to store logs more than 90 days, management vs data evants, send events to cloudwatch)
-trail store data in s3, you have to use athena to analyse it
-log file validation - file not tampered
-* https://aws.amazon.com/rds/aurora/faqs/
-* https://aws.amazon.com/ec2/autoscaling/faqs/, scaling out/in/up - differences, asg vs elb
-* https://aws.amazon.com/certificate-manager/faqs/
-* https://aws.amazon.com/cloud9/faqs/
-* https://aws.amazon.com/rekognition/faqs/
+* https://aws.amazon.com/codestar/faqs/
+* https://aws.amazon.com/rekognition/faqs
+* https://aws.amazon.com/ec2/autoscaling/faqs, scaling out/in/up - differences, asg vs elb
 * condtitions in cloudformation template
 * lambda in private vpc (or not in vpc) access internet
 * ec2/elb healthcheck based on json value (status: up)
@@ -63,7 +58,7 @@ For httpd to work you should supply root user, so `su ec2-user` is a must
 * rds read replica (cross-region) vs multi-az failover
 * can you see building blocks (ec2/rds/elb) when using beanstalk
 * cognito + api gateway + s3 serverless app (call cognito from java code from local machine vs from ec2)
-* register domain on hostgator/godaddy/aws => check it on https://whois.net/. route53 -> register domain
+* register domain on hostgator/godaddy/aws => check it on https://whois.net/. route53 -> register domain + add public certificate (certificate manager)
 * add free aws certificate to your domain
 * vpc endpoint vs private link
 * vpc endpoint gateway vs interface (for interface you need ENI)

@@ -51,14 +51,17 @@
 * 2.32 [AWS ElastiCache](#aws-elasticache)
 * 2.33 [AWS Systems Manager](#aws-systems-manager)
 * 2.34 [AWS Config](#aws-config)
-* 2.34 [AWS Aurora](#aws-aurora)
+* 2.35 [AWS Aurora](#aws-aurora)
+* 2.36 [AWS CloudTrail](#aws-cloudtrail)
+* 2.37 [AWS Certificate Manager](#aws-certificate-manager)
+* 2.38 [AWS Cloud9](#aws-cloud9)
 3. [Networking](#networking)
 * 3.1 [Hub, Switch, Router](#hub-switch-router)
 * 3.2 [Network Topology](#network-topology)
 * 3.3 [OSI Network Model](#osi-network-model)
 * 3.4 [High Level Protocols](#high-level-protocols)
 * 3.5 [Low Level Protocols](#low-level-protocols)
-* 3.6 [SOA record](#soa-record)
+* 3.6 [SOA and CAA](#soa-and-caa)
 * 3.7 [SSL vs TLS vs HTTPS](#ssl-vs-tls-vs-https)
 4. [Miscellaneous](#miscellaneous)
 * 4.1 [IaaC vs IaaS vs PaaS vs SaaS](#iaac-vs-iaas-vs-paas-vs-saas)
@@ -800,11 +803,66 @@ Config Rule - desired configuration of resource that is evaluated againt actual 
 Conformance Pack - collection of config rules.
 
 ###### AWS Aurora
-Aurora - myslq/postgres compatible aws database solution. It runs 5x faster than mysql and 3x faster than postgres. And cost 1/10 of similar solution.
+Aurora - mysql/postgres compatible (most app that works with mysql/postgres would switch with no problem to aurora) aws database solution. 
+Yet some features of mysql/postgres are not supported in aurora (like MyISAM storage engine).
+It runs 5x faster than mysql and 3x faster than postgres. And cost 1/10 of similar solution.
 It replicates 6  copy of itself in at least 3 AZ (2 copies in each az) - so it's highly available.
 Buckups and failover are done automatically. Self-healing storage - blocks are constantly checked and restored.
 Aurora serverlsess - cheap version of aurora, pay only for what you use (aurora start up/down, scale up/down automatically base on your load).
+You have 2 options to migrate to aurora
+* use `mysqldump/pg_dump`, export data from mysql/postgres, and import it into aurora
+* use RDS DB Snapshot migration
+Min storage is 10GB, incrementing by 10GB up to 64TB.
+There are 2 types of replica
+* aurora replica - aurora native same-region replica
+* mysql replica - cross-region replica based on mysql binlog
+Parallel Query - ability to distribute computational load across multiple instances.
 
+###### AWS CloudTrail
+CT - service that logs activity of your aws account (who made request, what params were passed, when and so on..). It's useful for compliance, when you need to ensure that only certain rules has ever been applied.
+On average event appear in CT after 15 min after api call was made.
+There are 3 types of logs
+* management events - api calls to modify aws resources (create ec2/s3 and so on...)
+* data events - api calls to modify actual data (s3 get/put/delete object + lambda calls)
+* insights events - CT use ML (Machine Learning) to determine any anomaly (like spike in some api calls) and notify you.
+
+By default logs stored for 90 days. If you need longer you should create trail. Trail stores data in s3, you have to analyze it yourself (usually using Athena).
+Trail can log events from one region or from all regions. Log file validation - guaranty that logs were not tampered with. Mare sure your s3 bucket has correct write policy, otherwise CT won't be able to store logs there.
+You can deliver CT logs to CloudWatch, in this case CT would deliver logs to s3 & CloudWatch logs.
+
+###### AWS Certificate Manager
+ACM (Amazon Certificate Manager) - service that allows you to create/deploy public/private SSL/TLS certificates.
+ACM removes the time-consuming manual process of purchasing, uploading, and renewing SSL/TLS certificates.
+There are 2 types of certificate
+* public - issued by public CA, trusted by all browser by default. 
+* private - issued by private CA. You can create your own private CA to manage all your private certificates. There are 3 modes to work
+    * you can delegate management to ACM
+    * you can manually distribute certificates to other services (like ec2), but ACM still renew your private certificates
+    * you have complete control
+    
+ACM Private CA (Certificate Authority) - managed by aws private CA where you can create your private certificates.
+Private CA handles the issuance, validation, and revocation of private certificates within a private network, compose of 2 
+* private certificate
+* CRL (Certificate Revocation List) - resources can check this list, that private certificate is valid one
+
+Difference between public/private CA
+* public - validate certificates in Internet. Can be used only with ELB/CloudFront/BeanStalk/API Gateway.
+* private - validate certificates in private network. Can be used with any aws service (ec2).
+Public certificate should have valid dns name, but private can have any desired name.
+Self-signed certificate - certificate generated manually without CA (so no way to check if it's revoked or valid).
+You can create certificate with multiple domain names or wildcard domain name (*.example.com).
+Since public certificates proves domain identity, Amazon must verify that you own domain before issuing certificate. You can also use email validation.
+DNS Validation - you modify your CNAME by adding some randomly generated token by ACM, that's how you prove that you own domain.
+If you want to automatically renew your cert you shouldn't remove CNAME token, otherwise in order to renew you would have to run dns validation again.
+Email validation - amazon sends email to the owner of domain that it obtains from whois service.
+For successful issuing of public certificate DNS CAA should be empty or include one of: amazon.com, amazontrust.com, awstrust.com, or amazonaws.com
+Public certs are free, but private CA - 400$ per month. You also pay for each private cert.
+
+###### AWS Cloud9
+Cloud9 - cloud based IDE (integrated development environment) where you can run and execute your code. It basically a separate ec2 where you can install programs, write/build code, and work just like with your laptop.
+So it basically IDE + linux. AWS CLI is preconfigured there. It's free but you pay for compute & storage, ec2+ebs. You can also connect cloud9 to on-premises server, in this case it's free.
+When you close cloud9, after 30 min it automatically stops ec2. If you open again it restarts it.
+Cloud9 provides aws lambda create/execute(locally)/deploy functions.
 
 ### Networking
 ###### Hub, Switch, Router
@@ -923,7 +981,7 @@ In this case we can divide it on min power 2.
 It encrypt packet, add new headers.
 * iSCSI (Internet Small Computer Systems Interface) - transport layer protocol, works above TCP. Initiator (server) packages SCSI commands into network packets, and sends it to Target (remote storage).
 
-###### SOA record
+###### SOA and CAA
 SOA (Start of Authority) - record in DNS containing administrative info about zone, email, last update time.
 
 You can get it by `dig SOA +multiline google.com`, email is `root@amazon.com`
@@ -936,6 +994,12 @@ amazon.com.		900 IN SOA dns-external-master.amazon.com. root.amazon.com. (
 				60         ; minimum (1 minute)
 				)
 
+```
+ 
+CAA (Certification Authority Authorization) - list of autorities who can issue certificates for this domain. You can run `dig CAA +multiline google.com`
+```
+;; ANSWER SECTION:
+google.com.		86400 IN CAA 0 issue "pki.goog"
 ```
 
 
