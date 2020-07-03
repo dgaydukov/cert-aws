@@ -32,34 +32,23 @@ There are 2 main reasons to get it.
 
 
 ### TODO
-* https://aws.amazon.com/codestar/faqs/
-* https://aws.amazon.com/rekognition/faqs
-* https://aws.amazon.com/ec2/autoscaling/faqs, scaling out/in/up - differences, asg vs elb
+* elb with auto-scaling group
 * condtitions in cloudformation template
+* cloudformation with s3 policies
 * lambda in private vpc (or not in vpc) access internet
 * ec2/elb healthcheck based on json value (status: up)
 * turn on vpc/subnet/eni flow logs and view it
+* cross-region vpc peering
 * create new NACL group (VPC=>Security=>Network ACLs) for public subnet (deny ssh in case someone misconfigure SG). subnet can be associated with 1 NACL at a time
-* cloudformation with s3 policies
-* run ec2 without ebs
-* snapshot-vs-ami for cross-region ec2 relocation. ami = snapshot + ec2 settings (launch permissions, ebs mapping)
 * ec2 with public ip => reboot => check ip change. Use elastic ip (it should stay the same). Don't forget to remove after terminate ec2.
 * vpc endpoint (access s3 from private ec2 that's not connected to nat gateway, with public https url -> aws will determine that you are using endpoint and will direct your traffic)
-* elb with auto-scaling group
-```
-#!/usr/bin/env bash
-sudo yum install httpd -y
-sudo service httpd start
-```
-For httpd to work you should supply root user, so `su ec2-user` is a must
-* route53 failover
-* cross-region vpc peering
 * vpc to on-premise (imitated by vpc + openswan) vpn connection (site-to-site vpn)
 * rds read replica (cross-region) vs multi-az failover
-* can you see building blocks (ec2/rds/elb) when using beanstalk
+* can you see building blocks (ec2/rds/elb) when using beanstalk + try codestar
 * cognito + api gateway + s3 serverless app (call cognito from java code from local machine vs from ec2)
 * register domain on hostgator/godaddy/aws => check it on https://whois.net/. route53 -> register domain + add public certificate (certificate manager)
 * add free aws certificate to your domain
+* route53 failover
 * vpc endpoint vs private link
 * vpc endpoint gateway vs interface (for interface you need ENI)
 * transit vpc

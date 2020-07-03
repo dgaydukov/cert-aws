@@ -19,7 +19,7 @@
 * 2.5 [AWS Glacier](#aws-glacier)
 * 2.6 [AWS EFS](#aws-efs)
 * 2.7 [AWS EBS](#aws-ebs)
-* 2.8 [AWS EC2 local instance](#aws-ec2-local-instance)
+* 2.8 [Instance Store](#aws-ec2-instance-store)
 * 2.9 [AWS CloudFront](#aws-cloudfront)
 * 2.10 [AWS Kinesis](#aws-kinesis)
 * 2.10 [AWS Lambda](#aws-lambda)
@@ -55,6 +55,9 @@
 * 2.36 [AWS CloudTrail](#aws-cloudtrail)
 * 2.37 [AWS Certificate Manager](#aws-certificate-manager)
 * 2.38 [AWS Cloud9](#aws-cloud9)
+* 2.39 [AWS CodeStar](#aws-codestar)
+* 2.40 [AWS Rekognition](#aws-rekognition)
+* 2.41 [AWS EC2 Auto Scaling](#aws-ec2-auto-scaling)
 3. [Networking](#networking)
 * 3.1 [Hub, Switch, Router](#hub-switch-router)
 * 3.2 [Network Topology](#network-topology)
@@ -864,6 +867,50 @@ So it basically IDE + linux. AWS CLI is preconfigured there. It's free but you p
 When you close cloud9, after 30 min it automatically stops ec2. If you open again it restarts it.
 Cloud9 provides aws lambda create/execute(locally)/deploy functions.
 
+
+###### AWS CodeStar
+CodeStar - cloud based development service that allows you to build/deploy your code in aws. You can quickly set up continuous delivery.
+You also got integration with jira out of the box. It's free, you pay for underlying resources (ec2, lambda, s3).
+You can use project dashboard to manage releases and see most recent activity. 
+You can start cloud9 directly from CodeStar, and any code you commit in cloud9 automatically goes to CodeStart pipeline and deployed to ec2/beanstalk/s3
+
+###### AWS Rekognition
+Rekognition - managed service that allows you to add powerful visual analysis to your app
+* image - you can search/verify millions of images quickly (detects objects/scene/faces, search & compare faces, recognize texts or celebrities)
+* video - you can extract motion pics from video/streams and analyse them (detect activity or inappropriate content, understand moving of people)
+Rekognition using deep learning algos to determine image/video patterns. It is pre-trained for image and video recognition tasks (so you don't have to be ML expert to use it).
+You can specify conditions (discard results with low confidence score) under which image would go for human moderation.
+Terminology
+* label - object/concept found in image based on description (for example, human/face/sun and so on..)
+* confidence score - number 0-100 that indicates the probability that prediction is correct
+
+###### AWS EC2 Auto Scaling
+* scale up - remove current instance and create new one with bigger compute/memory capacity
+* scale out - add one or more instances
+* scale down - remove current instance and create new one with lesser compute/memory capacity
+* scale in - remove one or more instances
+
+AS (Auto Scaling) - managed service that can create/delete ec2 instances to ensure that you always have a suitable number of running ec2 according to your load.
+So when you need to manage a fleet of ec2 you should use AS, cause it helps you
+* scale out - when load increases AS will create new ec2 instances
+* scale in - once load is low AS will terminate redundant ec2
+* check health - in case some ec2 is unhealthy for any reason, AS will terminate it and create new one
+
+Fleet management - replacing of unhealthy instances
+Dynamic scaling - scale up/down number of instances based on some metric (cpu/memory utilization)
+Target tracking - you select metric and AS automatically track this metric and scale your fleet
+
+ASG (Auto Scaling group) - a collection of same ec2 managed by AS. if you delete ASG all instances of it's type would be deleted.
+You can configure SNS to get notification when your ASG scales out/in or replace unhealthy instance.
+LC (launch configuration) - template that ASG uses to launch new instances. One ASG use one LC. You can't modify LC, if you need to change some params you should create new LC and update your ASG.
+ASG can launch your instances across multiple AZ but only within same region.
+
+lifecycle hooks - you can execute some logic after AS create new instance (useful when you don't have ready to use AMI and need to tune instance after creation).
+Unhealty instance can be determine by 2 healthchecks
+* elb healthchek - you should use it if you use elb
+* ec2 healthcheck - use it if you don't use elb
+
+
 ### Networking
 ###### Hub, Switch, Router
 * Hub (концентратор) - device that connects multiple computers in LAN (local area network) and propagate any packet sent from one computer to all other. Today mostly outdated, people use switch instead. Works on the physical layer (Layer 1) of OSI. 
@@ -1055,16 +1102,23 @@ Moreover it can be expensive in certain cases. Consider situation where you have
 For this you need NAT, cause your lambda can't just get internet access from private subnet inside VPC. So you go and create nat gateway, and your lambda can now access internet.
 But in the end of the month you get a bill for 50 cents for lambda + 35$ for Nat Gateway. The reason is that Nat Gateway is prices per hour (0.045 on average, 0.065 for HK) + you also paying per GB transfer through your Nat, 
 but for the example let's imagine that you transfer tiny amount of 100mb per month. So instead of having cheap serverless you pay 35.5$ per month, just your lambda sometime can get internet access.
-When [aws support got pressed](https://forums.aws.amazon.com/thread.jspa?threadID=234959&start=0&tstart=0) over the issue, the proposed instead of Nat Gateway create custom Nat Instance (ec2 running with nat), and it would cost only 10$.
+When [aws support got pressed](https://forums.aws.amazon.com/thread.jspa?threadID=234959) over the issue, the proposed instead of Nat Gateway create custom Nat Instance (ec2 running with nat), and it would cost only 10$.
 But this idea to run additional ec2 to have internet access for single lambda upends serverless. Why do you need lambdas in the first place, when you can just put them into ec2 itself?
 
 
 ###### AMI vs Snapshot
-AMI is region specific (so to use it from another region you should copy it) and same ami will have different AMI_ID in different regions
+AMI is region specific (so to use it from another region you should copy it) and same ami will have different AMI_ID in different regions.
+There are 2 types of AMI
+* instance-store - copy of the root instance-store volume + metadata in s3
+* ebs-boot - ebs snapshot + metadata (architecture, kernel, AMI name, description, block device mappings)
+Most ami are of second type (ebs-boot). If you need to launch new ec2 from snapshot, you should first convert snapshot into ami and then just launch ami.
 
 ###### Useful Linux Commands
 * List all userNames `cut -d: -f1 /etc/passwd`
 * Get all groups by userName `groups uName`
 * Get userId `id -u uName`
 * Get groupId by groupName `cut -d: -f3 < <(getent group gName)`
+* Get groupId by groupName `cut -d: -f3 < <(getent group gName)`
+* Get number of cores `nproc` - total number of cores, `lscpu` - total info about cpu cores
+* Imitate processor load `stress --cpu 8 --timeout 30` - load 8 cores for 30 sec
 
