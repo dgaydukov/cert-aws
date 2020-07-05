@@ -19,7 +19,7 @@ There are 2 main reasons to get it.
 
 
 ### Contents
-* [Solutions Architect Tips](https://github.com/dgaydukov/cert-aws-sa/blob/master/files/sa.md)
+* [Solutions Architect Tips](htгигtps://github.com/dgaydukov/cert-aws-sa/blob/master/files/sa.md)
 
 
 ### Useful Links
@@ -32,12 +32,18 @@ There are 2 main reasons to get it.
 
 
 ### TODO
+* can 2 ec2 with same SG talk with each other if SG has no inbound/outbound rules
+* stateful-vs-stateless SG (try stateful SG rule, but turn off all outbound traffic)
+* investigate 0.5$ for record set (we deleted it after 30 min)
+* lambda install dependencies from it (export & build in cloud9)
+* mount file gateway to ec2 the same way we are mounting efs
 * elb with auto-scaling group
 * condtitions in cloudformation template
 * cloudformation with s3 policies
 * lambda in private vpc (or not in vpc) access internet
 * ec2/elb healthcheck based on json value (status: up)
 * turn on vpc/subnet/eni flow logs and view it
+* install & use wireshark
 * cross-region vpc peering
 * create new NACL group (VPC=>Security=>Network ACLs) for public subnet (deny ssh in case someone misconfigure SG). subnet can be associated with 1 NACL at a time
 * ec2 with public ip => reboot => check ip change. Use elastic ip (it should stay the same). Don't forget to remove after terminate ec2.

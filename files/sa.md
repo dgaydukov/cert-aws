@@ -11,6 +11,7 @@
 * 1.7 [Egress vs Ingress](#egress-vs-ingress)
 * 1.8 [AWS CLI](#aws-cli)
 * 1.9 [Bastion vs JumpServer](#bastion-vs-jumpserver)
+* 1.9 [Disaster Recovery](#disaster-recovery)
 2. [Services](#services)
 * 2.1 [AWS Corretto](#aws-corretto)
 * 2.2 [AWS CloudFormation](#aws-cloudformation)
@@ -38,7 +39,7 @@
 * 2.22 [Elastic Load Balancing](#elastic-load-balancing)
 * 2.23 [AWS CloudWatch](#aws-cloudwatch)
 * 2.23 [AWS Key Management Service](#aws-key-management-service)
-* 2.23 [AWS Route 53](#aws-route-53)
+* 2.23 [AWS Route53](#aws-route53)
 * 2.24 [AWS RDS](#aws-rds)
 * 2.25 [AWS SQS](#aws-sqs)
 * 2.26 [AWS API Gateway](#aws-api-gateway)
@@ -205,6 +206,17 @@ chmod 400 mykey.pem
 ssh -i mykey.pem ec2-user@10.100.2.33
 ping google.com
 ```
+
+###### Disaster Recovery
+There are 2 main concepts of DR
+* RTO (Recovery Time Objective) - how fast can you recover your infra (if RTО is 5 hours => at 2 am AZ was flooded, at 7 am you have fully running infra in another region)
+* RPO (Recovery Point Objective) - to which point can you recover (you make backups every hour, at 1.30 AZ was flooded, so your RPO - 1 hour)
+
+There are 2 types of DR in aws
+* backup store - you store all you backups if tape (e.g. using iron mountain)
+* pilot light - you have replica of your main infra, but it always down. So when disaster happen you just start everything. White it's down every 1-3 month you update it (run ec2, install patches..)
+* warm standby - constantly running scaled in version of your main infra
+* multi site
 
 ### Services
 ###### AWS Corretto 
@@ -631,7 +643,7 @@ You can import only symmetric keys. You can't export CMK symmetric key or asymme
 
 
 
-###### AWS Route 53
+###### AWS Route53
 Route53 - is amazon DNS service that help to transform domain name into IP address. It's called 53, cause 53 - port of DNS.
 You can buy hostname from any provider and register it within Route53, after this Route53 gives you 4 TLD (Top-Level Domain) that you put into your hostname provider,
 so end user will request your domain, it will got to your provider, and from there to aws. Route53 supports wildcards (subdomains).
@@ -650,6 +662,8 @@ then traffic goes according to these drawn by you borders
 traffic goes to random one out of other 7
 * Weighted - 90% of traffic to one ec2, 10 to second
 
+Hosted zone - route53 concept of domain. For each of your domain you have 1 hosted zone where you can have records.
+Records set - subdomains of your hosted zone. You can easily route any record set to any aws services (s3/elb/cloudFront)
 
 
 
@@ -676,6 +690,8 @@ RDS Proxy - database proxy that helps
 * reduce db failover time for 66%
 * enforce IAM access to db
 
+When you reboot you can option to restart rds in new AZ.
+
 
 ###### AWS SQS
 SQS (Simple Queue Service) - managed service that provide publisher/subscriber (queue) model. There are 2 types
@@ -689,7 +705,7 @@ If queue is empty
 * short polling (default) - returns immediately with no results. Only possible way if single thread poll multiple queues, in this case long polling for one empty queue would block other queues, but it generally bad design.
 * long polling - wait till message got into queue, or polling timeout (by default 20 sec) expires (save SQS cost, cause reduce number of empty receives). It's better to always use this type of polling.
 Message retention can be configured from 1 min to 14 days (by default - 4 days).
-Visibility Timeout (0 sec to 12 hours, default - 30sec) - once you app consume a message it becomes invisible to others. But until your app notify queue that it processed it
+Visibility Timeout (0 sec    to 12 hours, default - 30sec) - once you app consume a message it becomes invisible to others. But until your app notify queue that it processed it
 message not deleted. So this timeout - is how long queue can wait.
 
 ###### AWS API Gateway
@@ -730,14 +746,14 @@ There are 3 types
 * File - store & retrieve files in S3 using NFS(Network File System)/SMB(Server Message Block) (these objects can also be directly accessed from S3). 
 You app read/write files using storage gateways as file server, which in turn translate it into S3 read/write requests.
 You should have only storage gateway to be able to modify s3, otherwise if you overwrite file added by gateway, you would get unpredictable behavior when gateway try to read it.
-File storage gateway use local disk for 2 purposes: 
-* save uploaded files there and asynchronously upload them to s3
-* store frequently accessed files for low-latency access (cache)
+*File storage gateway (just like efs but only for s3, but you mount it the same way as efs) use local disk for 2 purposes: 
+    * save uploaded files there and asynchronously upload them to s3
+    * store frequently accessed files for low-latency access (cache)
 The size of such disk should depend upon max possible file uploaded and how much data you want to store in cache
 * Tape - cloud base VTL (Virtual Tape Library), used by your backup apps. Tape translate your app requests into Glacier.
 * Volume - provide iSCSI target, where you can create block storage and mount it to on-premise/EC2 instances.
     * cached model - primary data in S3, frequently accessed data in on-premise.
-    * stored mode - primary data in on-premise and in s3 full backup.
+    * stored mode - primary data in on-premise, but you have snapshots in s3 (data transfer is async).
 Volume Gateways compress data before that data is transferred to AWS and while stored in AWS. Although data stored in s3, you can't directly access it through s3 api.
 Storage Gateway optimize data transfer to cloud by using
 * intelligent buffering
@@ -1027,6 +1043,16 @@ In this case we can divide it on min power 2.
 * VPN (Virtual Private Network) - encrypted connection(also called tunnel) over public network (usually Internet) between 2 or more private networks.
 It encrypt packet, add new headers.
 * iSCSI (Internet Small Computer Systems Interface) - transport layer protocol, works above TCP. Initiator (server) packages SCSI commands into network packets, and sends it to Target (remote storage).
+
+For all subnets you shouldn't use first & last address
+* first address - network identification (refers to the subnet itself and is used for routing purposes)
+Look at the binary representations for the ip address and the subnet mask. In the process of determining the route they are binary combined with AND. 1&0=0, 1&1=1, 0&0=0. The network part of the address remains unaffected, but the host part becomes all-zero. If you could use the .0 address for a host too, how would you different it from the net?
+* last address - broadcast (network devices use it to send messages to all other devices in this network)
+So for /24 network you can have totally 256-2 = 254 IP addresses.
+But in cloud (every cloud, not just aws) 3 IP addresses also would be gone (router, DHCP, DNS) so totally you have 254-3 = 251.
+But in real network you probably gonna have this 3 ip taken also (but you can also host them in one machine)
+
+
 
 ###### SOA and CAA
 SOA (Start of Authority) - record in DNS containing administrative info about zone, email, last update time.
