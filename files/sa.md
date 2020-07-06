@@ -414,8 +414,8 @@ AntiPattern
 * Stateful Applications (Lambda is stateless, if you need state it's better to create app in java/node.js and deploy it ot EC2 + RDS/DynamoDb)
 Cold Start - when you first run your lambda and aws search for idle server and run your lambda on this sever, delay may happen. When you run it for
 second and consecutive time, there is no delay.
-By default lambda runs in no VPC (so it has internet access), if you want your lambda to talk with other services you should put it into 
-VPC, if your lambda need internet access you have to configure nat for it.
+By default lambda runs in no VPC (so it has internet access), if you want your lambda to talk with other services you should put it into VPC, if your lambda need internet access you have to configure nat for it.
+Lambda doesn't run `npm install`. So if you add new package you have to build it locally, create `.zip` file with your project (including `node_modules`) and upload it to aws lambda.
 
 ###### AWS Step Functions
 Step Functions - visual tool that allows you to build complex logic based on lambda and EC2 calls.
@@ -552,10 +552,12 @@ EC2-to-EC2 communication through public IP
 Security groups (SG) vs ACL
 * SG operate at instance level, specify which traffic is allowed to/from EC2
 * ACL operates at subnet level and evaluate traffic that enter/exit subnet. Don't filter traffic inside same subnet.
-* ACL - stateless filtering, SG - stateful (if you send request from your ec2 you will got response even if SG don't have inbound rule for this) filtering
+* ACL - stateless filtering, SG - stateful filtering
 You can't block specific IP with SG, you need to use NACL
+Stateful - if you send request from your ec2 you will got response even if SG donesn't have any outbound rules.
 
 When you create VPC, default SG created automatically. It allows inbound traffic from instances with same SG (source - SG_ID), and all outbound traffic.
+So if you need 2 ec2 to talk with each other you can assign both of them same SG where source is ID of this SG - this means traffic allowed from any instance of the same SG
 
 To monitor traffic you can use
 * VPC traffic mirroring (it copies traffic and send it to NLB with a UDP listener)

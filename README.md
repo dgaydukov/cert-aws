@@ -32,10 +32,6 @@ There are 2 main reasons to get it.
 
 
 ### TODO
-* can 2 ec2 with same SG talk with each other if SG has no inbound/outbound rules
-* stateful-vs-stateless SG (try stateful SG rule, but turn off all outbound traffic)
-* investigate 0.5$ for record set (we deleted it after 30 min)
-* lambda install dependencies from it (export & build in cloud9)
 * mount file gateway to ec2 the same way we are mounting efs
 * elb with auto-scaling group
 * condtitions in cloudformation template
