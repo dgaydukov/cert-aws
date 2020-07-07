@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: 2010-09-09
 
 # File Gateway
-# !imprtant => There is no template for Storage Gateway, so you will have to create it manually through the console
+# !important => There is no template for Storage Gateway, so you will have to create it manually through the console
 
 Resources:
 
@@ -106,6 +106,14 @@ Resources:
         - IpProtocol: tcp
           FromPort: 2049
           ToPort: 2049
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 111
+          ToPort: 111
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 20048
+          ToPort: 20048
           CidrIp: 0.0.0.0/0
       Tags:
         - Key: Name

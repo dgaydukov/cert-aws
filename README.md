@@ -32,11 +32,10 @@ There are 2 main reasons to get it.
 
 
 ### TODO
-* mount file gateway to ec2 the same way we are mounting efs
-* elb with auto-scaling group
 * condtitions in cloudformation template
 * cloudformation with s3 policies
-* lambda in private vpc (or not in vpc) access internet
+* elb with auto-scaling group
+* close some url pattern (/internal) on elb level (by SG, allow only from inside vpc)
 * ec2/elb healthcheck based on json value (status: up)
 * turn on vpc/subnet/eni flow logs and view it
 * install & use wireshark
@@ -59,7 +58,6 @@ There are 2 main reasons to get it.
 * client vpn (connect to vpc from you remote laptop)
 * site-to-site vpn
 * direct connect
-* close some url pattern (/internal) on elb level (by SG, allow only from inside vpc)
 * ec2 app logs to cloudwatch => create custom metrics based on it
 
 

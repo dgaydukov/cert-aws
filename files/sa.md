@@ -9,8 +9,7 @@
 * 1.5 [AWS Tagging](#aws-tagging)
 * 1.6 [AWS LoadBalancer vs App LoadBalancer](#aws-loadbalancer-vs-app-loadbalancer)
 * 1.7 [Egress vs Ingress](#egress-vs-ingress)
-* 1.8 [AWS CLI](#aws-cli)
-* 1.9 [Bastion vs JumpServer](#bastion-vs-jumpserver)
+* 1.8 [Bastion vs JumpServer](#bastion-vs-jumpserver)
 * 1.9 [Disaster Recovery](#disaster-recovery)
 2. [Services](#services)
 * 2.1 [AWS Corretto](#aws-corretto)
@@ -73,6 +72,7 @@
 * 4.3 [Docker and Kubernetes](#docker-and-kubernetes)
 * 4.4 [Pure Serverless](#pure-serverless)
 * 4.5 [AMI vs Snapshot](#ami-vs-snapshot)
+* 4.5 [AWS CLI](#aws-cli)
 * 4.6 [Useful Linux Commands](#useful-linux-commands)
 
 
@@ -171,26 +171,6 @@ Traffic often is translated using NAT in and out of a private network like the c
 So to simplify egress- response, ingress - request.
 
 
-###### AWS CLI
-CLI (Command Line Interface) - can be useful to quickly automate some aws manual tasks.
-First you need to add aws credentials `aws configure --profile awscert`, after you can run commands like `aws s3 ls --profile awscert`
-You can get accountId `aws sts get-caller-identity --profile=awscert`
-Create presign s3 file 
-```
-aws s3 cp cloudformation/vpc/nested/vpc-bastion.yml s3://my-cloudformation-template-bucket --profile=awscert
-aws s3 cp cloudformation/vpc/nested/ec2-bastion.yml s3://my-cloudformation-template-bucket --profile=awscert
-
-# make file public for 30 sec
-aws s3 presign s3://my-cloudformation-template-example/data.txt --expires-in 30 --profile=awscert
-```
-
-* CloudFormation example
-```
-# create stack
-aws cloudformation create-stack --stack-name=stack1 --template-body file://./cloudformation/vpc-bastion-nat-instance.yml --profile=awscert --region=us-east-1
-aws cloudformation update-stack --stack-name=stack1 --template-body file://./cloudformation/vpc-bastion-nat-instance.yml --profile=awscert --region=us-east-1
-```
-
 ###### Bastion vs JumpServer
 They both serve the same purpose - to separate private network from public traffic. Usually you connect to it through SSH and from there you can connect to any private machine in the network.
 Bastion - outside your security zone (DNS/VPN/FTP server)
@@ -239,6 +219,7 @@ Supported formats are JSON/YAML. Resource naming is supported not for all produc
 To assign real name CloudFormation use stack + logical name, this ensures unique names.
 You can add deletion policy (for example you delete stack and want to preserve s3 buckets and take RDS snapshot).
 CloudFormation Registry - managed service that lets you register, use, and discover AWS and third party resource providers.
+You can use conditions inside templates (for example create ec2 based on input params).
 
 
 ###### AWS IAM
@@ -1140,6 +1121,26 @@ There are 2 types of AMI
 * instance-store - copy of the root instance-store volume + metadata in s3
 * ebs-boot - ebs snapshot + metadata (architecture, kernel, AMI name, description, block device mappings)
 Most ami are of second type (ebs-boot). If you need to launch new ec2 from snapshot, you should first convert snapshot into ami and then just launch ami.
+
+###### AWS CLI
+CLI (Command Line Interface) - can be useful to quickly automate some aws manual tasks.
+First you need to add aws credentials `aws configure --profile awscert`, after you can run commands like `aws s3 ls --profile awscert`
+You can get accountId `aws sts get-caller-identity --profile=awscert`
+Create presign s3 file 
+```
+aws s3 cp cloudformation/vpc/nested/vpc-bastion.yml s3://my-cloudformation-template-bucket --profile=awscert
+aws s3 cp cloudformation/vpc/nested/ec2-bastion.yml s3://my-cloudformation-template-bucket --profile=awscert
+
+# make file public for 30 sec
+aws s3 presign s3://my-cloudformation-template-example/data.txt --expires-in 30 --profile=awscert
+```
+
+* CloudFormation example
+```
+# create stack
+aws cloudformation create-stack --stack-name=mystack --template-body=file://cloudformation/condition.yml --profile=awssa --region=us-east-1
+aws cloudformation create-stack --stack-name=mystack --template-body=file://cloudformation/condition.yml --parameters=ParameterKey=Env,ParameterValue=prod --profile=awssa --region=us-east-1
+```
 
 ###### Useful Linux Commands
 * List all userNames `cut -d: -f1 /etc/passwd`
