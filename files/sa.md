@@ -67,7 +67,7 @@
 * 3.6 [SOA and CAA](#soa-and-caa)
 * 3.7 [SSL vs TLS vs HTTPS](#ssl-vs-tls-vs-https)
 4. [Miscellaneous](#miscellaneous)
-* 4.1 [IaaC vs IaaS vs PaaS vs SaaS](#iaac-vs-iaas-vs-paas-vs-saas)
+* 4.1 [SaaS vs PaaS vs IaaS/IAC](#saas-vs-paas-vs-iaasiac)
 * 4.2 [Virtualization and Containerization](#virtualization-and-containerization)
 * 4.3 [Docker and Kubernetes](#docker-and-kubernetes)
 * 4.4 [Pure Serverless](#pure-serverless)
@@ -199,7 +199,7 @@ There are 2 types of DR in aws
 * multi site
 
 ### Services
-###### AWS Corretto 
+###### Corretto 
 [AWS Corretto](https://aws.amazon.com/corretto/) - free amazon implementation of Java SE specification.
 As you know there are confusion around java SE. Oracle provides 2 java se implementations
 * OpenJDK - free
@@ -210,7 +210,7 @@ Yet there are some features in OpenJDK that can be of charge. that's why you may
 * Azul Zulu
 If you are still confuse you can take a look at [java is still free](https://www.infoq.com/news/2018/09/java-support-options-sept18/)
 
-###### AWS CloudFormation 
+###### CloudFormation 
 It's aws solution to IAC. There are 2 concepts
 * Template - json/yaml file with desired infrastructure
 * Stack - template deployed to cloud (you can run commands like describe/list/create/update stack). If you create/update stack and errors occur all would be rolled back and you would be notified by SNS
@@ -221,8 +221,17 @@ You can add deletion policy (for example you delete stack and want to preserve s
 CloudFormation Registry - managed service that lets you register, use, and discover AWS and third party resource providers.
 You can use conditions inside templates (for example create ec2 based on input params).
 
+Best practice is to divide your infra into several stacks. There are 2 approaches
+* multi-layered architecture - horizontal structure where one layer depends upon another by using nested stacks (you divide all your services into 3 stacks - networking/computing/rds => computing layer depends on networking, cause you create ec2 instances in some vpc and subnet)
+* SOA (service-oriented architecture) - you stacks are separated not by technical layers but by services (each service has a separate stack with it's own networking/computing/rds).
 
-###### AWS IAM
+Layered Architecture usually has 3 layers.
+* Presentations (controllers)
+* Business Logic (services)
+* Database (models/domain objects/dto)
+Presentation depends(can access) on Business Logic and it depends(can access) on Database, but no the other way around.
+
+###### IAM
 * In case you have one user who requires access to a specific resource, as a best practice, you should create a new AWS group for that access (in case new user would appear you would just assign him to this group)
 * EC2 role access - you can add (for example bucket write access) role to ec2 instance
 * Cross-account access - you can set up access for account B from account A
@@ -583,8 +592,8 @@ DMS use SCT (Schema Conversion Tool) for converting between existing schemas.
 
 
 ###### Elastic Load Balancing
-ELB - is a proxy that accept traffic (using listeners) from clients and route it to targets (usually EC2).
-Listener - is a protocol + port for which you got incomming requests.
+ELB - is a proxy that accept traffic (using listeners) from clients and route it to targets (usually EC2), so it basically distribute your traffic between different ec2 instances.
+Listener - is a protocol + port for which you got incoming requests.
 There are 3 types of elb:
 * Application LB - if you need to balance http/https. Also supports websocket & secure websocket
 * Network LB - if you need to balance TCP/UDP
@@ -606,6 +615,10 @@ It can also be enabled for ALB (for target group not for single ec2). Not availa
 XFF (X-Forward-For) - header of original IP address of user (cause your ec2 would see IP of load balancer)
 
 Health Check - you can monitor health of ec2 and always redirect user to healthy ec2 (ELB doesn't kill unhealthy ec2)
+There are 3 types of health checks
+* EC2 health check - watches for instance availability from hypervisor/networking point of view. For example, in case of a hardware problem, the check will fail. Also, if an instance was misconfigured and doesn't respond to network requests, it will be marked as faulty.
+* ELB health check verifies that a specified TCP port on an instance is accepting connections OR a specified web page returns 2xx code. Thus ELB health checks are a little bit smarter and verify that actual app works instead of verifying that just an instance works.
+* Custom health check. If your application can't be checked by simple HTTP request and requires advanced test logic, you can implement a custom check in your code and set instance health though API
 
 ALB Request Routing - you can redirect user to different ec2 based on request attributes (subdomains, headers, url params..)
 

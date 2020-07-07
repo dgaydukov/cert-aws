@@ -45,8 +45,7 @@ There are 2 main reasons to get it.
 * rds read replica (cross-region) vs multi-az failover
 * can you see building blocks (ec2/rds/elb) when using beanstalk + try codestar
 * cognito + api gateway + s3 serverless app (call cognito from java code from local machine vs from ec2)
-* register domain on hostgator/godaddy/aws => check it on https://whois.net/. route53 -> register domain + add public certificate (certificate manager)
-* add free aws certificate to your domain
+* create s3 staic site + add free aws certificate to your domain
 * route53 failover
 * vpc endpoint vs private link
 * vpc endpoint gateway vs interface (for interface you need ENI)
