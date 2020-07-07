@@ -12,52 +12,52 @@
 * 1.8 [Bastion vs JumpServer](#bastion-vs-jumpserver)
 * 1.9 [Disaster Recovery](#disaster-recovery)
 2. [Services](#services)
-* 2.1 [AWS Corretto](#aws-corretto)
-* 2.2 [AWS CloudFormation](#aws-cloudformation)
-* 2.3 [AWS IAM](#aws-iam)
-* 2.4 [AWS S3](#aws-s3)
-* 2.5 [AWS Glacier](#aws-glacier)
-* 2.6 [AWS EFS](#aws-efs)
-* 2.7 [AWS EBS](#aws-ebs)
-* 2.8 [Instance Store](#aws-ec2-instance-store)
-* 2.9 [AWS CloudFront](#aws-cloudfront)
-* 2.10 [AWS Kinesis](#aws-kinesis)
-* 2.10 [AWS Lambda](#aws-lambda)
-* 2.11 [AWS Step Functions](#aws-step-functions)
-* 2.12 [AWS EMR](#aws-emr)
-* 2.13 [AWS Glue](#aws-glue)
-* 2.14 [AWS DynamoDB](#aws-dynamodb)
-* 2.15 [AWS QuickSight](#aws-quicksight)
-* 2.16 [AWS EC2](#aws-ec2)
-* 2.17 [AWS Athena](#aws-athena)
-* 2.18 [AWS Organizations](#aws-organizations)
-* 2.19 [AWS Well-Architected Tool](#aws-well-architected-tool)
-* 2.20 [AWS VPC](#aws-vpc)
-* 2.21 [AWS Elastic Beanstalk](#aws-elastic-beanstalk)
-* 2.22 [AWS Database Migration Service](#aws-database-migration-service)
+* 2.1 [Corretto](#corretto)
+* 2.2 [CloudFormation](#cloudformation)
+* 2.3 [IAM](#iam)
+* 2.4 [S3](#s3)
+* 2.5 [Glacier](#glacier)
+* 2.6 [EFS](#efs)
+* 2.7 [EBS](#ebs)
+* 2.8 [Instance Store](#ec2-instance-store)
+* 2.9 [CloudFront](#cloudfront)
+* 2.10 [Kinesis](#kinesis)
+* 2.10 [Lambda](#lambda)
+* 2.11 [Step Functions](#step-functions)
+* 2.12 [EMR](#emr)
+* 2.13 [Glue](#glue)
+* 2.14 [DynamoDB](#dynamodb)
+* 2.15 [QuickSight](#quicksight)
+* 2.16 [EC2](#ec2)
+* 2.17 [Athena](#athena)
+* 2.18 [Organizations](#organizations)
+* 2.19 [Well-Architected Tool](#well-architected-tool)
+* 2.20 [VPC](#vpc)
+* 2.21 [Elastic Beanstalk](#elastic-beanstalk)
+* 2.22 [Database Migration Service](#database-migration-service)
 * 2.22 [Elastic Load Balancing](#elastic-load-balancing)
-* 2.23 [AWS CloudWatch](#aws-cloudwatch)
-* 2.23 [AWS Key Management Service](#aws-key-management-service)
-* 2.23 [AWS Route53](#aws-route53)
-* 2.24 [AWS RDS](#aws-rds)
-* 2.25 [AWS SQS](#aws-sqs)
-* 2.26 [AWS API Gateway](#aws-api-gateway)
-* 2.26 [AWS Cognito](#aws-cognito)
-* 2.27 [AWS CodePipeline(CodeCommit/CodeBuild/CodeDeploy)](#aws-codepipelinecodecommitcodebuildcodedeploy)
-* 2.28 [AWS Storage Gateway](#aws-storage-gateway)
-* 2.29 [AWS ECS](#aws-ecs)
-* 2.30 [AWS EKS](#aws-eks)
-* 2.31 [AWS Fargate](#aws-fargate)
-* 2.32 [AWS ElastiCache](#aws-elasticache)
-* 2.33 [AWS Systems Manager](#aws-systems-manager)
-* 2.34 [AWS Config](#aws-config)
-* 2.35 [AWS Aurora](#aws-aurora)
-* 2.36 [AWS CloudTrail](#aws-cloudtrail)
-* 2.37 [AWS Certificate Manager](#aws-certificate-manager)
-* 2.38 [AWS Cloud9](#aws-cloud9)
-* 2.39 [AWS CodeStar](#aws-codestar)
-* 2.40 [AWS Rekognition](#aws-rekognition)
-* 2.41 [AWS EC2 Auto Scaling](#aws-ec2-auto-scaling)
+* 2.23 [CloudWatch](#cloudwatch)
+* 2.23 [Key Management Service](#key-management-service)
+* 2.23 [Route53](#route53)
+* 2.24 [RDS](#rds)
+* 2.25 [SQS](#sqs)
+* 2.26 [API Gateway](#api-gateway)
+* 2.26 [Cognito](#cognito)
+* 2.27 [CodePipeline(CodeCommit/CodeBuild/CodeDeploy)](#codepipelinecodecommitcodebuildcodedeploy)
+* 2.28 [Storage Gateway](#storage-gateway)
+* 2.29 [ECS](#ecs)
+* 2.30 [EKS](#eks)
+* 2.31 [Fargate](#fargate)
+* 2.32 [ElastiCache](#elasticache)
+* 2.33 [Systems Manager](#systems-manager)
+* 2.34 [Config](#config)
+* 2.35 [Aurora](#aurora)
+* 2.36 [CloudTrail](#cloudtrail)
+* 2.37 [Certificate Manager](#certificate-manager)
+* 2.38 [Cloud9](#cloud9)
+* 2.39 [CodeStar](#codestar)
+* 2.40 [Rekognition](#rekognition)
+* 2.41 [EC2 Auto Scaling](#ec2-auto-scaling)
 3. [Networking](#networking)
 * 3.1 [Hub, Switch, Router](#hub-switch-router)
 * 3.2 [Network Topology](#network-topology)
@@ -236,7 +236,7 @@ You can define permissions by assigning policies to group/user. There are 2 type
 * managed by you - custom policies created by end user
 
 
-###### AWS S3
+###### S3
 S3 (Simple Storage Service) used for:
 * store and distribute static web content (cause each object in s3 has unique http url)
 * origin store for CDN (content delivery network) like aws CloudFront
@@ -277,7 +277,7 @@ Presign url - use cli to create url with key, that is accessible for limited tim
 Interface is global, so you assign a region to a bucket, but you see all your buckets across all regions
 
 
-###### AWS Glacier
+###### Glacier
 Glacier - low-cost tape-drive storage value with  $0.007 per gigabyte per month. Used to store backups that you don't need frequently.
 Access to data can take from few minutes to a few hours. You store data as archives.
 
@@ -290,7 +290,7 @@ Just like s3 you can use REST API to work with glacier
 You can set up s3 lifecycle, after which objects from s3 would be moved to glacier (but to view them you should use s3 api, if you use glacier api you won't see this objects)
 You can retrieve up to 5% of your average monthly storage for free each month (rated daily), above this you are charged additional fee
 
-###### AWS EFS
+###### EFS
 EFS (Elastic File System) - delivers simple network filesystem for EC2. It supports NFSv4/4.1 (Network file system).
 System size is grow as you add more files to file system.
 It allows parallel access from multiple EC2 within the same region
@@ -311,7 +311,7 @@ Some AMI (Amazon Linux/RHEL/Ubuntu) it's already installed, you just need to sta
 By default anybody can read, but root (UID 0) user can write. You can also use Access Points to create dirs in your efs for different users to read/write.
 You can also do `sudo chmod 777 /mnt/efs/` to give access to anybody to read/write. To check if directory is mounted to efs run `df /mnt/efs/`.
 
-###### AWS EBS
+###### EBS
 EBS (Elastic Block Storage) - simple block storage for EC2. After EBS is attached to EC2 you can format it with desired file system.
 Most AMI (Amazon Machine Images) are backed by Amazon EBS, and use an EBS volume to boot EC2 instances.
 You can attach multiple EBS to single EC2, but single EBS can only be attached to 1 EC2.
@@ -338,14 +338,14 @@ Since you can't encrypt volume after you attached it to ec2, so in order to crea
 3. create ami from encrypted snapshot
 4. run new ec2 from created ami & remove current ec2
 
-###### AWS EC2 Instance Store
+###### EC2 Instance Store
 Similar to EBS, but located on the same machine as EC2 (EBS connected through network), available only during lifetime of EC2.
 So it's not durable, once EC2 instance stop/restart/fail all data would be lost.
 It's not available for all ec2 types, only for [some of them](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/InstanceStorage.html#instance-store-volumes)
 You still have to use at lease 1 EBS + additional instance store. For some types you can select to remove instance store, but ebs should be present always.
 So you can't create ec2 without ebs.
 
-###### AWS CloudFront
+###### CloudFront
 CloudFront is a CDN (content delivery/distribution network) - that speed up the distribution of your data using edge locations.
 When user request content, CF use nearest edge location and deliver cached version, it's faster that transfer data directly from data center.
 If content not in cache, CF retrieve it directly from s3 or HTTP and cache it. CF is not durable storage, it's just an edge cache.
@@ -375,7 +375,7 @@ You have 2 types of distribution
 * web - static web content (files/pics)
 * RTMP - streaming media
 
-###### AWS Kinesis
+###### Kinesis
 It is a platform for streaming data on AWS, making it easy to load and analyze streaming data.
 With Kinesis, you can ingest real-time data such as application logs, website clickstreams, IoT telemetry data, and more into your databases, data lakes, and data warehouses, or build your own real-time applications using this data
 AntiPattern
@@ -386,7 +386,7 @@ Queue vs Streaming
 * queue (not reactive) - you have to poll data, once it polled it removed from queue
 * streaming (reactive) - many consumer notify of changes, events stay for long time (not deleted)
 
-###### AWS Lambda
+###### Lambda
 Lambda - piece of code that can be executed without any server env (just write code in javascript and it will run).
 Lambda can be directly triggered by AWS services such as Amazon S3, DynamoDB, Amazon Kinesis Data Streams, Amazon Simple Notification Service (Amazon SNS), CloudWatch
 AntiPattern
@@ -398,19 +398,19 @@ second and consecutive time, there is no delay.
 By default lambda runs in no VPC (so it has internet access), if you want your lambda to talk with other services you should put it into VPC, if your lambda need internet access you have to configure nat for it.
 Lambda doesn't run `npm install`. So if you add new package you have to build it locally, create `.zip` file with your project (including `node_modules`) and upload it to aws lambda.
 
-###### AWS Step Functions
+###### Step Functions
 Step Functions - visual tool that allows you to build complex logic based on lambda and EC2 calls.
 They can also help overcome lambda max 900sec execution time, by joining several lambdas into one execution flow.
 
 
-###### AWS EMR
+###### EMR
 EMR (Elastic Map Reduce) - highly distributed computing framework for data processing and storing, using Apache Hadoop.
 It reduces large workload into smaller jobs and distribute it between EC2 instances of Hadoop cluster (good for big data analyses).
 AntiPattern
 * Small data sets (EMR for large processing, if your dataset is small enough for one machine/thread it's better to use EC2 or Lambda)
 * ACID transaction requirements (if you need this it's better to use RDS instead of Hadoop)
 
-###### AWS Glue
+###### Glue
 Glue - fully managed ETL (extract, transform, load) to catalog/clean/enrich/move your data.
 AWS Glue crawlers scan various data stores you own to automatically infer schemas and partition structure and populate the AWS Glue Data Catalog with corresponding table definitions and statistics.
 You can then directly query your data lake with Amazon Athena and Amazon Redshift Spectrum.
@@ -418,11 +418,11 @@ AntiPattern
 * Streaming data (Glue is batch oriented, minimum interval is 5 min, so for streaming data Kinesis is better choice)
 * NoSQL Databases (Glue doesn't support NoSQL databases as source)
 
-###### AWS DynamoDB
+###### DynamoDB
 DynamoDB - fully managed NoSQL database, like mongo, but aws proprietary solution.
 Stores data across 3 regions. Row - item. Cell - attribute. Primary key - partition key + sort key.
 
-###### AWS RedShift
+###### RedShift
 Database vs Data Warehouse
 * db (single source) - OLTP (Online Transaction Processing) - store current transactions and quick access to them
 * warehouse (multiple sources)) - OLAP (Online Analytical Processing) - store large quantities of historical data
@@ -433,11 +433,11 @@ Redshift only supports Single-AZ deployments. It uses MPP (Massively Parallel Pr
 Single-node can be used to quickly set up cluster and grow later. Multi-node requires leader (who gets client connection and queries) and a few compute nodes, that actually execute load.
 
 
-###### AWS QuickSight
+###### QuickSight
 QuickSight - BI (business intelligence) tool, for building visualizations, perform ad-hoc analysis (can connect to all aws data sources).
 
 
-###### AWS EC2
+###### EC2
 EC2 (Elastic Compute Cloud) - web service that provides resizable compute capacity
 AntiPattern
 * Managed Service (if you need database, or some other service that is provided by aws, you would better to use it, like RDS)
@@ -485,14 +485,14 @@ once your credit is 0, performance downgrade
 
 It usually takes longer time to stop instance then to reboot. The reason is when you stop it does some clean up by removing dns name, public IPv4, private IPv4, IPv6, ec2 instance store.
 
-###### AWS Athena
+###### Athena
 Athena is an interactive query service that makes it easy to analyze data in Amazon S3 using standard SQL. 
 You don’t need to load your data into Athena, as it works directly with data stored in S3. Athena integrates with Amazon QuickSight for easy visualization.
 AntiPattern
 * Enterprise Reporting and Business Intelligence (for enterprise level it's better to use RedShift, query engine in Redshift has been optimized to perform especially well on data warehouse workloads)
 * ETL Workloads (for etl you should use EMR/Glue)
 
-###### AWS Organizations
+###### Organizations
 Organizations - service that allows to to tie several accounts to master account and centrally manage them (billing, services, policies)
 Organization is a collection of AWS accounts that you can organize into a hierarchy and manage centrally.
 Master Account - aws account from which you create your organization. From there you can also create/invite/delete other accounts. It's charged to pay all bills by all accounts. Once chosen, you can't change master account.
@@ -502,14 +502,14 @@ SCP (Service Control Policy) - policy you can apply to a group of aws accounts, 
 You can attach a policy to the root/OU/account.
 
 
-###### AWS Well-Architected Tool
+###### Well-Architected Tool
 Well-Architected Tool is a aws service that allows you to validate your current infrastructure against 5 pillars of well-arhitected framework.
 It works by creating a workload (collection of resources and code that make up a cloud application) and then run this workload against 5 pillars.
 The tool will evaluate your workload and provide an improvement plan with a prioritized list of issues.
 It's free of charge, you only pay for underlying aws resources.
 
 
-###### AWS VPC
+###### VPC
 VPC (Virtual private cloud) - a kind of internal network in on-premises. You can have some servers inside and they won't be accessible outside of vpc.
 You have complete control over your virtual networking environment, including selection of your own IP address ranges, creation of subnets, and configuration of route tables and network gateways.
 By default every account has default VPC (and default subnet for each AZ), so if you don't create any other, and create EC2 directly, default VPC would be used.
@@ -563,7 +563,7 @@ Tenancy
 * multi-tenant (virtual isolation) - you share your instances on the same server as other aws clients, you instance is divided by virtualization
 * single-tenant (dedicated, physical isolation) - you get completely separate hardware for you (can be useful if you have regulatory requirements)
 
-###### AWS Elastic Beanstalk
+###### Elastic Beanstalk
 Beanstalk - PaaS that mange deployment, provisioning, load-balancing, auto-scaling, health monitoring. Best suited when you need quickly deploy something and don't want to learn about other aws services.
 It keeps the provisioning of building blocks (EC2/RDS/ELB/Auto Scaling/CloudWatch), deployment of applications, and health monitoring abstracted from the user so they can just focus on writing code
 You simply upload a `.war` (in case of java) file, and beanstalk run tomcat server for you and deploy your app. Yet developer has a right to manage all infrastructure provided by beanstalk.
@@ -576,7 +576,7 @@ Using beanstalk you can:
 Beanstalk underneath using: EC2, RDS, ELB, S3 (app files, server logs), SNS
 Beanstalk is free, you pay for underlying resources (like EC2, S3) that you are actually use
 
-###### AWS Database Migration Service
+###### Database Migration Service
 DMS - used for easy migration between different db (like from MySql to DynamoDB), and also for data replication.
 DMS use SCT (Schema Conversion Tool) for converting between existing schemas.
 
@@ -611,7 +611,7 @@ ALB Request Routing - you can redirect user to different ec2 based on request at
 
 
 
-###### AWS CloudWatch
+###### CloudWatch
 CloudWatch - monitoring service for aws resources and apps running in aws cloud. IAM permission for CloudWatch are given to a resource as a whole (so you can't give access for only some of EC2, you give either for all EC2 instances or none).
 You can also use CloudWatch to create alarms (for example you get 5 errors, and you want to notify developer). Alarms are integrated with SNS (so you can send email, put message to SQS and so on).
 Many aws resources (EC2, RDS, and so on) automatically send metrics to CloudWatch. You can also send your custom metrics. Metrics can't be deleted, but expire automatically.
@@ -619,14 +619,14 @@ By default ec2 monitoring interval is 5min, but you can enable detailed monitori
 In ec2 you can create alarm too (when cpu goes above 80% - stop instance).
 If you want to track ec2 memory/cpu usage you have to install cloudwatch agent into ec2.
 
-###### AWS Key Management Service
+###### Key Management Service
 KMS - a service for generating/storing/auditing keys. If you have a lot of encryption it's better to use central key management service.
 You start working with KMS by creating CMK (customer master keys), or if you are using encryption from other aws resource, it would create CMK automatically for you.
 You can import only symmetric keys. You can't export CMK symmetric key or asymmetric private key.
 
 
 
-###### AWS Route53
+###### Route53
 Route53 - is amazon DNS service that help to transform domain name into IP address. It's called 53, cause 53 - port of DNS.
 You can buy hostname from any provider and register it within Route53, after this Route53 gives you 4 TLD (Top-Level Domain) that you put into your hostname provider,
 so end user will request your domain, it will got to your provider, and from there to aws. Route53 supports wildcards (subdomains).
@@ -650,7 +650,7 @@ Records set - subdomains of your hosted zone. You can easily route any record se
 
 
 
-###### AWS RDS
+###### RDS
 RDS (Relational Database Service) - aws managed service, that make it easy install/operate relational database in the cloud.
 * you can easily scale compute resources or storage associated with your db
 * it's easy to update db software
@@ -676,7 +676,7 @@ RDS Proxy - database proxy that helps
 When you reboot you can option to restart rds in new AZ.
 
 
-###### AWS SQS
+###### SQS
 SQS (Simple Queue Service) - managed service that provide publisher/subscriber (queue) model. There are 2 types
 * standard - ordering is not guaranteed, no limit to number of messages (you should implement custom protection against duplicates)
 * FIFO (first in, first out) - ordering is guaranteed, limit - 300 messages per second
@@ -691,7 +691,7 @@ Message retention can be configured from 1 min to 14 days (by default - 4 days).
 Visibility Timeout (0 sec    to 12 hours, default - 30sec) - once you app consume a message it becomes invisible to others. But until your app notify queue that it processed it
 message not deleted. So this timeout - is how long queue can wait.
 
-###### AWS API Gateway
+###### API Gateway
 API Gateway - managed api service that makes it easy to publish/manage api at any scale. It can
 * meter/throttle traffic to your backend
 * security (allow access only to EC2 with specific IAM role, allow only specific cognito users, allow to those who pass Lambda authorizer)
@@ -707,7 +707,7 @@ You can add documentation to your api and expose it as swagger file.
 Api Gateway can generate client-side SSL certificate, and you backend can get public key, so it can verify that requests are coming from Api Gateway.
 
 
-###### AWS Cognito
+###### Cognito
 Cognito - managed user service that add user sing-in/sign-up/management email/phone verification/2FA logic.
 User Pool - a directory with users' profiles, you can set up password strength.
 User pool - is a IdP (Identity Provider)
@@ -719,10 +719,10 @@ You pay for MAU (monthly active users) - user who within a month made some ident
 Free tier - 50k MAU per month.
 
 
-###### AWS CodePipeline(CodeCommit/CodeBuild/CodeDeploy)
+###### CodePipeline(CodeCommit/CodeBuild/CodeDeploy)
 CodePipeline - aws ci/cd tool, like jenkins.
 
-###### AWS Storage Gateway
+###### Storage Gateway
 Storage Gateway - hybrid storage that connects on-premises storage with cloud storage. The main idea is that you still use your on-premise storage (so don't lose that investment) and use cloud at the same time.
 The basic idea is that you can manage aws cloud storage the same way (by using same protocols) as you are using your on-premise storage.
 There are 3 types
@@ -748,7 +748,7 @@ Storage gateway available as:
 * hardware appliance - you but it and use in your on-premise
 
 
-###### AWS ECS
+###### ECS
 ECS (Elastic Container Service) - docker container management service to run apps on a managed cluster of Amazon EC2 instances. It eliminate the need to operate container management infra (like kubernetes).
 There are 2 ways to create cluster
 * Networking only - Fargate is managing/orchestrating your cluster
@@ -760,18 +760,18 @@ There are several network modes:
 * bridge - docker's default network type. All containers connected to bridge can communicate with each other
 * host - container is exposed to host (if you docker has port 80, this port would be accessible from host)
 
-###### AWS EKS
+###### EKS
 EKS (Elastic Kubernetes Service) - manages service that runs kubernetes cluster (so you don't need to deploy it from scratch).
 It provisions/manages Kubernetes control plane and worker nodes for you.
 
 
-###### AWS Fargate
+###### Fargate
 Fargate is serverless compute engine for containers running in ECS/EKS, it removes the need to provision and manage servers.
 You should use it when you don't want to manually provision your EC2 instances. 
 If you need greater control over EC2 (for security or customization), it's better to avoid using it, and istread manually provision EC2 instances.
 
 
-###### AWS ElastiCache
+###### ElastiCache
 ElastiCache - manages service that runs Memcached/Redis server nodes in cloud. 
 It automates common administrative tasks required to operate a distributed in-memory key-value environment.
 It consists of
@@ -780,7 +780,7 @@ It consists of
 * cluster - group of shards
 
 
-###### AWS Systems Manager
+###### Systems Manager
 SM (Systems Manager) - tool that helps you to manage your aws resources and automate some tasks on them:
 * when you create ec2 with SM agent role (this will give SM permission to interact with ec2), and later manage your ec2 from SM console (without need to connecting to instance with ssh)
 SM include
@@ -799,12 +799,12 @@ It improves security, cause it doesn't require you to open inbound ssh port (22)
 For this to work you should assign a role to ec2 with policy `AmazonEC2RoleforSSM`. Internally ssh manager just ssh you as `ssm-user` with root priviledge.
 
 
-###### AWS Config
+###### Config
 Config - manages service that provides aws resources inventory, config history, change notification.
 Config Rule - desired configuration of resource that is evaluated againt actual change (and report in case of mismatch).
 Conformance Pack - collection of config rules.
 
-###### AWS Aurora
+###### Aurora
 Aurora - mysql/postgres compatible (most app that works with mysql/postgres would switch with no problem to aurora) aws database solution. 
 Yet some features of mysql/postgres are not supported in aurora (like MyISAM storage engine).
 It runs 5x faster than mysql and 3x faster than postgres. And cost 1/10 of similar solution.
@@ -820,7 +820,7 @@ There are 2 types of replica
 * mysql replica - cross-region replica based on mysql binlog
 Parallel Query - ability to distribute computational load across multiple instances.
 
-###### AWS CloudTrail
+###### CloudTrail
 CT - service that logs activity of your aws account (who made request, what params were passed, when and so on..). It's useful for compliance, when you need to ensure that only certain rules has ever been applied.
 On average event appear in CT after 15 min after api call was made.
 There are 3 types of logs
@@ -832,7 +832,7 @@ By default logs stored for 90 days. If you need longer you should create trail. 
 Trail can log events from one region or from all regions. Log file validation - guaranty that logs were not tampered with. Mare sure your s3 bucket has correct write policy, otherwise CT won't be able to store logs there.
 You can deliver CT logs to CloudWatch, in this case CT would deliver logs to s3 & CloudWatch logs.
 
-###### AWS Certificate Manager
+###### Certificate Manager
 ACM (Amazon Certificate Manager) - service that allows you to create/deploy public/private SSL/TLS certificates.
 ACM removes the time-consuming manual process of purchasing, uploading, and renewing SSL/TLS certificates.
 There are 2 types of certificate
@@ -860,20 +860,20 @@ Email validation - amazon sends email to the owner of domain that it obtains fro
 For successful issuing of public certificate DNS CAA should be empty or include one of: amazon.com, amazontrust.com, awstrust.com, or amazonaws.com
 Public certs are free, but private CA - 400$ per month. You also pay for each private cert.
 
-###### AWS Cloud9
+###### Cloud9
 Cloud9 - cloud based IDE (integrated development environment) where you can run and execute your code. It basically a separate ec2 where you can install programs, write/build code, and work just like with your laptop.
 So it basically IDE + linux. AWS CLI is preconfigured there. It's free but you pay for compute & storage, ec2+ebs. You can also connect cloud9 to on-premises server, in this case it's free.
 When you close cloud9, after 30 min it automatically stops ec2. If you open again it restarts it.
 Cloud9 provides aws lambda create/execute(locally)/deploy functions.
 
 
-###### AWS CodeStar
+###### CodeStar
 CodeStar - cloud based development service that allows you to build/deploy your code in aws. You can quickly set up continuous delivery.
 You also got integration with jira out of the box. It's free, you pay for underlying resources (ec2, lambda, s3).
 You can use project dashboard to manage releases and see most recent activity. 
 You can start cloud9 directly from CodeStar, and any code you commit in cloud9 automatically goes to CodeStart pipeline and deployed to ec2/beanstalk/s3
 
-###### AWS Rekognition
+###### Rekognition
 Rekognition - managed service that allows you to add powerful visual analysis to your app
 * image - you can search/verify millions of images quickly (detects objects/scene/faces, search & compare faces, recognize texts or celebrities)
 * video - you can extract motion pics from video/streams and analyse them (detect activity or inappropriate content, understand moving of people)
@@ -883,7 +883,7 @@ Terminology
 * label - object/concept found in image based on description (for example, human/face/sun and so on..)
 * confidence score - number 0-100 that indicates the probability that prediction is correct
 
-###### AWS EC2 Auto Scaling
+###### EC2 Auto Scaling
 * scale up - remove current instance and create new one with bigger compute/memory capacity
 * scale out - add one or more instances
 * scale down - remove current instance and create new one with lesser compute/memory capacity
@@ -1139,7 +1139,8 @@ aws s3 presign s3://my-cloudformation-template-example/data.txt --expires-in 30 
 ```
 # create stack
 aws cloudformation create-stack --stack-name=mystack --template-body=file://cloudformation/condition.yml --profile=awssa --region=us-east-1
-aws cloudformation create-stack --stack-name=mystack --template-body=file://cloudformation/condition.yml --parameters=ParameterKey=Env,ParameterValue=prod --profile=awssa --region=us-east-1
+# update stack and pass params
+aws cloudformation update-stack --stack-name=mystack --template-body=file://cloudformation/condition.yml --parameters=ParameterKey=Env,ParameterValue=prod --profile=awssa --region=us-east-1
 ```
 
 ###### Useful Linux Commands

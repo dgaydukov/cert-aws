@@ -32,8 +32,6 @@ There are 2 main reasons to get it.
 
 
 ### TODO
-* condtitions in cloudformation template
-* cloudformation with s3 policies
 * elb with auto-scaling group
 * close some url pattern (/internal) on elb level (by SG, allow only from inside vpc)
 * ec2/elb healthcheck based on json value (status: up)
@@ -59,7 +57,3 @@ There are 2 main reasons to get it.
 * site-to-site vpn
 * direct connect
 * ec2 app logs to cloudwatch => create custom metrics based on it
-
-
-
-            
