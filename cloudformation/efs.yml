@@ -96,7 +96,7 @@ Resources:
   PublicEC2InstanceSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Enable SSH/ICMP access from internet
+      GroupDescription: Enable SSH/ICMP access from anywhere
       VpcId: !Ref VPC
       SecurityGroupIngress:
         - IpProtocol: tcp

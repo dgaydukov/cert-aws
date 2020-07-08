@@ -12,7 +12,7 @@ Resources:
   BastionEC2InstanceSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Enable SSH/ICMP access from internet
+      GroupDescription: Enable SSH/ICMP access from anywhere
       VpcId: !GetAtt VpcStack.Outputs.VpcId
       SecurityGroupIngress:
         - IpProtocol: tcp

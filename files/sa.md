@@ -221,6 +221,29 @@ You can add deletion policy (for example you delete stack and want to preserve s
 CloudFormation Registry - managed service that lets you register, use, and discover AWS and third party resource providers.
 You can use conditions inside templates (for example create ec2 based on input params).
 
+Don't confuse nested stack and imported stack
+* nested stack - you put one stack into another (main) by using `AWS::CloudFormation::Stack` and create only 1 stack (main). And this stack would create dependent first. It's the same as have 1 file, you just separate code, yet in aws your stacks would be divided into main and nested.
+* imported stack (Cross-Stack References) - you create 2 separate stacks with different names, and inside main you call resources from dependee stack by using `!ImportValue !Sub "${stackName}-SubnetID"`.
+In both cases your first stack should export resources, by using `Outputs`, that you want to use in main stack.
+
+By default CloudFormation use the same permission as user has (so if user can't create ec2 instances and create template that should create new ec2, this template would fail).
+But you can assign IAM role to CloudFormation, and in this case it would use permissions from this role. To create stack with assumed role you should pass param to cli like `--role-arn={youRoleForCloudFormationARN}`.
+If you don't specify `role-arn`, aws will use previous role. If it first time it will use temporary session that is generated from user (one who is creating the stack) credentials.
+
+For multi-env deployment (where you have dev/prod env or more) you should use single reusable template file (don't create new template file for each env, cause you will end up in a mess). 
+You can achieve reusability by adding parameters, mappings, conditions section into your template. Then you just create 2 stacks with different names (dev/prod) and different params but with single template file.
+
+Nested stacks are mostly used when you need to reuse some common template. Suppose you have 3 templates and each of them using specific type of ec2. You can just duplicate code across 3 templates, but it ineffective.
+It's better to create new template and use it as nested template for each of your 3 templates. Notice that you can't use just imported stack in this case - cause that would mean that only 1 instance of ec2 would be created
+and shared between all 3 stacks, but what you need is each stack to have it's own instance, that's why here you should use nested stack.
+
+Use dynamic references, never store secrets in your stack template. If you need secrets you should store them in aws secrets and just reference them from your template by using `'{{resolve:service-name:reference-key}}'`.
+
+Good practice is to set params constraints. In this way you are guarantee that param would be some expected value.
+
+You can create rules with CloudFormation Guard (cfn-guard - open source CLI tool) that can ensure that your stack is compliant (for example: all ebs volumes should be only encrypted).
+In case rule failed, stack won't be created.
+
 Best practice is to divide your infra into several stacks. There are 2 approaches
 * multi-layered architecture - horizontal structure where one layer depends upon another by using nested stacks (you divide all your services into 3 stacks - networking/computing/rds => computing layer depends on networking, cause you create ec2 instances in some vpc and subnet)
 * SOA (service-oriented architecture) - you stacks are separated not by technical layers but by services (each service has a separate stack with it's own networking/computing/rds).
@@ -230,6 +253,10 @@ Layered Architecture usually has 3 layers.
 * Business Logic (services)
 * Database (models/domain objects/dto)
 Presentation depends(can access) on Business Logic and it depends(can access) on Database, but no the other way around.
+There are other 2 types of architecture
+* hexagonal
+* onion
+But generally they resemble layered style, only difference they divide core (doman objects + services) and outer object (ui, database) and they are connected by using port (on core side) + adapter (on outer side)
 
 ###### IAM
 * In case you have one user who requires access to a specific resource, as a best practice, you should create a new AWS group for that access (in case new user would appear you would just assign him to this group)
@@ -718,6 +745,7 @@ You can also use API Gateway with openApi to quickly generate api endpoints and 
 Stage - like a tag, allows your api have multiple versions, like dev stage - myapi.com/dev/users.
 You can add documentation to your api and expose it as swagger file.
 Api Gateway can generate client-side SSL certificate, and you backend can get public key, so it can verify that requests are coming from Api Gateway.
+Api Gateway calls are supported by CloudFront, so your api is highly available.
 
 
 ###### Cognito
