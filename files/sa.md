@@ -599,6 +599,16 @@ Tenancy
 * multi-tenant (virtual isolation) - you share your instances on the same server as other aws clients, you instance is divided by virtualization
 * single-tenant (dedicated, physical isolation) - you get completely separate hardware for you (can be useful if you have regulatory requirements)
 
+Flow Logs - you can configure flow logs for
+* vpc - flow logs would be for all ENI in whole vpc
+* subnet - flow logs would be written for all ENI in this subnet
+* network interface - flow logs would be written only for this particular ENI
+Format of flow logs `${version} ${account-id} ${interface-id} ${srcaddr} ${dstaddr} ${srcport} ${dstport} ${protocol} ${packets} ${bytes} ${start} ${end} ${action} ${log-status}`
+As you see there is no actual payload, only fact that somebody try to send some tcp/udp message to someone. If you want actual payload you should use Traffic Mirroring.
+So use
+* Flow Logs - troubleshoot connectivity and security issues, make sure that the network access rules are working as expected
+* Traffic Mirroring - deeper insight into the network traffic by analyzing traffic content (payload)
+
 ###### Elastic Beanstalk
 Beanstalk - PaaS that mange deployment, provisioning, load-balancing, auto-scaling, health monitoring. Best suited when you need quickly deploy something and don't want to learn about other aws services.
 It keeps the provisioning of building blocks (EC2/RDS/ELB/Auto Scaling/CloudWatch), deployment of applications, and health monitoring abstracted from the user so they can just focus on writing code
@@ -648,6 +658,9 @@ There are 3 types of health checks
 * Custom health check. If your application can't be checked by simple HTTP request and requires advanced test logic, you can implement a custom check in your code and set instance health though API
 
 ALB Request Routing - you can redirect user to different ec2 based on request attributes (subdomains, headers, url params..)
+
+Listener Rule - can forward request but not change. So if you have a rule `/api => EC2_1, /internal => EC2_2`
+That means EC2_1 should have url `/api` and EC2_2 should have url `/internal`.
 
 
 

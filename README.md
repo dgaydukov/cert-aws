@@ -32,10 +32,9 @@ There are 2 main reasons to get it.
 
 
 ### TODO
+* add comment about danger or async when update same result in same function
 * close some url pattern (/internal) on elb level (by SG, allow only from inside vpc)
 * ec2/elb healthcheck based on json value (status: up)
-* turn on vpc/subnet/eni flow logs and view it
-* install & use wireshark
 * cross-region vpc peering
 * create new NACL group (VPC=>Security=>Network ACLs) for public subnet (deny ssh in case someone misconfigure SG). subnet can be associated with 1 NACL at a time
 * ec2 with public ip => reboot => check ip change. Use elastic ip (it should stay the same). Don't forget to remove after terminate ec2.
