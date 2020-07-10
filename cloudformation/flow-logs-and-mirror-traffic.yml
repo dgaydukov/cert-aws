@@ -2,7 +2,11 @@ AWSTemplateFormatVersion: 2010-09-09
 
 # create vpc with 2 public subnets
 # Add vpc flow logs and save them to s3 (you can also save them to cloud-watch)
-# !important => target should be of nitro type, otherwise you got error `ENI must be attached to a supported instance`
+# You can use wireshart in target ec2 to monitor/analyze all traffic or just type `sudo tcpdump -nt -i eth0 udp port 4789` to see all incoming vxlan traffic
+
+# !important => this template use ec2 of type t3a.nano which is not under free tier
+# !important => we make auto-assign public ip = Enable for subnets, by setting MapPublicIpOnLaunch=true. Otherwise if you use AssociatePublicIpAddress:true, you will get `AssociatePublicIpAddress can't be used when you set NetworkInterfaceId property`
+# !important => source should be of nitro type, otherwise when you create TrafficMirrorSession you got error `ENI must be attached to a supported instance`
 
 Resources:
 
@@ -107,7 +111,6 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AWS::StackName}-MyVpc-Http-SG
-
   SshSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -121,11 +124,24 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AWS::StackName}-MyVpc-Ssh-SG
+  VxlanSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable VXLAN access from anywhere
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: udp
+          FromPort: 4789
+          ToPort: 4789
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-Ssh-SG
 
   WebServerInstance:
     Type: AWS::EC2::Instance
     Properties:
-      InstanceType: t2.micro
+      InstanceType: t3a.nano
       ImageId: ami-09d95fab7fff3776c
       KeyName: mykey
       UserData:
@@ -159,7 +175,7 @@ Resources:
   TargetInstance:
     Type: AWS::EC2::Instance
     Properties:
-      InstanceType: t3a.nano
+      InstanceType: t2.micro
       ImageId: ami-09d95fab7fff3776c
       KeyName: mykey
       NetworkInterfaces:
@@ -177,6 +193,7 @@ Resources:
     Properties:
       GroupSet:
         - !GetAtt SshSG.GroupId
+        - !GetAtt VxlanSG.GroupId
       SubnetId: !Ref PublicSubnet2
       Tags:
         - Key: Name
@@ -214,6 +231,24 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AWS::StackName}-MyVpc-TrafficMirrorFilter
+  AllowAllInboudTrafficRule:
+    Type: AWS::EC2::TrafficMirrorFilterRule
+    Properties:
+      TrafficMirrorFilterId: !Ref TrafficMirrorFilter
+      TrafficDirection: ingress
+      DestinationCidrBlock: 0.0.0.0/0
+      SourceCidrBlock: 0.0.0.0/0
+      RuleAction: accept
+      RuleNumber: 100
+  AllowAllOutboundTrafficRule:
+    Type: AWS::EC2::TrafficMirrorFilterRule
+    Properties:
+      TrafficMirrorFilterId: !Ref TrafficMirrorFilter
+      TrafficDirection: egress
+      DestinationCidrBlock: 0.0.0.0/0
+      SourceCidrBlock: 0.0.0.0/0
+      RuleAction: accept
+      RuleNumber: 100
   TrafficMirrorSession:
     Type: AWS::EC2::TrafficMirrorSession
     Properties:
@@ -222,8 +257,6 @@ Resources:
       TrafficMirrorTargetId: !Ref TrafficMirrorTarget
       TrafficMirrorFilterId: !Ref TrafficMirrorFilter
       SessionNumber: 1
-      PacketLength: 100
-      VirtualNetworkId: 1234
       Tags:
         - Key: Name
           Value: !Sub ${AWS::StackName}-MyVpc-TrafficMirrorSession

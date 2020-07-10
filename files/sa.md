@@ -59,13 +59,14 @@
 * 2.40 [Rekognition](#rekognition)
 * 2.41 [EC2 Auto Scaling](#ec2-auto-scaling)
 3. [Networking](#networking)
-* 3.1 [Hub, Switch, Router](#hub-switch-router)
-* 3.2 [Network Topology](#network-topology)
-* 3.3 [OSI Network Model](#osi-network-model)
-* 3.4 [High Level Protocols](#high-level-protocols)
-* 3.5 [Low Level Protocols](#low-level-protocols)
-* 3.6 [SOA and CAA](#soa-and-caa)
-* 3.7 [SSL vs TLS vs HTTPS](#ssl-vs-tls-vs-https)
+* 3.1 [NIC](#nic)
+* 3.2 [Hub, Switch, Router](#hub-switch-router)
+* 3.3 [Network Topology](#network-topology)
+* 3.4 [OSI Network Model](#osi-network-model)
+* 3.5 [High Level Protocols](#high-level-protocols)
+* 3.6 [Low Level Protocols](#low-level-protocols)
+* 3.7 [SOA and CAA](#soa-and-caa)
+* 3.8 [SSL vs TLS vs HTTPS](#ssl-vs-tls-vs-https)
 4. [Miscellaneous](#miscellaneous)
 * 4.1 [SaaS vs PaaS vs IaaS/IAC](#saas-vs-paas-vs-iaasiac)
 * 4.2 [Virtualization and Containerization](#virtualization-and-containerization)
@@ -965,6 +966,21 @@ Unhealty instance can be determine by 2 healthchecks
 
 
 ### Networking
+###### NIC
+NIC (Network interface controller) - hardware component to connect computer to network. It implements electronic circuit that operates on both physical & data link layers using either Ethernet/Wi-Fi protocols.
+If you NIC is inside network that using hub, than hub sends all packets to all pc connected to the network. But you NIC process only those that are intended for it (NIC check MAC address, and if it corresponds to address of NIC it sends frame further to CPU).
+Promiscuous mode - you turn off MAC address check, and all packets that are sent to NIC (regardless of destination MAC address) are forwarded to CPU to process. This mode is turned off by default, can be useful for traffic sniffing.
+Traffic sniffing - catch all traffic and analyze it, best tool is [WireShark](https://www.wireshark.org/).
+You can detect promiscuous mode by sending a ping (ICMP echo request) with the wrong MAC address but the right IP address. In normal mode NIC would drop packet, but in promiscuous - you would get response.
+
+Since most modern networks using switch, and it sends data directly to special pc (compare to hub which just replicate packet to everybody in the network), just turning promiscuous mode won't help much, 
+cause switch will route only those packets that are only designated for your NIC, so you can't sniff all network traffic. Hopefully Managed switches provide Port Mirroring (ability to mirror all incoming packets to some specific port, port - is not tcp/udp port but a connection nest inside switch)
+If your switch is not managed and you can't turn on port mirroring in the switch you can employ ARP-Spoofing.
+ARP is used to by switches to get mac address by ip address. So switch basically sends ARP requests to all connected devices, and if IP address in ARP request match device IP address, device responds with MAC address.
+Key here is that switch has no way to verify response. So for all ARP your host can response with it's onw mac address. In this case all packets that switch receives would be transmitted to your host.
+But to operate normally your host should retransmit these packets to their respective owners. In this case you basically embed your host between switch and all other devices. So you can sniff all traffic.
+
+
 ###### Hub, Switch, Router
 * Hub (концентратор) - device that connects multiple computers in LAN (local area network) and propagate any packet sent from one computer to all other. Today mostly outdated, people use switch instead. Works on the physical layer (Layer 1) of OSI. 
 * Bridge (мост) - connect several hubs into single network. Works on OSI layer 2. As hubs mostly outdated today.
