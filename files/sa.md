@@ -554,7 +554,7 @@ Amazon VPC consists of
 * VPC - private network, logically isolated from other networks in aws cloud. Can span across multiple AZ. Instances in different AZ charged $0.01 per GB for data transfer.
 * Subnet - private sub-network inside VPC. Can reside only within single AZ.
 * Route table - set of rules (routes) to determine where network traffic from your VPC is directed
-* Internet Gateway - entry point between your VPC and Internet. It allows EC2 in VPC directly access Internet. You can use public IP or elastic IP to both communicate with Internet and receive requests from outside web-servers.
+* Internet Gateway - entry point between your VPC and Internet. It allows EC2 in VPC directly access Internet. You can use public IP or elastic IP(won't change after stop/start) to both communicate with Internet and receive requests from outside web-servers.
 * NAT Gateway - Network address resolution service in private subnet to access the Internet. Instances without public IP use NAT gateway to access Internet. Nat allows outbound communication, but doesn't allows machines on the Internet to access instances inside VPC.
 With IG you have both outbound and inbound access, but with Nat gateway - only outbound (your instance can access Internet, but is unaccessable from Internet)
 * Virtual private gateway - VPC+VPN
@@ -702,7 +702,7 @@ traffic goes to random one out of other 7
 Hosted zone - route53 concept of domain. For each of your domain you have 1 hosted zone where you can have records.
 Records set - subdomains of your hosted zone. You can easily route any record set to any aws services (s3/elb/cloudFront)
 
-
+You can create route53 health check for dns failover (you can also choose String matching and not just ensure that response is 200 http status, but check actual content of response)
 
 ###### RDS
 RDS (Relational Database Service) - aws managed service, that make it easy install/operate relational database in the cloud.

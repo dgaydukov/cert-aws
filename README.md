@@ -32,25 +32,21 @@ There are 2 main reasons to get it.
 
 
 ### TODO
-* add comment about danger or async when update same result in same function
-* close some url pattern (/internal) on elb level (by SG, allow only from inside vpc)
-* ec2/elb healthcheck based on json value (status: up)
-* cross-region vpc peering
-* create new NACL group (VPC=>Security=>Network ACLs) for public subnet (deny ssh in case someone misconfigure SG). subnet can be associated with 1 NACL at a time
-* ec2 with public ip => reboot => check ip change. Use elastic ip (it should stay the same). Don't forget to remove after terminate ec2.
+* ec2 app logs to cloudwatch => create custom metrics based on it
+* create s3 static site + add free aws certificate to your domain
+* route53 failover
 * vpc endpoint (access s3 from private ec2 that's not connected to nat gateway, with public https url -> aws will determine that you are using endpoint and will direct your traffic)
-* vpc to on-premise (imitated by vpc + openswan) vpn connection (site-to-site vpn)
+* create new NACL group (VPC=>Security=>Network ACLs) for public subnet (deny ssh in case someone misconfigure SG). subnet can be associated with 1 NACL at a time
 * rds read replica (cross-region) vs multi-az failover
 * can you see building blocks (ec2/rds/elb) when using beanstalk + try codestar
 * cognito + api gateway + s3 serverless app (call cognito from java code from local machine vs from ec2)
-* create s3 static site + add free aws certificate to your domain
-* route53 failover
+* cross-region vpc peering
+* vpc peering (non-transitive)
+* vpc to on-premise (imitated by vpc + openswan) vpn connection (site-to-site vpn)
 * vpc endpoint vs private link
 * vpc endpoint gateway vs interface (for interface you need ENI)
 * transit vpc
-* vpc peering (non-transitive)
 * transit gateway (connect multiple vpc to each other)
 * client vpn (connect to vpc from you remote laptop)
 * site-to-site vpn
 * direct connect
-* ec2 app logs to cloudwatch => create custom metrics based on it
