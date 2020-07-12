@@ -562,6 +562,10 @@ With IG you have both outbound and inbound access, but with Nat gateway - only o
 * VPC Endpoints - private connection to AWS services without Internet Gateway/NAT/VPN. It make sure all traffic goes inside aws network.
 * Egress-only Internet Gateway - egress(going out) only access from VPC to Internet over IPv6
 
+Old terminology
+* Subnet == VLAN
+* VPC == VRF (virtual routing and forwarding)
+
 EC2-to-EC2 communication through public IP
 * When inside same Region - inside aws network
 * When in different Regions that connected with VPC peering - inside aws network
