@@ -32,7 +32,6 @@ There are 2 main reasons to get it.
 
 
 ### TODO
-* ec2 app logs to cloudwatch => create custom metrics based on it
 * create s3 static site + add free aws certificate to your domain
 * route53 failover
 * vpc endpoint (access s3 from private ec2 that's not connected to nat gateway, with public https url -> aws will determine that you are using endpoint and will direct your traffic)

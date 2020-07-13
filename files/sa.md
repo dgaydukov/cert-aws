@@ -1215,6 +1215,8 @@ aws s3 presign s3://my-cloudformation-template-example/data.txt --expires-in 30 
 aws cloudformation create-stack --stack-name=mystack --template-body=file://cloudformation/condition.yml --profile=awssa --region=us-east-1
 # update stack and pass params
 aws cloudformation update-stack --stack-name=mystack --template-body=file://cloudformation/condition.yml --parameters=ParameterKey=Env,ParameterValue=prod --profile=awssa --region=us-east-1
+# if you are creating a stack that create iam resouce you should explicitly tell to cloudformation that it's ok to create iam resources
+aws cloudformation update-stack --stack-name=logs --template-body=file://cloudformation/ec2-logs.yml --profile=awssa --region=us-east-1 --capabilities=CAPABILITY_IAM
 ```
 
 ###### Useful Linux Commands

@@ -16,7 +16,6 @@ Resources:
       Tags:
         - Key: Name
           Value:  !Sub ${AWS::StackName}-MyVpc
-
   InternetGateway:
     Type: AWS::EC2::InternetGateway
     DependsOn: VPC
@@ -56,7 +55,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-MyVpc-Public-RT1
+          Value: !Sub ${AWS::StackName}-MyVpc-Public-RT
   PublicRoute:
     Type: AWS::EC2::Route
     DependsOn: AttachGateway
