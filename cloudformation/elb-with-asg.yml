@@ -1,12 +1,21 @@
 AWSTemplateFormatVersion: 2010-09-09
 
 # create vpc with 2 public subnets, and one elb and asg
-# lb use listener which use listener rule to forward traffic
-# both elb & ec2 should allow access to port 80
+# lb should allow 80, 443, ec2 - only 80. You can manually configure route53 dns to call elb
+# you can forward 80 to target group, and it would just work, but can also redirect it to 443, and in this case you will force user to use https
 # !important => you can remove AWS::ElasticLoadBalancingV2::ListenerRule, since every Listener come with default rule
 
-Resources:
+Parameters:
+  MainDomain:
+    Description: Second level domain (hosted zone)
+    Default: aumingo.com
+    Type: String
+  SubDomain:
+    Description: Third level domain (any string)
+    Default: elb
+    Type: String
 
+Resources:
   VPC:
     Type: AWS::EC2::VPC
     Properties:
@@ -106,7 +115,19 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AWS::StackName}-MyVpc-Http-SG
-
+  HttpsSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable HTTPS access from anywhere
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-Https-SG
   SshSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -166,33 +187,36 @@ Resources:
       Type: application
       SecurityGroups:
         - !GetAtt HttpSG.GroupId
+        - !GetAtt HttpsSG.GroupId
       Subnets:
         - !Ref PublicSubnet1
         - !Ref PublicSubnet2
       Tags:
         - Key: Name
           Value: !Sub ${AWS::StackName}-MyVpc-ALB
-  AlbListener:
+  HttpAlbListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: redirect
+          RedirectConfig:
+            Port: 443
+            Protocol: HTTPS
+            StatusCode: HTTP_301
+      LoadBalancerArn: !Ref ALB
+      Port: 80
+      Protocol: HTTP
+  HttpsAlbListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       DefaultActions:
         - Type: forward
           TargetGroupArn: !Ref TG
       LoadBalancerArn: !Ref ALB
-      Port: 80
-      Protocol: HTTP
-  AlbListenerDefaultRule:
-    Type: AWS::ElasticLoadBalancingV2::ListenerRule
-    Properties:
-      Actions:
-        - Type: forward
-          TargetGroupArn: !Ref TG
-      Conditions:
-        - Field: path-pattern
-          Values:
-            - "*"
-      ListenerArn: !Ref AlbListener
-      Priority: 1
+      Port: 443
+      Protocol: HTTPS
+      Certificates:
+        - CertificateArn: !Ref SslCert
   TG:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
@@ -203,3 +227,26 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AWS::StackName}-MyVpc-TG
+
+  DnsRecordSet:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneName: !Join ["", [!Ref MainDomain, "."]]
+      Comment: DNS name for my instance.
+      Name: !Join ["", [!Ref SubDomain, ".", !Ref MainDomain]]
+      Type: A
+      AliasTarget:
+        DNSName: !GetAtt ALB.DNSName
+        HostedZoneId: !GetAtt ALB.CanonicalHostedZoneID
+
+  SslCert:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Join ["", [!Ref SubDomain, ".", !Ref MainDomain]]
+      ValidationMethod: DNS
+      DomainValidationOptions:
+        - DomainName: !Join ["", [!Ref SubDomain, ".", !Ref MainDomain]]
+          ValidationDomain: !Join ["", [!Ref SubDomain, ".", !Ref MainDomain]]
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-${SubDomain}.${MainDomain}

@@ -32,10 +32,9 @@ There are 2 main reasons to get it.
 
 
 ### TODO
-* create s3 static site + add free aws certificate to your domain
-* route53 failover
 * vpc endpoint (access s3 from private ec2 that's not connected to nat gateway, with public https url -> aws will determine that you are using endpoint and will direct your traffic)
 * create new NACL group (VPC=>Security=>Network ACLs) for public subnet (deny ssh in case someone misconfigure SG). subnet can be associated with 1 NACL at a time
+* route53 failover
 * rds read replica (cross-region) vs multi-az failover
 * can you see building blocks (ec2/rds/elb) when using beanstalk + try codestar
 * cognito + api gateway + s3 serverless app (call cognito from java code from local machine vs from ec2)

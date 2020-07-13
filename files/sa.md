@@ -73,8 +73,9 @@
 * 4.3 [Docker and Kubernetes](#docker-and-kubernetes)
 * 4.4 [Pure Serverless](#pure-serverless)
 * 4.5 [AMI vs Snapshot](#ami-vs-snapshot)
-* 4.5 [AWS CLI](#aws-cli)
-* 4.6 [Useful Linux Commands](#useful-linux-commands)
+* 4.6 [AWS CLI](#aws-cli)
+* 4.7 [Useful Linux Commands](#useful-linux-commands)
+* 4.8 [Redirect 301 vs 302](#redirect-301-vs-302)
 
 
 
@@ -1228,3 +1229,11 @@ aws cloudformation update-stack --stack-name=logs --template-body=file://cloudfo
 * Get number of cores `nproc` - total number of cores, `lscpu` - total info about cpu cores
 * Imitate processor load `stress --cpu 8 --timeout 30` - load 8 cores for 30 sec
 
+###### Redirect 301 vs 302
+There are 2 main codes of redirects (HTTP method can also change)
+* 301 (permanent) - resource was moved permanently and browser should no longer request old url
+* 302 (temporary) - resource was temporary moved to new url, so browser should continue request old url
+
+Redirects without changing http method. They basically the same as 301/302 only difference is that here HTTP method (GET/POST/PUT..) can't change
+* 307 (temporary)
+* 308 (permanent)
