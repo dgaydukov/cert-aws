@@ -1,7 +1,9 @@
 AWSTemplateFormatVersion: 2010-09-09
 
-# File Gateway
-# !important => There is no template for Storage Gateway, so you will have to create it manually through the console
+# File Gateway. Once you create it manually amd mount, after you add files to mounted folder they would be synced to s3, but no way back (adding files directly to s3 will not sync them to mounted folder)
+
+# !important => you must use m4.xlarge for fgw ec2 instance (if you use free tier t2.micro, fgw would be created but on Configure local disks step you got error Unable to load local disks.)
+# !important => There is no template for Storage Gateway, so you will have to create it manually through the console (and then create file share and mount this share as nfs to second linux machine)
 
 Resources:
 
@@ -13,7 +15,7 @@ Resources:
       EnableDnsHostnames: true
       Tags:
         - Key: Name
-          Value:  !Sub ${AWS::StackName}-VPC-PN
+          Value:  !Sub ${AWS::StackName}-MyVpc
 
   InternetGateway:
     Type: AWS::EC2::InternetGateway
@@ -21,7 +23,7 @@ Resources:
     Properties:
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-VPC-PN-IGW
+          Value: !Sub ${AWS::StackName}-MyVpc-IGW
   AttachGateway:
     Type: AWS::EC2::VPCGatewayAttachment
     Properties:
@@ -36,7 +38,7 @@ Resources:
       AvailabilityZone: us-east-1a
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-VPC-PN-Public1
+          Value: !Sub ${AWS::StackName}-MyVpc-Public1
 
   PublicSubnet2:
     Type: AWS::EC2::Subnet
@@ -46,7 +48,7 @@ Resources:
       AvailabilityZone: us-east-1b
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-VPC-PN-Public2
+          Value: !Sub ${AWS::StackName}-MyVpc-Public2
 
   PublicRT:
     Type: AWS::EC2::RouteTable
@@ -54,7 +56,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-VPC-PN-Public-RT1
+          Value: !Sub ${AWS::StackName}-MyVpc-Public-RT1
   PublicRoute:
     Type: AWS::EC2::Route
     DependsOn: AttachGateway
@@ -75,23 +77,19 @@ Resources:
       SubnetId: !Ref PublicSubnet2
       RouteTableId: !Ref PublicRT
 
-  PublicEC2InstanceSG:
+  SshSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Enable SSH/ICMP access from anywhere
+      GroupDescription: Enable SSH access from anywhere
       VpcId: !Ref VPC
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 22
           ToPort: 22
           CidrIp: 0.0.0.0/0
-        - IpProtocol: icmp
-          FromPort: -1
-          ToPort: -1
-          CidrIp: 0.0.0.0/0
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-VPC-PN-Public-SG
+          Value: !Sub ${AWS::StackName}-MyVpc-Ssh-SG
 
   FGWSG:
     Type: AWS::EC2::SecurityGroup
@@ -104,12 +102,12 @@ Resources:
           ToPort: 80
           CidrIp: 0.0.0.0/0
         - IpProtocol: tcp
-          FromPort: 2049
-          ToPort: 2049
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
           FromPort: 111
           ToPort: 111
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 2049
+          ToPort: 2049
           CidrIp: 0.0.0.0/0
         - IpProtocol: tcp
           FromPort: 20048
@@ -117,12 +115,12 @@ Resources:
           CidrIp: 0.0.0.0/0
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-VPC-PN-Public-SG
+          Value: !Sub ${AWS::StackName}-MyVpc-Fgw-SG
 
-  PublicEC2Instance1:
+  FgwInstance:
     Type: AWS::EC2::Instance
     Properties:
-      InstanceType: t2.micro
+      InstanceType: m4.xlarge
       ImageId: ami-08dcf54ec97e3cbc8
       KeyName: mykey
       NetworkInterfaces:
@@ -130,7 +128,7 @@ Resources:
           DeviceIndex: 0
           SubnetId: !Ref PublicSubnet1
           GroupSet:
-            - !GetAtt PublicEC2InstanceSG.GroupId
+            - !GetAtt SshSG.GroupId
             - !GetAtt FGWSG.GroupId
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
@@ -141,9 +139,9 @@ Resources:
             VolumeSize: 150
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-VPC-PN-File-Gateway
+          Value: !Sub ${AWS::StackName}-MyVpc-Fgw
 
-  PublicEC2Instance2:
+  OnPremiseInstance:
     Type: AWS::EC2::Instance
     Properties:
       InstanceType: t2.micro
@@ -158,18 +156,18 @@ Resources:
           DeviceIndex: 0
           SubnetId: !Ref PublicSubnet2
           GroupSet:
-            - !GetAtt PublicEC2InstanceSG.GroupId
+            - !GetAtt SshSG.GroupId
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
           Ebs:
             VolumeSize: 8
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-VPC-PN-Public-EC2
+          Value: !Sub ${AWS::StackName}-MyVpc-OnPremise
 
 
   S3Bucket:
     Type: AWS::S3::Bucket
     DeletionPolicy: Delete
     Properties:
-      BucketName: fgw-s3
+      BucketName: !Sub ${AWS::StackName}-myvpc-fgw-s3

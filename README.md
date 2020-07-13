@@ -32,8 +32,6 @@ There are 2 main reasons to get it.
 
 
 ### TODO
-* try storage gateway with m4x.large (0.2$ per hour)
-* https://retrocomputing.stackexchange.com/questions/15522/could-you-reverse-engineer-silicon-just-by-looking-at-it/15523#15523
 * ec2 app logs to cloudwatch => create custom metrics based on it
 * create s3 static site + add free aws certificate to your domain
 * route53 failover
