@@ -1,8 +1,9 @@
 AWSTemplateFormatVersion: 2010-09-09
 
 # add valid bucket name as param, allow public access, and upload index.html (make it public)
-# got to private ec2 through public (bastion) and try to call curl https://test-s3-bucket-12345.s3.amazonaws.com/index.html
+# got to private ec2 through public (bastion) and try to call `curl https://test-s3-bucket-12345.s3.amazonaws.com/index.html`
 # although there is no internet in private ec2, you can still access s3, cause you are using s3 vpc endpoint
+# !important => if you go to RouteTable you will find that for each RT, new route was added with target=vpcEndpoint and Destination=s3Bucket
 
 Parameters:
   BucketName:

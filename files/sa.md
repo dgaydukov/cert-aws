@@ -577,6 +577,7 @@ EC2-to-EC2 communication through public IP
 
 Security groups (SG) vs ACL
 * SG operate at instance level, specify which traffic is allowed to/from EC2
+You can set source as CIDR or other SG (in this case only instances from this SG can access your instance)
 * ACL operates at subnet level and evaluate traffic that enter/exit subnet. Don't filter traffic inside same subnet.
 stateless filtering, SG - stateful filtering
 You can only assign one NACL to one subnet, yet you can assign many SG to same ec2
@@ -600,8 +601,12 @@ VPC ClassicLink
 * allows to connect your VPC with EC2 classic, EC2 becomes a member of VPC Security Group
 
 VPC Endpoint
-* endpoint services (used to call AWS PrivateLink) - you create some service (ec2) and add ELB, and other aws accounts can connect to your service via interface endpoint
+* endpoint services (used to call AWS PrivateLink) - you create some service (ec2) and add NLB(not application/classic lb), and other aws accounts can connect to your service via interface endpoint
 So using this you can create private service provider that would provide some logic to other aws accounts on vpc-to-vpc basis
+Of course you can access your NLB form the internet (you should have at least one RT with intenet gateway route to access NLB/ALB by dns name), but using privatelink will ensure that all traffic is within aws , and no traverse the internet (same as this service running inside your vpc),
+and to access your service from privatelink you don't need to have internet gateway (cause all traffic inside aws and doesn't go to outside Internet)
+So you can access service (ec2) of one vpc from another without vpc peering/internet gateway/vpn
+If you share your service with aws marketplace you can get vanity dns name like `us-east-1.vpce.mycoolsite.com`
 * Gateway endpoint — target for a route in your route table for traffic destined to a supported AWS service (s3/dynamoDB)
 * Interface endpoint — ENI with a private IP address from the IP address range of your subnet that serves as an entry point for traffic destined to a supported service.
 So instead of calling public dns name of some service, aws create ENI inside your subnet, and so you don't need internet access anymore. You can directly call this private IP since it's inside your vpc.

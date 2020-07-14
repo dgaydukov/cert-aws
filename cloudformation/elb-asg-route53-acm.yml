@@ -3,7 +3,7 @@ AWSTemplateFormatVersion: 2010-09-09
 # create vpc with 2 public subnets, and one elb and asg
 # lb should allow 80, 443, ec2 - only 80. You can manually configure route53 dns to call elb
 # you can forward 80 to target group, and it would just work, but can also redirect it to 443, and in this case you will force user to use https
-# !important => you can remove AWS::ElasticLoadBalancingV2::ListenerRule, since every Listener come with default rule
+# !important => you have to go to Certificate Manager and manually approve dns record (before that stack would be in CREATE_IN_PROGRESS status)
 
 Parameters:
   MainDomain:

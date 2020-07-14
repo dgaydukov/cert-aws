@@ -2,7 +2,7 @@ AWSTemplateFormatVersion: 2010-09-09
 
 # create 2 dns records of type A with IP addresses of 2 ec2
 # to test, ssh to first ec2, and run `sudo service httpd stop`
-# you can remove SecondaryHealthCheck, cause it's not mandatory to have healthcheck for secondary record
+# you can remove SecondaryHealthCheck, cause it's not mandatory to have healthcheck for secondary record, BUT doing so would guarantee in case second heathcheck fail, route53 would update dns record A to primary IP address
 
 Parameters:
   MainDomain:
