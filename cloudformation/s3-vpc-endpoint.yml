@@ -1,6 +1,14 @@
 AWSTemplateFormatVersion: 2010-09-09
 
+# add valid bucket name as param, allow public access, and upload index.html (make it public)
+# got to private ec2 through public (bastion) and try to call curl https://test-s3-bucket-12345.s3.amazonaws.com/index.html
+# although there is no internet in private ec2, you can still access s3, cause you are using s3 vpc endpoint
 
+Parameters:
+  BucketName:
+    Description: Valid Bucket name.
+    Default: test-s3-bucket-12345
+    Type: String
 
 Resources:
   VPC:
@@ -154,7 +162,7 @@ Resources:
             Action:
               - "s3:GetObject"
             Resource:
-              - "arn:aws:s3:::test-s3-bucket-12345/*"
+              - !Sub arn:aws:s3:::${BucketName}/*
       RouteTableIds:
         - !Ref PublicRT
         - !Ref PrivateRT
