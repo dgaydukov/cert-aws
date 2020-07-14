@@ -4,7 +4,6 @@ AWSTemplateFormatVersion: 2010-09-09
 # you can either terminate instance and asg will create new one, or run: stress --cpu 1 --timeout 180. after some time it will delete old
 
 Resources:
-
   VPC:
     Type: AWS::EC2::VPC
     Properties:

@@ -4,7 +4,6 @@ AWSTemplateFormatVersion: 2010-09-09
 # !important => since our nat acts as proxy we should disable source/destination check by setting SourceDestCheck: false
 
 Resources:
-
   VPC:
     Type: AWS::EC2::VPC
     Properties:

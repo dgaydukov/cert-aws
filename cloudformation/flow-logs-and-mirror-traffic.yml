@@ -9,7 +9,6 @@ AWSTemplateFormatVersion: 2010-09-09
 # !important => source should be of nitro type, otherwise when you create TrafficMirrorSession you got error `ENI must be attached to a supported instance`
 
 Resources:
-
   VPC:
     Type: AWS::EC2::VPC
     Properties:

@@ -7,7 +7,6 @@ AWSTemplateFormatVersion: 2010-09-09
 # !important => we add sleep 10, to wait before mounting to be sure, mount targets are available (otherwise mount may not work)
 
 Resources:
-
   VPC:
     Type: AWS::EC2::VPC
     Properties:

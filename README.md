@@ -32,7 +32,6 @@ There are 2 main reasons to get it.
 
 
 ### TODO
-* vpc endpoint (access s3 from private ec2 that's not connected to nat gateway, with public https url -> aws will determine that you are using endpoint and will direct your traffic)
 * create new NACL group (VPC=>Security=>Network ACLs) for public subnet (deny ssh in case someone misconfigure SG). subnet can be associated with 1 NACL at a time
 * route53 failover
 * rds read replica (cross-region) vs multi-az failover

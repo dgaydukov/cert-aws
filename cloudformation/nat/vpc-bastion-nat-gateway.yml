@@ -3,7 +3,6 @@ AWSTemplateFormatVersion: 2010-09-09
 # Create vpc with private & public subnet and one EC2 in each subnet
 
 Resources:
-
   VPC:
     Type: AWS::EC2::VPC
     Properties:

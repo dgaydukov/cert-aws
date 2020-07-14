@@ -413,6 +413,9 @@ You have 2 types of distribution
 * web - static web content (files/pics)
 * RTMP - streaming media
 
+If you create distribution to be accessed from dns name you should add all possible urls to cname in cloudfront.
+Sof you are going to access it from example.com, www.example.com, photos.example.com, all these 3 dns names should be added to Cname names when you create distribution.
+
 ###### Kinesis
 It is a platform for streaming data on AWS, making it easy to load and analyze streaming data.
 With Kinesis, you can ingest real-time data such as application logs, website clickstreams, IoT telemetry data, and more into your databases, data lakes, and data warehouses, or build your own real-time applications using this data
@@ -740,8 +743,24 @@ DNS record types
 * CNAME - you can assign another subdomain (blog.example.com CNAME test.my.com)
 Classic example when you support both apex & www domain
 An A record for example.com pointing to the server IP address
-A CNAME record for www.example.com pointing to example.com
+A CNAME record for www.example.com pointing to example.com (but not other way around, cause you can't add CNAME record to apex domain)
 * AAAA - maps subdomain to IPv6
+* MX (Mail eXchange) - tells email delivery agents where they should deliver your email
+* TXT - some text
+* SO - singular Start of Authority record kept at the top level of the domain
+* NS - list of dns servers associated with name
+
+You can't assign CNAME to apex domain - the reason is simple. We can have a chain of subdomains all with CNAME records
+```
+test.example.com => test1.example.com
+test1.example.com => test2.example.com
+test2.example.com => test3.example.com
+...
+```
+But sooner or later it should end with some apex domain. And since apex domain can't be CNAME we would get desired IP address.
+So if you could assign CNAME to apex domain that would meant that CNAME could be endless.
+
+SOA and NS records are mandatory to be present at the root domain
 
 ###### RDS
 RDS (Relational Database Service) - aws managed service, that make it easy install/operate relational database in the cloud.
@@ -1148,6 +1167,7 @@ But in real network you probably gonna have this 3 ip taken also (but you can al
 
 ###### SOA and CAA
 SOA (Start of Authority) - record in DNS containing administrative info about zone, email, last update time.
+You can use dig (domain information groper) utility to group(grip/get) information about dns
 
 You can get it by `dig SOA +multiline google.com`, email is `root@amazon.com`
 ```

@@ -1,9 +1,6 @@
 AWSTemplateFormatVersion: 2010-09-09
 
-# File Gateway. Once you create it manually amd mount, after you add files to mounted folder they would be synced to s3, but no way back (adding files directly to s3 will not sync them to mounted folder)
 
-# !important => you must use m4.xlarge for fgw ec2 instance (if you use free tier t2.micro, fgw would be created but on Configure local disks step you got error Unable to load local disks.)
-# !important => There is no template for Storage Gateway, so you will have to create it manually through the console (and then create file share and mount this share as nfs to second linux machine)
 
 Resources:
   VPC:
@@ -15,6 +12,7 @@ Resources:
       Tags:
         - Key: Name
           Value:  !Sub ${AWS::StackName}-MyVpc
+
   InternetGateway:
     Type: AWS::EC2::InternetGateway
     DependsOn: VPC
@@ -28,25 +26,23 @@ Resources:
       VpcId: !Ref VPC
       InternetGatewayId: !Ref InternetGateway
 
-  PublicSubnet1:
+  PublicSubnet:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
       CidrBlock: 10.100.1.0/24
-      AvailabilityZone: us-east-1a
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-MyVpc-Public1
+          Value: !Sub ${AWS::StackName}-MyVpc-Public
 
-  PublicSubnet2:
+  PrivateSubnet:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
       CidrBlock: 10.100.2.0/24
-      AvailabilityZone: us-east-1b
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-MyVpc-Public2
+          Value: !Sub ${AWS::StackName}-MyVpc-Private
 
   PublicRT:
     Type: AWS::EC2::RouteTable
@@ -63,19 +59,27 @@ Resources:
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId: !Ref InternetGateway
 
+  PrivateRT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-Private-RT
 
-  PublicSubnetRTAssociation1:
+
+  PublicSubnetRTAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      SubnetId: !Ref PublicSubnet1
+      SubnetId: !Ref PublicSubnet
       RouteTableId: !Ref PublicRT
-  PublicSubnetRTAssociation2:
+  PrivateSubnetRTAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      SubnetId: !Ref PublicSubnet2
-      RouteTableId: !Ref PublicRT
+      SubnetId: !Ref PrivateSubnet
+      RouteTableId: !Ref PrivateRT
 
-  SshSG:
+  PublicSshSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Enable SSH access from anywhere
@@ -87,85 +91,72 @@ Resources:
           CidrIp: 0.0.0.0/0
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-MyVpc-Ssh-SG
-
-  FGWSG:
+          Value: !Sub ${AWS::StackName}-MyVpc-PublicSshS-SG
+  VpcSshSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Enable NFS access from anywhere
+      GroupDescription: Enable SSH access from vpc
       VpcId: !Ref VPC
       SecurityGroupIngress:
         - IpProtocol: tcp
-          FromPort: 80
-          ToPort: 80
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          FromPort: 111
-          ToPort: 111
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          FromPort: 2049
-          ToPort: 2049
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          FromPort: 20048
-          ToPort: 20048
-          CidrIp: 0.0.0.0/0
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 10.100.0.0/16
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-MyVpc-Fgw-SG
+          Value: !Sub ${AWS::StackName}-MyVpc-VpcSsh-SG
 
-  FgwInstance:
-    Type: AWS::EC2::Instance
-    Properties:
-      InstanceType: m4.xlarge
-      ImageId: ami-08dcf54ec97e3cbc8
-      KeyName: mykey
-      NetworkInterfaces:
-        - AssociatePublicIpAddress: true
-          DeviceIndex: 0
-          SubnetId: !Ref PublicSubnet1
-          GroupSet:
-            - !GetAtt SshSG.GroupId
-            - !GetAtt FGWSG.GroupId
-      BlockDeviceMappings:
-        - DeviceName: /dev/xvda
-          Ebs:
-            VolumeSize: 80
-        - DeviceName: /dev/sdb
-          Ebs:
-            VolumeSize: 150
-      Tags:
-        - Key: Name
-          Value: !Sub ${AWS::StackName}-MyVpc-Fgw
-
-  OnPremiseInstance:
+  PublicInstance:
     Type: AWS::EC2::Instance
     Properties:
       InstanceType: t2.micro
       ImageId: ami-09d95fab7fff3776c
       KeyName: mykey
-      UserData:
-        Fn::Base64:
-          !Sub |
-          #!/usr/bin/env bash
       NetworkInterfaces:
         - AssociatePublicIpAddress: true
           DeviceIndex: 0
-          SubnetId: !Ref PublicSubnet2
+          SubnetId: !Ref PublicSubnet
           GroupSet:
-            - !GetAtt SshSG.GroupId
+            - !GetAtt PublicSshSG.GroupId
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
           Ebs:
             VolumeSize: 8
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-MyVpc-OnPremise
+          Value: !Sub ${AWS::StackName}-MyVpc-Public
 
-
-  S3Bucket:
-    Type: AWS::S3::Bucket
-    DeletionPolicy: Delete
+  PrivateEInstance:
+    Type: AWS::EC2::Instance
     Properties:
-      BucketName: !Sub ${AWS::StackName}-myvpc-fgw-s3
+      InstanceType: t2.micro
+      ImageId: ami-09d95fab7fff3776c
+      KeyName: mykey
+      SubnetId: !Ref PrivateSubnet
+      SecurityGroupIds:
+        - !GetAtt VpcSshSG.GroupId
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 8
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-Private
+
+  S3VpcEndpoing:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal: "*"
+            Action:
+              - "s3:GetObject"
+            Resource:
+              - "arn:aws:s3:::test-s3-bucket-12345/*"
+      RouteTableIds:
+        - !Ref PublicRT
+        - !Ref PrivateRT
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.s3
+      VpcId: !Ref VPC
