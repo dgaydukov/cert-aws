@@ -697,17 +697,51 @@ routing policy
 * Simple - default policy to link domain to any aws serivce (elb/ec2/beanstalk)
 * Failover - in case one ec2 fail, to redirect traffic to second one
 * Geolocation - redirect traffic based on user location to record set with nearest geographic aws region
-* Geoproximity - you choose region and set bias value, and based on this value region border is drawn
-then traffic goes according to these drawn by you borders
+* Geoproximity - you choose region and set bias value, and based on this value region border is drawn then traffic goes according to these drawn by you borders
 * Latency - redirect traffic to the region that provides the lowest latency.
-* Multivalue answer - simple routing policy + healthcheck. You can set up to 8 instances, and if first become unavailable
-traffic goes to random one out of other 7
+* Multivalue answer - simple routing policy + healthcheck. You can set up to 8 instances, and if first become unavailable traffic goes to random one out of other 7
 * Weighted - 90% of traffic to one ec2, 10 to second
 
 Hosted zone - route53 concept of domain. For each of your domain you have 1 hosted zone where you can have records.
 Records set - subdomains of your hosted zone. You can easily route any record set to any aws services (s3/elb/cloudFront)
 
 You can create route53 health check for dns failover (you can also choose String matching and not just ensure that response is 200 http status, but check actual content of response)
+Apex domain - second level domain (example.com). All other like www.example.com, test.example.com - are third level domains
+Alias record - way route53 allows you to bind domain (both apex and any subdomain) to dns record of s3/elb/cloudfront/beanstack/api_gateway/vpc_endpoint (by default you should add IP address, but IP associated with these services can be changed due to scaling up/down)
+Alias is not the same as CNAME record. Internally route53 will substitute alias with appropriate IP address for A record. Of course you can take dns name of (let's say elb) and create CNAME record for this dns, and it would work the same way as alias for A record.
+But alias is better cause it gives IP. Alias automatically changes IP address in case it was changed in aws (suppose you have alias for elb dns, and elb ip has been changed => aws would change dns A record and propagate it to all dns servers)
+
+A record with Alias for elb `dig elb.aumingo.com`
+```
+;; ANSWER SECTION:
+elb.aumingo.com.	60	IN	A	52.202.13.14
+elb.aumingo.com.	60	IN	A	34.194.253.144
+```
+
+CNAME record with custom dns for elb `dig elb2.aumingo.com`
+```
+;; ANSWER SECTION:
+elb2.aumingo.com.	300	IN	CNAME	elb.aumingo.com.
+elb.aumingo.com.	59	IN	A	52.202.13.14
+elb.aumingo.com.	59	IN	A	34.194.253.144
+```
+
+CNAME record with elb dns `dig elb3.aumingo.com`
+```
+;; ANSWER SECTION:
+elb3.aumingo.com.	300	IN	CNAME	elb-alb-1qtyacrlf2pd7-248530498.us-east-1.elb.amazonaws.com.
+elb-alb-1qtyacrlf2pd7-248530498.us-east-1.elb.amazonaws.com. 59	IN A 34.194.253.144
+elb-alb-1qtyacrlf2pd7-248530498.us-east-1.elb.amazonaws.com. 59	IN A 52.202.13.14
+```
+
+
+DNS record types
+* A - you should assign IPv4 address (blog.example.com A 3.50.51.52)
+* CNAME - you can assign another subdomain (blog.example.com CNAME test.my.com)
+Classic example when you support both apex & www domain
+An A record for example.com pointing to the server IP address
+A CNAME record for www.example.com pointing to example.com
+* AAAA - maps subdomain to IPv6
 
 ###### RDS
 RDS (Relational Database Service) - aws managed service, that make it easy install/operate relational database in the cloud.
@@ -1201,7 +1235,7 @@ Most ami are of second type (ebs-boot). If you need to launch new ec2 from snaps
 CLI (Command Line Interface) - can be useful to quickly automate some aws manual tasks.
 First you need to add aws credentials `aws configure --profile awscert`, after you can run commands like `aws s3 ls --profile awscert`
 You can get accountId `aws sts get-caller-identity --profile=awscert`
-Create presign s3 file 
+* S3 (create presign url) 
 ```
 aws s3 cp cloudformation/vpc/nested/vpc-bastion.yml s3://my-cloudformation-template-bucket --profile=awscert
 aws s3 cp cloudformation/vpc/nested/ec2-bastion.yml s3://my-cloudformation-template-bucket --profile=awscert
@@ -1210,7 +1244,7 @@ aws s3 cp cloudformation/vpc/nested/ec2-bastion.yml s3://my-cloudformation-templ
 aws s3 presign s3://my-cloudformation-template-example/data.txt --expires-in 30 --profile=awscert
 ```
 
-* CloudFormation example
+* CloudFormation
 ```
 # create stack
 aws cloudformation create-stack --stack-name=mystack --template-body=file://cloudformation/condition.yml --profile=awssa --region=us-east-1
