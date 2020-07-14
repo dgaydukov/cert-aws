@@ -12,7 +12,7 @@ Resources:
       EnableDnsHostnames: true
       Tags:
         - Key: Name
-          Value:  !Sub ${AWS::StackName}-VPC-Bastion
+          Value:  !Sub ${AWS::StackName}-MyVpc
 
   InternetGateway:
     Type: AWS::EC2::InternetGateway
@@ -20,7 +20,7 @@ Resources:
     Properties:
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-VPC-Bastion-IGW
+          Value: !Sub ${AWS::StackName}-MyVpc-IGW
   AttachGateway:
     Type: AWS::EC2::VPCGatewayAttachment
     Properties:
@@ -34,7 +34,7 @@ Resources:
       CidrBlock: 10.100.1.0/24
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-VPC-Bastion-Public
+          Value: !Sub ${AWS::StackName}-MyVpc-Public
 
   PrivateSubnet:
     Type: AWS::EC2::Subnet
@@ -43,7 +43,7 @@ Resources:
       CidrBlock: 10.100.2.0/24
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-VPC-Bastion-Private
+          Value: !Sub ${AWS::StackName}-MyVpc-Private
 
   PublicRT:
     Type: AWS::EC2::RouteTable
@@ -51,7 +51,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-VPC-Bastion-Public-RT
+          Value: !Sub ${AWS::StackName}-MyVpc-Public-RT
   PublicRoute:
     Type: AWS::EC2::Route
     DependsOn: AttachGateway
@@ -66,7 +66,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-VPC-Bastion-Private-RT
+          Value: !Sub ${AWS::StackName}-MyVpc-Private-RT
   PrivateRoute:
     Type: AWS::EC2::Route
     Properties:
@@ -102,7 +102,7 @@ Resources:
           CidrIp: 0.0.0.0/0
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-VPC-Bastion-Bastion-SG
+          Value: !Sub ${AWS::StackName}-MyVpc-Bastion-SG
   # the !Ref function returns IDs for most resources, but it returns names for security groups, that's why we should use !GetAtt
   BastionEC2Instance:
     Type: AWS::EC2::Instance
@@ -122,7 +122,7 @@ Resources:
             VolumeSize: 8
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-VPC-Bastion-Bastion-EC2
+          Value: !Sub ${AWS::StackName}-MyVpc-Bastion-EC2
 
   PrivateEC2InstanceSG:
     Type: AWS::EC2::SecurityGroup
@@ -140,7 +140,7 @@ Resources:
           CidrIp: 10.100.0.0/16
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-VPC-Bastion-Private-SG
+          Value: !Sub ${AWS::StackName}-MyVpc-Private-SG
   PrivateEC2Instance:
     Type: AWS::EC2::Instance
     Properties:
@@ -156,7 +156,7 @@ Resources:
             VolumeSize: 8
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-VPC-Bastion-Private-EC2
+          Value: !Sub ${AWS::StackName}-MyVpc-Private-EC2
 
   NatEc2InstanceSG:
     Type: AWS::EC2::SecurityGroup
@@ -178,7 +178,7 @@ Resources:
           CidrIp: 10.100.0.0/16
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-VPC-Bastion-Nat-SG
+          Value: !Sub ${AWS::StackName}-MyVpc-Nat-SG
   NatEc2Instance:
     Type: AWS::EC2::Instance
     Properties:
@@ -198,4 +198,4 @@ Resources:
             VolumeSize: 8
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-VPC-Bastion-Nat-EC2
+          Value: !Sub ${AWS::StackName}-MyVpc-Nat-EC2
