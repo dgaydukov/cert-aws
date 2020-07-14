@@ -578,9 +578,10 @@ EC2-to-EC2 communication through public IP
 Security groups (SG) vs ACL
 * SG operate at instance level, specify which traffic is allowed to/from EC2
 * ACL operates at subnet level and evaluate traffic that enter/exit subnet. Don't filter traffic inside same subnet.
-* ACL - stateless filtering, SG - stateful filtering
+stateless filtering, SG - stateful filtering
+You can only assign one NACL to one subnet, yet you can assign many SG to same ec2
 You can't block specific IP with SG, you need to use NACL
-Stateful - if you send request from your ec2 you will got response even if SG donesn't have any outbound rules.
+Stateful - if you send request from your ec2 you will got response even if SG doesn't have any outbound rules
 
 When you create VPC, default SG created automatically. It allows inbound traffic from instances with same SG (source - SG_ID), and all outbound traffic.
 So if you need 2 ec2 to talk with each other you can assign both of them same SG where source is ID of this SG - this means traffic allowed from any instance of the same SG
@@ -598,8 +599,13 @@ VPC ClassicLink
 * before 2013 there were no default VPC and all EC2 where launched in flat network shared with other aws users
 * allows to connect your VPC with EC2 classic, EC2 becomes a member of VPC Security Group
 
-AWS PrivateLink
-* allows you to connect your VPC to aws services (traffic goes inside aws)
+VPC Endpoint
+* endpoint services (used to call AWS PrivateLink) - you create some service (ec2) and add ELB, and other aws accounts can connect to your service via interface endpoint
+So using this you can create private service provider that would provide some logic to other aws accounts on vpc-to-vpc basis
+* Gateway endpoint — target for a route in your route table for traffic destined to a supported AWS service (s3/dynamoDB)
+* Interface endpoint — ENI with a private IP address from the IP address range of your subnet that serves as an entry point for traffic destined to a supported service.
+So instead of calling public dns name of some service, aws create ENI inside your subnet, and so you don't need internet access anymore. You can directly call this private IP since it's inside your vpc.
+Using this enables you to connect to services powered by AWS PrivateLink (so basically all aws services + your custom created via endpoint, except those in gateway endpoint, are aws privatelink)
 
 By default ec2 instances dns name is disabled (only ip address is given). You can enable it for vpc by going to `Actions=>Edit DNS Hostname`.
 You can change subnet setting `Actions=>Modify auto-assign IP settings` and in this case when you create ec2, it would by default select subnet settings (enable/disable auto-assign public IP address). Of course you can also change it on ec2 level.
