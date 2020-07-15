@@ -1313,6 +1313,34 @@ CLI (Command Line Interface) - can be useful to quickly automate some aws manual
 aws configure --profile awssa
 ```
 
+* There are 3 env variables that overwrites `~/.aws/config` settings
+```
+export AWS_ACCESS_KEY_ID=123
+export AWS_SECRET_ACCESS_KEY=123
+export AWS_DEFAULT_REGION=us-west-2
+```
+Although default region for `awssa` profile is `us-east-1` (you can check it by `aws configure get region --profile=awssa`), if you set region as env var `AWS_DEFAULT_REGION=us-west-1`, and then run `aws configure list --profile=awssa`
+```
+      Name                    Value             Type    Location
+      ----                    -----             ----    --------
+   profile                    awssa           manual    --profile
+access_key     ****************2JQS shared-credentials-file    
+secret_key     ****************Y+na shared-credentials-file    
+    region                us-west-1              env    AWS_DEFAULT_REGION
+```
+So whenever you run any command with this profile and don't specify region (by setting `--region=us-east-1`), region from env var is used (not from your config setting).
+To remove it just unset the variable `unset AWS_DEFAULT_REGION`, and now if you run `aws configure list --profile=awssa` you will see that region is taken from config
+```
+      Name                    Value             Type    Location
+      ----                    -----             ----    --------
+   profile                    awssa           manual    --profile
+access_key     ****************2JQS shared-credentials-file    
+secret_key     ****************Y+na shared-credentials-file    
+    region                us-east-1      config-file    ~/.aws/config
+```
+And you can run commands from console and default region from config file will be used.
+You can set or unset aws env vars in `~/.bashrc` file.
+
 * Get account Id
 ```
 aws sts get-caller-identity --profile=awssa

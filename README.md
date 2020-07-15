@@ -32,6 +32,9 @@ There are 2 main reasons to get it.
 
 
 ### TODO
+* assume 2 roles at the same time
+* add access to s3 buckets except production buckets
+* cloudformation cognito
 * rds read replica (cross-region) vs multi-az failover
 * cognito + api gateway + s3 serverless app (call cognito from java code from local machine vs from ec2)
 * can you see building blocks (ec2/rds/elb) when using beanstalk + try codestar
