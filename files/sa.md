@@ -35,7 +35,7 @@
 * 2.20 [VPC](#vpc)
 * 2.21 [Elastic Beanstalk](#elastic-beanstalk)
 * 2.22 [Database Migration Service](#database-migration-service)
-* 2.22 [Elastic Load Balancing](#elastic-load-balancing)
+* 2.22 [ELB](#elb)
 * 2.23 [CloudWatch](#cloudwatch)
 * 2.23 [Key Management Service](#key-management-service)
 * 2.23 [Route53](#route53)
@@ -267,11 +267,55 @@ But generally they resemble layered style, only difference they divide core (dom
 
 There are 2 types of permission
 * group - collection of permissions that you can assign. Used to define users. One user can belong to multiple groups.
-* role - collection of permissions for specific aws service (for example ec2 can connect to s3 without any secret key). Role can't be assign to user.
+* role - collection of permissions for specific aws service (for example ec2 can connect to s3 without any secret key). You can also create role for user, but user will have to assume this role.
+So if user is assigned to 2 groups he would get all permissions from 2 groups at the same time, but if he assigned 2 roles, he can use only one at a time (by assuming one role)
+Role for user
+* create role `S3Viewer` of type: Another AWS Account (enter desired accountID or your own) and assign policy  `AmazonS3ReadOnlyAccess`
+* create new policy `AssumeS3ViewerRole`
+```
+{
+    "Version": "2012-10-17",
+    "Statement": {
+        "Effect": "Allow",
+        "Action": "sts:AssumeRole",
+        "Resource": "arn:aws:iam::ACCOUNT_ID:role/S3Viewer*"
+    }
+}
+```
+* create user `jack` with both console & programmatic access, and  attach `AssumeRoleForS3` & `AmazonEC2ReadOnlyAccess` policies to it
+* add user to cli `aws configure --profile=jack`
+* You can run `aws ec2 describe-instances --profile=jack` and see results. But if you run `aws s3 ls --profile=jack` you will got error, cause your user has not permission to view buckets
+* You can get temporal credential for role by `aws sts assume-role --role-arn=arn:aws:iam::ACCOUNT_ID:role/S3Viewer --role-session-name=mysession --profile=jack`
+```
+{
+    "Credentials": {
+        "AccessKeyId": "...",
+        "SecretAccessKey": "...",
+        "SessionToken": "...",
+        "Expiration": "2020-07-15T08:20:57Z"
+    },
+    "AssumedRoleUser": {
+        "AssumedRoleId": "...:mysession",
+        "Arn": "arn:aws:sts::ACCOUNT_ID:assumed-role/S3Viewer/mysession"
+    }
+}
+```
+Note `...` - some secret code
+* If you need constant access add to `~/.aws/config`
+```
+[profile jackS3Viewer]
+region = us-east-1
+role_arn = arn:aws:iam::ACCOUNT_ID:role/S3Viewer
+source_profile = jack
+```
+Now if you run `aws s3 ls --profile=jackS3Viewer` you get a list of buckets, but if you run `aws ec2 describe-instances --profile=jackS3Viewer` you got `UnauthorizedOperation`, cause this role can only view s3 buckets.
+* To use assumed role from SDK you have to use `AWSSecurityTokenService` to get temporary credentials, [example here](https://docs.aws.amazon.com/AmazonS3/latest/dev/AuthUsingTempSessionTokenJava.html)
+So in Spring you just create 2 configs (based on Profile) and in local config add this logic to obtain temporal credentials. This way will allows for local development
 
 You can define permissions by assigning policies to group/user. There are 2 types of policy
-* aws managed - most common policies created by aws (for example s3/ec2 access and so on...  b  )
+* aws managed - most common policies created by aws (for example s3/ec2 access and so on...)
 * managed by you - custom policies created by end user
+
 
 
 ###### S3
@@ -648,8 +692,8 @@ DMS use SCT (Schema Conversion Tool) for converting between existing schemas.
 
 
 
-###### Elastic Load Balancing
-ELB - is a proxy that accept traffic (using listeners) from clients and route it to targets (usually EC2), so it basically distribute your traffic between different ec2 instances.
+###### ELB
+ELB (Elastic Load Balancing) - is a proxy that accept traffic (using listeners) from clients and route it to targets (usually EC2), so it basically distribute your traffic between different ec2 instances.
 Listener - is a protocol + port for which you got incoming requests.
 There are 3 types of elb:
 * Application LB - if you need to balance http/https. Also supports websocket & secure websocket
@@ -1264,15 +1308,23 @@ Most ami are of second type (ebs-boot). If you need to launch new ec2 from snaps
 
 ###### AWS CLI
 CLI (Command Line Interface) - can be useful to quickly automate some aws manual tasks.
-First you need to add aws credentials `aws configure --profile awscert`, after you can run commands like `aws s3 ls --profile awscert`
-You can get accountId `aws sts get-caller-identity --profile=awscert`
+* Create new profile to access aws services from console
+```
+aws configure --profile awssa
+```
+
+* Get account Id
+```
+aws sts get-caller-identity --profile=awssa
+```
+
 * S3 (create presign url) 
 ```
-aws s3 cp cloudformation/vpc/nested/vpc-bastion.yml s3://my-cloudformation-template-bucket --profile=awscert
-aws s3 cp cloudformation/vpc/nested/ec2-bastion.yml s3://my-cloudformation-template-bucket --profile=awscert
+aws s3 cp cloudformation/vpc/nested/vpc-bastion.yml s3://my-cloudformation-template-bucket --profile=awssa
+aws s3 cp cloudformation/vpc/nested/ec2-bastion.yml s3://my-cloudformation-template-bucket --profile=awssa
 
 # make file public for 30 sec
-aws s3 presign s3://my-cloudformation-template-example/data.txt --expires-in 30 --profile=awscert
+aws s3 presign s3://my-cloudformation-template-example/data.txt --expires-in 30 --profile=awssa
 ```
 
 * CloudFormation

@@ -32,8 +32,6 @@ There are 2 main reasons to get it.
 
 
 ### TODO
-* uefi vs legacy, load from usb
-* why do I need to switch roles when my account should already have all roles permissions (create limited account with role) + check do I need to set env var role name (like role_arn) to access some service for role
 * rds read replica (cross-region) vs multi-az failover
 * cognito + api gateway + s3 serverless app (call cognito from java code from local machine vs from ec2)
 * can you see building blocks (ec2/rds/elb) when using beanstalk + try codestar
