@@ -870,7 +870,7 @@ multi-AZ (failover):
 
 Read replica (replica db only for reading):
 Use it if you want to write to master and read from replica. Read Replica implemented using db (mysql or other) native asynchronous replication, that's why lag can occur, comparing with multi-AZ replication
-where writes are concurrent. You can also modify read replica to execute DDL (Data Definition Language) SQL queries.
+where writes are concurrent. You can also modify read replica to execute DDL (Data Definition Language) SQL queries. You can promote read replica to become master database.
 
 Enhanced monitoring - allows you to view all metrics with 1 sec granularity
 
