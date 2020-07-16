@@ -32,7 +32,6 @@ There are 2 main reasons to get it.
 
 
 ### TODO
-* rds read replica (cross-region) vs multi-az failoverrds
 * cognito + api gateway + s3 serverless app (call cognito from java code from local machine vs from ec2) => put it all into cloudformation (pay attention to cognito, cause terraform doesn't support it)
 * can you see building blocks (ec2/rds/elb) when using beanstalk + try codestar
 * cross-region vpc peering
