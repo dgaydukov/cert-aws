@@ -312,6 +312,43 @@ Now if you run `aws s3 ls --profile=jackS3Viewer` you get a list of buckets, but
 * To use assumed role from SDK you have to use `AWSSecurityTokenService` to get temporary credentials, [example here](https://docs.aws.amazon.com/AmazonS3/latest/dev/AuthUsingTempSessionTokenJava.html)
 So in Spring you just create 2 configs (based on Profile) and in local config add this logic to obtain temporal credentials. This way will allows for local development
 
+You can assume only 1 role at a time. So if you want to assume 2 roles, it would be 2 different set of permissions, you can't make any union operation on them.
+Moreover in cli you can add profiles only for single role. If you try to add profile for 2 or more roles like
+```
+[profile jackViewer]
+region = us-east-1
+role_arn = arn:aws:iam::ACCOUNT_ID:role/S3Viewer
+role_arn = arn:aws:iam::ACCOUNT_ID:role/Ec2Viewer                                         
+source_profile = jack
+```
+When you try to run any command you will get `configparser.DuplicateOptionError: While reading from '/home/diman/.aws/config' [line 38]: option 'role_arn' in section 'profile jackViewer' already exists`
+So [as explained here](https://stackoverflow.com/questions/48876077/assume-multiple-aws-iam-roles-are-a-single-time) role assuming is one at a time operation, and in case you need union (like you need to load 2 athena tables from 2 accounts)
+you have to use some sort of custom loader (using java sdk) and load them one by one assuming one role at a time.
+
+If you need really fine-grained control you can create policy to access s3 or ec2 by name or tag, and divide access based on evn (For example all dev s3/ec2 can be accessed for dev role, but prod only to admin)
+Yet there are some limitation, [take a look](https://stackoverflow.com/a/18956581), to work with s3 buckets you need to add `ListAllMyBuckets` for all buckets. So if you want to create a policy to work with single bucket
+```
+{
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": "s3:ListAllMyBuckets",
+            "Resource": "arn:aws:s3:::*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": "s3:*",
+            "Resource": [
+                "arn:aws:s3:::bucket-name",
+                "arn:aws:s3:::bucket-name/*"
+            ]
+        }
+    ]
+}
+```
+User would still be able to list all buckets.
+Due to this limitations, sometimes it's better to create multiple aws accounts (dev/prod) to divide access, and make sure that nobody from developers has access to prod env.
+
 You can define permissions by assigning policies to group/user. There are 2 types of policy
 * aws managed - most common policies created by aws (for example s3/ec2 access and so on...)
 * managed by you - custom policies created by end user
@@ -827,10 +864,12 @@ There are 2 ways to backup
 * automatic backup - snapshots takes by RDS daily, retained for limited period (by default 7 days)
 * db snapshot - taken by user
 
-multi-AZ deployment:
+multi-AZ (failover):
 * primary - you main db that performs read/write
 * standby - replica db that has most recent updates from primary. You can't use it for reads, the only purpose is failover - when primary fails, your standby becomes primary, so you won't even notice failure. Replication is synchronous.
-If you want to write to master and read from replica, RDS provide `read replica`. Read Replica implemented using db (mysql or other) native asynchronous replication, that's why lag can occur, comparing with multi-AZ replication
+
+Read replica (replica db only for reading):
+Use it if you want to write to master and read from replica. Read Replica implemented using db (mysql or other) native asynchronous replication, that's why lag can occur, comparing with multi-AZ replication
 where writes are concurrent. You can also modify read replica to execute DDL (Data Definition Language) SQL queries.
 
 Enhanced monitoring - allows you to view all metrics with 1 sec granularity
@@ -840,7 +879,12 @@ RDS Proxy - database proxy that helps
 * reduce db failover time for 66%
 * enforce IAM access to db
 
-When you reboot you can option to restart rds in new AZ.
+When you reboot you can option to restart rds in new AZ
+
+DB Subnet group - a list of VPC subnets (you should have at least 2 subnets in 2 different AZ) where rds would create your db.
+DB Parameter Group - a list of db config values that can be applied to 1 or many rds instances
+
+Get current database `SELECT DATABASE() FROM DUAL;`
 
 
 ###### SQS
