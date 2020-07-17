@@ -32,10 +32,9 @@ There are 2 main reasons to get it.
 
 
 ### TODO
-* cognito + api gateway + s3 serverless app (call cognito from java code from local machine vs from ec2) => put it all into cloudformation (pay attention to cognito, cause terraform doesn't support it)
+* finish serverless: add congito auth + api to safe file in s3
 * can you see building blocks (ec2/rds/elb) when using beanstalk + try codestar
-* cross-region vpc peering
-* vpc peering (non-transitive)
+* cross-region vpc peering vs non-transitive vpc peering
 * vpc to on-premise (imitated by vpc + openswan) vpn connection (site-to-site vpn)
 * transit vpc
 * vpc endpoint service (add ec2+NLB and share ti to vpc from another region)

@@ -638,7 +638,10 @@ By default every account has default VPC (and default subnet for each AZ), so if
 Amazon VPC consists of
 * VPC - private network, logically isolated from other networks in aws cloud. Can span across multiple AZ. Instances in different AZ charged $0.01 per GB for data transfer.
 * Subnet - private sub-network inside VPC. Can reside only within single AZ.
-* Route table - set of rules (routes) to determine where network traffic from your VPC is directed
+* RT (Route table) - set of rules (routes) to determine where network traffic from your VPC is directed
+Single RT can be associated with multiple subnets, but single subnet can be associated to one RT only.
+When you create vpc, default RT is created and all subnets by default assigned to this RT, yet if you go to this RT you will see that subnets are not explicitly associated with it.
+That is because this RT - is default. If you create new RT and associate subnet with it, or implicitly associate default RT with subnet, you will see that RT has this association.
 * Internet Gateway - entry point between your VPC and Internet. It allows EC2 in VPC directly access Internet. You can use public IP or elastic IP(won't change after stop/start) to both communicate with Internet and receive requests from outside web-servers.
 * NAT Gateway - Network address resolution service in private subnet to access the Internet. Instances without public IP use NAT gateway to access Internet. Nat allows outbound communication, but doesn't allows machines on the Internet to access instances inside VPC.
 With IG you have both outbound and inbound access, but with Nat gateway - only outbound (your instance can access Internet, but is unaccessable from Internet)
