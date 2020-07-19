@@ -32,13 +32,15 @@ There are 2 main reasons to get it.
 
 
 ### TODO
+* see json logs from cloudtrail (how do they look like) and create task to log as json
+* trunk connection
 * finish serverless: add congito auth + api to safe file in s3
+* elb hide some path by creating rules only for allowed path (allow /api, but hide /internal) -- delete default rule
 * can you see building blocks (ec2/rds/elb) when using beanstalk + try codestar
-* cross-region vpc peering vs non-transitive vpc peering
-* vpc to on-premise (imitated by vpc + openswan) vpn connection (site-to-site vpn)
-* transit vpc
+* cross-region vpc peering vs non-transitive vpc peering (add route table)
 * vpc endpoint service (add ec2+NLB and share ti to vpc from another region)
 * transit gateway (connect multiple vpc to each other)
 * client vpn (connect to vpc from you remote laptop)
-* site-to-site vpn
-* direct connect
+* site-to-site vpn (on-premise network imitated by vpc with ec2 and openswan + vpn gateway from vpc side)
+* direct connect (direct connection between your IPS and AWS)
+* transit vpc

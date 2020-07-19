@@ -662,7 +662,13 @@ EC2-to-EC2 communication through public IP
 Security groups (SG) vs ACL
 * SG operate at instance level, specify which traffic is allowed to/from EC2
 You can set source as CIDR or other SG (in this case only instances from this SG can access your instance)
-* ACL operates at subnet level and evaluate traffic that enter/exit subnet. Don't filter traffic inside same subnet.
+* NACL operates at subnet level and evaluate traffic that enter/exit subnet. Don't filter traffic inside same subnet.
+Evaluation order: starting from lowest to highest without overwriting each other.
+In example once we hit rule #90 it was applied, and later rule #100 will not overwrite it.
+Or you can also think that rules are evaluated in decreasing order by overwriting each other
+Suppose you want to allow all traffic except http
+90  - tcp - 80    - DENY
+100 - all traffic - ALLOW
 stateless filtering, SG - stateful filtering
 You can only assign one NACL to one subnet, yet you can assign many SG to same ec2
 You can't block specific IP with SG, you need to use NACL
@@ -712,6 +718,12 @@ As you see there is no actual payload, only fact that somebody try to send some 
 So use
 * Flow Logs - troubleshoot connectivity and security issues, make sure that the network access rules are working as expected
 * Traffic Mirroring - deeper insight into the network traffic by analyzing traffic content (payload)
+
+3 layers of security
+* vpc layer - route tables define which traffic to allow
+* subnet layer - NACL decide which traffic to allow
+* ec2 layer - SG
+
 
 ###### Elastic Beanstalk
 Beanstalk - PaaS that mange deployment, provisioning, load-balancing, auto-scaling, health monitoring. Best suited when you need quickly deploy something and don't want to learn about other aws services.
