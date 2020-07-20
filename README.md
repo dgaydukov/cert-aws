@@ -32,8 +32,6 @@ There are 2 main reasons to get it.
 
 
 ### TODO
-* see json logs from cloudtrail (how do they look like) and create task to log as json
-* trunk connection
 * finish serverless: add congito auth + api to safe file in s3
 * elb hide some path by creating rules only for allowed path (allow /api, but hide /internal) -- delete default rule
 * can you see building blocks (ec2/rds/elb) when using beanstalk + try codestar

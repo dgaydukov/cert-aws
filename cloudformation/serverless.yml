@@ -42,12 +42,15 @@ Resources:
         ZipFile: |
           exports.handler = (params, context, cb) => {
               console.log("params => ", params);
-              cb(null, "very cool app");
+              cb(null, {
+                  statusCode: 200,
+                  body: JSON.stringify({msg: "serverless app"}),
+                  headers: {"Content-Type": "application/json"}
+              });
           }
       Tags:
         - Key: Name
           Value: !Sub ${AWS::StackName}-Info
-
 
   HttpApi:
     Type: AWS::ApiGatewayV2::Api
@@ -57,13 +60,25 @@ Resources:
       ProtocolType: HTTP
       Tags:
         Name: !Sub ${AWS::StackName}-Http-Api
+  ApiGatewayTrigger:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt InfoLambda.Arn
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Join [ "", ["arn:aws:execute-api:", !Ref "AWS::Region", ":", !Ref "AWS::AccountId", ":", !Ref HttpApi, "/*/*/*"]]
   DevStage:
     Type: AWS::ApiGatewayV2::Stage
     Properties:
       StageName: dev
       Description: Only for dev env
       ApiId: !Ref HttpApi
-
+  Deployment:
+    Type: AWS::ApiGatewayV2::Deployment
+    Properties:
+      Description: Serverless app deployment
+      ApiId: !Ref HttpApi
+      StageName: !Ref DevStage
 
   InfoIntegration:
     Type: AWS::ApiGatewayV2::Integration
@@ -75,6 +90,7 @@ Resources:
       IntegrationMethod: POST
       ConnectionType: INTERNET
       PayloadFormatVersion: 1.0
+      TimeoutInMillis: 5000
   InfoRoute:
     DependsOn:
       - InfoIntegration
@@ -82,12 +98,4 @@ Resources:
     Properties:
       ApiId: !Ref HttpApi
       RouteKey: GET /info
-      Target: !Join ["", ["/integrations", !Ref InfoIntegration]]
-
-#  Deployment:
-#    Type: AWS::ApiGatewayV2::Deployment
-#    DependsOn:
-#      - InfoRoute
-#    Properties:
-#      Description: My deployment
-#      ApiId: !Ref HttpApi
+      Target: !Join ["", ["integrations/", !Ref InfoIntegration]]
