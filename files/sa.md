@@ -936,8 +936,7 @@ Api Gateway calls are supported by CloudFront, so your api is highly available.
 
 ###### Cognito
 Cognito - managed user service that add user sing-in/sign-up/management email/phone verification/2FA logic.
-User Pool - a directory with users' profiles, you can set up password strength.
-User pool - is a IdP (Identity Provider)
+User Pool - a directory with users' profiles, you can set up password strength, kind of IdP (Identity Provider)
 You can migrate your users into cognito, but password won't be migrated. If you want to migrate them with password you need to add special logic to your app:
 when user signin to your app - you signin him within cognito, if user doesn't exist in cognito you sign-up him with username/password.
 Cognito also support SAML or OpenID Connect, social identity providers (such as Facebook, Twitter, Amazon) and you can also integrate your own identity provider.
