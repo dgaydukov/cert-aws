@@ -2,110 +2,122 @@ AWSTemplateFormatVersion: 2010-09-09
 
 
 Resources:
-#  LambdaRole:
-#    Type: AWS::IAM::Role
-#    Properties:
-#      AssumeRolePolicyDocument:
-#        Version: 2012-10-17
-#        Statement:
-#          - Effect: Allow
-#            Principal:
-#              Service:
-#                - lambda.amazonaws.com
-#            Action:
-#              - sts:AssumeRole
-#      Path: /
-#  LogRolePolicy:
-#    Type: AWS::IAM::Policy
-#    Properties:
-#      PolicyName: !Sub ${AWS::StackName}-Logging
-#      PolicyDocument:
-#        Version: 2012-10-17
-#        Statement:
-#          - Effect: Allow
-#            Action:
-#              - "logs:CreateLogGroup"
-#              - "logs:CreateLogStream"
-#              - "logs:PutLogEvents"
-#              - "logs:DescribeLogStreams"
-#            Resource: "*"
-#      Roles:
-#        - !Ref LambdaRole
-#  InfoLambda:
-#    Type: AWS::Lambda::Function
-#    Properties:
-#      Description: Show basic information about app
-#      Role: !GetAtt LambdaRole.Arn
-#      Runtime: nodejs12.x
-#      Handler: index.handler
-#      Code:
-#        ZipFile: |
-#          exports.handler = (params, context, cb) => {
-#              console.log("params => ", params);
-#              cb(null, {
-#                  statusCode: 200,
-#                  body: JSON.stringify({msg: "serverless app"}),
-#                  headers: {"Content-Type": "application/json"}
-#              });
-#          }
-#      Tags:
-#        - Key: Name
-#          Value: !Sub ${AWS::StackName}-Info
-#
-#  HttpApi:
-#    Type: AWS::ApiGatewayV2::Api
-#    Properties:
-#      Name: Serverless API
-#      Description: Complete serverless web app using only aws services without any java code (cognito + api gateway + s3 + lambda = serverless app)
-#      ProtocolType: HTTP
-#      Tags:
-#        Name: !Sub ${AWS::StackName}-Http-Api
-#  ApiGatewayTrigger:
-#    Type: AWS::Lambda::Permission
-#    Properties:
-#      FunctionName: !GetAtt InfoLambda.Arn
-#      Action: lambda:InvokeFunction
-#      Principal: apigateway.amazonaws.com
-#      SourceArn: !Join [ "", ["arn:aws:execute-api:", !Ref "AWS::Region", ":", !Ref "AWS::AccountId", ":", !Ref HttpApi, "/*/*/*"]]
-#  DevStage:
-#    Type: AWS::ApiGatewayV2::Stage
-#    Properties:
-#      StageName: dev
-#      Description: Only for dev env
-#      ApiId: !Ref HttpApi
-#  Deployment:
-#    Type: AWS::ApiGatewayV2::Deployment
-#    Properties:
-#      Description: Serverless app deployment
-#      ApiId: !Ref HttpApi
-#      StageName: !Ref DevStage
-#
-#  InfoIntegration:
-#    Type: AWS::ApiGatewayV2::Integration
-#    Properties:
-#      ApiId: !Ref HttpApi
-#      Description: Lambda Integration
-#      IntegrationType: AWS_PROXY
-#      IntegrationUri: !Join ["", ["arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/", !GetAtt InfoLambda.Arn, "/invocations"]]
-#      IntegrationMethod: POST
-#      ConnectionType: INTERNET
-#      PayloadFormatVersion: 1.0
-#      TimeoutInMillis: 5000
-#  InfoRoute:
-#    DependsOn:
-#      - InfoIntegration
-#    Type: AWS::ApiGatewayV2::Route
-#    Properties:
-#      ApiId: !Ref HttpApi
-#      RouteKey: GET /info
-#      Target: !Join ["", ["integrations/", !Ref InfoIntegration]]
-#
-#  AuthRoute:
-#    Type: AWS::ApiGatewayV2::Route
-#    Properties:
-#      ApiId: !Ref HttpApi
-#      RouteKey: GET /auth
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+  LogRolePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub ${AWS::StackName}-Logging
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - "logs:CreateLogGroup"
+              - "logs:CreateLogStream"
+              - "logs:PutLogEvents"
+              - "logs:DescribeLogStreams"
+            Resource: "*"
+      Roles:
+        - !Ref LambdaRole
+  InfoLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Show basic information about app
+      Role: !GetAtt LambdaRole.Arn
+      Runtime: nodejs12.x
+      Handler: index.handler
+      Code:
+        ZipFile: |
+          exports.handler = (params, context, cb) => {
+              console.log("params => ", params);
+              var msg = "Serverless app";
+              if (params.resource == "/auth") {
+                msg = "Authenticated page";
+              }
+              cb(null, {
+                statusCode: 200,
+                body: JSON.stringify({msg}),
+                headers: {"Content-Type": "application/json"}
+              });
+          }
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-Info
 
+  HttpApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: Serverless API
+      Description: Complete serverless web app using only aws services without any java code (cognito + api gateway + s3 + lambda = serverless app)
+      ProtocolType: HTTP
+      Tags:
+        Name: !Sub ${AWS::StackName}-Http-Api
+  ApiGatewayTrigger:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt InfoLambda.Arn
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Join [ "", ["arn:aws:execute-api:", !Ref "AWS::Region", ":", !Ref "AWS::AccountId", ":", !Ref HttpApi, "/*/*/*"]]
+  DevStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      StageName: dev
+      Description: Only for dev env
+      ApiId: !Ref HttpApi
+      AutoDeploy: true
+
+  InfoIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref HttpApi
+      Description: Lambda Integration
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Join ["", ["arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/", !GetAtt InfoLambda.Arn, "/invocations"]]
+      IntegrationMethod: POST
+      ConnectionType: INTERNET
+      PayloadFormatVersion: 1.0
+      TimeoutInMillis: 5000
+  InfoRoute:
+    DependsOn:
+      - InfoIntegration
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: GET /info
+      Target: !Join ["", ["integrations/", !Ref InfoIntegration]]
+
+  AuthRoute:
+    DependsOn:
+      - InfoIntegration
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: GET /auth
+      Target: !Join ["", ["integrations/", !Ref InfoIntegration]]
+
+
+  Authorizer:
+    Type: AWS::ApiGateway::Authorizer
+    Properties:
+      AuthorizerResultTtlInSeconds: 300
+      AuthorizerUri: !Join [ "", ["https://cognito-idp.", !Ref "AWS::Region", ".amazonaws.com/", !Ref UserPool]]
+      Type: TOKEN
+      IdentitySource: $request.header.Authorization
+      Name: DefaultAuthorizer
+      RestApiId: !Ref HttpApi
 
 
   UserPool:
@@ -127,13 +139,12 @@ Resources:
           Required: true
 
 
-  WebAppClient:
+  WebClient:
     Type: AWS::Cognito::UserPoolClient
     Properties:
-      ClientName: !Sub ${AWS::StackName}-WebApp
+      ClientName: !Sub ${AWS::StackName}-Web
       GenerateSecret: false
       UserPoolId: !Ref UserPool
-
 
   IdentityPool:
     Type: AWS::Cognito::IdentityPool
@@ -141,7 +152,7 @@ Resources:
       IdentityPoolName: !Sub ${AWS::StackName}-Identity
       AllowUnauthenticatedIdentities: true
       CognitoIdentityProviders:
-        - ClientId: !Ref WebAppClient
+        - ClientId: !Ref WebClient
           ProviderName: !GetAtt UserPool.ProviderName
 
   AuthorizedRole:
