@@ -1,6 +1,9 @@
 AWSTemplateFormatVersion: 2010-09-09
 
 
+# Create api gateway + routes + authorizer + cognito pool (user + identity)
+# TODO: check how authorizer works, how to obtain valid jwt cognito token
+
 Resources:
   LambdaRole:
     Type: AWS::IAM::Role
@@ -107,17 +110,23 @@ Resources:
       ApiId: !Ref HttpApi
       RouteKey: GET /auth
       Target: !Join ["", ["integrations/", !Ref InfoIntegration]]
+      AuthorizerId: !Ref Authorizer
+      AuthorizationType: JWT
 
 
   Authorizer:
-    Type: AWS::ApiGateway::Authorizer
+    Type: AWS::ApiGatewayV2::Authorizer
     Properties:
-      AuthorizerResultTtlInSeconds: 300
-      AuthorizerUri: !Join [ "", ["https://cognito-idp.", !Ref "AWS::Region", ".amazonaws.com/", !Ref UserPool]]
-      Type: TOKEN
-      IdentitySource: $request.header.Authorization
-      Name: DefaultAuthorizer
-      RestApiId: !Ref HttpApi
+      Name: MyCognitoAuthorizer
+      AuthorizerType: JWT
+      IdentitySource:
+        - $request.header.Authorization
+      JwtConfiguration:
+        Audience:
+          - mysecret
+        Issuer: !Join [ "", ["https://cognito-idp.", !Ref "AWS::Region", ".amazonaws.com/", !Ref UserPool]]
+      ApiId: !Ref HttpApi
+
 
 
   UserPool:

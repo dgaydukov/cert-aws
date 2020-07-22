@@ -32,8 +32,6 @@ There are 2 main reasons to get it.
 
 
 ### TODO
-* finish serverless: add congito auth + api to safe file in s3
-* elb hide some path by creating rules only for allowed path (allow /api, but hide /internal) -- delete default rule
 * can you see building blocks (ec2/rds/elb) when using beanstalk + try codestar
 * cross-region vpc peering vs non-transitive vpc peering (add route table)
 * vpc endpoint service (add ec2+NLB and share ti to vpc from another region)
