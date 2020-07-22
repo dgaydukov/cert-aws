@@ -1,7 +1,9 @@
 AWSTemplateFormatVersion: 2010-09-09
 
 # create vpc with 2 public subnets, and one elb and 2 ec2
+# You can limit api access by specifing rules (for example allow /, /index.html, /api.html. But we prohibit /internal.html)
 # pages named differently in ec2, so you can easily track with elb switched to another ec2 instance
+# by default elb using ec2 healthchecks, that check that instance is running and port 80 is available
 
 Resources:
   VPC:
@@ -191,15 +193,6 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AWS::StackName}-MyVpc-ALB
-  HttpAlbListener:
-    Type: AWS::ElasticLoadBalancingV2::Listener
-    Properties:
-      DefaultActions:
-        - Type: forward
-          TargetGroupArn: !Ref TG
-      LoadBalancerArn: !Ref ALB
-      Port: 80
-      Protocol: HTTP
   TG:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
@@ -213,3 +206,28 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AWS::StackName}-MyVpc-TG
+  HttpAlbListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: fixed-response
+          FixedResponseConfig:
+            StatusCode: 403
+      LoadBalancerArn: !Ref ALB
+      Port: 80
+      Protocol: HTTP
+  ApiRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      Priority: 10
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref TG
+      Conditions:
+        - Field: path-pattern
+          PathPatternConfig:
+            Values:
+              - "/"
+              - "/index.html"
+              - "/api.html"
+      ListenerArn: !Ref HttpAlbListener

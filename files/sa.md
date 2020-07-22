@@ -777,9 +777,10 @@ ALB Request Routing - you can redirect user to different ec2 based on request at
 
 Listener Rule - can forward request but not change. So if you have a rule `/api => EC2_1, /internal => EC2_2`
 That means EC2_1 should have url `/api` and EC2_2 should have url `/internal`.
-Default Rule - for every listener there is default rule that route all traffic to target group. Because of this you can't use elb to hide some parts of url.
-Although you can add rules like if path `/api` route to targetGroup1, if `/pub` to targetGroup2. But if you have some private route `/internal` and there is no matching rule for it, elb will use last rule (which is default one) 
-and successfully forward your request to this path. So there is no way to use elb to hide some parts of url.
+Since we can modify rules, you can use elb to hide some api endpoints. For example you can create 2 rules like:
+* rule-1 - forward /api requests to /api endpoint in your app
+* default rule - always return 403
+So with this only `/api` endpoint would be available. All other endpoints would return 403.
 
 
 ###### CloudWatch
