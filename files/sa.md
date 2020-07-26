@@ -616,14 +616,17 @@ AntiPattern
 * ETL Workloads (for etl you should use EMR/Glue)
 
 ###### Organizations
-Organizations - service that allows to to tie several accounts to master account and centrally manage them (billing, services, policies)
+Organizations - service that allows to tie several accounts to master account and centrally manage them (billing, services, policies)
 Organization is a collection of AWS accounts that you can organize into a hierarchy and manage centrally.
 Master Account - aws account from which you create your organization. From there you can also create/invite/delete other accounts. It's charged to pay all bills by all accounts. Once chosen, you can't change master account.
 OU (Organization Unit) - group of accounts under one name, can be used to build hierarchical structure.
 Account can be a member of only 1 organization/OU at a time. OU can be a member of only 1 OU at a time.
-SCP (Service Control Policy) - policy you can apply to a group of aws accounts, defines service actions (like run EC2 instance), it follows the same rules as IAM policies.
-You can attach a policy to the root/OU/account.
-
+Typical use case is to have 2 accounts (dev + prod) to separate concerns, but to manage them from single one.
+There are 2 types of policies
+* SCP (Service Control Policy) - policy you can apply to a group of aws accounts, defines service actions (like run EC2 instance), it follows the same rules as IAM policies.
+You can attach a policy to the root/OU/account. SCP overwrites IAM permissions (if you create SCP to block ec2 creation for all accounts, even root user form child account won't be able to launch any ec2 except for t2.micro)
+Order of execution - most restrictive policies take precedence.
+* TP (Tag policy) - set of rules regarding tags (which resource should have which tags)
 
 ###### Well-Architected Tool
 Well-Architected Tool is a aws service that allows you to validate your current infrastructure against 5 pillars of well-arhitected framework.
@@ -725,6 +728,10 @@ So use
 * subnet layer - NACL decide which traffic to allow
 * ec2 layer - SG
 
+PG (Placement group) - create ec2 in underlying hardware in such a way as to avoid correlated failures. There are 2 types
+* cluster - packs instances close together inside AZ (good when you need high speed node-to-node communication, used in HPC apps). t2.micro can't be placed into cluster PG
+* partition - spread instances between different hardware partitions (so group in instances inside one partition don't share any hardware with group of instances from another partition)
+* spread - strictly place instances into distinct hardware to reduce correlated failures
 
 ###### Elastic Beanstalk
 Beanstalk - PaaS that mange deployment, provisioning, load-balancing, auto-scaling, health monitoring. Best suited when you need quickly deploy something and don't want to learn about other aws services.
@@ -1316,12 +1323,17 @@ Routing - process to select path between different networks using 5 addressing m
 * `unicast` - one-to-one between a sender and destination (each destination address uniquely identifies a single receiver endpoint)
 * `broadcast` - one-to-all (single datagram from one sender is routed to all of the possibly multiple endpoints associated with the broadcast address)
 * `multicast` - one-to-many (datagrams are routed simultaneously in a single transmission to many recipients)
-* `anycast` - one-to-one (datagrams are routed to any single member of a group of potential receivers that are all identified by the same destination address)
+* `anycast` - one-to-nearest (datagrams are routed to any single member of a group of potential receivers that are all identified by the same destination address)
+it allows for multiple machines to share same IP address, and send user request based of the user proximity to server.
+So if one datacenter would go offline, anycast would forward user to the next closest datacenter.
+It's based on BGP and AS. With unicast path would lead to one destination, no matter what distance is.
 * `geocast` - delivery of information to a group of destinations in a network identified by their geographical locations
 
 routing protocol
 * EGP (External Gateway Protocol) - based on based on tree-like (i.e., hierarchical) topologies.
 As internet grows EGP become inefficient to find the quickest route, so new protocol was developed
+AS (Autonomous System) architecture (represented by unique number called an ASN).
+Each AS controls a collection of connected routing prefixes, representing a range of IP addresses. It then determines the routing policy inside the network.
 * BGP (Border Gateway Protocol) - makes internet to work.
 It works like GPS (the best route is determined by different factors, such as traffic congestion, roads temporarily closed for maintenance, etc).
 BGP is designed to exchange routing and reachability information between autonomous systems on the Internet

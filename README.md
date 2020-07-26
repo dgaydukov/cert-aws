@@ -32,6 +32,8 @@ There are 2 main reasons to get it.
 
 
 ### TODO
+* did our aws account integrated into aws organizations?
+
 * find out how account auth works, implement `configure(ResourceServerSecurityConfigurer resources)`
 * check out authentication through `UserDetailsService`
 * create spring boot + db app for beanstalk
@@ -43,4 +45,9 @@ There are 2 main reasons to get it.
 * site-to-site vpn (on-premise network imitated by vpc with ec2 and openswan + vpn gateway from vpc side)
 * direct connect (direct connection between your IPS and AWS)
 * transit vpc
-* https://aws.amazon.com/global-accelerator/faqs
+* https://aws.amazon.com/global-accelerator/faqs 
+you hit aws edge location, and from there traffic goes not though internet but through aws global network to exact region with your app
+add cloudformation global accelerator (2 ec2 httpd machines in 2 regions), turn off one instance and see that traffic redirected to another ec2
+so you can basically redirect to another ec2 (in another region) using same static anycast IP
+* https://aws.amazon.com/fsx/windows/faqs / https://aws.amazon.com/fsx/lustre/faqs
+* 
