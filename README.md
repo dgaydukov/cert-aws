@@ -33,6 +33,7 @@ There are 2 main reasons to get it.
 
 ### TODO
 * find out how account auth works, implement `configure(ResourceServerSecurityConfigurer resources)`
+* check out authentication through `UserDetailsService`
 * create spring boot + db app for beanstalk
 * can you see building blocks (ec2/rds/elb) when using beanstalk + try codestar
 * cross-region vpc peering vs non-transitive vpc peering (add route table)
@@ -42,3 +43,4 @@ There are 2 main reasons to get it.
 * site-to-site vpn (on-premise network imitated by vpc with ec2 and openswan + vpn gateway from vpc side)
 * direct connect (direct connection between your IPS and AWS)
 * transit vpc
+* https://aws.amazon.com/global-accelerator/faqs

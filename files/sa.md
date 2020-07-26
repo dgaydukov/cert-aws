@@ -67,6 +67,7 @@
 * 3.6 [Low Level Protocols](#low-level-protocols)
 * 3.7 [SOA and CAA](#soa-and-caa)
 * 3.8 [SSL vs TLS vs HTTPS](#ssl-vs-tls-vs-https)
+* 3.8 [Routing](#routing)
 4. [Miscellaneous](#miscellaneous)
 * 4.1 [SaaS vs PaaS vs IaaS/IAC](#saas-vs-paas-vs-iaasiac)
 * 4.2 [Virtualization and Containerization](#virtualization-and-containerization)
@@ -1309,6 +1310,21 @@ SSL (Secure Sockets Layers) - outdated protocol not used today. TLS (Transport L
 So you can call TLS more updated & secure version of SSL. But we still call our digital certs as SSL certificates, but in reality when you buy SSL certificate from DigiCert
 you are buying most up-to-date TLS certificate.
 HTTPS means that our HTTP traffic is secured by TLS protocol with SSL(TLS) certificate.
+
+###### Routing
+Routing - process to select path between different networks using 5 addressing method (association)
+* `unicast` - one-to-one between a sender and destination (each destination address uniquely identifies a single receiver endpoint)
+* `broadcast` - one-to-all (single datagram from one sender is routed to all of the possibly multiple endpoints associated with the broadcast address)
+* `multicast` - one-to-many (datagrams are routed simultaneously in a single transmission to many recipients)
+* `anycast` - one-to-one (datagrams are routed to any single member of a group of potential receivers that are all identified by the same destination address)
+* `geocast` - delivery of information to a group of destinations in a network identified by their geographical locations
+
+routing protocol
+* EGP (External Gateway Protocol) - based on based on tree-like (i.e., hierarchical) topologies.
+As internet grows EGP become inefficient to find the quickest route, so new protocol was developed
+* BGP (Border Gateway Protocol) - makes internet to work.
+It works like GPS (the best route is determined by different factors, such as traffic congestion, roads temporarily closed for maintenance, etc).
+BGP is designed to exchange routing and reachability information between autonomous systems on the Internet
 
 
 ### Miscellaneous
