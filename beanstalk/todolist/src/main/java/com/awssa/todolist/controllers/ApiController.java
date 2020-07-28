@@ -18,9 +18,9 @@ public class ApiController {
     @Autowired
     private TodoItemRepository repository;
 
-    @GetMapping("/api/info")
-    public String getApiInfo(){
-        return "Api v 2.0";
+    @GetMapping("/")
+    public String getInfo(){
+        return "Todolist App v1.0";
     }
 
     @GetMapping("/api/todo")

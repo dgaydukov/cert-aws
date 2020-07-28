@@ -32,8 +32,6 @@ There are 2 main reasons to get it.
 
 
 ### TODO
-* create spring boot + db app for beanstalk
-* can you see building blocks (ec2/rds/elb) when using beanstalk + try codestar
 * cross-region vpc peering vs non-transitive vpc peering (add route table)
 * vpc endpoint service (add ec2+NLB and share ti to vpc from another region)
 * transit gateway (connect multiple vpc to each other)

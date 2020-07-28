@@ -737,19 +737,12 @@ PG (Placement group) - create ec2 in underlying hardware in such a way as to avo
 Beanstalk - PaaS that mange deployment, provisioning, load-balancing, auto-scaling, health monitoring. Best suited when you need quickly deploy something and don't want to learn about other aws services.
 It keeps the provisioning of building blocks (EC2/RDS/ELB/Auto Scaling/CloudWatch), deployment of applications, and health monitoring abstracted from the user so they can just focus on writing code
 You simply upload a `.war` (in case of java) file, and beanstalk run tomcat server for you and deploy your app. Yet developer has a right to manage all infrastructure provided by beanstalk.
-Using beanstalk you can:
-* select OS
-* select EC2 instance (on-demand, reserved, spot)
-* ssh to EC2
-* select RDS and configure it
-
-Beanstalk underneath using: EC2, RDS, ELB, S3 (app files, server logs), SNS
-Beanstalk is free, you pay for underlying resources (like EC2, S3) that you are actually use
+EB using cloudformation template that build your configuration. After successfull deployment you can see your rds/ec2/elb and configure them separately.``
+Keep in mind that for prod deployment it's better to use your own cloudformation script and manage infra with it, eb is good for testing purposes, PoC.
 
 ###### Database Migration Service
 DMS - used for easy migration between different db (like from MySql to DynamoDB), and also for data replication.
 DMS use SCT (Schema Conversion Tool) for converting between existing schemas.
-
 
 
 ###### ELB
