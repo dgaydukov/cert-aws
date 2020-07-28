@@ -32,8 +32,8 @@ There are 2 main reasons to get it.
 
 
 ### TODO
-* add cloudformation global accelerator (2 ec2 httpd machines in 2 regions), turn off one instance and see that traffic redirected to another ec2
-* https://aws.amazon.com/fsx/windows/faqs / https://aws.amazon.com/fsx/lustre/faqs
+* 2 cloudformation templates (region1: ec2 + globalAccelerator, region2: ec2) with httpd servers, turn off one instance and see that traffic redirected to another ec2
+* cloudformation template with FSx for windows or lustre (and connect it to ec2 with linux)
 * cross-region vpc peering vs non-transitive vpc peering (add route table)
 * vpc endpoint service (add ec2+NLB and share ti to vpc from another region)
 * transit gateway (connect multiple vpc to each other)

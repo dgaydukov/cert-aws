@@ -59,6 +59,7 @@
 * 2.40 [Rekognition](#rekognition)
 * 2.41 [EC2 Auto Scaling](#ec2-auto-scaling)
 * 2.42 [Global Accelerator](#global-accelerator)
+* 2.43 [FSx](#fsx)
 3. [Networking](#networking)
 * 3.1 [NIC](#nic)
 * 3.2 [Hub, Switch, Router](#hub-switch-router)
@@ -1150,6 +1151,20 @@ Even if you are using single region, GA can still help you, cause it will route 
 ELB provides load balancing within 1 region, GA provides traffic management across multiple Regions. So if you have all your load in one region ELB would be enough, no need to use GA, but if you have global distirubion of services
 across multiple regions, than definately you have to use GA. In this case you can have several ELB for each region, and they are set as targets for GA.
 CloudFront duplicates your data across different edge locations, but GA only route your request to nearest location to you.
+
+###### FSx
+FSx - file system for windows and lustre.
+Lustre - distributed file system for cluster computing (portmanteau word derived from Linux and cluster).
+
+FSx for Windows - fully managed, highly reliable, and scalable file storage using SMB protocol. File Share - specific folder inside file system.
+FSx mostly for windows, EFS - for linux. FSx integrated with windows AD (AWS AD or windows native AD) and windows users can use there AD identity to access resources on FSx.
+By default FSx replicates data in single AZ for durability, but you can create Multi-AZ FSx go ensure data durability and failover in case of AZ damage. You can also create backups and store them in s3.
+
+Lustre - open source high-performance file system (good for HPC, video processing, financial modeling, genome sequencing), it provides two deployment options
+* scratch - temporary storage and shorter-term processing of data. Data is not replicated and does not persist if a file server fails
+* persistent - long-term storage (data automatically replicated within single AZ)
+You can access FSx lustre from
+* linux (install the open-source Lustre client on that instance)
 
 ### Networking
 ###### NIC
