@@ -32,10 +32,6 @@ There are 2 main reasons to get it.
 
 
 ### TODO
-* did our aws account integrated into aws organizations?
-
-* find out how account auth works, implement `configure(ResourceServerSecurityConfigurer resources)`
-* check out authentication through `UserDetailsService`
 * create spring boot + db app for beanstalk
 * can you see building blocks (ec2/rds/elb) when using beanstalk + try codestar
 * cross-region vpc peering vs non-transitive vpc peering (add route table)
@@ -50,4 +46,3 @@ you hit aws edge location, and from there traffic goes not though internet but t
 add cloudformation global accelerator (2 ec2 httpd machines in 2 regions), turn off one instance and see that traffic redirected to another ec2
 so you can basically redirect to another ec2 (in another region) using same static anycast IP
 * https://aws.amazon.com/fsx/windows/faqs / https://aws.amazon.com/fsx/lustre/faqs
-* 
