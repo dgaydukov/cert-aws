@@ -14,6 +14,7 @@ DB_USERNAME=root
 DB_PASSWORD=12345678
 ```
 4. Save env vars and upload your jar file
+** If you update env vars after you create your app, you may get errors. This is because beanstalk can't restart ec2. Try to manually terminate ec2 and update env vars. In this case beanstalk will create new ec2 with updated env vars.
 
 ### Console commands
 ```

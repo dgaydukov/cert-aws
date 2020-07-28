@@ -58,6 +58,7 @@
 * 2.39 [CodeStar](#codestar)
 * 2.40 [Rekognition](#rekognition)
 * 2.41 [EC2 Auto Scaling](#ec2-auto-scaling)
+* 2.42 [Global Accelerator](#global-accelerator)
 3. [Networking](#networking)
 * 3.1 [NIC](#nic)
 * 3.2 [Hub, Switch, Router](#hub-switch-router)
@@ -736,9 +737,10 @@ PG (Placement group) - create ec2 in underlying hardware in such a way as to avo
 ###### Elastic Beanstalk
 Beanstalk - PaaS that mange deployment, provisioning, load-balancing, auto-scaling, health monitoring. Best suited when you need quickly deploy something and don't want to learn about other aws services.
 It keeps the provisioning of building blocks (EC2/RDS/ELB/Auto Scaling/CloudWatch), deployment of applications, and health monitoring abstracted from the user so they can just focus on writing code
-You simply upload a `.war` (in case of java) file, and beanstalk run tomcat server for you and deploy your app. Yet developer has a right to manage all infrastructure provided by beanstalk.
-EB using cloudformation template that build your configuration. After successfull deployment you can see your rds/ec2/elb and configure them separately.``
+You simply upload a `.war/.jar` (in case of java) file, and beanstalk run tomcat server for you and deploy your app. Yet developer has a right to manage all infrastructure provided by beanstalk.
+EB using cloudformation template that build your configuration. After successfull deployment you can see your rds/ec2/elb and configure them separately.
 Keep in mind that for prod deployment it's better to use your own cloudformation script and manage infra with it, eb is good for testing purposes, PoC.
+With EB you shouldn't worry about java installed on ec2, if you select java it would automatically install it into ec2 and use coretton as jdk (same true for other popular env like node.js/tomcat and so on..)
 
 ###### Database Migration Service
 DMS - used for easy migration between different db (like from MySql to DynamoDB), and also for data replication.
@@ -1135,10 +1137,19 @@ LC (launch configuration) - template that ASG uses to launch new instances. One 
 ASG can launch your instances across multiple AZ but only within same region.
 
 lifecycle hooks - you can execute some logic after AS create new instance (useful when you don't have ready to use AMI and need to tune instance after creation).
-Unhealty instance can be determine by 2 healthchecks
+Unhealthy instance can be determine by 2 healthchecks
 * elb healthchek - you should use it if you use elb
 * ec2 healthcheck - use it if you don't use elb
 
+###### Global Accelerator
+GA allows you to create 2 static anycast IP addresses and routing users to nearest server to them.
+You can create 2 ec2 from 2 regions and create GA for it. When user try to access it by IP he would be routed to the nearest region.
+You can use [speed tool](https://speedtest.globalaccelerator.aws/) to see how GA would speed up routing. Apart from this GA can also allow traffic control (how much traffic direct to a particular region).
+GA also has healthchecks, so in case one region become unhealty all requests would be routed to nearest healthy location.
+Even if you are using single region, GA can still help you, cause it will route traffic to nearest aws region to user, and from there request would go through aws global network (which is faster than through the internet) to region with your ec2.
+ELB provides load balancing within 1 region, GA provides traffic management across multiple Regions. So if you have all your load in one region ELB would be enough, no need to use GA, but if you have global distirubion of services
+across multiple regions, than definately you have to use GA. In this case you can have several ELB for each region, and they are set as targets for GA.
+CloudFront duplicates your data across different edge locations, but GA only route your request to nearest location to you.
 
 ### Networking
 ###### NIC
