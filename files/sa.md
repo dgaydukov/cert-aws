@@ -261,7 +261,7 @@ Presentation depends(can access) on Business Logic and it depends(can access) on
 There are other 2 types of architecture
 * hexagonal
 * onion
-But generally they resemble layered style, only difference they divide core (doman objects + services) and outer object (ui, database) and they are connected by using port (on core side) + adapter (on outer side)
+But generally they resemble layered style, only difference they divide core (domain objects + services) and outer object (ui, database) and they are connected by using port (on core side) + adapter (on outer side)
 
 ###### IAM
 * In case you have one user who requires access to a specific resource, as a best practice, you should create a new AWS group for that access (in case new user would appear you would just assign him to this group)
@@ -1175,18 +1175,20 @@ Now you can access them using GA IP address, by using it you would be routed to 
 Healthchecks are already built into endpoints, so you don't need to explicitly define them.
 
 ###### FSx
-FSx - file system for windows and lustre.
+FSx - file system for windows and lustre. File system is accesible from inside aws. If you want to access it from on-premises you have to use direct connect or VPN.
 Lustre - distributed file system for cluster computing (portmanteau word derived from Linux and cluster).
+Generally FSx is cheaper than EFS (cause EFS provides 100% durability with multi-AZ deployment). FSx Lustre on average more faster then EFS
 
 FSx for Windows - fully managed, highly reliable, and scalable file storage using SMB protocol. File Share - specific folder inside file system.
 FSx mostly for windows, EFS - for linux. FSx integrated with windows AD (AWS AD or windows native AD) and windows users can use there AD identity to access resources on FSx.
 By default FSx replicates data in single AZ for durability, but you can create Multi-AZ FSx go ensure data durability and failover in case of AZ damage. You can also create backups and store them in s3.
 
-Lustre - open source high-performance file system (good for HPC, video processing, financial modeling, genome sequencing), it provides two deployment options
+Lustre - open source high-performance file system (good for HPC, video processing, financial modeling, genome sequencing), it provides two deployment options:
 * scratch - temporary storage and shorter-term processing of data. Data is not replicated and does not persist if a file server fails
 * persistent - long-term storage (data automatically replicated within single AZ)
 You can access FSx lustre from
 * linux (install the open-source Lustre client on that instance)
+Minimum size for Lustre is 1.2TB
 
 ### Networking
 ###### NIC

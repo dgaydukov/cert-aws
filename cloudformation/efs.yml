@@ -4,7 +4,7 @@ AWSTemplateFormatVersion: 2010-09-09
 # create efs and mount to both ec2
 # create one access point for user ec2-user (userId/groupId - 1000 by default) - so ec2-user can write to it. It also would be as dit /data in our efs
 # !important => we add VPC.DefaultSecurityGroup to our instance and to efs, so they both in save SG and allow inbound traffic (you can mount efs from ec2)
-# !important => we add sleep 10, to wait before mounting to be sure, mount targets are available (otherwise mount may not work)
+# !important => we add sleep 10, to wait before mounting to be sure, mount targets are available (sometimes it may work without it, at some cases you may like to make it 30 or 60 sec)
 
 Resources:
   VPC:

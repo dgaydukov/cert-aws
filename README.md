@@ -32,12 +32,10 @@ There are 2 main reasons to get it.
 
 
 ### TODO
-* 2 cloudformation templates (region1: ec2 + globalAccelerator, region2: ec2) with httpd servers, turn off one instance and see that traffic redirected to another ec2
-* cloudformation template with FSx for windows or lustre (and connect it to ec2 with linux)
+* client vpn (connect to vpc from you remote laptop)
 * cross-region vpc peering vs non-transitive vpc peering (add route table)
 * vpc endpoint service (add ec2+NLB and share ti to vpc from another region)
 * transit gateway (connect multiple vpc to each other)
-* client vpn (connect to vpc from you remote laptop)
 * site-to-site vpn (on-premise network imitated by vpc with ec2 and openswan + vpn gateway from vpc side)
 * direct connect (direct connection between your IPS and AWS)
 * transit vpc
