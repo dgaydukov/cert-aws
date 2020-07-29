@@ -610,6 +610,11 @@ once your credit is 0, performance downgrade
 
 It usually takes longer time to stop instance then to reboot. The reason is when you stop it does some clean up by removing dns name, public IPv4, private IPv4, IPv6, ec2 instance store.
 
+2 types of scaling
+* vertical - enlarge instance capacity, need downtime. Stop instance, go to instance settings => change instance type and select new instance type, then start it.
+Stopping is required cause Amazon has to move the VM to a different piece of hardware with the available resources for the size change.
+* horizontal - add more instances, no need for downtime
+
 ###### Athena
 Athena is an interactive query service that makes it easy to analyze data in Amazon S3 using standard SQL. 
 You don’t need to load your data into Athena, as it works directly with data stored in S3. Athena integrates with Amazon QuickSight for easy visualization.
