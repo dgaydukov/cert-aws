@@ -1,6 +1,9 @@
 # Spring/mysql todolist app
 Simple java/spring/mysql app to deploy on beanstalk (or create all infra separately with cloudformation) to test how beanstalk works.
 
+# Development
+You should import this folder `/beanstal/todolist` into IntelliJ as maven project (`.ide/target` dirs already included into `.gitignore`).
+In this case you can develop/run app from IntelliJ and work with it just like with any other spring boot project.
 
 ### Deploy & Run
 1. Build jar file (see command below) and upload this jar to beanstalk (don't forget configure to create mysql db during beanstalk setup).

@@ -736,6 +736,14 @@ PG (Placement group) - create ec2 in underlying hardware in such a way as to avo
 * spread - strictly place instances into distinct hardware to reduce correlated failures
 
 ###### Elastic Beanstalk
+Imagine you have spring boot app that use mysql and you want to deploy it to aws, what you have to do
+1. create vpc/subnet/IGW/RT
+2. create mysql RDS
+3. create EC2
+4. ssh to ec2, install java, copy your jar file, and run it passing all env vars
+Quite a lot for a start. Imagine if we have a tool where you can just say that you want java app, mysql db, set env vars and upload jar file, and all infra would be built for you.
+Welcome beanstalk - aws service where you can say what you want and beanstalk will build all infrastructure for you.
+
 Beanstalk - PaaS that mange deployment, provisioning, load-balancing, auto-scaling, health monitoring. Best suited when you need quickly deploy something and don't want to learn about other aws services.
 It keeps the provisioning of building blocks (EC2/RDS/ELB/Auto Scaling/CloudWatch), deployment of applications, and health monitoring abstracted from the user so they can just focus on writing code
 You simply upload a `.war/.jar` (in case of java) file, and beanstalk run tomcat server for you and deploy your app. Yet developer has a right to manage all infrastructure provided by beanstalk.

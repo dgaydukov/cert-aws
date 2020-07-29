@@ -19,7 +19,7 @@ There are 2 main reasons to get it.
 
 
 ### Contents
-* [Solutions Architect Tips](htгигtps://github.com/dgaydukov/cert-aws-sa/blob/master/files/sa.md)
+* [Solutions Architect Tips](https://github.com/dgaydukov/cert-aws-sa/blob/master/files/sa.md)
 
 
 ### Useful Links

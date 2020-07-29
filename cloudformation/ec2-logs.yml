@@ -61,7 +61,7 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       VpcId: !Ref VPC
-      GroupDescription: Enable Ssh access from anywhere
+      GroupDescription: Enable SSH access from anywhere
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 22
