@@ -236,7 +236,7 @@ But you can assign IAM role to CloudFormation, and in this case it would use per
 If you don't specify `role-arn`, aws will use previous role. If it first time it will use temporary session that is generated from user (one who is creating the stack) credentials.
 
 For multi-env deployment (where you have dev/prod env or more) you should use single reusable template file (don't create new template file for each env, cause you will end up in a mess). 
-You can achieve reusability by adding parameters, mappings, conditions section into your template. Then you just create 2 stacks with different names (dev/prod) and different params but with single template file.
+You can achieve reusability by adding params, mappings, conditions section into your template. Then you just create 2 stacks with different names (dev/prod) and different params but with single template file.
 
 Nested stacks are mostly used when you need to reuse some common template. Suppose you have 3 templates and each of them using specific type of ec2. You can just duplicate code across 3 templates, but it ineffective.
 It's better to create new template and use it as nested template for each of your 3 templates. Notice that you can't use just imported stack in this case - cause that would mean that only 1 instance of ec2 would be created
@@ -1154,11 +1154,25 @@ Unhealthy instance can be determine by 2 healthchecks
 GA allows you to create 2 static anycast IP addresses and routing users to nearest server to them.
 You can create 2 ec2 from 2 regions and create GA for it. When user try to access it by IP he would be routed to the nearest region.
 You can use [speed tool](https://speedtest.globalaccelerator.aws/) to see how GA would speed up routing. Apart from this GA can also allow traffic control (how much traffic direct to a particular region).
-GA also has healthchecks, so in case one region become unhealty all requests would be routed to nearest healthy location.
+GA also has healthchecks, so in case one region become unhealed all requests would be routed to nearest healthy location.
 Even if you are using single region, GA can still help you, cause it will route traffic to nearest aws region to user, and from there request would go through aws global network (which is faster than through the internet) to region with your ec2.
-ELB provides load balancing within 1 region, GA provides traffic management across multiple Regions. So if you have all your load in one region ELB would be enough, no need to use GA, but if you have global distirubion of services
-across multiple regions, than definately you have to use GA. In this case you can have several ELB for each region, and they are set as targets for GA.
+ELB provides load balancing within 1 region, GA provides traffic management across multiple Regions. So if you have all your load in one region ELB would be enough, no need to use GA, but if you have global distribution of services
+across multiple regions, than definitely you have to use GA. In this case you can have several ELB for each region, and they are set as targets for GA.
 CloudFront duplicates your data across different edge locations, but GA only route your request to nearest location to you.
+
+Example of creating 2 ec2 in 2 different regions + GA that have both of them as endpoints
+```
+# create ec2 in singapore
+aws cloudformation create-stack --stack-name=ga --template-body=file://cloudformation/global-accelerator/ap-southeast-1-ec2.yml --profile=awssa --region=ap-southeast-1
+
+# get ec2 id
+aws cloudformation describe-stacks --stack-name=ga --query "Stacks[0].Outputs[0].OutputValue" --profile=awssa --region=ap-southeast-1 
+
+# create ec2 and ga in us-east-1 region
+aws cloudformation create-stack --stack-name=ga --template-body=file://cloudformation/global-accelerator/us-east-1-ec2-ga.yml --parameters=ParameterKey=SingaporeEc2Id,ParameterValue={instanceId} --profile=awssa
+```
+Now you can access them using GA IP address, by using it you would be routed to the closest region. Now you can also terminate instance in closest region, and by doing this GA IP would be routed to second region.
+Healthchecks are already built into endpoints, so you don't need to explicitly define them.
 
 ###### FSx
 FSx - file system for windows and lustre.

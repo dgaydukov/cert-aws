@@ -1,5 +1,11 @@
 AWSTemplateFormatVersion: 2010-09-09
 
+# create ec2 + http/ssh SG + global accelerator with 1 ec2 endpoint
+
+Parameters:
+  InstanceId:
+    Description: Id of ec2 from ap-southeast-1 region
+    Type: String
 
 Resources:
   HttpSshSG:
@@ -54,7 +60,7 @@ Resources:
       PortRanges:
         - FromPort: 80
           ToPort: 80
-  Ec2EndpointGroup:
+  Region1Ec2EndpointGroup:
     Type: AWS::GlobalAccelerator::EndpointGroup
     Properties:
       ListenerArn: !Ref HttpListener
@@ -62,3 +68,11 @@ Resources:
       TrafficDialPercentage: 100
       EndpointConfigurations:
         - EndpointId: !Ref WebServer
+  Region2Ec2EndpointGroup:
+    Type: AWS::GlobalAccelerator::EndpointGroup
+    Properties:
+      ListenerArn: !Ref HttpListener
+      EndpointGroupRegion: ap-southeast-1
+      TrafficDialPercentage: 100
+      EndpointConfigurations:
+        - EndpointId: !Ref InstanceId
