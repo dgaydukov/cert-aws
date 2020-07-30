@@ -60,6 +60,7 @@
 * 2.41 [EC2 Auto Scaling](#ec2-auto-scaling)
 * 2.42 [Global Accelerator](#global-accelerator)
 * 2.43 [FSx](#fsx)
+* 2.44 [VPN](#vpn)
 3. [Networking](#networking)
 * 3.1 [NIC](#nic)
 * 3.2 [Hub, Switch, Router](#hub-switch-router)
@@ -1195,6 +1196,27 @@ You can access FSx lustre from
 * linux (install the open-source Lustre client on that instance)
 Minimum size for Lustre is 1.2TB
 
+###### VPN
+AWS VPN consists of 2 services
+* AWS Site-to-Site VPN (has 2 tunnels for redundancy) - connect your on-premises network with vpc
+* AWS Client VPN - connect users to aws vpc or on-premises network
+Both of them using IPSec protocol (encrypt all IP packets of data before sending over the internet and decrypt them back on receiving).
+
+Client VPN endpoint - allows end users to access aws network over TLS. Target network (vpc subnet) - network that you associate with VPN endpoint, so end users can access it.
+You create vpn endpoint, associate it with target network and distribute vpn config file with end users. End user download openVpn and using your config connect to vpc.
+When you create client vpn you can enable split-tunnel.
+There are 3 ways for authentication for client vpn
+* AWS Directory Service
+* Certificate-based authentication
+* Federated Authentication using SAML-2.0
+
+You can connect vpc to on-premise using Hardware VPN connection via the virtual private gateway.
+There are 2 types of Site-to-Site VPN connections
+* statically routed VPN connection 
+* dynamically-routed VPN connection
+Aws supports Phase 1 and Phase 2 of Diffie-Hellman groups.
+Accelerated Site-to-Site VPN - achieve faster package delivery by using not public internet but aws global network (so packet goes to closest aws region datacenter and from there goes to desired aws region inside fast aws global network).
+
 ### Networking
 ###### NIC
 NIC (Network interface controller) - hardware component to connect computer to network. It implements electronic circuit that operates on both physical & data link layers using either Ethernet/Wi-Fi protocols.
@@ -1323,8 +1345,9 @@ In this case we can divide it on min power 2.
 50 => 64(2**6)
 20 => 32(2**5)
 * Routing table - a list of ip-addresses and subnet masks of all networks connected to the router, stored in router RAM.
-* VPN (Virtual Private Network) - encrypted connection(also called tunnel) over public network (usually Internet) between 2 or more private networks.
-It encrypt packet, add new headers.
+* VPN (Virtual Private Network) - encrypted connection(also called tunnel) over public network (usually Internet) between 2 or more private networks. It encrypt packet, add new headers.
+Split tunnel. By default all traffic (both to external resources like google.com and to on-premise network) goes through vpn tunnel. But this can be a problem, cause it may overload tunnel.
+To solve this issue there is split of tunnel so based on destination packets are go either though vpn tunnel or directly to internet (take a look at `files/images/vpn-split-tunneling.svg`)
 * iSCSI (Internet Small Computer Systems Interface) - transport layer protocol, works above TCP. Initiator (server) packages SCSI commands into network packets, and sends it to Target (remote storage).
 
 For all subnets you shouldn't use first & last address

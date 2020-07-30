@@ -32,7 +32,6 @@ There are 2 main reasons to get it.
 
 
 ### TODO
-* https://aws.amazon.com/vpn/faqs
 * client vpn (connect to vpc from you remote laptop)
 * site-to-site vpn (on-premise network imitated by vpc with ec2 and openswan + vpn gateway from vpc side)
 * cross-region vpc peering (2014) vs non-transitive vpc peering (add route table)
