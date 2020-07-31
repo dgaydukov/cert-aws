@@ -61,6 +61,7 @@
 * 2.42 [Global Accelerator](#global-accelerator)
 * 2.43 [FSx](#fsx)
 * 2.44 [VPN](#vpn)
+* 2.45 [Directory Service](#directory-service)
 3. [Networking](#networking)
 * 3.1 [NIC](#nic)
 * 3.2 [Hub, Switch, Router](#hub-switch-router)
@@ -263,6 +264,12 @@ There are other 2 types of architecture
 * hexagonal
 * onion
 But generally they resemble layered style, only difference they divide core (domain objects + services) and outer object (ui, database) and they are connected by using port (on core side) + adapter (on outer side)
+
+AWS-specific parameter types: If you need to pass param as ec2 key name, you can pass it as string, but if this key doesn't exist, you template would be half-created and aborted.
+It would be nice, if aws can first check if the key exists, and after this starts to create stack. This is what for aws specific param types. If you set param type, not just `string`, but `AWS::EC2::KeyPair::KeyName`
+cloudformation would first check that the key with such name exists (in region), and only after this would start to create your stack. 
+Name of ssh key is not the only one, here is full list of [AWS-specific parameter types](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/parameters-section-structure.html#aws-specific-parameter-types)
+
 
 ###### IAM
 * In case you have one user who requires access to a specific resource, as a best practice, you should create a new AWS group for that access (in case new user would appear you would just assign him to this group)
@@ -1206,7 +1213,7 @@ Client VPN endpoint - allows end users to access aws network over TLS. Target ne
 You create vpn endpoint, associate it with target network and distribute vpn config file with end users. End user download openVpn and using your config connect to vpc.
 When you create client vpn you can enable split-tunnel.
 There are 3 ways for authentication for client vpn
-* AWS Directory Service
+* AWS Directory Service - your users in AD can just use vpn and be automatically authenticated cause they use AD
 * Certificate-based authentication
 * Federated Authentication using SAML-2.0
 
@@ -1216,6 +1223,26 @@ There are 2 types of Site-to-Site VPN connections
 * dynamically-routed VPN connection
 Aws supports Phase 1 and Phase 2 of Diffie-Hellman groups.
 Accelerated Site-to-Site VPN - achieve faster package delivery by using not public internet but aws global network (so packet goes to closest aws region datacenter and from there goes to desired aws region inside fast aws global network).
+
+###### Directory Service
+DS (Directory Service) - hierarchical structure to store/search/manipulate objects, so users can locate resources no matter where they are stored.
+In software engineering, a directory is a map between names and values. It allows the lookup of named values, similar to a dictionary.
+DS - is a standard, AD - implementation of DS by microsoft.
+AD (Active Directory) - microsoft DS that additionally provides SSO/LDAP so user can have roles/authentication to access resources, it stores users/computers/printers in company's network and provides access/roles to users.
+AD provides centralize authorization and authentication to network resources, it also stores network resources and users information like computer, printers, users, users groups, organizational units, passwords information.
+LDAP (Lightweight Directory Access Protocol) is an application protocol for querying and modifying items in directory service providers like AD.
+Objects in AD grouped into domains. Tree - collection of one or more domains. Forest - collection of trees that share common global catalog.
+Domain Controller - windows server that runs AD.
+
+AWS DS - managed service replicated across multiple AZ. There are 3 types of aws ds
+* AWS Managed Microsoft AD - microsoft AD completely deployed in cloud and managed there
+    * deployed in 2 AZ
+    * connected to VPC
+    * backups automatically taken once per day
+    * EBS by default encrypted
+    * failed domain controllers automatically replaced in the same AZ using the same IP address
+* simple AD - Linux-Samba AD deployed & managed in the cloud
+* AD Connector - connector to redirect all request to your on-premises AD
 
 ### Networking
 ###### NIC
@@ -1235,7 +1262,7 @@ But to operate normally your host should retransmit these packets to their respe
 
 ###### Hub, Switch, Router
 * Hub (концентратор) - device that connects multiple computers in LAN (local area network) and propagate any packet sent from one computer to all other. Today mostly outdated, people use switch instead. Works on the physical layer (Layer 1) of OSI. 
-* Bridge (мост) - connect several hubs into single network. Works on OSI layer 2. As hubs mostly outdated today.
+* Bridge (мост) - connect several hubs into single network. Works on OSI layer 2. As hubs, mostly outdated today.
 * Switch (коммутатор) - device that connects multiple computers in LAN, but knows exactly where to send packet of data, 
 it has internal table where it store which port takes which mac address, and at first it sends ARP to get mac addresses, but once table is full it just send packet to desired node. Works on the data link layer (Layer 2) of OSI.
 * Router (маршрутизатор) - small computer that can route the network traffic. Usually used to connect not computers, but networks such as LAN/WAN. Works on (Layer 3).
@@ -1385,9 +1412,19 @@ google.com.		86400 IN CAA 0 issue "pki.goog"
 
 ###### SSL vs TLS vs HTTPS
 SSL (Secure Sockets Layers) - outdated protocol not used today. TLS (Transport Layer Security) - main security protocol used today.
-So you can call TLS more updated & secure version of SSL. But we still call our digital certs as SSL certificates, but in reality when you buy SSL certificate from DigiCert
-you are buying most up-to-date TLS certificate.
+So you can call TLS more updated & secure version of SSL. But we still call our digital certs as SSL certificates, but in reality when you buy SSL certificate from DigiCert you are buying most up-to-date TLS certificate.
 HTTPS means that our HTTP traffic is secured by TLS protocol with SSL(TLS) certificate.
+
+CA (Certificate Authority) - entity that issues digital trusted certificates (certifies the ownership of a public key by the named subject of the certificate).
+Certificate prevents man-in-the-middle attack by encrypting all packets sent to server with certificate's public key, and on the server side everything is decrypted using private key.
+There are public (low ubiquity, issues certificates for free, like [Let's encrypt](https://letsencrypt.org/getting-started/)) and commercial(high ubiquity, charge you for issuing certificate) CA out there.
+Ubiquity - quantity of internet browsers, other devices and applications which trust a particular CA.
+SSL certificates are verified and issued by a CA. If you are using aws, everything is done inside, and certificate is generated for you.
+But you can also generate public/private keys using `openssl`, and then generate CSR and reqeust CA to issue certificate for you.
+CSR (Certificate Signing Request) - request signed with private key that contains vital information about your organization and domain, so it
+is an encrypted block of text that includes your organization’s information, such as country, email address, fully qualified domain name, etc. It is sent to the Certificate Authority when applying for an SSL certificate.
+Most detailed info [here](https://letsencrypt.org/how-it-works/)
+
 
 ###### Routing
 Routing - process to select path between different networks using 5 addressing method (association)

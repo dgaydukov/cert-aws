@@ -1,0 +1,182 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+# create requester vpc with public subnet and ec2 + create accepter vpc with private subnet and ec2 and create peering between them
+# try to ssh to public ec2, from there ssh to private ec2, from there ping public ec2 by private ip
+# we create peering within same account and region, but if you create to another account and/or region you should add other params to VPCPeeringConnection (PeerOwnerId - account of requested vpc, PeerRegion - region of requested vpc)
+
+Parameters:
+  RequesterVpcCidr:
+    Description: CIDR block of VPC A
+    Default: 10.100.0.0/16
+    Type: String
+  AccepterVpcCidr:
+    Description: CIDR block of VPC B
+    Default: 10.200.0.0/16
+    Type: String
+
+Resources:
+  RequesterVpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref RequesterVpcCidr
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value:  !Sub ${AWS::StackName}-RequesterVpc
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    DependsOn: RequesterVpc
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-RequesterVpc-IGW
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref RequesterVpc
+      InternetGatewayId: !Ref InternetGateway
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref RequesterVpc
+      CidrBlock: 10.100.1.0/24
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-RequesterVpc-Public
+  RequesterVpcPublicRT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref RequesterVpc
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-RequesterVpc-Public-RT
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId: !Ref RequesterVpcPublicRT
+      GatewayId: !Ref InternetGateway
+  PublicSubnetRTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref RequesterVpcPublicRT
+  RequesterVpcSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH/ICMP access from anywhere
+      VpcId: !Ref RequesterVpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: icmp
+          FromPort: -1
+          ToPort: -1
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-RequesterVpc-SG
+  PublicInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-09d95fab7fff3776c
+      KeyName: mykey
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: 0
+          SubnetId: !Ref PublicSubnet
+          GroupSet:
+            - !GetAtt RequesterVpcSG.GroupId
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 8
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-RequesterVpc-Public-EC2
+
+  AccepterVpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref AccepterVpcCidr
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value:  !Sub ${AWS::StackName}-AccepterVpc
+  PrivateSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref AccepterVpc
+      CidrBlock: 10.200.1.0/24
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-AccepterVpc-Private
+  AccepterVpcPrivateRT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref AccepterVpc
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-AccepterVpc-Private-RT
+  PrivateSubnetRTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet
+      RouteTableId: !Ref AccepterVpcPrivateRT
+  AccepterVpcSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH/ICMP access from RequesterVpc
+      VpcId: !Ref AccepterVpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref RequesterVpcCidr
+        - IpProtocol: icmp
+          FromPort: -1
+          ToPort: -1
+          CidrIp: !Ref RequesterVpcCidr
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-AccepterVpc-SG
+  PrivateInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-09d95fab7fff3776c
+      KeyName: mykey
+      SubnetId: !Ref PrivateSubnet
+      SecurityGroupIds:
+        - !GetAtt AccepterVpcSG.GroupId
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 8
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-AccepterVpc-Private-EC2
+
+  peeringConnection:
+    Type: AWS::EC2::VPCPeeringConnection
+    Properties:
+      VpcId: !Ref RequesterVpc
+      PeerVpcId: !Ref AccepterVpc
+  AccepterPeeringRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: !Ref RequesterVpcCidr
+      RouteTableId: !Ref AccepterVpcPrivateRT
+      VpcPeeringConnectionId: !Ref peeringConnection
+  RequesterPeeringRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: !Ref AccepterVpcCidr
+      RouteTableId: !Ref RequesterVpcPublicRT
+      VpcPeeringConnectionId: !Ref peeringConnection
