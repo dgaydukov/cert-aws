@@ -705,6 +705,19 @@ VPC peering
 * traffic of peering within same region is not encrypted, but isolated, just like traffic between 2 EC2 in the same VPC
 * traffic of peering within different regions is encrypted
 
+multiple VPC connection
+* vpc peering (2014) - connect 2 vpc to each other (requester -> request access to accepter).
+Peering is non-transitive connection type (basically it's one-to-one). So if A has a peering with B, and B has a peering with C, A has no access to C, in order for them to access each other you have to create peering between them too
+It's good when you need to connect 2 or 3 vpc, but in case you have to connect 10 vpc, that means you would have to create `n*(n-1)/2` peering connection between each and every vpc.
+Good news is that peering can be cross-account and cross-region. Basic cloudformation example here `cloudformation/advanced-networking/vpc-peering.yml`
+* transit vpc (2016) - a way to connect multiple vpc (form different regions) and your on-premises data center without creating hundreds of peering connections.
+Transit vpc is not aws service, it's just a concept or architecture how you should design such a transit vpc that would connect all other vpc with each other.
+The idea is to create one vpc with ec2 and IGW and install there some software from Cisco/Aviatrix (software is commercial, you buy ami with Cisco Cloud Services Router 1000V Series).
+Implicit drawback is cost: since you pay for every traffic exiting (egress) your VPC, if you use transit vpc as single internet gateway, all other vpc would access internet from it. So fo each internet access you would pay twice
+first - egress traffic from vpc (that goes to transit vpc), second - egreass traffic from transit vpc itself (from there it goes to public internet).
+underneath it's all these vpc and on-premises centers are connected to each other thgough vpn and transit vpc basically works as vpn server and routing this vpn traffic.
+* transit gateway (2018) - it's aws managed service that works like transit vpc, but don't have all it's complexity of installing and configuring.
+
 VPC ClassicLink
 * before 2013 there were no default VPC and all EC2 where launched in flat network shared with other aws users
 * allows to connect your VPC with EC2 classic, EC2 becomes a member of VPC Security Group

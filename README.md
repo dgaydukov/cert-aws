@@ -32,10 +32,8 @@ There are 2 main reasons to get it.
 
 
 ### TODO
+* transit gateway (https://theithollow.com/2018/12/12/setup-aws-transit-gateway)
 * client vpn (connect to vpc from you remote laptop)
 * site-to-site vpn (on-premise network imitated by vpc with ec2 and openswan + vpn gateway from vpc side)
-* cross-region vpc peering (2014) vs non-transitive vpc peering (add route table)
-* transit vpc (2016) (connect multiple VPCs and remote networks) https://theithollow.com/2018/07/16/should-i-use-a-transit-vpc-in-aws
-* transit gateway (2018) (connect multiple vpc to each other)
 * vpc endpoint service (add ec2+NLB and share it to vpc from another region)
 * direct connect (https://aws.amazon.com/directconnect/faqs) (direct connection between your ISP and AWS)

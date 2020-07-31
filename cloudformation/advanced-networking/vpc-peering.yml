@@ -3,6 +3,7 @@ AWSTemplateFormatVersion: 2010-09-09
 # create requester vpc with public subnet and ec2 + create accepter vpc with private subnet and ec2 and create peering between them
 # try to ssh to public ec2, from there ssh to private ec2, from there ping public ec2 by private ip
 # we create peering within same account and region, but if you create to another account and/or region you should add other params to VPCPeeringConnection (PeerOwnerId - account of requested vpc, PeerRegion - region of requested vpc)
+# !important => you need 2 additional routes in requester and accepter to route traffic to each other
 
 Parameters:
   RequesterVpcCidr:
