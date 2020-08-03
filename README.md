@@ -32,19 +32,15 @@ There are 2 main reasons to get it.
 
 
 ### TODO
-* client vpn (connect to vpc from you remote laptop) + create association and configure authorization rule + upload keys created locally
-you can associate only one subnet per AZ
-associating subnet to vpn client endpoint => created eni inside subnet, so that's why from now on it looks like you are accessing all other vpc parts just like you are from inside vpc
-downside is that if you see vpc logs, you won't see vpn client ip address (from client CIDR space) you will see it just like some ENI from subnet accesing other subnet resources
-different client certificates for different clients
-add ec2 security group ssh/icmp from cidr block of client vpn (since you connet to ec2 using client vpn, you will use not your public IP, but one allocated from vpn CIDR block). Source in SG should not be IP address by SG of vpnserver.
+* client vpn (connect to vpc from you remote laptop) + create association and configure authorization rule + upload keys created locally + check split tunneling (when turned on internet should go without vpn => check by IP address)
 * site-to-site vpn (on-premise network imitated by vpc with ec2 and openswan + vpn gateway from vpc side)
-* transit gateway - add on-premise network imitated by third vpc
-https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-transitgateway.html
-https://theithollow.com/2018/12/12/setup-aws-transit-gateway
 -------------------------Advanced------------------------------------------
 * create aws microsoft AD and see how it works
 * create client vpn with security as microsoft AD
 * create custom vpn server in ec2 and try to connect to it (do both use oepnvpn server ami and any ami (OpenVPN Access Server from marketplace which is free tier, in this case you should configure it through browser admin panel) + manually configure openvpn server)
 * vpc endpoint service (add ec2 (with basic httpd service)+NLB and share it to vpc from another region)
 * route 53 resolver
+* transit gateway - add on-premise network imitated by third vpc
+https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-transitgateway.html - guide to add on-premise
+https://theithollow.com/2018/12/12/setup-aws-transit-gateway
+* 

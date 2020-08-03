@@ -1,5 +1,9 @@
 AWSTemplateFormatVersion: 2010-09-09
 
+# create vpc with private & public subnet subnet with ec2
+# create vpn endpoint
+# connect to vpn, now you can ping ec2 by internal IP
+
 Resources:
   VPC:
     Type: AWS::EC2::VPC
@@ -77,12 +81,16 @@ Resources:
   SshSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
+      GroupDescription: Enable SSH/ICMP access from anywhere
       VpcId: !Ref VPC
-      GroupDescription: Enable SSH access from anywhere
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 22
           ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: icmp
+          FromPort: -1
+          ToPort: -1
           CidrIp: 0.0.0.0/0
       Tags:
         - Key: Name
@@ -107,3 +115,37 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AWS::StackName}-MyVpc-PublicInstance
+
+
+
+  VPN:
+    Type: AWS::EC2::ClientVpnEndpoint
+    Properties:
+      AuthenticationOptions:
+        - Type: certificate-authentication
+          MutualAuthentication:
+            ClientRootCertificateChainArn: arn:aws:acm:us-east-1:530313143429:certificate/51905ced-d024-445f-add5-712b78a02e1c
+      ClientCidrBlock: 10.200.0.0/16
+      ConnectionLogOptions:
+        Enabled: false
+      Description: My Client VPN Endpoint
+      ServerCertificateArn: arn:aws:acm:us-east-1:530313143429:certificate/e137f36a-9500-4a74-b7e6-1a1d3ecadecc
+      TransportProtocol: udp
+      VpcId: !Ref VPC
+      SecurityGroupIds:
+        - !GetAtt VPC.DefaultSecurityGroup
+      TagSpecifications:
+        - ResourceType: client-vpn-endpoint
+          Tags:
+            - Key: Name
+              Value: !Sub ${AWS::StackName}-VPN
+  PublicSubnetNetworkAssociation:
+    Type: AWS::EC2::ClientVpnTargetNetworkAssociation
+    Properties:
+      ClientVpnEndpointId: !Ref VPN
+      SubnetId: !Ref PublicSubnet
+  PrivateSubnetNetworkAssociation:
+    Type: AWS::EC2::ClientVpnTargetNetworkAssociation
+    Properties:
+      ClientVpnEndpointId: !Ref VPN
+      SubnetId: !Ref PrivateSubnet

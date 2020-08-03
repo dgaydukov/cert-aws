@@ -1233,6 +1233,8 @@ With vpn server everything the same, only difference - connecting is hide before
 the same access to all internal resources. When you access resources in both cases it looks like you are accessing them from inside vpc, and thus you can add SG rule to allow not all public IP addresses (`0.0.0.0/0`)
 but only CIDR addresses of vpn server allocated CIDR block, or from bastion server internal IP.
 
+You can associate only one subnet per AZ
+
 AWS VPN consists of 2 services
 * AWS Site-to-Site VPN (has 2 tunnels for redundancy) - connect your on-premises network with vpc
 * AWS Client VPN - connect users to aws vpc or on-premises network
@@ -1252,6 +1254,26 @@ There are 2 types of Site-to-Site VPN connections
 * dynamically-routed VPN connection
 Aws supports Phase 1 and Phase 2 of Diffie-Hellman groups.
 Accelerated Site-to-Site VPN - achieve faster package delivery by using not public internet but aws global network (so packet goes to closest aws region datacenter and from there goes to desired aws region inside fast aws global network).
+
+You can create certs. Don't forget to set Common Name (e.g. server FQDN or YOUR name) => it's domain name
+```
+1. Generate the CA:
+openssl req -out ca.pem -new -x509 
+(This creates two files: the CA file "ca.pem" and its private key "privkey.pem".)
+
+2. Create a serial file:
+echo "00" > serial.srl
+
+3. Generate the server certificate and key:
+openssl genrsa -out server.key 1024
+openssl req -key server.key -new -out server.req
+openssl x509 -req -in server.req -CA ca.pem -CAkey privkey.pem -CAserial serial.srl -out server.pem
+
+4. Generate the client certificate and key:
+openssl genrsa -out client.key 1024 
+openssl req -key client.key -new -out client.req
+openssl x509 -req -in client.req -CA ca.pem -CAkey privkey.pem -CAserial serial.srl -out client.pem
+```
 
 ###### Directory Service
 DS (Directory Service) - hierarchical structure to store/search/manipulate objects, so users can locate resources no matter where they are stored.
