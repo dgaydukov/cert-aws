@@ -33,6 +33,17 @@ There are 2 main reasons to get it.
 
 ### TODO
 * client vpn (connect to vpc from you remote laptop) + create association and configure authorization rule + upload keys created locally + check split tunneling (when turned on internet should go without vpn => check by IP address)
+generage key https://github.com/OpenVPN/easy-rsa 
+chain - ca.crt file
+- add different domain to client & server
+- cert file - .crt file
+- add authorization rule (destination - cidr of vpc)
+- add routes for other vpc (if you have peered vpc you should add route)
+```
+./easyrsa init-pki
+./easyrsa build-ca nopass
+# build client and server certificate
+```
 * site-to-site vpn (on-premise network imitated by vpc with ec2 and openswan + vpn gateway from vpc side)
 -------------------------Advanced------------------------------------------
 * create aws microsoft AD and see how it works
