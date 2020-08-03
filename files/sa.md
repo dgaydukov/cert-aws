@@ -71,7 +71,8 @@
 * 3.6 [Low Level Protocols](#low-level-protocols)
 * 3.7 [SOA and CAA](#soa-and-caa)
 * 3.8 [SSL vs TLS vs HTTPS](#ssl-vs-tls-vs-https)
-* 3.8 [Routing](#routing)
+* 3.9 [Routing](#routing)
+* 3.10 [MTU & Jumbo frame](#mtu--jumbo-frame)
 4. [Miscellaneous](#miscellaneous)
 * 4.1 [SaaS vs PaaS vs IaaS/IAC](#saas-vs-paas-vs-iaasiac)
 * 4.2 [Virtualization and Containerization](#virtualization-and-containerization)
@@ -1202,7 +1203,7 @@ Now you can access them using GA IP address, by using it you would be routed to 
 Healthchecks are already built into endpoints, so you don't need to explicitly define them.
 
 ###### FSx
-FSx - file system for windows and lustre. File system is accesible from inside aws. If you want to access it from on-premises you have to use direct connect or VPN.
+FSx - file system for windows and lustre. File system is accessible from inside aws. If you want to access it from on-premises you have to use direct connect or VPN.
 Lustre - distributed file system for cluster computing (portmanteau word derived from Linux and cluster).
 Generally FSx is cheaper than EFS (cause EFS provides 100% durability with multi-AZ deployment). FSx Lustre on average more faster then EFS
 
@@ -1218,6 +1219,11 @@ You can access FSx lustre from
 Minimum size for Lustre is 1.2TB
 
 ###### VPN
+On the high level vpn server is just bastion server but for end users. Bastion server is for developers/administrators, you explicitly access it though ssh, and from there you access all internal resources.
+With vpn server everything the same, only difference - connecting is hide before some user-friendly program, like [openvpn client](https://openvpn.net/download-open-vpn), but once connected, end user has all
+the same access to all internal resources. When you access resources in both cases it looks like you are accessing them from inside vpc, and thus you can add SG rule to allow not all public IP addresses (`0.0.0.0/0`)
+but only CIDR addresses of vpn server allocated CIDR block, or from bastion server internal IP.
+
 AWS VPN consists of 2 services
 * AWS Site-to-Site VPN (has 2 tunnels for redundancy) - connect your on-premises network with vpc
 * AWS Client VPN - connect users to aws vpc or on-premises network
@@ -1313,7 +1319,7 @@ There are 7 levels in OSI model, here is the list from lowest to upper
 * Application layer - apps works on this level by using HTTP/FTP
 
 On each of this layer passed information is called different.
-* Application/Presentation/Session - PDU (protocol data units)
+* Application/Presentation/Session - PDU
 * Transport - TCP - segments, UDP - datagramm
 * Network - packets
 * Data Link - frames
@@ -1460,6 +1466,36 @@ Each AS controls a collection of connected routing prefixes, representing a rang
 It works like GPS (the best route is determined by different factors, such as traffic congestion, roads temporarily closed for maintenance, etc).
 BGP is designed to exchange routing and reachability information between autonomous systems on the Internet
 
+###### MTU & Jumbo frame
+PDU (Protocol data unit) - single unit of information transmitted between 2 computers. At each layer PDU has it's own name
+* TCP - segment
+* UDP - datagram
+* IP - packet
+
+MTU (Maximum transmission unit) - max size of PDU that can be transferred in single network layer transaction. MTU for Ethernet is 1500 bytes.
+
+Jumbo frame - ethernet frame with more than 1500 bytes MTU, usually up to 9000. 
+The idea is that it's easy to process the contents of single large frame instread of many smaller frames.
+
+You can test all of this with `ping` command
+```
+# by default 84 bytes of data transfered
+ping google.com
+# PING google.com (172.217.161.142) 56(84) bytes of data.
+
+# 1500 is max size
+ping -s 1472 google.com
+# PING google.com (172.217.161.142) 1472(1500) bytes of data.
+
+# if you try more, ping won't work
+ping -s 1473 google.com
+#PING google.com (172.217.161.142) 1473(1501) bytes of data.
+
+# you can force to run large frame
+ping -M do -s 9000 google.com
+# PING google.com (172.217.161.142) 9000(9028) bytes of data.
+# ping: local error: Message too long, mtu=1500
+```
 
 ### Miscellaneous
 ###### SaaS vs PaaS vs IaaS/IAC 
@@ -1473,7 +1509,6 @@ and just deploy your code, and it will provide everything else (container, java,
 IaaS (Infrastructure as a Service) - good example is aws that provides infrastructure (like container/networking/storage/database) as services to end users. Compare to other 2 PaaS/SaaS users of IaaS responsible for managing infrastructure themselves. 
 The best practice is to use IAC (Infrastructure as a code) - is an idea that you should code how you want to build your infrastructure. For example to run you microservice app you need to have 3 containers. 
 Of course you can manually create all of them, install all needed software there and deploy it. But you can also add script file that would do it all automatically. Most popular tools is Aws CloudFormation and Terraform.
-
 
 * SaaS - mail service, ELK (elasticsearch, logstash, kibana) stack
 * PaaS - beanstalk, spring cloudfoundry
