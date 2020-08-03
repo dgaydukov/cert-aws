@@ -32,10 +32,6 @@ There are 2 main reasons to get it.
 
 
 ### TODO
-* investigate bill
-* vpc-to-vpc nat
-* route53 resolver (its ip always 10.0.0.2)
-* route table propogation
 * transit gateway (https://theithollow.com/2018/12/12/setup-aws-transit-gateway)
 * client vpn (connect to vpc from you remote laptop) + create association and configure authorization rule + upload keys created locally
 you can associate only one subnet per AZ
@@ -44,10 +40,9 @@ downside is that if you see vpc logs, you won't see vpn client ip address (from 
 different client certificates for different clients
 add ec2 security group ssh/icmp from cidr block of client vpn (since you connet to ec2 using client vpn, you will use not your public IP, but one allocated from vpn CIDR block). Source in SG should not be IP address by SG of vpnserver.
 * site-to-site vpn (on-premise network imitated by vpc with ec2 and openswan + vpn gateway from vpc side)
-* direct connect (https://aws.amazon.com/directconnect/faqs) (direct connection between your ISP and AWS)
-
 -------------------------Advanced------------------------------------------
 * create aws microsoft AD and see how it works
 * create client vpn with security as microsoft AD
 * create custom vpn server in ec2 and try to connect to it (do both use oepnvpn server ami and any ami (OpenVPN Access Server from marketplace which is free tier, in this case you should configure it through browser admin panel) + manually configure openvpn server)
 * vpc endpoint service (add ec2 (with basic httpd service)+NLB and share it to vpc from another region)
+* route 53 resolver

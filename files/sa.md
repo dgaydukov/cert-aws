@@ -672,8 +672,8 @@ With IG you have both outbound and inbound access, but with Nat gateway - only o
 * Egress-only Internet Gateway - egress(going out) only access from VPC to Internet over IPv6
 
 Old terminology
-* Subnet == VLAN
 * VPC == VRF (virtual routing and forwarding)
+* Subnet == VLAN
 
 EC2-to-EC2 communication through public IP
 * When inside same Region - inside aws network
@@ -707,7 +707,7 @@ VPC peering
 * traffic of peering within same region is not encrypted, but isolated, just like traffic between 2 EC2 in the same VPC
 * traffic of peering within different regions is encrypted
 
-multiple VPC connection
+multiple VPC connection (3 ways)
 * vpc peering (2014) - connect 2 vpc to each other (requester -> request access to accepter).
 Peering is non-transitive connection type (basically it's one-to-one). So if A has a peering with B, and B has a peering with C, A has no access to C, in order for them to access each other you have to create peering between them too
 It's good when you need to connect 2 or 3 vpc, but in case you have to connect 10 vpc, that means you would have to create `n*(n-1)/2` peering connection between each and every vpc.
@@ -716,9 +716,17 @@ Good news is that peering can be cross-account and cross-region. Basic cloudform
 Transit vpc is not aws service, it's just a concept or architecture how you should design such a transit vpc that would connect all other vpc with each other.
 The idea is to create one vpc with ec2 and IGW and install there some software from Cisco/Aviatrix (software is commercial, you buy ami with Cisco Cloud Services Router 1000V Series).
 Implicit drawback is cost: since you pay for every traffic exiting (egress) your VPC, if you use transit vpc as single internet gateway, all other vpc would access internet from it. So fo each internet access you would pay twice
-first - egress traffic from vpc (that goes to transit vpc), second - egreass traffic from transit vpc itself (from there it goes to public internet).
-underneath it's all these vpc and on-premises centers are connected to each other thgough vpn and transit vpc basically works as vpn server and routing this vpn traffic.
+first - egress traffic from vpc (that goes to transit vpc), second - egress traffic from transit vpc itself (from there it goes to public internet).
+underneath it's all these vpc and on-premises centers are connected to each other through vpn and transit vpc basically works as vpn server and routing this vpn traffic.
 * transit gateway (2018) - it's aws managed service that works like transit vpc, but don't have all it's complexity of installing and configuring.
+
+Connect vpc to on-premise network (2 ways)
+* site-to-site VPN
+Route propagation allows a virtual private gateway to automatically propagate routes to the route tables - so you don't need to manually update RT (works for both static & dynamic routing)
+* Direct Connect - private connection between aws region and you (aws router to your on-premise router) or your ISP (internet service provider).
+LAG (Link Aggregation Groups) - ability to order multiple direct connect ports as manage them single larger connection (max number is 4 ports, port types should be the same, all 1GB, or all 10GB)
+DCG (Direct Connect Gateway) - grouping of VGW (virtual private gateways) and VIF (private virtual interfaces). Multi-account DCG allows to associate up to 10 VPC (from different accounts) or up to 3 Transit Gateway.
+Direct Connect and DCG support both 1500 and 9001 MTU (you can also modify it if you need).
 
 VPC ClassicLink
 * before 2013 there were no default VPC and all EC2 where launched in flat network shared with other aws users
@@ -727,7 +735,7 @@ VPC ClassicLink
 VPC Endpoint
 * endpoint services (used to call AWS PrivateLink) - you create some service (ec2) and add NLB(not application/classic lb), and other aws accounts can connect to your service via interface endpoint
 So using this you can create private service provider that would provide some logic to other aws accounts on vpc-to-vpc basis
-Of course you can access your NLB form the internet (you should have at least one RT with intenet gateway route to access NLB/ALB by dns name), but using privatelink will ensure that all traffic is within aws , and no traverse the internet (same as this service running inside your vpc),
+Of course you can access your NLB form the internet (you should have at least one RT with internet gateway route to access NLB/ALB by dns name), but using privatelink will ensure that all traffic is within aws , and no traverse the internet (same as this service running inside your vpc),
 and to access your service from privatelink you don't need to have internet gateway (cause all traffic inside aws and doesn't go to outside Internet)
 So you can access service (ec2) of one vpc from another without vpc peering/internet gateway/vpn
 If you share your service with aws marketplace you can get vanity dns name like `us-east-1.vpce.mycoolsite.com`
