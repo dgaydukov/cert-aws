@@ -1,0 +1,205 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+# create 2 vpc with public and private subnet/ec2
+# try to ssh to public ec2, from there ssh to private ec2, from there ping public ec2 by private ip
+# we create transit gateway and add 2 attachments (different from vpc peering we can add as much as we want vpc as attachments)
+# !important => you need 2 additional routes in requester and accepter to route traffic to each other
+
+Parameters:
+  PublicVpcCidr:
+    Description: CIDR block of VPC A
+    Default: 10.100.0.0/16
+    Type: String
+  PrivateVpcCidr:
+    Description: CIDR block of VPC B
+    Default: 10.200.0.0/16
+    Type: String
+
+Resources:
+  PublicVpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref PublicVpcCidr
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value:  !Sub ${AWS::StackName}-PublicVpc
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    DependsOn: PublicVpc
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-PublicVpc-IGW
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref PublicVpc
+      InternetGatewayId: !Ref InternetGateway
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref PublicVpc
+      CidrBlock: 10.100.1.0/24
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-PublicVpc-Public
+  PublicVpcRT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref PublicVpc
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-PublicVpc-Public-RT
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId: !Ref PublicVpcRT
+      GatewayId: !Ref InternetGateway
+  PublicSubnetRTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref PublicVpcRT
+  PublicVpcSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH/ICMP access from anywhere
+      VpcId: !Ref PublicVpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: icmp
+          FromPort: -1
+          ToPort: -1
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-PublicVpc-SG
+  PublicInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-09d95fab7fff3776c
+      KeyName: mykey
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: 0
+          SubnetId: !Ref PublicSubnet
+          GroupSet:
+            - !GetAtt PublicVpcSG.GroupId
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 8
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-PublicVpc-Public-EC2
+
+  PrivateVpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref PrivateVpcCidr
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value:  !Sub ${AWS::StackName}-PrivateVpc
+  PrivateSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref PrivateVpc
+      CidrBlock: 10.200.1.0/24
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-PrivateVpc-Private
+  PrivateVpcRT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref PrivateVpc
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-PrivateVpc-Private-RT
+  PrivateSubnetRTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet
+      RouteTableId: !Ref PrivateVpcRT
+  PrivateVpcSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH/ICMP access from PublicVpc
+      VpcId: !Ref PrivateVpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref PublicVpcCidr
+        - IpProtocol: icmp
+          FromPort: -1
+          ToPort: -1
+          CidrIp: !Ref PublicVpcCidr
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-PrivateVpc-SG
+  PrivateInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-09d95fab7fff3776c
+      KeyName: mykey
+      SubnetId: !Ref PrivateSubnet
+      SecurityGroupIds:
+        - !GetAtt PrivateVpcSG.GroupId
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 8
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-PrivateVpc-Private-EC2
+
+  TGW:
+    Type: AWS::EC2::TransitGateway
+    Properties:
+      Description: TGW Between OnPremise and PrivateVpc
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-TGW
+  PublicVpcAttachment:
+    Type: AWS::EC2::TransitGatewayAttachment
+    Properties:
+      TransitGatewayId: !Ref TGW
+      VpcId: !Ref PublicVpc
+      SubnetIds:
+        - !Ref PublicSubnet
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-PublicVpc-Attachment
+  PrivateVpcAttachment:
+    Type: AWS::EC2::TransitGatewayAttachment
+    Properties:
+      TransitGatewayId: !Ref TGW
+      VpcId: !Ref PrivateVpc
+      SubnetIds:
+        - !Ref PrivateSubnet
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-PrivateVpc-Attachment
+  PublicVpcTgwRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: !Ref PrivateVpcCidr
+      RouteTableId: !Ref PublicVpcRT
+      TransitGatewayId: !Ref TGW
+  PrivateVpcTgwRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: !Ref PublicVpcCidr
+      RouteTableId: !Ref PrivateVpcRT
+      TransitGatewayId: !Ref TGW

@@ -719,6 +719,7 @@ Implicit drawback is cost: since you pay for every traffic exiting (egress) your
 first - egress traffic from vpc (that goes to transit vpc), second - egress traffic from transit vpc itself (from there it goes to public internet).
 underneath it's all these vpc and on-premises centers are connected to each other through vpn and transit vpc basically works as vpn server and routing this vpn traffic.
 * transit gateway (2018) - it's aws managed service that works like transit vpc, but don't have all it's complexity of installing and configuring.
+You create TGW and then just attach VPC/VPN configurations and add route tables.
 
 Connect vpc to on-premise network (2 ways)
 * site-to-site VPN
