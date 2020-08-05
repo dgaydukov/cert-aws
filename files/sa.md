@@ -724,6 +724,36 @@ You create TGW and then just attach VPC/VPN configurations and add route tables.
 Connect vpc to on-premise network (2 ways)
 * site-to-site VPN
 Route propagation allows a virtual private gateway to automatically propagate routes to the route tables - so you don't need to manually update RT (works for both static & dynamic routing)
+After running `cloudformation/advanced-networking/site-to-site-vpn.yml` you will have to manually go to site-to-site vpn and download configuration (select openswan as router).
+Then update values from here (left, right, and last line for `/etc/ipsec.d/aws.secrets`). After you will be able to ping ec2 in private vpc
+```
+# left - on-premise, right - aws vpc side
+sudo su
+echo "net.ipv4.ip_forward = 1
+net.ipv4.conf.default.rp_filter = 0
+echo net.ipv4.conf.default.accept_source_route = 0" >> /etc/sysctl.conf
+service network restart
+echo "conn Tunnel1
+    authby=secret
+    auto=start
+    left=%defaultroute
+    leftid=3.237.1.182
+    right=52.6.121.143
+    type=tunnel
+    ikelifetime=8h
+    keylife=1h
+    phase2alg=aes128-sha1;modp1024
+    ike=aes128-sha1;modp1024
+    keyingtries=%forever
+    keyexchange=ike
+    leftsubnet=10.100.0.0/16
+    rightsubnet=10.200.0.0/16
+    dpddelay=10
+    dpdtimeout=30
+    dpdaction=restart_by_peer" > /etc/ipsec.d/aws.conf
+echo '3.237.1.182 52.6.121.143: PSK "wCfcjn4X6xF895fHM3Tgq6XvSPiEuBcp"' > /etc/ipsec.d/aws.secrets
+service ipsec restart
+```
 * Direct Connect - private connection between aws region and you (aws router to your on-premise router) or your ISP (internet service provider).
 LAG (Link Aggregation Groups) - ability to order multiple direct connect ports as manage them single larger connection (max number is 4 ports, port types should be the same, all 1GB, or all 10GB)
 DCG (Direct Connect Gateway) - grouping of VGW (virtual private gateways) and VIF (private virtual interfaces). Multi-account DCG allows to associate up to 10 VPC (from different accounts) or up to 3 Transit Gateway.

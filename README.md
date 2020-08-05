@@ -45,9 +45,6 @@ chain - ca.crt file
 ./easyrsa build-ca nopass
 # build client and server certificate
 ```
-* site-to-site vpn (on-premise network imitated by vpc with ec2 and openswan + vpn gateway from aws side)
-- openswan doesn't support 2-tunnel vpn (try other vpn servers instead of swan like openvpn)
-- CGW static-vs-dynamic routing
 -------------------------Advanced------------------------------------------
 * create aws microsoft AD and see how it works
 * create client vpn with security as microsoft AD

@@ -6,6 +6,7 @@ AWSTemplateFormatVersion: 2010-09-09
 # connect to vpnServer => ssh to onPremisePrivateEc2 => ssh to vpcPrivateEc2 => ssh back to onPremisePrivateEc2 -- that would mean we can connect from on-premise to vpc and vice versa
 
 # !important => we should disable source/destination check for vpn server so we could use it as proxy (just like nat instance) and route traffic from onPremisePrivateEc2 to vpcPrivateEc2 through vpnServer
+# !important => you have to download vpn configuration and manually update data there (check in sa.md under site-to-site vpn section)
 
 Parameters:
   OnPremiseCidr:
@@ -69,7 +70,9 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AWS::StackName}-OnPremise-Private-RT
+# need depends on, otherwise you got route table rtb-123 and network gateway igw-123 belong to different networks
   OnPremisePublicRoute:
+    DependsOn: OnPremiseIgwAttachment
     Type: AWS::EC2::Route
     Properties:
       RouteTableId: !Ref OnPremisePublicRT
@@ -154,30 +157,6 @@ Resources:
           !Sub |
           #!/usr/bin/env bash
           sudo yum install openswan -y
-          sudo bash -c 'echo net.ipv4.ip_forward = 1 >> /etc/sysctl.conf'
-          sudo bash -c 'echo net.ipv4.conf.default.rp_filter = 0 >> /etc/sysctl.conf'
-          sudo bash -c 'echo net.ipv4.conf.default.accept_source_route = 0 >> /etc/sysctl.conf'
-          sudo service network restart
-          sudo bash -c 'echo "conn Tunnel1
-          authby=secret
-          auto=start
-          left=%defaultroute
-          leftid=${OnPremiseVpnServer.PublicIp}
-          right=52.3.130.190
-          type=tunnel
-          ikelifetime=8h
-          keylife=1h
-          phase2alg=aes128-sha1;modp1024
-          ike=aes128-sha1;modp1024
-          keyingtries=%forever
-          keyexchange=ike
-          leftsubnet=${OnPremiseCidr}
-          rightsubnet=${VpcCidr}
-          dpddelay=10
-          dpdtimeout=30
-          dpdaction=restart_by_peer" > /etc/ipsec.d/aws.conf'
-          sudo bash -c 'echo ${OnPremiseVpnServer.PublicIp} 52.3.130.190: PSK "7KudkQASKhimwcwnfk9rT_wRU7259b57" > /etc/ipsec.d/aws.secrets'
-          sudo service ipsec restart
       NetworkInterfaces:
         - AssociatePublicIpAddress: true
           DeviceIndex: 0
@@ -233,12 +212,6 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AWS::StackName}-Vpc-Private-RT
-  VpcToOnPremiseRoute:
-    Type: AWS::EC2::Route
-    Properties:
-      RouteTableId: !Ref VpcPrivateRT
-      DestinationCidrBlock: !Ref OnPremiseCidr
-      GatewayId: !Ref VpnGateway
   PrivateSubnetRTAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
@@ -290,7 +263,9 @@ Resources:
     Properties:
       VpcId: !Ref Vpc
       VpnGatewayId: !Ref VpnGateway
+# propagation will add route to RT, when access onPremise => use vpn gateway
   VpnGatewayRoutePropagation:
+    DependsOn: VpnConn
     Type: AWS::EC2::VPNGatewayRoutePropagation
     Properties:
       RouteTableIds:
