@@ -67,7 +67,7 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AWS::StackName}-MyVpc-Private-RT
-  PrivateRoute:
+  NatRoute:
     Type: AWS::EC2::Route
     Properties:
       RouteTableId: !Ref PrivateRT

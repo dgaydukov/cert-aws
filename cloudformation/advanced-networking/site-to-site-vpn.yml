@@ -1,0 +1,322 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+# create on-premise network with vpnServer and private machine (imitated by vpc with public & private subnet/ec2)
+# create vpc network with private subnet/ec2
+# create vpn connection with customer gateway (on-premise network) and vpc gateway (vpc)
+# connect to vpnServer => ssh to onPremisePrivateEc2 => ssh to vpcPrivateEc2 => ssh back to onPremisePrivateEc2 -- that would mean we can connect from on-premise to vpc and vice versa
+
+# !important => we should disable source/destination check for vpn server so we could use it as proxy (just like nat instance) and route traffic from onPremisePrivateEc2 to vpcPrivateEc2 through vpnServer
+
+Parameters:
+  OnPremiseCidr:
+    Description: CIDR block of On-Premise Network
+    Default: 10.100.0.0/16
+    Type: String
+  VpcCidr:
+    Description: CIDR block of AWS VPC
+    Default: 10.200.0.0/16
+    Type: String
+
+Resources:
+  OnPremiseNetwork:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref OnPremiseCidr
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value:  !Sub ${AWS::StackName}-OnPremiseNetwork
+  OnPremiseIgw:
+    Type: AWS::EC2::InternetGateway
+    DependsOn: OnPremiseNetwork
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-OnPremise-IGW
+  OnPremiseIgwAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref OnPremiseNetwork
+      InternetGatewayId: !Ref OnPremiseIgw
+  OnPremisePublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref OnPremiseNetwork
+      CidrBlock: 10.100.1.0/24
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-OnPremise-Public-Subnet
+  OnPremisePrivateSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref OnPremiseNetwork
+      CidrBlock: 10.100.2.0/24
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-OnPremise-Private-Subnet
+  OnPremisePublicRT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref OnPremiseNetwork
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-OnPremise-Public-RT
+  OnPremisePrivateRT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref OnPremiseNetwork
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-OnPremise-Private-RT
+  OnPremisePublicRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref OnPremisePublicRT
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref OnPremiseIgw
+  OnPremiseVpcRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref OnPremisePrivateRT
+      DestinationCidrBlock: !Ref VpcCidr
+      InstanceId: !Ref OnPremiseVpnServer
+  OnPremisePublicSubnetRtAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref OnPremisePublicSubnet
+      RouteTableId: !Ref OnPremisePublicRT
+  OnPremisePrivateSubnetRtAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref OnPremisePrivateSubnet
+      RouteTableId: !Ref OnPremisePrivateRT
+  OnPremisePublicSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH/ICMP access from anywhere
+      VpcId: !Ref OnPremiseNetwork
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: icmp
+          FromPort: -1
+          ToPort: -1
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-OnPremise-Public-SG
+  OnPremisePrivateSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH/ICMP access from inside network
+      VpcId: !Ref OnPremiseNetwork
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref OnPremiseCidr
+        - IpProtocol: icmp
+          FromPort: -1
+          ToPort: -1
+          CidrIp: !Ref OnPremiseCidr
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-OnPremise-Private-SG
+  OnPremiseVpcSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH/ICMP access from inside network
+      VpcId: !Ref OnPremiseNetwork
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref VpcCidr
+        - IpProtocol: icmp
+          FromPort: -1
+          ToPort: -1
+          CidrIp: !Ref VpcCidr
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-Vpc-Private-SG
+  OnPremiseVpnServer:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-09d95fab7fff3776c
+      KeyName: mykey
+      SourceDestCheck: false
+      UserData:
+        Fn::Base64:
+          !Sub |
+          #!/usr/bin/env bash
+          sudo yum install openswan -y
+          sudo bash -c 'echo net.ipv4.ip_forward = 1 >> /etc/sysctl.conf'
+          sudo bash -c 'echo net.ipv4.conf.default.rp_filter = 0 >> /etc/sysctl.conf'
+          sudo bash -c 'echo net.ipv4.conf.default.accept_source_route = 0 >> /etc/sysctl.conf'
+          sudo service network restart
+          sudo bash -c 'echo "conn Tunnel1
+          authby=secret
+          auto=start
+          left=%defaultroute
+          leftid=${OnPremiseVpnServer.PublicIp}
+          right=52.3.130.190
+          type=tunnel
+          ikelifetime=8h
+          keylife=1h
+          phase2alg=aes128-sha1;modp1024
+          ike=aes128-sha1;modp1024
+          keyingtries=%forever
+          keyexchange=ike
+          leftsubnet=${OnPremiseCidr}
+          rightsubnet=${VpcCidr}
+          dpddelay=10
+          dpdtimeout=30
+          dpdaction=restart_by_peer" > /etc/ipsec.d/aws.conf'
+          sudo bash -c 'echo ${OnPremiseVpnServer.PublicIp} 52.3.130.190: PSK "7KudkQASKhimwcwnfk9rT_wRU7259b57" > /etc/ipsec.d/aws.secrets'
+          sudo service ipsec restart
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: 0
+          SubnetId: !Ref OnPremisePublicSubnet
+          GroupSet:
+            - !GetAtt OnPremisePublicSG.GroupId
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 8
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-OnPremise-Vpn-Server
+  OnPremisePrivateInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-09d95fab7fff3776c
+      KeyName: mykey
+      SubnetId: !Ref OnPremisePrivateSubnet
+      SecurityGroupIds:
+        - !GetAtt OnPremisePrivateSG.GroupId
+        - !GetAtt OnPremiseVpcSG.GroupId
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 8
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-OnPremise-Private-EC2
+
+  Vpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCidr
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value:  !Sub ${AWS::StackName}-Vpc
+  VpcPrivateSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: 10.200.1.0/24
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-Vpc-Private-Subnet
+  VpcPrivateRT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-Vpc-Private-RT
+  VpcToOnPremiseRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref VpcPrivateRT
+      DestinationCidrBlock: !Ref OnPremiseCidr
+      GatewayId: !Ref VpnGateway
+  PrivateSubnetRTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref VpcPrivateSubnet
+      RouteTableId: !Ref VpcPrivateRT
+  VpcSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH/ICMP access from OnPremise
+      VpcId: !Ref Vpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref OnPremiseCidr
+        - IpProtocol: icmp
+          FromPort: -1
+          ToPort: -1
+          CidrIp: !Ref OnPremiseCidr
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-Vpc-SG
+  PrivateInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-09d95fab7fff3776c
+      KeyName: mykey
+      SubnetId: !Ref VpcPrivateSubnet
+      SecurityGroupIds:
+        - !GetAtt VpcSG.GroupId
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 8
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-Vpc-Private-EC2
+
+  VpnGateway:
+    Type: AWS::EC2::VPNGateway
+    Properties:
+      Type: ipsec.1
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-Vpn-Gateway
+  VpcGatewayToVpcAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref Vpc
+      VpnGatewayId: !Ref VpnGateway
+  VpnGatewayRoutePropagation:
+    Type: AWS::EC2::VPNGatewayRoutePropagation
+    Properties:
+      RouteTableIds:
+        - !Ref VpcPrivateRT
+      VpnGatewayId: !Ref VpnGateway
+  CustomerGateway:
+    Type: AWS::EC2::CustomerGateway
+    Properties:
+      Type: ipsec.1
+      BgpAsn: 65534
+      IpAddress: !GetAtt OnPremiseVpnServer.PublicIp
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-Customer-Gateway
+  VpnConn:
+    Type: AWS::EC2::VPNConnection
+    Properties:
+      Type: ipsec.1
+      StaticRoutesOnly: true
+      CustomerGatewayId: !Ref CustomerGateway
+      VpnGatewayId: !Ref VpnGateway
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-Vpn-Connection
+  VpnConnStaticRoute:
+    Type: AWS::EC2::VPNConnectionRoute
+    Properties:
+      DestinationCidrBlock: !Ref OnPremiseCidr
+      VpnConnectionId: !Ref VpnConn

@@ -33,6 +33,7 @@ There are 2 main reasons to get it.
 
 ### TODO
 * client vpn (connect to vpc from you remote laptop) + create association and configure authorization rule + upload keys created locally + check split tunneling (when turned on internet should go without vpn => check by IP address)
++ add cert manager to cloudformation => https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-certificatemanager-certificate.html
 generate key https://github.com/OpenVPN/easy-rsa 
 chain - ca.crt file
 - add different domain to client & server
@@ -45,14 +46,8 @@ chain - ca.crt file
 # build client and server certificate
 ```
 * site-to-site vpn (on-premise network imitated by vpc with ec2 and openswan + vpn gateway from aws side)
-+ add private subnet to on-premise and put ec2 there, so public ec2 works as vpn server, but communication works between private ec2 from vpc and on-premise
-for each you should disable source/dest check for openswan ec2
-add route if dest is aws vpc then go to openswan ec2
-- openswan doesn't support 2-tunnel vpn (try other server that supports it)
-- SG - range of on-premise network CIDR imitated by vpc
-- try other vpn servers instead of swan like openvpn
+- openswan doesn't support 2-tunnel vpn (try other vpn servers instead of swan like openvpn)
 - CGW static-vs-dynamic routing
-- VPN static routing - IP prefixes of on-premise network CIDR imitated by vpc
 -------------------------Advanced------------------------------------------
 * create aws microsoft AD and see how it works
 * create client vpn with security as microsoft AD
