@@ -802,6 +802,9 @@ PG (Placement group) - create ec2 in underlying hardware in such a way as to avo
 * partition - spread instances between different hardware partitions (so group in instances inside one partition don't share any hardware with group of instances from another partition)
 * spread - strictly place instances into distinct hardware to reduce correlated failures
 
+Prefix list - set of one or more CIDR blocks (can be used in SG as `SourcePrefixListId` to define not single CIDR range but a set of them).
+If you want your ec2 to be accessed from elb you should put `SourceSecurityGroupId` id of SG for elb (in this way only elb or whoever has same SG can access ec2).
+
 ###### Elastic Beanstalk
 Imagine you have spring boot app that use mysql and you want to deploy it to aws, what you have to do
 1. create vpc/subnet/IGW/RT

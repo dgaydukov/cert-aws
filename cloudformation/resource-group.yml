@@ -1,0 +1,135 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+# create vpc with public subnet/ec2 and 2 resource groups based on tags and stack
+
+Parameters:
+  Env:
+    Description: afasdf
+    Default: dev
+    Type: String
+
+Resources:
+  Vpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.100.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value:  !Sub ${AWS::StackName}-MyVpc
+        - Key: Env
+          Value:  !Ref Env
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    DependsOn: Vpc
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-IGW
+        - Key: Env
+          Value:  !Ref Env
+  IgwToVpcAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref Vpc
+      InternetGatewayId: !Ref InternetGateway
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: 10.100.1.0/24
+      AvailabilityZone: us-east-1a
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-Public-Subnet=
+        - Key: Env
+          Value:  !Ref Env
+  PublicRT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-Public-RT
+        - Key: Env
+          Value:  !Ref Env
+  IgwRoute:
+    Type: AWS::EC2::Route
+    DependsOn: IgwToVpcAttachment
+    Properties:
+      RouteTableId: !Ref PublicRT
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+  PublicSubnetRTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref PublicRT
+  PublicSg:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable HTTP access from anywhere
+      VpcId: !Ref Vpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: icmp
+          FromPort: -1
+          ToPort: -1
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-Public-SG
+        - Key: Env
+          Value:  !Ref Env
+  PublicInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-09d95fab7fff3776c
+      KeyName: mykey
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: 0
+          SubnetId: !Ref PublicSubnet
+          GroupSet:
+            - !GetAtt PublicSg.GroupId
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 8
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-Instance
+        - Key: Env
+          Value:  !Ref Env
+
+# multiple values for single tag works like OR, multiple tags works like AND
+  TagBasedRg:
+    Type: AWS::ResourceGroups::Group
+    Properties:
+      Name: !Sub ${AWS::StackName}-TagBasedRg
+      Description: Resource group based on Name tag
+      ResourceQuery:
+        Type: TAG_FILTERS_1_0
+        Query:
+          ResourceTypeFilters:
+            - AWS::AllSupported
+          TagFilters:
+            - Key: Env
+              Values:
+                - !Ref Env
+
+  StackBasedRg:
+    Type: AWS::ResourceGroups::Group
+    Properties:
+      Name: !Sub ${AWS::StackName}-StackBasedRg
+      Description: Resource group based on current stack
+      ResourceQuery:
+        Type: CLOUDFORMATION_STACK_1_0
+        Query:
+          ResourceTypeFilters:
+            - AWS::AllSupported

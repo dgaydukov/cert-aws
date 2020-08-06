@@ -13,7 +13,7 @@ If you go straight to professional you just pay 300. But I would encourage you t
 
 
 ### Why do you need it
-There are 2 main reasons to get it.
+There are 2 main reasons to get it
 1. During preparation you will learn a lot of new stuff
 2. It may help your career
 
