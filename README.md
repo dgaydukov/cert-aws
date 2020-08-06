@@ -32,6 +32,10 @@ There are 2 main reasons to get it
 
 
 ### TODO
+* https://docs.aws.amazon.com/vpc/latest/userguide/Carrier_Gateway.html
+* Identity federation (AD - saml, or social providers - openId connect)
+* cloudformation template iam create identity provider'
+* https://aws.amazon.com/single-sign-on/faqs/
 -----------------------------------------------Advanced-----------------------------------------------
 * create aws microsoft AD and see how it works
 * ClientVPN with security as microsoft AD

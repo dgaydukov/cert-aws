@@ -799,7 +799,7 @@ So use
 
 PG (Placement group) - create ec2 in underlying hardware in such a way as to avoid correlated failures. There are 2 types
 * cluster - packs instances close together inside AZ (good when you need high speed node-to-node communication, used in HPC apps). t2.micro can't be placed into cluster PG
-* partition - spread instances between different hardware partitions (so group in instances inside one partition don't share any hardware with group of instances from another partition)
+* partition (up to 7 per AZ) - spread instances between different hardware partitions (so group in instances inside one partition don't share any hardware with group of instances from another partition)
 * spread - strictly place instances into distinct hardware to reduce correlated failures
 
 Prefix list - set of one or more CIDR blocks (can be used in SG as `SourcePrefixListId` to define not single CIDR range but a set of them).
@@ -1327,13 +1327,18 @@ Domain Controller - windows server that runs AD.
 
 AWS DS - managed service replicated across multiple AZ. There are 3 types of aws ds
 * AWS Managed Microsoft AD - microsoft AD completely deployed in cloud and managed there
+Trust Relationship - you can build it between aws microsoft AD and your on-premise microsoft AD, and store your users/passwords in your on-premise AD
+but use aws microsoft AD to access aws services based on users from on-premises AD. 
+So you can use it as either standalone AD or as trust relationship to on-premise AD.
     * deployed in 2 AZ
     * connected to VPC
     * backups automatically taken once per day
     * EBS by default encrypted
     * failed domain controllers automatically replaced in the same AZ using the same IP address
 * simple AD - Linux-Samba AD deployed & managed in the cloud
-* AD Connector - connector to redirect all request to your on-premises AD
+you can singIn to aws management console with simple AD account
+it doesn't support trust relationship, schema extension, multi-factor auth.
+* AD Connector - connector to redirect all request to your on-premises AD. So it basically directory gateway that forward requests to on-premise AD.
 
 ### Networking
 ###### NIC
