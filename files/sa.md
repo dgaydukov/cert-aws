@@ -1304,6 +1304,13 @@ openssl genrsa -out client.key 1024
 openssl req -key client.key -new -out client.req
 openssl x509 -req -in client.req -CA ca.pem -CAkey privkey.pem -CAserial serial.srl -out client.pem
 ```
+Then upload them and use `cloudformation/advanced-networking/client-vpn.yml` update params as server/client ACM ID.
+Download config and add 
+* `<cert></cert>` - certificate from client.pem file
+* `<key></key>` - private key from client.key file
+Remove `remote-cert-tls server` from `*.ovpn` file, otherwise you got `ERROR: Certificate does not have key usage extension`
+After run `sudo openvpn --config ~/Downloads/downloaded-client-config.ovpn`
+After you can ping private ec2 from your local machine
 
 ###### Directory Service
 DS (Directory Service) - hierarchical structure to store/search/manipulate objects, so users can locate resources no matter where they are stored.

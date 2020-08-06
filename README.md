@@ -12,7 +12,7 @@ If you go with associate + professional => you pay 150 + 300 with 50% discount (
 If you go straight to professional you just pay 300. But I would encourage you to take both, since during preparation for both of them you will learn a lot of new funny stuff.
 
 
-### Why do you need it.
+### Why do you need it
 There are 2 main reasons to get it.
 1. During preparation you will learn a lot of new stuff
 2. It may help your career
@@ -32,26 +32,14 @@ There are 2 main reasons to get it.
 
 
 ### TODO
-* client vpn (connect to vpc from you remote laptop) + create association and configure authorization rule + upload keys created locally + check split tunneling (when turned on internet should go without vpn => check by IP address)
-+ add cert manager to cloudformation => https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-certificatemanager-certificate.html
-generate key https://github.com/OpenVPN/easy-rsa 
-chain - ca.crt file
-- add different domain to client & server
-- cert file - .crt file
-- add authorization rule (destination - cidr of vpc)
-- add routes for other vpc (if you have peered vpc you should add route)
-```
-./easyrsa init-pki
-./easyrsa build-ca nopass
-# build client and server certificate
-```
--------------------------Advanced------------------------------------------
+-----------------------------------------------Advanced-----------------------------------------------
 * create aws microsoft AD and see how it works
-* create client vpn with security as microsoft AD
+* ClientVPN with security as microsoft AD
+* ClientVPN add nat instance so internet would work without tunnel split (yet check it also with tunnel split, and your IP would be different)
 * create custom vpn server in ec2 and try to connect to it (do both use oepnvpn server ami and any ami (OpenVPN Access Server from marketplace which is free tier, in this case you should configure it through browser admin panel) + manually configure openvpn server)
 * vpc endpoint service (add ec2 (with basic httpd service)+NLB and share it to vpc from another region)
 * route 53 resolver
-* transit gateway - add on-premise network imitated by third vpc
-https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-transitgateway.html - guide to add on-premise
-https://theithollow.com/2018/12/12/setup-aws-transit-gateway
+* transit gateway - add on-premise network imitated by third vpc (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-transitgateway.html - guide to add on-premise, https://theithollow.com/2018/12/12/setup-aws-transit-gateway)
 * put spring app into ECS and EKS and compare the difference (try fargate too)
+* Try maximum automate site-to-site vpn cloudformation template (try to extract somehow all IP addresses and PSK secret string and put it into ec2 userdata for VpnServer)
+* Try some other vpn server in on-premise site of site-to-site vpn

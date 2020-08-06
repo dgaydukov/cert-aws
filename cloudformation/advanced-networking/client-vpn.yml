@@ -4,6 +4,18 @@ AWSTemplateFormatVersion: 2010-09-09
 # create vpn endpoint
 # connect to vpn, now you can ping ec2 by internal IP
 
+# !important => by default split tunnel is false for vpn, so we set SplitTunnel to true explicitly. Otherwise you won't be able to connect to internet (cause we don't have nat here)
+
+Parameters:
+  ServerCertId:
+    Description: Server ACM Id
+    Default: df46bc79-95bc-4591-a1c3-b34db3ab6473
+    Type: String
+  ClientCertId:
+    Description: Client ACM Id
+    Default: defeff95-c9f1-4d8b-bbdd-aa98fcf896ca
+    Type: String
+
 Resources:
   VPC:
     Type: AWS::EC2::VPC
@@ -118,18 +130,19 @@ Resources:
 
 
 
-  VPN:
+  ClientVpn:
     Type: AWS::EC2::ClientVpnEndpoint
     Properties:
+      SplitTunnel: true
       AuthenticationOptions:
         - Type: certificate-authentication
           MutualAuthentication:
-            ClientRootCertificateChainArn: arn:aws:acm:us-east-1:530313143429:certificate/51905ced-d024-445f-add5-712b78a02e1c
+            ClientRootCertificateChainArn: !Sub arn:aws:acm:us-east-1:${AWS::AccountId}:certificate/${ClientCertId}
       ClientCidrBlock: 10.200.0.0/16
       ConnectionLogOptions:
         Enabled: false
       Description: My Client VPN Endpoint
-      ServerCertificateArn: arn:aws:acm:us-east-1:530313143429:certificate/e137f36a-9500-4a74-b7e6-1a1d3ecadecc
+      ServerCertificateArn: !Sub arn:aws:acm:us-east-1:${AWS::AccountId}:certificate/${ServerCertId}
       TransportProtocol: udp
       VpcId: !Ref VPC
       SecurityGroupIds:
@@ -142,10 +155,17 @@ Resources:
   PublicSubnetNetworkAssociation:
     Type: AWS::EC2::ClientVpnTargetNetworkAssociation
     Properties:
-      ClientVpnEndpointId: !Ref VPN
+      ClientVpnEndpointId: !Ref ClientVpn
       SubnetId: !Ref PublicSubnet
   PrivateSubnetNetworkAssociation:
     Type: AWS::EC2::ClientVpnTargetNetworkAssociation
     Properties:
-      ClientVpnEndpointId: !Ref VPN
+      ClientVpnEndpointId: !Ref ClientVpn
       SubnetId: !Ref PrivateSubnet
+  VpcAuthRule:
+    Type: AWS::EC2::ClientVpnAuthorizationRule
+    Properties:
+      ClientVpnEndpointId: !Ref ClientVpn
+      AuthorizeAllGroups: true
+      TargetNetworkCidr: 10.100.0.0/16
+      Description: Auth rule to access vpc
