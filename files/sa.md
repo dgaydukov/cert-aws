@@ -268,9 +268,11 @@ But generally they resemble layered style, only difference they divide core (dom
 
 AWS-specific parameter types: If you need to pass param as ec2 key name, you can pass it as string, but if this key doesn't exist, you template would be half-created and aborted.
 It would be nice, if aws can first check if the key exists, and after this starts to create stack. This is what for aws specific param types. If you set param type, not just `string`, but `AWS::EC2::KeyPair::KeyName`
-cloudformation would first check that the key with such name exists (in region), and only after this would start to create your stack. 
+CF would first check that the key with such name exists (in region), and only after this would start to create your stack. 
 Name of ssh key is not the only one, here is full list of [AWS-specific parameter types](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/parameters-section-structure.html#aws-specific-parameter-types)
 
+Internally CF is nothing but a service that parse your JSON/YAML, creates dependency graph and turn it into aws API calls (from bottom to top so dependencies would work).
+CF uses declarative approach, cause you declare how your stack should look like, you are not telling what CF should do to in order to build it (imperative approach).
 
 ###### IAM
 * In case you have one user who requires access to a specific resource, as a best practice, you should create a new AWS group for that access (in case new user would appear you would just assign him to this group)
@@ -281,6 +283,9 @@ There are 2 types of permission
 * group - collection of permissions that you can assign. Used to define users. One user can belong to multiple groups.
 * role - collection of permissions for specific aws service (for example ec2 can connect to s3 without any secret key). You can also create role for user, but user will have to assume this role.
 So if user is assigned to 2 groups he would get all permissions from 2 groups at the same time, but if he assigned 2 roles, he can use only one at a time (by assuming one role)
+
+Policy - define the permissions for a user, group, or role
+
 Role for user
 * create role `S3Viewer` of type: Another AWS Account (enter desired accountID or your own) and assign policy  `AmazonS3ReadOnlyAccess`
 * create new policy `AssumeS3ViewerRole`
@@ -584,6 +589,7 @@ Type of EC2
     * convertible - 54% discount, you can change RI attribute (for example after month you find out you need more compute capacity)
     * scheduled - you reserve instance for specific time period (one day for every week)
 * Spot (50-90% discount) - not commitment from aws (you bid for a cheaper price, and if any instance is available you got it, but you pay not what you bid, but the second highest bid)
+once spot price exceeds your bill, ec2 would be terminated within 2 min
 * Dedicated (can be on-demand or reserved) - your ec2 instance runs on physically separate hardware
 
 There are 3 types of IP address
@@ -622,6 +628,7 @@ It usually takes longer time to stop instance then to reboot. The reason is when
 2 types of scaling
 * vertical - enlarge instance capacity, need downtime. Stop instance, go to instance settings => change instance type and select new instance type, then start it.
 Stopping is required cause Amazon has to move the VM to a different piece of hardware with the available resources for the size change.
+If you are using CF template and change `InstanceType` there, CF smart enough to stop/change/start your instance (so it won't create new one with new instance type).
 * horizontal - add more instances, no need for downtime
 
 ###### Athena
@@ -680,7 +687,11 @@ EC2-to-EC2 communication through public IP
 * When in different Regions that connected with VPC peering - inside aws network
 * When in different Regions - not guaranteed to communicate inside aws network (probably communicate through Internet)
 
-Security groups (SG) vs ACL
+SG (Security group) - also called virtual firewall, decide which traffic (both inbound & outbound) on which port to allow to ec2.
+* inbound - check traffic based on source (source -  IP address or SG)
+* outbound - check traffic based on destination (destination - IP address or SG)
+
+SG vs ACL
 * SG operate at instance level, specify which traffic is allowed to/from EC2
 You can set source as CIDR or other SG (in this case only instances from this SG can access your instance)
 * NACL operates at subnet level and evaluate traffic that enter/exit subnet. Don't filter traffic inside same subnet.
@@ -694,6 +705,8 @@ stateless filtering, SG - stateful filtering
 You can only assign one NACL to one subnet, yet you can assign many SG to same ec2
 You can't block specific IP with SG, you need to use NACL
 Stateful - if you send request from your ec2 you will got response even if SG doesn't have any outbound rules
+
+If you set up NACL (let's say for ssh) you should also add outbound rules (cause nacl are stateless). But for ssh outbound port is not 22, it's ephemeral port - When a client connects to a server, a random port from the ephemeral port range (1024-65535) becomes the client's source port.
 
 When you create VPC, default SG created automatically. It allows inbound traffic from instances with same SG (source - SG_ID), and all outbound traffic.
 So if you need 2 ec2 to talk with each other you can assign both of them same SG where source is ID of this SG - this means traffic allowed from any instance of the same SG
@@ -1596,6 +1609,9 @@ Originally hypervisors developped to give multiple users simultaneous access to 
 So virtualization is a simulation of physical hardware for virtual OS.
 Containerization on the other hand is like os-level virtualization. Instead of creating a complete new OS, container share resources with host os, but have it's own file system, and by doing so divide itself from main OS.
 
+Virtual machine like ec2 is part of physical machine in aws datacenter. It's isolated from other virtual machines by hypervisor or alike software. 
+* Host - physical machine where all virtual machines are located
+* Guest - virtual machine
 
 ###### Docker and Kubernetes
 Docker - is a tool to quickly create and manage containers (like create/stop/start/destroy). But if you have many containers and they all should interact with each other you need some system to manage all of this.
@@ -1628,8 +1644,31 @@ There are 2 types of AMI
 * ebs-boot - ebs snapshot + metadata (architecture, kernel, AMI name, description, block device mappings)
 Most ami are of second type (ebs-boot). If you need to launch new ec2 from snapshot, you should first convert snapshot into ami and then just launch ami.
 
+Linux AMI virtualization types
+* HVM (Hardware Virtual Machine) - means that virtualization technology using hardware extensions for faster access to resources
+* PV (paravirtual) - boot with a special boot loader called PV-GRUB, which starts the boot cycle and then chain loads the kernel specified in the menu.lst
+
+AMI doesn't include kernel, it's loaded from AKI (Amazon Kernel Image).
+In November 2017 new virtualization came out as Nitro (combines a KVM-based hypervisor with customized hardware (ASICs) aiming to provide a performance that is indistinguishable from bare metal machines)
+
 ###### AWS CLI
-CLI (Command Line Interface) - can be useful to quickly automate some aws manual tasks.
+CLI (Command Line Interface) - can be useful to quickly automate some aws manual tasks. Internally it just convert cli calls into aws API calls and wrap results into useful format.
+`help` is very useful command working with cli.
+```
+aws help # show all available services
+aws <service> help # show all available actions to perform on selected service
+aws <service> <action> help # shaw all avaialble action options to perform for specified action 
+```
+
+`--query` - use JMESPath - query language for JSON
+```
+# show imageId of first image
+aws ec2 describe-images --query "Images[0].ImageId"
+
+# show state for all images
+aws ec2 describe-images --query "Images[*].State"
+```
+
 * Create new profile to access aws services from console
 ```
 aws configure --profile awssa

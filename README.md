@@ -36,6 +36,8 @@ There are 2 main reasons to get it
 * Identity federation (AD - saml, or social providers - openId connect)
 * cloudformation template iam create identity provider'
 * https://aws.amazon.com/single-sign-on/faqs/
+* rewrite template comments to multi-line description https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-description-structure.html
+* https://aws.amazon.com/opsworks/stacks/faqs/ (and how it differ from beanstalk)
 -----------------------------------------------Advanced-----------------------------------------------
 * create aws microsoft AD and see how it works
 * ClientVPN with security as microsoft AD
@@ -47,3 +49,4 @@ There are 2 main reasons to get it
 * put spring app into ECS and EKS and compare the difference (try fargate too)
 * Try maximum automate site-to-site vpn cloudformation template (try to extract somehow all IP addresses and PSK secret string and put it into ec2 userdata for VpnServer)
 * Try some other vpn server in on-premise site of site-to-site vpn
+* Install ec2 with openswan and use it as personal vpn server
