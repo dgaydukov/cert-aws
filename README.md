@@ -34,10 +34,13 @@ There are 2 main reasons to get it
 ### TODO
 * https://docs.aws.amazon.com/vpc/latest/userguide/Carrier_Gateway.html
 * Identity federation (AD - saml, or social providers - openId connect)
-* cloudformation template iam create identity provider'
-* https://aws.amazon.com/single-sign-on/faqs/
+* cloudformation template iam create identity provider
+* https://aws.amazon.com/single-sign-on/faqs
 * rewrite template comments to multi-line description https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-description-structure.html
 * https://aws.amazon.com/opsworks/stacks/faqs/ (and how it differ from beanstalk)
+* https://aws.amazon.com/wavelength/faqs
+* elastic network adapter vs network interface vs elastic fabric adapter
+* specify iam permission boundary
 -----------------------------------------------Advanced-----------------------------------------------
 * create aws microsoft AD and see how it works
 * ClientVPN with security as microsoft AD
@@ -50,3 +53,7 @@ There are 2 main reasons to get it
 * Try maximum automate site-to-site vpn cloudformation template (try to extract somehow all IP addresses and PSK secret string and put it into ec2 userdata for VpnServer)
 * Try some other vpn server in on-premise site of site-to-site vpn
 * Install ec2 with openswan and use it as personal vpn server
+* Try Athena & Aws Glue tutorials
+* aws config CF template (check that ec2 is of specific type and alert when type has been changed)
+* Kinesis firehose real example (with cf template)
+* connect 2 vpc with privatelink (access ec2 from one vpc from another)

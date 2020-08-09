@@ -634,6 +634,7 @@ If you are using CF template and change `InstanceType` there, CF smart enough to
 ###### Athena
 Athena is an interactive query service that makes it easy to analyze data in Amazon S3 using standard SQL. 
 You don’t need to load your data into Athena, as it works directly with data stored in S3. Athena integrates with Amazon QuickSight for easy visualization.
+It uses managed data catalog (aws glue - ETL tool) to store tables you create from s3.
 AntiPattern
 * Enterprise Reporting and Business Intelligence (for enterprise level it's better to use RedShift, query engine in Redshift has been optimized to perform especially well on data warehouse workloads)
 * ETL Workloads (for etl you should use EMR/Glue)
@@ -999,6 +1000,7 @@ DB Parameter Group - a list of db config values that can be applied to 1 or many
 
 Get current database `SELECT DATABASE() FROM DUAL;`
 
+You can enable encryption when you create db, but once created you can't enable it. So if you create unencrypted db and want to turn on encryption you have to take snapshot encrypt it and create new encrypted db drom it, then remove old db.
 
 ###### SQS
 SQS (Simple Queue Service) - managed service that provide publisher/subscriber (queue) model. There are 2 types
@@ -1125,8 +1127,11 @@ For this to work you should assign a role to ec2 with policy `AmazonEC2RoleforSS
 
 ###### Config
 Config - manages service that provides aws resources inventory, config history, change notification.
-Config Rule - desired configuration of resource that is evaluated againt actual change (and report in case of mismatch).
+Config Rule - desired configuration of resource that is evaluated against actual change (and report in case of mismatch).
 Conformance Pack - collection of config rules.
+
+CloudTrail - list of all api calls (cli & CF templates in the end are transformed into api calls)
+Config - store point-in-time configuration of your aws resources
 
 ###### Aurora
 Aurora - mysql/postgres compatible (most app that works with mysql/postgres would switch with no problem to aurora) aws database solution. 
@@ -1272,6 +1277,7 @@ Lustre - open source high-performance file system (good for HPC, video processin
 You can access FSx lustre from
 * linux (install the open-source Lustre client on that instance)
 Minimum size for Lustre is 1.2TB
+Lustre has integration with s3 so you can access objects from s3 as files
 
 ###### VPN
 On the high level vpn server is just bastion server but for end users. Bastion server is for developers/administrators, you explicitly access it though ssh, and from there you access all internal resources.
