@@ -329,6 +329,20 @@ Now if you run `aws s3 ls --profile=jackS3Viewer` you get a list of buckets, but
 * To use assumed role from SDK you have to use `AWSSecurityTokenService` to get temporary credentials, [example here](https://docs.aws.amazon.com/AmazonS3/latest/dev/AuthUsingTempSessionTokenJava.html)
 So in Spring you just create 2 configs (based on Profile) and in local config add this logic to obtain temporal credentials. This way will allows for local development
 
+You can also create a policy to forbid deletion of s3 for example. In this case evan administrator/root can't delete a bucket.
+When you work with beanstalk, it creates bucket to store files with such a policy. So even if you are admin you can't just delete it.
+If you want to delete it you should go to permission->bucket policy and remove this policy. After this you can easily delete a bucket.
+```
+{
+    "Effect": "Deny",
+    "Principal": {
+        "AWS": "*"
+    },
+    "Action": "s3:DeleteBucket",
+    "Resource": "arn:aws:s3:::you-bucket-name"
+}
+```
+
 You can assume only 1 role at a time. So if you want to assume 2 roles, it would be 2 different set of permissions, you can't make any union operation on them.
 Moreover in cli you can add profiles only for single role. If you try to add profile for 2 or more roles like
 ```
@@ -412,6 +426,12 @@ Presign url - use cli to create url with key, that is accessible for limited tim
 
 Interface is global, so you assign a region to a bucket, but you see all your buckets across all regions
 
+S3 accidental delete protection
+* add 2FA delete - user will need to enter 2FA code in order to delete
+* add versioning - when file is deleted new version `mark delete` is added, but original file is still stored with some version
+Suppose we have 2 versions A and B (current) and delete file. In this case we would have A, B, C (mark delete, current). As you see file is still preserved with some version.
+
+Eventual consistency - since put/read is atomic, you won't read partially updated file, so you will either read old file or new file, because of this sometimes just after write you can read old file, but after some time new file would be available.
 
 ###### Glacier
 Glacier - low-cost tape-drive storage value with  $0.007 per gigabyte per month. Used to store backups that you don't need frequently.
@@ -474,12 +494,30 @@ Since you can't encrypt volume after you attached it to ec2, so in order to crea
 3. create ami from encrypted snapshot
 4. run new ec2 from created ami & remove current ec2
 
+Root ebs is already mounted, but if you add second/third and so on... you have to manually mount them (instance store is mounted automatically although root is still ebs)
+```
+# create new fs
+sudo mkfs -t ext4 /dev/xvdb
+
+# create dir and mount
+sudo mkdir /mnt/volume
+sudo mount /dev/xvdb /mnt/volume
+
+# check mounted devices
+df -h
+
+# check write & read performance (first we write 1GB file to mounted ebs, then we read it)
+sudo dd if=/dev/zero of=/mnt/volume/tmpfile bs=1M count=1024
+sudo dd if=/mnt/volume/tmpfile of=/dev/null bs=1M count=1024
+```
+
 ###### EC2 Instance Store
 Similar to EBS, but located on the same machine as EC2 (EBS connected through network), available only during lifetime of EC2.
 So it's not durable, once EC2 instance stop/restart/fail all data would be lost.
 It's not available for all ec2 types, only for [some of them](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/InstanceStorage.html#instance-store-volumes)
 You still have to use at lease 1 EBS + additional instance store. For some types you can select to remove instance store, but ebs should be present always.
 So you can't create ec2 without ebs.
+It's differ from EBS cause it's directly attach to machine (ebs connected via network) and provide lowest latency.
 
 ###### CloudFront
 CloudFront is a CDN (content delivery/distribution network) - that speed up the distribution of your data using edge locations.
@@ -489,7 +527,7 @@ To work with CF you should create origin server (s3 in case of static content, e
 Later when user request this link CF check the closest edge location for data, and if found in chane - return, if not request it from origin server and cache it.
 To ensure origin availability you can add backup origin and configure CF in case it get 4xx/5xx response from main origin, to use backup origin.
 Edge cache is smart, it can remove less popular content to make room for other data.
-You can also use Geo Restriction to specify at which contries content should be 403 (Forbidden), you can also add custom error code and message.
+You can also use Geo Restriction to specify at which countries content should be 403 (Forbidden), you can also add custom error code and message.
 You can control expire date (when CF will check origin server for new version) by setting cache control header (by default 24 hours).
 You can delete item from CF by
 * delete it from origin server, and when expire date come it would be deleted from CF
@@ -528,12 +566,14 @@ Queue vs Streaming
 ###### Lambda
 Lambda - piece of code that can be executed without any server env (just write code in javascript and it will run).
 Lambda can be directly triggered by AWS services such as Amazon S3, DynamoDB, Amazon Kinesis Data Streams, Amazon Simple Notification Service (Amazon SNS), CloudWatch
+Lambda are billed per request, so it's better for some small simple tasks. If you have highload with 10m hits per day, run simple ec2 is cheaper.
 AntiPattern
 * Long Running Applications (Lambda max time is 900sec. If you need some long running jobs you should consider EC2)
 * Dynamic Websites (although you can use Lambda to create static website, it's better to use some programming language like java/node.js and deploy it to EC2)
 * Stateful Applications (Lambda is stateless, if you need state it's better to create app in java/node.js and deploy it ot EC2 + RDS/DynamoDb)
-Cold Start - when you first run your lambda and aws search for idle server and run your lambda on this sever, delay may happen. When you run it for
-second and consecutive time, there is no delay.
+Cold Start - when you first run your lambda and aws search for idle server and run your lambda on this sever, delay may happen. 
+When you first run your code aws create new execution context (download code, set up env vars, load code) and it can take from few millisec to a few sec.
+When you run it for second and consecutive time, there is no delay.
 By default lambda runs in no VPC (so it has internet access), if you want your lambda to talk with other services you should put it into VPC, if your lambda need internet access you have to configure nat for it.
 Lambda doesn't run `npm install`. So if you add new package you have to build it locally, create `.zip` file with your project (including `node_modules`) and upload it to aws lambda.
 

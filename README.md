@@ -41,6 +41,10 @@ There are 2 main reasons to get it
 * https://aws.amazon.com/wavelength/faqs
 * elastic network adapter vs network interface vs elastic fabric adapter
 * specify iam permission boundary
+* roll out new java app version into ASG (if we have single ec2 we can just ssh and put .jar there, but how to deal with ec2 fleet)
+* cf template that trigger lambda every 5 sec, and lambda check liveliness of ec2 (go to ec2 turn off httpd and see that logs are written to cloudwatch) + create alarm on error (more than 2 times sned sns email)
++ add cloudwatch event (rule, source - aws.ec2, detailtype-runinstances) when new ec2 started and add tag owner with lambda inside vpc
+* rewrite efs from default SG to custom (cause it's better to explicitly control SG)
 -----------------------------------------------Advanced-----------------------------------------------
 * create aws microsoft AD and see how it works
 * ClientVPN with security as microsoft AD
@@ -57,3 +61,4 @@ There are 2 main reasons to get it
 * aws config CF template (check that ec2 is of specific type and alert when type has been changed)
 * Kinesis firehose real example (with cf template)
 * connect 2 vpc with privatelink (access ec2 from one vpc from another)
+* ELB access logs store to s3 => trigger lambda to process logs and put them into elasticsearch
