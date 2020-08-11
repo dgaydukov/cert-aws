@@ -511,6 +511,8 @@ sudo dd if=/dev/zero of=/mnt/volume/tmpfile bs=1M count=1024
 sudo dd if=/mnt/volume/tmpfile of=/dev/null bs=1M count=1024
 ```
 
+Incremental Snapshots available only for rds for other types (ec2 instance store, efs you have to manully make backups)
+
 ###### EC2 Instance Store
 Similar to EBS, but located on the same machine as EC2 (EBS connected through network), available only during lifetime of EC2.
 So it's not durable, once EC2 instance stop/restart/fail all data would be lost.
@@ -598,8 +600,59 @@ AntiPattern
 * NoSQL Databases (Glue doesn't support NoSQL databases as source)
 
 ###### DynamoDB
-DynamoDB - fully managed NoSQL database, like mongo, but aws proprietary solution.
-Stores data across 3 regions. Row - item. Cell - attribute. Primary key - partition key + sort key.
+DynamoDB - fully managed NoSQL key-value database, like mongo, but aws proprietary solution. Stores data across 3 AZ. 
+NoSql terminology
+* Row - item
+* Cell - attribute
+* Primary key - partition key + sort key.
+
+Main reason to use NoSql against relation db is that you can scale horizontally.
+With relational db the scale is vertical (add more compute/memory to single node). If you try to scale horizontally relational db you have to use 2PC to support transaction atomicity.
+2PC (Two-phase commit protocol) - distributed algorithm that support atomic transaction between 2 nodes.
+Simplified 2 phase commit is
+* TC (transaction coordinator) sends commit requests to 2 nodes
+* both nodes decided can they execute commit or not and send results (yes/no) back to TC
+* if both answered yes, TC send request to execute commit
+As you guessed the problem is the more nodes you add the slower is communication to decide should they all run transaction.
+So the good solution is to use db that doesn't adhere to these guidelines (transactionless db or NoSql).
+
+There are 4 types of NoSql db
+* document
+* graph
+* columnar
+* key-value
+
+Since DynamoDb is multi-AZ by default there is no automatic backup (like rds have), but you can use on-demand backup/restore logic.
+DynamoDb just like s3 is not in vpc, so you can either
+* access it from internet using some url
+* access it from private subnet using vpc gateway endpoint
+
+To work with db (create/query tables) you should use SDK/CLI or management console.
+Although dynamoDb is proprietary solution with closed source code there are 2 options for local development
+* download aws version for developers
+* use it from localstack
+But don't use it in production, cause it only for dev purposes, api is the same, but underlying design is different (not suitable for prod highload).
+
+DynamoDb Stream - stream that provide all write (create/update/delete) operations. It's useful for
+* replicating
+* elasticache (so your cache would be always updated to latest state of db)
+* in case your app need to know about all updates
+
+Global Secondary Index - special read-only table created by dynamoDb to simplify search for indexed fields. Index speed up search but require more memory to store itself.
+Scanning - like `select * from` operation in RDS, just go over all records.
+DynamoDb just like s3 is eventual consistent, so if you update data and read it right away you can get old value (cause items are persisted on multiple machines, and depending from what machine you read you can get stale data).
+You can disable eventual consistency by setting `ConsistentRead: true`. In this case `getItem/query/scan` operations would always return correct value, but reads would take longer time.
+eventually consistent read takes half the capacity of a SCR (strongly consistent read).
+To read data of size
+* less than 4KB - 1 SCR
+* more than 4KB - 2 SCR
+
+Throughput is of 2 types
+* read (`ReadCapacityUnits: 5`) - 5 SCR per second (if you have more then dynamoDb will throttle them, if you have too much they would be just rejected)
+* write (`WriteCapacityUnits: 5`) - 5 writes per second 
+You can increase throughput as much as you want but decrease up to 9 times per day.
+
+It's the only db that grow/shrink based on load.
 
 ###### RedShift
 Database vs Data Warehouse
@@ -1014,13 +1067,20 @@ RDS (Relational Database Service) - aws managed service, that make it easy insta
 * it's easy to update db software
 * it simplifies replication
 
+if you want to import data you have to
+* dump data to you local machine
+* copy dump to some ec2 in same vpc
+* pump data into rds from ec2
+
 There are 2 ways to backup
 * automatic backup - snapshots takes by RDS daily, retained for limited period (by default 7 days)
 * db snapshot - taken by user
+You can recover snapshot on the moment taken or by point-in-time (cause rds keeps db change logs)
 
 multi-AZ (failover):
 * primary - you main db that performs read/write
 * standby - replica db that has most recent updates from primary. You can't use it for reads, the only purpose is failover - when primary fails, your standby becomes primary, so you won't even notice failure. Replication is synchronous.
+Since Aurora stores data across 3 AZ, if master is failed, it would automatically recreated in another AZ, so for aurora you don't need to set up stand-by replica.
 
 Read replica (replica db only for reading):
 Use it if you want to write to master and read from replica. Read Replica implemented using db (mysql or other) native asynchronous replication, that's why lag can occur, comparing with multi-AZ replication
@@ -1040,7 +1100,7 @@ DB Parameter Group - a list of db config values that can be applied to 1 or many
 
 Get current database `SELECT DATABASE() FROM DUAL;`
 
-You can enable encryption when you create db, but once created you can't enable it. So if you create unencrypted db and want to turn on encryption you have to take snapshot encrypt it and create new encrypted db drom it, then remove old db.
+You can enable encryption when you create db, but once created you can't enable it. So if you create unencrypted db and want to turn on encryption you have to take snapshot encrypt it and create new encrypted db from it, then remove old db.
 
 ###### SQS
 SQS (Simple Queue Service) - managed service that provide publisher/subscriber (queue) model. There are 2 types
@@ -1142,9 +1202,23 @@ ElastiCache - manages service that runs Memcached/Redis server nodes in cloud.
 It automates common administrative tasks required to operate a distributed in-memory key-value environment.
 It consists of
 * node - smallest building block - network-attached RAM
-* shard - primary node and zero or more read-replicas
-* cluster - group of shards
+* shard (node group) - primary node and zero or more read-replicas
+* cluster (replication group) - group of shards
 
+Caching strategies
+* Lazy loading - populate cache on-demand (first hit - request data from db, all subsequent reads - take directly from cache).
+For this to work you should set TTL (time to live) to ensure that you always have last data (so if you ttl - 1 month, data would be stored in cache for 1 month, although they have been updated in underlying db after 2 minutes).
+* Write through - whenever update happened you first update cache and then db (or first update dy and then async update of cache)
+Downside if cache is not big enough, when new data arrived, LRU (least recently used) data is evicted from cache
+
+Cache is implemented as key-value pair. So if you want to store leaderboard in cache you have to store sha256 of query as key and result of query as string value.
+With cluster you distribute load across nodes/shards(in case of redis), it also protection against failure. If you have one node and it failed, your cache is failed, but if you have cluster of 10 nodes, and one node is failed, only 10% of cache is failed.
+
+Memcached cluster vs redis cluster
+* Memcached cluster consists of up to 20 nodes, keys are distributed across nodes. If one node failed, data is lost.
+So memcached is best if you have data in db and just need a cache layer, and losing cache is not critical.
+* Redis cluster consists of up to 15 shards (each shard is 1 primary and up to 5 replica nodes), so totally 15*6 = 90 nodes.
+So if you need data replication you should use redis. Replication is supported by only redis.
 
 ###### Systems Manager
 SM (Systems Manager) - tool that helps you to manage your aws resources and automate some tasks on them:
@@ -1162,7 +1236,7 @@ you can also update/patch your ami
 * Run Command - easy way to manage your ec2 instances without ssh/bastion. All actions made here are recorded by CloudTrail, so you can easily trace what happened
 * Session Manager - browser cli that allow to interact with ec2 without ssh/bastion/opening inbound ports. 
 It improves security, cause it doesn't require you to open inbound ssh port (22) to talk with ec2. You also don't need to operate bastion host.
-For this to work you should assign a role to ec2 with policy `AmazonEC2RoleforSSM`. Internally ssh manager just ssh you as `ssm-user` with root priviledge.
+For this to work you should assign a role to ec2 with policy `AmazonEC2RoleforSSM`. Internally ssh manager just ssh you as `ssm-user` with root privilege.
 
 
 ###### Config
@@ -1750,6 +1824,10 @@ You can set or unset aws env vars in `~/.bashrc` file.
 
 * Get account Id
 ```
+# get arn
+aws iam get-user --query "User.Arn" --profile=awssa
+
+# get arn + userId
 aws sts get-caller-identity --profile=awssa
 ```
 

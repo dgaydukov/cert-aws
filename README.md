@@ -42,9 +42,21 @@ There are 2 main reasons to get it
 * elastic network adapter vs network interface vs elastic fabric adapter
 * specify iam permission boundary
 * roll out new java app version into ASG (if we have single ec2 we can just ssh and put .jar there, but how to deal with ec2 fleet)
-* cf template that trigger lambda every 5 sec, and lambda check liveliness of ec2 (go to ec2 turn off httpd and see that logs are written to cloudwatch) + create alarm on error (more than 2 times sned sns email)
+* cf template that trigger lambda every 5 sec, and lambda check liveliness of ec2 (go to ec2 turn off httpd and see that logs are written to cloudwatch) + create alarm on error (more than 2 times send sns email)
 + add cloudwatch event (rule, source - aws.ec2, detailtype-runinstances) when new ec2 started and add tag owner with lambda inside vpc
 * rewrite efs from default SG to custom (cause it's better to explicitly control SG)
+* add SG to RDS with source as SG of webserver
+* db migration DMS vs manual migration (copy dump to ec2 within same vpc as rds, and from ec2 import into rds)
+* iam database authentication (no need to create separate db username/password)
+* Create cf template with redis cache and ec2 to connect to this cache (SG with clientSG that attached to desired ec2)
+```
+sudo yum -y install --enablerepo=epel redis
+redis-cli -h redis_ip_address
+SET mykey myvalue
+# store data with ttl of 5 seconds (after expired key would be null~~~~)
+SET mykey myvalue EX 5
+```
+* create cf template with dynamodb vpc endpoint and access dynamodb from ec2 in private subnet (add scaling policy to dynamoDb)
 -----------------------------------------------Advanced-----------------------------------------------
 * create aws microsoft AD and see how it works
 * ClientVPN with security as microsoft AD
