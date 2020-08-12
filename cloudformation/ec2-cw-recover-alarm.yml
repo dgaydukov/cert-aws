@@ -1,0 +1,76 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+# recover can only be used with metric StatusCheckFailed_System - this alarm fire when data center failure, so you can't test it manually
+# look here for more details https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/UsingAlarmActions.html#AddingRecoverActions
+
+Resources:
+  WebServerSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH/HTTP access from anywhere
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-WebServer-SG
+
+  WebServer:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-09d95fab7fff3776c
+      KeyName: mykey
+# enable detailed monitoring for every minute (by default ec2 sends data every 5 min)
+      Monitoring: true
+      UserData:
+        Fn::Base64:
+          !Sub |
+          #!/usr/bin/env bash
+          sudo yum install httpd -y
+          sudo service httpd start
+          RND1=$(shuf -i 1-100 -n 1)
+          RND2=$(shuf -i 1-100 -n 1)
+          sudo echo "<h1>WebServer ${AWS::Region} #$RND1-$RND2</h1>" > /var/www/html/index.html
+      SecurityGroupIds:
+        - !GetAtt WebServerSG.GroupId
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 8
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-WebServer
+
+  MyEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      InstanceId: !Ref WebServer
+      Tags:
+          - Key: Name
+            Value: !Sub ${AWS::StackName}-WebServer-StaicIP
+
+  RecoveryAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Recover EC2 in case of 3 consecutive check failures
+      Namespace: AWS/EC2
+      MetricName: StatusCheckFailed_System
+      Statistic: Maximum
+      Period: 60
+      EvaluationPeriods: 3
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 0
+      AlarmActions:
+        - !Sub arn:aws:automate:${AWS::Region}:ec2:recover
+      Dimensions:
+        - Name: InstanceId
+          Value: !Ref WebServer
+
+

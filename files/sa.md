@@ -206,6 +206,10 @@ There are 2 types of DR in aws
 * warm standby - constantly running scaled in version of your main infra
 * multi site
 
+HA vs FT
+* HA (High availability) - system can recover with short downtime
+* FT (fault tolerance) - system continue provide services even in case of failures
+
 ### Services
 ###### Corretto 
 [AWS Corretto](https://aws.amazon.com/corretto/) - free amazon implementation of Java SE specification.

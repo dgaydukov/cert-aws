@@ -74,3 +74,4 @@ SET mykey myvalue EX 5
 * Kinesis firehose real example (with cf template)
 * connect 2 vpc with privatelink (access ec2 from one vpc from another)
 * ELB access logs store to s3 => trigger lambda to process logs and put them into elasticsearch
+* Create AWS::CloudWatch::Alarm and recover instance in case it stopped or port 80 not responding (take template as base `cloudformation/ec2-cw-recover-alarm.yml`)
