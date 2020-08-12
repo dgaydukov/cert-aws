@@ -62,6 +62,7 @@
 * 2.43 [FSx](#fsx)
 * 2.44 [VPN](#vpn)
 * 2.45 [Directory Service](#directory-service)
+* 2.45 [Wavelength](#wavelength)
 3. [Networking](#networking)
 * 3.1 [NIC](#nic)
 * 3.2 [Hub, Switch, Router](#hub-switch-router)
@@ -1500,6 +1501,14 @@ So you can use it as either standalone AD or as trust relationship to on-premise
 you can singIn to aws management console with simple AD account
 it doesn't support trust relationship, schema extension, multi-factor auth.
 * AD Connector - connector to redirect all request to your on-premises AD. So it basically directory gateway that forward requests to on-premise AD.
+
+###### Wavelength
+Wavelength combines 5G networks with aws compute/storage services. You should use it when you want your aws services to be accessed from mobile devices with low latency.
+Wavelength Zone - aws infra (compute/storage) deployed directly to telecom provider's datacenter so traffic reach aws infra without leaving provider network.
+Carrier gateway - provides connection between subnet in watelength zone and telecom carrier (provider). So it provides NAT service from subnet IP range to provider's IP range.
+
+Local Zone - aws solution where aws services are located locally near your end-users providing low latency.
+Outpost - aws rack with compute/memory devices that you install on-premises and run it through aws management console.
 
 ### Networking
 ###### NIC

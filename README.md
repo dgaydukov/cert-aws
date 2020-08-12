@@ -32,13 +32,11 @@ There are 2 main reasons to get it
 
 
 ### TODO
-* https://docs.aws.amazon.com/vpc/latest/userguide/Carrier_Gateway.html
 * Identity federation (AD - saml, or social providers - openId connect)
 * cloudformation template iam create identity provider
 * https://aws.amazon.com/single-sign-on/faqs
 * rewrite template comments to multi-line description https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-description-structure.html
 * https://aws.amazon.com/opsworks/stacks/faqs/ (and how it differ from beanstalk)
-* https://aws.amazon.com/wavelength/faqs
 * elastic network adapter vs network interface vs elastic fabric adapter
 * specify iam permission boundary
 * roll out new java app version into ASG (if we have single ec2 we can just ssh and put .jar there, but how to deal with ec2 fleet)
