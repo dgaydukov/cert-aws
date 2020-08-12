@@ -1,6 +1,7 @@
 AWSTemplateFormatVersion: 2010-09-09
 
 # recover can only be used with metric StatusCheckFailed_System - this alarm fire when data center failure, so you can't test it manually
+# recovered instance would use same ebs (so that's why we use 2 random numbers, cause they should be preserved), EIP (so you can reach site with same public IP)
 # look here for more details https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/UsingAlarmActions.html#AddingRecoverActions
 
 Resources:

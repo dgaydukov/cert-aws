@@ -114,7 +114,8 @@ You can go to `Bills` on the left menu and thee you would see detailed info on w
 There are different geographic regions across the globe where aws data centers are located. One region is divided between several AZ (availability zone).
 Each regions is completely independent and connected through Internet (no private cables between regions).
 Each AZ is isolated within a regions, but connected through low-latency links (not through public Internet).
-AZ is regions + az identifier like `us-east-1a`. AZ consists of one or more discrete data centers.
+AZ is regions + az identifier like `us-east-1a`. AZ consists of one or more discrete data centers. 
+To distribute load equally AZ letter is different for every account (for accountA letter `a` point to AZ1, but for accountB letter `a` point to another AZ, so by this equal distribution of loads across different AZ is achieved)
 LZ (local zone) - extension of region closer to your users.
 Edge location - A site that CloudFront uses to cache copies of your content for faster delivery to users at any location
 
@@ -208,7 +209,12 @@ There are 2 types of DR in aws
 
 HA vs FT
 * HA (High availability) - system can recover with short downtime
-* FT (fault tolerance) - system continue provide services even in case of failures
+* FT (fault tolerance) - system continue provide services even in case of failures. You build FT by introducing redundancy.
+
+Availability vs. Durability on ebs example
+* Availability - ebs available 99.9% time, but in case of AZ failure it won't be available (cause ebs is linked to subnet/AZ). But when AZ becomes again available your data won't be lost.
+* Availability - ebs 99.9% durable, that means if you have 1000 volumes you can expect to lose 1 volume per year.
+
 
 ### Services
 ###### Corretto 
@@ -728,6 +734,12 @@ Stopping is required cause Amazon has to move the VM to a different piece of har
 If you are using CF template and change `InstanceType` there, CF smart enough to stop/change/start your instance (so it won't create new one with new instance type).
 * horizontal - add more instances, no need for downtime
 
+ASG (auto-scaling group) - allows you scale up/down system based on some metric like
+* ASGAverageCPUUtilization - based on cpu consumption
+* ALBRequestCountPerTarget - based on number of requests for elb
+* ASGAverageNetworkIn/ASGAverageNetworkOut - based on average number of bytes
+You can also create your own custom metrics. But it should change based on number of instances (latency is bad and won't work, cause adding/removing instances doesn't directly affect response time)
+
 ###### Athena
 Athena is an interactive query service that makes it easy to analyze data in Amazon S3 using standard SQL. 
 You don’t need to load your data into Athena, as it works directly with data stored in S3. Athena integrates with Amazon QuickSight for easy visualization.
@@ -1107,7 +1119,7 @@ Get current database `SELECT DATABASE() FROM DUAL;`
 You can enable encryption when you create db, but once created you can't enable it. So if you create unencrypted db and want to turn on encryption you have to take snapshot encrypt it and create new encrypted db from it, then remove old db.
 
 ###### SQS
-SQS (Simple Queue Service) - managed service that provide publisher/subscriber (queue) model. There are 2 types
+SQS (Simple Queue Service) - managed service that provide asynchronous decoupling and publisher/subscriber (queue) model. There are 2 types
 * standard - ordering is not guaranteed, no limit to number of messages (you should implement custom protection against duplicates)
 * FIFO (first in, first out) - ordering is guaranteed, limit - 300 messages per second
 It guarantee at-least-once delivery. you can use Amazon SQS Java Messaging Library that implements the JMS 1.1 specification and uses Amazon SQS as the JMS provider.
@@ -1120,6 +1132,18 @@ If queue is empty
 Message retention can be configured from 1 min to 14 days (by default - 4 days).
 Visibility Timeout (0 sec    to 12 hours, default - 30sec) - once you app consume a message it becomes invisible to others. But until your app notify queue that it processed it
 message not deleted. So this timeout - is how long queue can wait.
+
+You can get twice same message if
+* received message is not deleted during `VisibilityTimeout` (time during which you should handle message and delete it from queue)
+default timeout is 60 sec, you can [read more](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-visibility-timeout.html#changing-message-visibility-timeout)
+* `DeleteMessage` operation doesn't delete it on all nodes (since sqs is distributed system it may happen that one node was unavailable for short time and didn't get delete message, then it will deliver message again) - very rare
+You can solve double-delivery problem by making processing request idempotent (no matter how many times it called you always return same result).
+Generally idempotency solve a lot of problem in distributed systems.
+
+SQS is not replace for message broker like Rabbit/Kafka cause it doesn't support a lot of functionality that message brokers support like routing or message priorities.
+So it's incorrect to compare sqs to kafka, just like compare DynamoDB to MySQL.
+
+DLQ (dead-letter queue) - queue with messages that failed to processed after n retries (otherwise some messages would retry forever, but you can specify param, so after 10 retry message goes to this queue, and not tried to retry again).
 
 ###### API Gateway
 API Gateway - managed api service that makes it easy to publish/manage api at any scale. It can
@@ -1782,6 +1806,15 @@ CLI (Command Line Interface) - can be useful to quickly automate some aws manual
 aws help # show all available services
 aws <service> help # show all available actions to perform on selected service
 aws <service> <action> help # shaw all avaialble action options to perform for specified action 
+```
+
+Basic commands
+```
+# get available regions
+aws ec2 describe-regions --profile=awssa
+
+# get available AZ
+aws ec2 describe-availability-zones --region=us-east-1 --profile=awssa
 ```
 
 `--query` - use JMESPath - query language for JSON

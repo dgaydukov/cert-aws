@@ -53,10 +53,11 @@ There are 2 main reasons to get it
 sudo yum -y install --enablerepo=epel redis
 redis-cli -h redis_ip_address
 SET mykey myvalue
-# store data with ttl of 5 seconds (after expired key would be null~~~~)
+# store data with ttl of 5 seconds (after expired key would be null)
 SET mykey myvalue EX 5
 ```
 * create cf template with dynamodb vpc endpoint and access dynamodb from ec2 in private subnet (add scaling policy to dynamoDb)
+* add vpc to `cloudformation/ec2-cw-recover-alarm.yml` (in case you run it in region where no default vpc)
 -----------------------------------------------Advanced-----------------------------------------------
 * create aws microsoft AD and see how it works
 * ClientVPN with security as microsoft AD
@@ -74,4 +75,28 @@ SET mykey myvalue EX 5
 * Kinesis firehose real example (with cf template)
 * connect 2 vpc with privatelink (access ec2 from one vpc from another)
 * ELB access logs store to s3 => trigger lambda to process logs and put them into elasticsearch
-* Create AWS::CloudWatch::Alarm and recover instance in case it stopped or port 80 not responding (take template as base `cloudformation/ec2-cw-recover-alarm.yml`)
+* Create AWS::CloudWatch::Alarm and recover instance in case it stopped or port 80 not responding (find some standard cloudwatch metric for this, take template as base `cloudformation/ec2-cw-recover-alarm.yml`)
++ add alarm to send email in case of failure
++ add elb health check with
+```
+TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+    HealthCheckIntervalSeconds: 10
+    HealthCheckProtocol: HTTP
+    HealthCheckPath: /index.html
+    HealthCheckTimeoutSeconds: 5
+    HealthyThresholdCount: 3
+    UnhealthyThresholdCount: 2
+    Matcher:
+        HttpCode: 200-299
+```
+* Create custom cloudwatch metric and alarm based on this metric
+* Create lambda and cloudwatch rule to run lambda every minute (scheduled lambda)
+* Create auto-scale group with ec2 httpd (but store data in efs, this would guarantee that if instance launched in another AZ data won't be lost)
+* Add do sleep while enf not enabled (instead of just sleep for 10 sec) to all cloudformation templates that use efs
+* Create auto-scale group with single ec2 and eip and after terminate associate same eip to new ec2 (in launch config userdata add ability to associate eip to current ec2 + you need role for ec2 to be able to associate eip to itself)
+* Simple elb with 2 ec2 from 2 private subnets (use nat gateway to install httpd)
+* Rewrite cf templates random httpd to display privateIP
+* Add auto-scaling example for specific time range with `AWS::AutoScaling::ScheduledAction`
++ add based on number of messages in sqs
