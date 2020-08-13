@@ -32,7 +32,6 @@ There are 2 main reasons to get it
 
 
 ### TODO
-* https://aws.amazon.com/opsworks/stacks/faqs/ (and how it differ from beanstalk)
 * elastic network adapter vs network interface vs elastic fabric adapter
 * specify iam permission boundary
 * roll out new java app version into ASG (if we have single ec2 we can just ssh and put .jar there, but how to deal with ec2 fleet)
@@ -96,3 +95,6 @@ TargetGroup:
 * Add auto-scaling example for specific time range with `AWS::AutoScaling::ScheduledAction`
 + add based on number of messages in sqs
 * cloudformation template iam create identity provider with both saml & openId connect, and with cognito/aws AD (by the way learn how AD works internally)
+* try to create aws sso user with permission set and add 1 free app, and then try to login to both aws console & this app
+* Create vpc with custom DHCP options set and create ec2 instance and see it private/public domain name
+* Deploy java app using opsworks stacks

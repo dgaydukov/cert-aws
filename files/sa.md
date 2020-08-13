@@ -64,6 +64,7 @@
 * 2.45 [Directory Service](#directory-service)
 * 2.46 [Wavelength](#wavelength)
 * 2.47 [SSO](#sso)
+* 2.48 [OpsWorks](#opsworks)
 3. [Networking](#networking)
 * 3.1 [NIC](#nic)
 * 3.2 [Hub, Switch, Router](#hub-switch-router)
@@ -84,7 +85,6 @@
 * 4.6 [AWS CLI](#aws-cli)
 * 4.7 [Useful Linux Commands](#useful-linux-commands)
 * 4.8 [Redirect 301 vs 302](#redirect-301-vs-302)
-
 
 
 
@@ -940,6 +940,11 @@ PG (Placement group) - create ec2 in underlying hardware in such a way as to avo
 Prefix list - set of one or more CIDR blocks (can be used in SG as `SourcePrefixListId` to define not single CIDR range but a set of them).
 If you want your ec2 to be accessed from elb you should put `SourceSecurityGroupId` id of SG for elb (in this way only elb or whoever has same SG can access ec2).
 
+DHCP options sets - set of rules how to create private domain name. When you create new vpc, default DHCP set would be linked to it. It also add dns server into your vpc to determine dns rules.
+You can crete your custom set and link it to any vpc. You can also remove DHCP set form vpc, in this case no dns name would be created.
+If you want to change vpc dhcp set you can do it only after you've created vpc, go to `Actions=>Edit DHCP options set` and select another set or remove it from vpc.
+Yet if you unlink dhcp from default vpc, and try to create ec2, it will still use default dhcp rules and add public/private dns names.
+
 ###### Elastic Beanstalk
 Imagine you have spring boot app that use mysql and you want to deploy it to aws, what you have to do
 1. create vpc/subnet/IGW/RT
@@ -1534,6 +1539,27 @@ You can enable 2FA for SSO users.
 sso user permission are set by permission set (kind of managed policy for sso), so based on this decided which action user is allowed to do in aws. 
 Just like with iam user your sso user can access both aws management console and aws cli.
 If you need access to third-party apps you can add applications to your sso under `application` menu. Just configure app and your user would be able to sign in into it.
+
+###### OpsWorks
+OpsWorks - config management service that provides managed instances of Chef/Puppet which help automate servers' configuration/deployment/management.
+There are 3 solutions
+* OpsWorks Stacks
+* OpsWorks for Chef Automate
+* OpsWorks for Puppet Enterprise
+
+OpsWorks Stacks - manages apps and servers in aws and on-premises, you model your app as stack containing different layers (elb, rds, ec2).
+You run Chef recipes using Chef Solo to automate package installation/deployment/management of your stack.
+So it helps you provision/manage your app in aws using Chef solo installed in one of ec2. 
+Difference with other platform
+* stacks - config management platform (using Chef to automate deployment/management, has less service coverage, just the most basic like vpc/iam/ec2/elb/cloudWatch)
+* beanstalk - app management platform (you just upload code and beanstalk configure everything else use it's own CF templates)
+* cloudFormation - infra management platform
+OpsWorks Stacks create lifecycle events and on each of them some recipes could be executed (default events - setup/configure/deploy/undeploy/shutdown).
+
+OpsWorks for Chef Automate - fully managed Chef server and automation tools for ci/cd. You can migrate to it from Stacks, but you would need to rewrite some recipes, but most recipes would work without any change.
+
+OpsWorks for Puppet Enterprise - managed Puppet Enterprise server and automation tools for ci/cd (including orchestration/provisioning/deploying services in ec2)
+
 
 ### Networking
 ###### NIC
