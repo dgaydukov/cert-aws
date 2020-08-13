@@ -32,7 +32,6 @@ There are 2 main reasons to get it
 
 
 ### TODO
-* https://aws.amazon.com/single-sign-on/faqs
 * https://aws.amazon.com/opsworks/stacks/faqs/ (and how it differ from beanstalk)
 * elastic network adapter vs network interface vs elastic fabric adapter
 * specify iam permission boundary

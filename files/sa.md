@@ -62,7 +62,8 @@
 * 2.43 [FSx](#fsx)
 * 2.44 [VPN](#vpn)
 * 2.45 [Directory Service](#directory-service)
-* 2.45 [Wavelength](#wavelength)
+* 2.46 [Wavelength](#wavelength)
+* 2.47 [SSO](#sso)
 3. [Networking](#networking)
 * 3.1 [NIC](#nic)
 * 3.2 [Hub, Switch, Router](#hub-switch-router)
@@ -1520,12 +1521,26 @@ Carrier gateway - provides connection between subnet in watelength zone and tele
 Local Zone - aws solution where aws services are located locally near your end-users providing low latency.
 Outpost - aws rack with compute/memory devices that you install on-premises and run it through aws management console.
 
+###### SSO
+SSO (Single Sing On) - aws service that allows central access to multiple aws accounts. You can use it as identity store or as connector to your existing identity stores (like microsoft AD).
+To work with sso you should create aws organization (sso won't work without organization created). With sso you can access
+* multiple aws accounts (using aws organizations)
+* SAML-enabled cloud applications (Salesforce/Office365)
+* custom-built apps
+
+Cognito is not supported IdP for sso.
+You can enable 2FA for SSO users.
+
+sso user permission are set by permission set (kind of managed policy for sso), so based on this decided which action user is allowed to do in aws. 
+Just like with iam user your sso user can access both aws management console and aws cli.
+If you need access to third-party apps you can add applications to your sso under `application` menu. Just configure app and your user would be able to sign in into it.
+
 ### Networking
 ###### NIC
 NIC (Network interface controller) - hardware component to connect computer to network. It implements electronic circuit that operates on both physical & data link layers using either Ethernet/Wi-Fi protocols.
 If you NIC is inside network that using hub, than hub sends all packets to all pc connected to the network. But you NIC process only those that are intended for it (NIC check MAC address, and if it corresponds to address of NIC it sends frame further to CPU).
 Promiscuous mode - you turn off MAC address check, and all packets that are sent to NIC (regardless of destination MAC address) are forwarded to CPU to process. This mode is turned off by default, can be useful for traffic sniffing.
-Traffic sniffing - catch all traffic and analyze it, best tool is [WireShark](https://www.wireshark.org/).
+Traffic sniffing - catch all traffic and analyze it, best tool is [WireShark](https://www.wireshark.org).
 You can detect promiscuous mode by sending a ping (ICMP echo request) with the wrong MAC address but the right IP address. In normal mode NIC would drop packet, but in promiscuous - you would get response.
 
 Since most modern networks using switch, and it sends data directly to special pc (compare to hub which just replicate packet to everybody in the network), just turning promiscuous mode won't help much, 
