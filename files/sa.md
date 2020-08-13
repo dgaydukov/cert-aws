@@ -395,7 +395,17 @@ You can define permissions by assigning policies to group/user. There are 2 type
 * aws managed - most common policies created by aws (for example s3/ec2 access and so on...)
 * managed by you - custom policies created by end user
 
-
+Identity federation - grant to external identities ability to secure access aws (both management console & API) without creating iam users
+External identities can be of 2 types
+* corporate IdP (microsoft AD, aws AD)
+* web IdP (cognito, facebook, google or any other openId connect)
+FU (Federated user) - user of such external identity who can access aws services but don't have corresponding iam user (so it managed outside aws iam)
+FU can access aws management console in 2 ways
+* programmatically request security credentials and put them into sign-in request to the AWS
+* post SAML assertion directly to [AWS sign-in](https://signin.aws.amazon.com/saml)
+But both allows federated user to access the console without having to sign in with a user name and password
+FU assume iam role and can access aws resources based on this role. Access is intersection of 2 policies (one passed within request + another from iam role).
+So FU request access with some policy attached and his iam role also has some policy they intersect and this is his policy inside aws.
 
 ###### S3
 S3 (Simple Storage Service) used for:

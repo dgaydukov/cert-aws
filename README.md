@@ -32,10 +32,7 @@ There are 2 main reasons to get it
 
 
 ### TODO
-* Identity federation (AD - saml, or social providers - openId connect)
-* cloudformation template iam create identity provider
 * https://aws.amazon.com/single-sign-on/faqs
-* rewrite template comments to multi-line description https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-description-structure.html
 * https://aws.amazon.com/opsworks/stacks/faqs/ (and how it differ from beanstalk)
 * elastic network adapter vs network interface vs elastic fabric adapter
 * specify iam permission boundary
@@ -57,6 +54,7 @@ SET mykey myvalue EX 5
 * create cf template with dynamodb vpc endpoint and access dynamodb from ec2 in private subnet (add scaling policy to dynamoDb)
 * add vpc to `cloudformation/ec2-cw-recover-alarm.yml` (in case you run it in region where no default vpc)
 -----------------------------------------------Advanced-----------------------------------------------
+* rewrite template comments to multi-line description https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-description-structure.html
 * create aws microsoft AD and see how it works
 * ClientVPN with security as microsoft AD
 * ClientVPN add nat instance so internet would work without tunnel split (yet check it also with tunnel split, and your IP would be different)
@@ -98,3 +96,4 @@ TargetGroup:
 * Rewrite cf templates random httpd to display privateIP
 * Add auto-scaling example for specific time range with `AWS::AutoScaling::ScheduledAction`
 + add based on number of messages in sqs
+* cloudformation template iam create identity provider with both saml & openId connect, and with cognito/aws AD (by the way learn how AD works internally)
