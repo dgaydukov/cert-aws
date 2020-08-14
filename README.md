@@ -31,8 +31,10 @@ There are 2 main reasons to get it
 * Read all FAQ & user guide for every AWS service
 
 
-### TODO~~~~~~~~
------------------------------------------------Advanced-----------------------------------------------
+### TODO
+* range header to retrive specific bytes https://docs.aws.amazon.com/AmazonS3/latest/dev/GettingObjectsUsingAPIs.html
+* you can also use s3 to transfer backup there and from there import data (at least with dynamoDb, check mysql)
+* cloudformation signed url (start/end date & time) + make s3 url unavailable
 * edit all current cf templates => rewrite efs from default SG to custom (cause it's better to explicitly control SG)
 * edit all current cf templates => add SG to RDS with source as SG of webserver
 * add vpc to `cloudformation/ec2-cw-recover-alarm.yml` (in case you run it in region where no default vpc)
@@ -49,20 +51,6 @@ SET mykey myvalue EX 5
 * add cf template for iam database authentication (then go to public ec2 and try to access db with both regular username/password and iam token)
 * create cf template with dynamodb vpc endpoint and access dynamodb from ec2 in private subnet (add scaling policy to dynamoDb)
 * rewrite template comments to multi-line description https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-description-structure.html
-* create aws microsoft AD and see how it works
-* ClientVPN with security as microsoft AD
-* ClientVPN add nat instance so internet would work without tunnel split (yet check it also with tunnel split, and your IP would be different)
-* create custom vpn server in ec2 and try to connect to it (do both use oepnvpn server ami and any ami (OpenVPN Access Server from marketplace which is free tier, in this case you should configure it through browser admin panel) + manually configure openvpn server)
-* vpc endpoint service (add ec2 (with basic httpd service)+NLB and share it to vpc from another region)
-* route 53 resolver
-* transit gateway - add on-premise network imitated by third vpc (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-transitgateway.html - guide to add on-premise, https://theithollow.com/2018/12/12/setup-aws-transit-gateway)
-* put spring app into ECS and EKS and compare the difference (try fargate too)
-* Try maximum automate site-to-site vpn cloudformation template (try to extract somehow all IP addresses and PSK secret string and put it into ec2 userdata for VpnServer)
-* Try some other vpn server in on-premise site of site-to-site vpn
-* Install ec2 with openswan and use it as personal vpn server
-* Try Athena & Aws Glue tutorials
-* aws config CF template (check that ec2 is of specific type and alert when type has been changed)
-* Kinesis firehose real example (with cf template)
 * connect 2 vpc with privatelink (access ec2 from one vpc from another)
 * ELB access logs store to s3 => trigger lambda to process logs and put them into elasticsearch
 * Create AWS::CloudWatch::Alarm and recover instance in case it stopped or port 80 not responding (find some standard cloudwatch metric for this, take template as base `cloudformation/ec2-cw-recover-alarm.yml`)
@@ -94,3 +82,18 @@ TargetGroup:
 * try to create aws sso user with permission set and add 1 free app, and then try to login to both aws console & this app
 * Create vpc with custom DHCP options set and create ec2 instance and see it private/public domain name
 * Deploy java app using opsworks stacks
+-----------------------------------------------Advanced-----------------------------------------------
+* create aws microsoft AD and see how it works
+* ClientVPN with security as microsoft AD
+* ClientVPN add nat instance so internet would work without tunnel split (yet check it also with tunnel split, and your IP would be different)
+* create custom vpn server in ec2 and try to connect to it (do both use oepnvpn server ami and any ami (OpenVPN Access Server from marketplace which is free tier, in this case you should configure it through browser admin panel) + manually configure openvpn server)
+* vpc endpoint service (add ec2 (with basic httpd service)+NLB and share it to vpc from another region)
+* route 53 resolver
+* transit gateway - add on-premise network imitated by third vpc (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-transitgateway.html - guide to add on-premise, https://theithollow.com/2018/12/12/setup-aws-transit-gateway)
+* put spring app into ECS and EKS and compare the difference (try fargate too)
+* Try maximum automate site-to-site vpn cloudformation template (try to extract somehow all IP addresses and PSK secret string and put it into ec2 userdata for VpnServer)
+* Try some other vpn server in on-premise site of site-to-site vpn
+* Install ec2 with openswan and use it as personal vpn server
+* Try Athena & Aws Glue tutorials
+* aws config CF template (check that ec2 is of specific type and alert when type has been changed)
+* Kinesis firehose real example (with cf template)
