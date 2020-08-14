@@ -426,6 +426,21 @@ But both allows federated user to access the console without having to sign in w
 FU assume iam role and can access aws resources based on this role. Access is intersection of 2 policies (one passed within request + another from iam role).
 So FU request access with some policy attached and his iam role also has some policy they intersect and this is his policy inside aws.
 
+Policy - json file with permission which you attach to IAM identity (user/group/role) or aws resource (some resources can have it's own access policy, like s3 bucket policy - where you can define which user which action should take).
+Main difference between identity and resource policy (like s3 bucket policy) is that identity policy doesn't have `Principal` attribute, cause you link it to some iam identity which would be it's principal.
+Contrary to this resource policy have `Principal` attribute where you define to which user this policy is applied. Generally you should use identity policies cause you can define access to multiple resources there, where for resource policy access is limited to this resource only.
+One example where resource policy is useful is when you need to add simple way to grant cross-account access to your S3 environment without creating iam role.
+There are 6 policy types
+* Identity-based policies - for iam identity
+* Resource-based policies - define policies separately for aws resources like s3 bucket policy (not all resources support this)
+* Permissions boundaries - same policy as for identity, but added not as permission policy to iam identity but as permission boundary. Specify what permission user can potentially have.
+So they don't actually give these permissions but merely state that this identity can potentially have up to these permission.
+So the actual permission are calculated as intersection of permission policy & permission boundary. Whenever you create new iam identity (user/group/role) you can add actual permissions and permission boundaries.
+The idea behind is that you can delegate responsibility to others (you can create policy that would allow identity to create iam users only with certain boundary => so all newly created users would have your predefined boundary, [example](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_boundaries.html#access_policies_boundaries-delegate))
+* Organizations SCPs - AWS Organizations service control policy limit permissions that identity-based policies or resource-based policies grant to entities
+* ACL (Access control lists) - control which principals in other accounts can access the resource to which the ACL is attached (so they only cross-account, cannot grant permissions to entities within the same account)
+* Session policies - limit the permissions that the role or user's identity-based policies grant to the session
+
 ###### S3
 S3 (Simple Storage Service) used for:
 * store and distribute static web content (cause each object in s3 has unique http url)
