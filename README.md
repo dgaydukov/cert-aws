@@ -31,14 +31,13 @@ There are 2 main reasons to get it
 * Read all FAQ & user guide for every AWS service
 
 
-### TODO
-* roll out new java app version into ASG (if we have single ec2 we can just ssh and put .jar there, but how to deal with ec2 fleet)
+### TODO~~~~~~~~
+-----------------------------------------------Advanced-----------------------------------------------
+* edit all current cf templates => rewrite efs from default SG to custom (cause it's better to explicitly control SG)
+* edit all current cf templates => add SG to RDS with source as SG of webserver
+* add vpc to `cloudformation/ec2-cw-recover-alarm.yml` (in case you run it in region where no default vpc)
 * cf template that trigger lambda every 5 sec, and lambda check liveliness of ec2 (go to ec2 turn off httpd and see that logs are written to cloudwatch) + create alarm on error (more than 2 times send sns email)
 + add cloudwatch event (rule, source - aws.ec2, detailtype-runinstances) when new ec2 started and add tag owner with lambda inside vpc
-* rewrite efs from default SG to custom (cause it's better to explicitly control SG)
-* add SG to RDS with source as SG of webserver
-* db migration DMS vs manual migration (copy dump to ec2 within same vpc as rds, and from ec2 import into rds)
-* iam database authentication (no need to create separate db username/password)
 * Create cf template with redis cache and ec2 to connect to this cache (SG with clientSG that attached to desired ec2)
 ```
 sudo yum -y install --enablerepo=epel redis
@@ -47,9 +46,8 @@ SET mykey myvalue
 # store data with ttl of 5 seconds (after expired key would be null)
 SET mykey myvalue EX 5
 ```
+* add cf template for iam database authentication (then go to public ec2 and try to access db with both regular username/password and iam token)
 * create cf template with dynamodb vpc endpoint and access dynamodb from ec2 in private subnet (add scaling policy to dynamoDb)
-* add vpc to `cloudformation/ec2-cw-recover-alarm.yml` (in case you run it in region where no default vpc)
------------------------------------------------Advanced-----------------------------------------------
 * rewrite template comments to multi-line description https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-description-structure.html
 * create aws microsoft AD and see how it works
 * ClientVPN with security as microsoft AD
