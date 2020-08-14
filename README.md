@@ -32,7 +32,6 @@ There are 2 main reasons to get it
 
 
 ### TODO
-* elastic network adapter vs network interface vs elastic fabric adapter
 * specify iam permission boundary
 * roll out new java app version into ASG (if we have single ec2 we can just ssh and put .jar there, but how to deal with ec2 fleet)
 * cf template that trigger lambda every 5 sec, and lambda check liveliness of ec2 (go to ec2 turn off httpd and see that logs are written to cloudwatch) + create alarm on error (more than 2 times send sns email)

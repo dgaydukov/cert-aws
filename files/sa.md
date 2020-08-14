@@ -11,6 +11,7 @@
 * 1.7 [Egress vs Ingress](#egress-vs-ingress)
 * 1.8 [Bastion vs JumpServer](#bastion-vs-jumpserver)
 * 1.9 [Disaster Recovery](#disaster-recovery)
+* 1.9 [ENI, ENA, EFA](#eni-ena-efa)
 2. [Services](#services)
 * 2.1 [Corretto](#corretto)
 * 2.2 [CloudFormation](#cloudformation)
@@ -85,6 +86,7 @@
 * 4.6 [AWS CLI](#aws-cli)
 * 4.7 [Useful Linux Commands](#useful-linux-commands)
 * 4.8 [Redirect 301 vs 302](#redirect-301-vs-302)
+* 4.9 [Nmap](#nmap)
 
 
 
@@ -217,10 +219,26 @@ Availability vs. Durability on ebs example
 * Availability - ebs available 99.9% time, but in case of AZ failure it won't be available (cause ebs is linked to subnet/AZ). But when AZ becomes again available your data won't be lost.
 * Availability - ebs 99.9% durable, that means if you have 1000 volumes you can expect to lose 1 volume per year.
 
+###### ENI, ENA, EFA
+ENI (elastic network interface) - logical networking component in a VPC that represents a virtual network card that has attributes:
+* primary private IPv4 (from VPC range)
+* public IPv4
+* elastic IPv4 (static public IP, can't change after stop/start)
+* IPv6, mac-address, security groups and so on...
+You can create ENI by going to `EC2 => Network & Security => Network interfaces` and create network interface and attach/detach it to ec2 instance.
+Every instance in VPC has a default ENI - primary network interface, you can't detach it. You can create new and attach. Number of ni that can be attached to ec2 depends on it's size (more computing power - more ni can be attached).
+
+Both ENA & EFA are ENI that provide some advanced networking
+* ENA (Elastic Network Adapter) - ENI that provides enhanced networking capabilities. There is a selected [set of instance](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/enhanced-networking-ena.html#ena-requirements) that support ena. You can ssh to ec2 and run `modinfo ena` if you see response your ENI is ENA.
+* EFA (Elastic Fabric Adapter) - ENA + OS bypass hardware interface (without involving the instance kernel) that use hardware-provided reliable transport communication.
+It allows HPC applications to communicate to talk with each other with low latency and higher throughput than traditional TCP channels.
+HPC applications - a group of ec2 instances that perform some high load logic. They are written using MPI (Message Passing Interface) and require fact communication between instances.
+EFA ENIs can only be attached at launch or to stopped instances.
+
 
 ### Services
 ###### Corretto 
-[AWS Corretto](https://aws.amazon.com/corretto/) - free amazon implementation of Java SE specification.
+[AWS Corretto](https://aws.amazon.com/corretto) - free amazon implementation of Java SE specification.
 As you know there are confusion around java SE. Oracle provides 2 java se implementations
 * OpenJDK - free
 * OracleJDK - paid
@@ -228,7 +246,7 @@ Yet there are some features in OpenJDK that can be of charge. that's why you may
 * Amazon Corretto
 * AdoptOpenJDK
 * Azul Zulu
-If you are still confuse you can take a look at [java is still free](https://www.infoq.com/news/2018/09/java-support-options-sept18/)
+If you are still confuse you can take a look at [java is still free](https://www.infoq.com/news/2018/09/java-support-options-sept18)
 
 ###### CloudFormation 
 It's aws solution to IAC. There are 2 concepts
@@ -717,15 +735,6 @@ source/destination checks
 * each ec2 performs it by default
 * if your instance is NAT instance - it not a source/destination, it just a proxy to other instances. That's why for Nat instance you should disable it.
 
-ENI (elastic network interface) - logical networking component in a VPC that represents a virtual network card that has attributes:
-* primary private IPv4 (from VPC range)
-* public IPv4
-* elastic IPv4
-* IPv6, mac-address, security groups and so on...
-
-You can create ENI by going to `EC2 => Network & Security => Network interfaces` and create network interface.
-You can create ni (network interface) and attach/detach it to ec2 instance.
-Every instance in VPC has a default ni - primary network interface, you can't detach it. You can create new and attach. Number of ni that can be attached to ec2 depends on it's size (more computing power - more ni can be attached).
 
 There are several instance types. You can get full view [here](https://www.ec2instances.info)
 * C (good for CPU load)
@@ -812,6 +821,12 @@ EC2-to-EC2 communication through public IP
 SG (Security group) - also called virtual firewall, decide which traffic (both inbound & outbound) on which port to allow to ec2.
 * inbound - check traffic based on source (source -  IP address or SG)
 * outbound - check traffic based on destination (destination - IP address or SG)
+[Connection tracking](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-security-groups.html#security-group-connection-tracking)
+Working with SG rules you can notice interesting phenomena.
+* You run ping, it waits cause there is no icmp rule. You add icmp rule and ping starts to work.
+* Ping is running in console. You remove icmp rule from SG, but ping continue. If you stop it and run again it wouldn't work, cause there is no ping rule.
+If you read above link everything becomes clear. Cause connection is stateful, SG doesn't track outbound traffic. So when icmp rule was enabled, ping established connection, and outbound traffic
+started to flow. Once you remove icmp rule, you can't establish new ping connection, but old one established before can continue receive responses (outbound traffic - which is not tracked due to statefulness of SG).
 
 SG vs ACL
 * SG operate at instance level, specify which traffic is allowed to/from EC2
@@ -1964,3 +1979,23 @@ There are 2 main codes of redirects (HTTP method can also change)
 Redirects without changing http method. They basically the same as 301/302 only difference is that here HTTP method (GET/POST/PUT..) can't change
 * 307 (temporary)
 * 308 (permanent)
+
+
+###### Nmap
+Nmap (Network Mapper) - free and open-source utility for network discovery and security auditing.
+First you have to install it `sudo apt-get install nmap -y`. After check version `nmap --version`.
+Nmap - utility to listen and check for available ports. Create ec2 in public network with all icmp and ssh open in SG.
+Then you can scan ports `nmap -Pn 34.207.196.102`. `-Pn` - just check port, without pinging host machine first (useful if icmp protocol turned off by SG).
+```
+Starting Nmap 7.60 ( https://nmap.org ) at 2020-08-14 10:21 HKT
+Nmap scan report for ec2-34-207-196-102.compute-1.amazonaws.com (34.207.196.102)
+Host is up (0.25s latency).
+Not shown: 999 filtered ports
+PORT   STATE SERVICE
+22/tcp open  ssh
+
+Nmap done: 1 IP address (1 host up) scanned in 20.69 seconds
+```
+Nmap check for which port app exist. So even if you open all traffic in SG, namp would show only those ports that have underlying app.
+So in SG you just open ports, if no app exists for this port in ec2, nmap won't see it, cause there is nobody to talk with.
+
