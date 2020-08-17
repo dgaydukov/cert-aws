@@ -617,15 +617,19 @@ There are 4 types
 You can protect CF data by using 
 * Signed url (like presigned s3 url) - temporary access to CF data (end-datetime is mandatory cause we need to know when access to particular file is over, start-datetime - optional).
 * Signed cookie - you can access multiple CF objects with same signed cookie. So use this method if you want to have access to multiple files with same cookie, and want to use standard url (without any signature as url params).
+You can make CF private by setting `Restrict Viewer Access` to yes (in this case you can also set which accounts can create signed urls, so other accounts can also generate urls to access data)
+You can create pre-signed url with following command `aws cloudfront sign --url=https://dk0jkxxx0lyr7.cloudfront.net/info.html --key-pair-id=K3COW0UXF40T2F  --private-key=file://mykey.pem  --date-less-than=2021-01-01`
+This will create signed url by which you can access your data from CF.
+
 In order for CF to serve from s3 bucket, objects in s3 should be publicly available, otherwise CF won't serve them
 You have 2 types of distribution
 * web - static web content (files/pics)
 * RTMP - streaming media
 
-If you create distribution to be accessed from dns name you should add all possible urls to cname in cloudfront.
+If you create distribution to be accessed from dns name you should add all possible urls to cname in CF.
 Sof you are going to access it from example.com, www.example.com, photos.example.com, all these 3 dns names should be added to Cname names when you create distribution.
 
-OAI (Origin Access Identity) - cloudfront user that can access origin. To access s3 from cloudfront you should unblock public access on a bucket level.
+OAI (Origin Access Identity) - CF user that can access origin. To access s3 from CF you should unblock public access on a bucket level.
 But if you do this user can access your s3 files by s3 url like `https://my-test-s3-bucket-1.s3.amazonaws.com/info.html`. But if you want that your s3 objects to be accessed only by cloudfront url like `https://d1vyzpsqe05sg1.cloudfront.net/info.html`
 You should add bucket policy to your bucket like
 ```
