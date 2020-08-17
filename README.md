@@ -32,12 +32,9 @@ There are 2 main reasons to get it
 
 
 ### TODO
-* range header to retrive specific bytes https://docs.aws.amazon.com/AmazonS3/latest/dev/GettingObjectsUsingAPIs.html
-* you can also use s3 to transfer backup there and from there import data (at least with dynamoDb, check mysql)
-* cloudformation signed url (start/end date & time) + make s3 url unavailable
+* add vpc to `cloudformation/ec2-cw-recover-alarm.yml` (in case you run it in region where no default vpc)
 * edit all current cf templates => rewrite efs from default SG to custom (cause it's better to explicitly control SG)
 * edit all current cf templates => add SG to RDS with source as SG of webserver
-* add vpc to `cloudformation/ec2-cw-recover-alarm.yml` (in case you run it in region where no default vpc)
 * cf template that trigger lambda every 5 sec, and lambda check liveliness of ec2 (go to ec2 turn off httpd and see that logs are written to cloudwatch) + create alarm on error (more than 2 times send sns email)
 + add cloudwatch event (rule, source - aws.ec2, detailtype-runinstances) when new ec2 started and add tag owner with lambda inside vpc
 * Create cf template with redis cache and ec2 to connect to this cache (SG with clientSG that attached to desired ec2)

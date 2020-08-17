@@ -457,7 +457,23 @@ When it's better not to use s3
 * archives with infrequent access (better to use Glacier)
 * dynamic web-sites (better to use EC2/EFS)
 
-S3 offers multipart upload, where your large file uploaded as parts, and on server they are assembled into single file.
+You can upload/download file by parts
+* multipart upload - your large file uploaded as parts, and on server they are assembled into single file
+* partial download - use `Range` HTTP header in a GET request, you can retrieve a specific range of bytes from s3
+```
+# return full page => <h1>Hello world</h1>
+curl https://my-test-s3-bucket-1.s3.amazonaws.com/index.html 
+
+# get first 2 bytes (range is inclusive) => <h
+curl -H "Range: bytes=0-1" https://my-test-s3-bucket-1.s3.amazonaws.com/index.html
+# you can also use short form
+curl -r 0-1 https://my-test-s3-bucket-1.s3.amazonaws.com/index.html
+
+# both requests return 2 headers
+< Content-Range: bytes 0-1/20
+< Content-Length: 2
+```
+ 
 You can enable cross-region replication for every bucket
 
 S3 security
@@ -599,8 +615,8 @@ There are 4 types
 * origin response - when CF receive response from origin server
 * viewer response - before CF responds to viewer
 You can protect CF data by using 
-* Signed url (like presigned s3 url) - temprorary access to CF data
-* Signe cookie - you can access multiple CF objects with same signed cookie
+* Signed url (like presigned s3 url) - temporary access to CF data (end-datetime is mandatory cause we need to know when access to particular file is over, start-datetime - optional).
+* Signed cookie - you can access multiple CF objects with same signed cookie. So use this method if you want to have access to multiple files with same cookie, and want to use standard url (without any signature as url params).
 In order for CF to serve from s3 bucket, objects in s3 should be publicly available, otherwise CF won't serve them
 You have 2 types of distribution
 * web - static web content (files/pics)
@@ -609,12 +625,33 @@ You have 2 types of distribution
 If you create distribution to be accessed from dns name you should add all possible urls to cname in cloudfront.
 Sof you are going to access it from example.com, www.example.com, photos.example.com, all these 3 dns names should be added to Cname names when you create distribution.
 
+OAI (Origin Access Identity) - cloudfront user that can access origin. To access s3 from cloudfront you should unblock public access on a bucket level.
+But if you do this user can access your s3 files by s3 url like `https://my-test-s3-bucket-1.s3.amazonaws.com/info.html`. But if you want that your s3 objects to be accessed only by cloudfront url like `https://d1vyzpsqe05sg1.cloudfront.net/info.html`
+You should add bucket policy to your bucket like
+```
+{
+    "Version": "2008-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity E27OQ9NRS1N0QR"
+            },
+            "Action": "s3:GetObject",
+            "Resource": "arn:aws:s3:::my-test-s3-bucket-1/*"
+        }
+    ]
+}
+```
+When you set OAI from cloudfront you can set `update bucket policy` and aws will itself add such policy to your s3 bucket. Of course you can do it manually, or edit it after this.
+In this case your s3 bucket is public, but can be accessed only by cloudfornt user with OAI=E27OQ9NRS1N0QR.
+
 ###### Kinesis
 It is a platform for streaming data on AWS, making it easy to load and analyze streaming data.
 With Kinesis, you can ingest real-time data such as application logs, website clickstreams, IoT telemetry data, and more into your databases, data lakes, and data warehouses, or build your own real-time applications using this data
 AntiPattern
 * Small scale consistent throughput (Kinesis Data Streams is designed  and optimized for large data throughputs)
-* Long-term data storage and analytics (By default Kinesis Data Streams stores data 24 hours, you can extend retention up to 7 days, if you need longer you should consired RDS/DynamoDb/S3/Glacier)
+* Long-term data storage and analytics (By default Kinesis Data Streams stores data 24 hours, you can extend retention up to 7 days, if you need longer you should considered RDS/DynamoDb/S3/Glacier)
 
 Queue vs Streaming
 * queue (not reactive) - you have to poll data, once it polled it removed from queue
@@ -1148,7 +1185,7 @@ Since Aurora stores data across 3 AZ, if master is failed, it would automaticall
 
 Read replica (replica db only for reading):
 Use it if you want to write to master and read from replica. Read Replica implemented using db (mysql or other) native asynchronous replication, that's why lag can occur, comparing with multi-AZ replication
-where writes are concurrent. You can also modify read replica to execute DDL (Data Definition Language) SQL queries. You can promote read replica to become master database.
+where writes are concurrent. Ycd prou can also modify read replica to execute DDL (Data Definition Language) SQL queries. You can promote read replica to become master database.
 
 Enhanced monitoring - allows you to view all metrics with 1 sec granularity
 
@@ -1170,7 +1207,7 @@ IAM db auth - you can add db user and use iam user to authenticate to your db. Y
 to get token and to access your db using this token (token would be valid for 15 min).
 
 On-premise to rds data migration:
-* copy dump to ec2 within same vpc as rds, and from ec2 import into rds
+* copy dump to s3 and from s3 import into rds (you can also use ec2, but create new ec2 for this purpose in to wise, yet this would work: copy dump to ec2 within same vpc as rds, go to ec2, connect from there to rds, and pump data into rds)
 * use DMS for more complex scenario
 
 ###### SQS
