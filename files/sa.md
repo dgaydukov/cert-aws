@@ -540,6 +540,7 @@ You can also do `sudo chmod 777 /mnt/efs/` to give access to anybody to read/wri
 
 ###### EBS
 EBS (Elastic Block Storage) - simple block storage for EC2. After EBS is attached to EC2 you can format it with desired file system.
+It automatically replicated within AZ to provide higher durability (yet if AZ failed it would be unaccessible).
 Most AMI (Amazon Machine Images) are backed by Amazon EBS, and use an EBS volume to boot EC2 instances.
 You can attach multiple EBS to single EC2, but single EBS can only be attached to 1 EC2.
 EBS allows to create point-in-time snapshots (backup) and store them in s3.
@@ -614,12 +615,20 @@ There are 4 types
 * origin request - before CF forward request to origin server
 * origin response - when CF receive response from origin server
 * viewer response - before CF responds to viewer
+
 You can protect CF data by using 
-* Signed url (like presigned s3 url) - temporary access to CF data (end-datetime is mandatory cause we need to know when access to particular file is over, start-datetime - optional).
+* Signed url (like pre-signed s3 url) - temporary access to CF data (end-datetime is mandatory cause we need to know when access to particular file is over, start-datetime - optional).
 * Signed cookie - you can access multiple CF objects with same signed cookie. So use this method if you want to have access to multiple files with same cookie, and want to use standard url (without any signature as url params).
-You can make CF private by setting `Restrict Viewer Access` to yes (in this case you can also set which accounts can create signed urls, so other accounts can also generate urls to access data)
-You can create pre-signed url with following command `aws cloudfront sign --url=https://dk0jkxxx0lyr7.cloudfront.net/info.html --key-pair-id=K3COW0UXF40T2F  --private-key=file://mykey.pem  --date-less-than=2021-01-01`
+In order to create pre-sign url you need to create CF keypair. You can do it only as root account (iam user won't work in this case). Login as root, go to `Account=>Security Credentials`, from there go to `CloudFront key pairs` and create new key pair.
+Don't confuse it with ec2 key pairs and with CF public key. They both for different purpose.
+You can make CF private by setting `Restrict Viewer Access` to yes (in this case you can also set which accounts can create signed urls, so other accounts can also generate urls to access data).
+So if you restricted access and try to access url you got error `Missing Key-Pair-Id query parameter or cookie value`.
+You can create pre-signed url with following command `aws cloudfront sign --url=https://d3l9m9kf4m2kpm.cloudfront.net/info.html --key-pair-id=APKAJDZCS7VF4FG32EWA  --private-key=file://cfkey.pem  --date-less-than=2020-08-19`
 This will create signed url by which you can access your data from CF.
+
+You can also use CF to distribute dynamic content (like ec2/api requests). Although at first it seems unreasonable cause for every dynamic request CF should forward it to underlying ec2.
+But the point is that such a request from user goes to closest edge location and terminates there. From there on it goes not through public internet but through aws cross-region private link.
+That improve speed and give security. As you see this is basically the same as Global Accelerator.
 
 In order for CF to serve from s3 bucket, objects in s3 should be publicly available, otherwise CF won't serve them
 You have 2 types of distribution
@@ -629,8 +638,8 @@ You have 2 types of distribution
 If you create distribution to be accessed from dns name you should add all possible urls to cname in CF.
 Sof you are going to access it from example.com, www.example.com, photos.example.com, all these 3 dns names should be added to Cname names when you create distribution.
 
-OAI (Origin Access Identity) - CF user that can access origin. To access s3 from CF you should unblock public access on a bucket level.
-But if you do this user can access your s3 files by s3 url like `https://my-test-s3-bucket-1.s3.amazonaws.com/info.html`. But if you want that your s3 objects to be accessed only by cloudfront url like `https://d1vyzpsqe05sg1.cloudfront.net/info.html`
+OAI (Origin Access Identity) - CF user that can access origin. To access s3 from CF you should policy on a bucket level (but you don't need to allow public access).
+But if you do this user can access your s3 files by s3 url like `https://my-test-s3-bucket-1.s3.amazonaws.com/info.html`. But if you want that your s3 objects to be accessed only by CF url like `https://d1vyzpsqe05sg1.cloudfront.net/info.html`
 You should add bucket policy to your bucket like
 ```
 {
@@ -681,8 +690,10 @@ They can also help overcome lambda max 900sec execution time, by joining several
 
 
 ###### EMR
-EMR (Elastic Map Reduce) - highly distributed computing framework for data processing and storing, using Apache Hadoop.
+EMR (Elastic Map Reduce) - highly distributed computing framework for data processing and storing, using Apache Hadoop as its distributed data processing engine.
+Hadoop is open source java framework supports data-intensive distributed apps running on large clusters of commodity hardware. Hive/Pig/HBase are packages that run on top of Hadoop.
 It reduces large workload into smaller jobs and distribute it between EC2 instances of Hadoop cluster (good for big data analyses).
+Hadoop is basically 2 things: a Distributed FileSystem (HDFS) + a Computation or Processing framework (MapReduce)
 AntiPattern
 * Small data sets (EMR for large processing, if your dataset is small enough for one machine/thread it's better to use EC2 or Lambda)
 * ACID transaction requirements (if you need this it's better to use RDS instead of Hadoop)
@@ -696,7 +707,7 @@ AntiPattern
 * NoSQL Databases (Glue doesn't support NoSQL databases as source)
 
 ###### DynamoDB
-DynamoDB - fully managed NoSQL key-value database, like mongo, but aws proprietary solution. Stores data across 3 AZ. 
+DynamoDB - fully managed NoSQL key-value/document database, kind of mongo, but aws proprietary solution. Stores data across 3 AZ. 
 NoSql terminology
 * Row - item
 * Cell - attribute
@@ -713,10 +724,10 @@ As you guessed the problem is the more nodes you add the slower is communication
 So the good solution is to use db that doesn't adhere to these guidelines (transactionless db or NoSql).
 
 There are 4 types of NoSql db
-* document
-* graph
-* columnar
-* key-value
+* key-value (DynamoDB)
+* document (DynamoDB)
+* columnar (RedShift)
+* graph (Neptune)
 
 Since DynamoDb is multi-AZ by default there is no automatic backup (like rds have), but you can use on-demand backup/restore logic.
 DynamoDb just like s3 is not in vpc, so you can either
