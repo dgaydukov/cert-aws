@@ -503,10 +503,18 @@ S3 accidental delete protection
 Suppose we have 2 versions A and B (current) and delete file. In this case we would have A, B, C (mark delete, current). As you see file is still preserved with some version.
 
 Eventual consistency - since put/read is atomic, you won't read partially updated file, so you will either read old file or new file, because of this sometimes just after write you can read old file, but after some time new file would be available.
+Although bucket name is global across all regions, you still select region when you create bucket, and actual data is stored in that particular region.
+Using bucket policy you can specify from which ip (CIDR notation) and at what time you allow to access data.
+
+Server access logs - you can enable them and see who is accessing your s3 (IP address/time/action(get/post/put)/response)
+Event notification - you can send events (sns/sqs/lambda) base on s3 action (get/post/put).
+To achieve better performance you are adviced to use random names for objects, but [it's not longer required](https://aws.amazon.com/about-aws/whats-new/2018/07/amazon-s3-announces-increased-request-rate-performance). 
+Randomized named worked better cause when names are sequential all data store in the same place and it's harder to extract it.
 
 ###### Glacier
 Glacier - low-cost tape-drive storage value with  $0.007 per gigabyte per month. Used to store backups that you don't need frequently.
 Access to data can take from few minutes to a few hours. You store data as archives.
+Vault - same as bucket for s3, actual place where your archives are stored. You control access by using iam identity or vault policy.
 
 When you should never use glacier
 * rapidly changing data (use EBS/EFS/RDS/DynamoDB)
@@ -623,7 +631,7 @@ In order to create pre-sign url you need to create CF keypair. You can do it onl
 Don't confuse it with ec2 key pairs and with CF public key. They both for different purpose.
 You can make CF private by setting `Restrict Viewer Access` to yes (in this case you can also set which accounts can create signed urls, so other accounts can also generate urls to access data).
 So if you restricted access and try to access url you got error `Missing Key-Pair-Id query parameter or cookie value`.
-You can create pre-signed url with following command `aws cloudfront sign --url=https://d3l9m9kf4m2kpm.cloudfront.net/info.html --key-pair-id=APKAJDZCS7VF4FG32EWA  --private-key=file://cfkey.pem  --date-less-than=2020-08-19`
+You can create pre-signed url with following command `aws cloudfront sign --url=https://d3l9m9kf4m2kpm.cloudfront.net/info.html --key-pair-id=APKAJDZCS7VF4FG32EWA  --private-key=file://cfkey.pem  --date-less-than=2020-08-19` (this command is local and doesn't call aws api, so we don't need to pass profile)
 This will create signed url by which you can access your data from CF.
 
 You can also use CF to distribute dynamic content (like ec2/api requests). Although at first it seems unreasonable cause for every dynamic request CF should forward it to underlying ec2.
@@ -996,9 +1004,14 @@ Using this enables you to connect to services powered by AWS PrivateLink (so bas
 By default ec2 instances dns name is disabled (only ip address is given). You can enable it for vpc by going to `Actions=>Edit DNS Hostname`.
 You can change subnet setting `Actions=>Modify auto-assign IP settings` and in this case when you create ec2, it would by default select subnet settings (enable/disable auto-assign public IP address). Of course you can also change it on ec2 level.
 
-Tenancy
+VPC Tenancy
 * multi-tenant (virtual isolation) - you share your instances on the same server as other aws clients, you instance is divided by virtualization
 * single-tenant (dedicated, physical isolation) - you get completely separate hardware for you (can be useful if you have regulatory requirements)
+EC2 Tenancy - you can set it for individual ec2 also.
+* shared (accessible only if vpc tenancy = multi-tenant) - Your instance runs on shared hardware
+* dedicated - Your instance runs on single-tenant hardware
+* host - Your instance runs on a Dedicated Host, which is an isolated server with configurations that you can control
+After launch you can change only from dedicated to host and vice versa.
 
 Flow Logs - you can configure flow logs for
 * vpc - flow logs would be for all ENI in whole vpc
