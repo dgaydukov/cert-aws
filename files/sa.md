@@ -553,6 +553,13 @@ Most AMI (Amazon Machine Images) are backed by Amazon EBS, and use an EBS volume
 You can attach multiple EBS to single EC2, but single EBS can only be attached to 1 EC2.
 EBS allows to create point-in-time snapshots (backup) and store them in s3.
 
+Snapshots are store in amazon s3 bucket (not in your bucket, so you don't have full control of it, you can't go to bucket and download snapshot) and amazon provides some services to you regarding snapshot
+* create & delete
+* recover
+* copy to other region
+When you take snapshot of running ebs, it would be available immediately (there is no delay).
+But when you recover snapshot ebs is read immediately, but data is loaded lazyly.
+
 IOPS vs Throughput vs Bandwidth
 * IOPS - number of read/write operations per second
     * General Purpose SSD (gp2)
@@ -800,6 +807,12 @@ Type of EC2
 once spot price exceeds your bill, ec2 would be terminated within 2 min
 * Dedicated (can be on-demand or reserved) - your ec2 instance runs on physically separate hardware
 
+With reserved instances you can modify
+* instance size (within the same instance family)
+* AZ
+* merge 2 into 1 (2 * t2.small => t2.large), or split one into 2 smaller
+You can't change OS
+
 There are 3 types of IP address
 * private IP - your instance is not available from outside, only from within your VPC (base on SG)
 * public (dynamic - cause it changes) IP - you instance is available from outside. Given once to concrete instance, if you stop/start instance it may change
@@ -870,7 +883,7 @@ VPC (Virtual private cloud) - a kind of internal network in on-premises. You can
 You have complete control over your virtual networking environment, including selection of your own IP address ranges, creation of subnets, and configuration of route tables and network gateways.
 By default every account has default VPC (and default subnet for each AZ), so if you don't create any other, and create EC2 directly, default VPC would be used.
 Amazon VPC consists of
-* VPC - private network, logically isolated from other networks in aws cloud. Can span across multiple AZ. Instances in different AZ charged $0.01 per GB for data transfer.
+* VPC - private network, logically isolated from other networks in aws cloud. Can span across multiple AZ. Instances in different AZ charged $0.01 per GB for data transfer. Size should be /16 - /28 (so from 16-65535)
 * Subnet - private sub-network inside VPC. Can reside only within single AZ.
 * RT (Route table) - set of rules (routes) to determine where network traffic from your VPC is directed
 Single RT can be associated with multiple subnets, but single subnet can be associated to one RT only.
@@ -1064,6 +1077,9 @@ DMS use SCT (Schema Conversion Tool) for converting between existing schemas.
 
 ###### ELB
 ELB (Elastic Load Balancing) - is a proxy that accept traffic (using listeners) from clients and route it to targets (usually EC2), so it basically distribute your traffic between different ec2 instances.
+ELB holds 2 connections
+* from client to elb
+* from elb to ec2
 Listener - is a protocol + port for which you got incoming requests.
 There are 3 types of elb:
 * Application LB - if you need to balance http/https. Also supports websocket & secure websocket
@@ -1099,6 +1115,15 @@ Since we can modify rules, you can use elb to hide some api endpoints. For examp
 * rule-1 - forward /api requests to /api endpoint in your app
 * default rule - always return 403
 So with this only `/api` endpoint would be available. All other endpoints would return 403.
+
+Usefule features
+* cross-zone for eqaul load distribution across all instances, no matter in which AZ they are.
+* Sticky Sessions - when you send `AWSELB` cookie and elb remember to which ec2 instance to route request
+
+Health check can be
+* ping
+* connection attempt
+* page that is checked periodically
 
 
 ###### CloudWatch
@@ -1493,6 +1518,7 @@ Target tracking - you select metric and AS automatically track this metric and s
 ASG (Auto Scaling group) - a collection of same ec2 managed by AS. if you delete ASG all instances of it's type would be deleted.
 You can configure SNS to get notification when your ASG scales out/in or replace unhealthy instance.
 LC (launch configuration) - template that ASG uses to launch new instances. One ASG use one LC. You can't modify LC, if you need to change some params you should create new LC and update your ASG.
+You can use on-demand or spot instances in LC, in case of spot you should set bid price in LC.
 ASG can launch your instances across multiple AZ but only within same region.
 
 lifecycle hooks - you can execute some logic after AS create new instance (useful when you don't have ready to use AMI and need to tune instance after creation).
