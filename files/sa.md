@@ -66,6 +66,7 @@
 * 2.46 [Wavelength](#wavelength)
 * 2.47 [SSO](#sso)
 * 2.48 [OpsWorks](#opsworks)
+* 2.49 [SWF](#swf)
 3. [Networking](#networking)
 * 3.1 [NIC](#nic)
 * 3.2 [Hub, Switch, Router](#hub-switch-router)
@@ -1720,6 +1721,16 @@ OpsWorks for Chef Automate - fully managed Chef server and automation tools for 
 
 OpsWorks for Puppet Enterprise - managed Puppet Enterprise server and automation tools for ci/cd (including orchestration/provisioning/deploying services in ec2)
 
+###### SWF
+Simple Workflow Service - coordinate work (tasks) across distributed apps. With SWF you don't need to use messaging system, cause tasks works as messages.
+SWF offers rich SDK for quick development.
+Task - any invocation within app (code execution, web-server call, human action), they processed by workers, that take tasks, execute it and return result back.
+Decider i-s a program that controls the coordination of tasks (ordering/concurrency/scheduling).
+You can build your own coordination system, but you should take care that
+* tasks may fail, timeout, require restarts
+* tracking and visualizing tasks can be challenging
+* you must ensure that some tasks assigned only once, and tracked all the way down
+So of course you can reinvent the wheel, but it's better to use ready solutions like SWF.
 
 ### Networking
 ###### NIC
