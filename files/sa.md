@@ -309,12 +309,25 @@ CF uses declarative approach, cause you declare how your stack should look like,
 * EC2 role access - you can add (for example bucket write access) role to ec2 instance
 * Cross-account access - you can set up access for account B from account A
 
-There are 2 types of permission
+There are 3 types of permission
+* user - permission for single iam entity
 * group - collection of permissions that you can assign. Used to define users. One user can belong to multiple groups.
-* role - collection of permissions for specific aws service (for example ec2 can connect to s3 without any secret key). You can also create role for user, but user will have to assume this role.
+* role - collection of permissions for specific aws service (for example ec2 can connect to s3 without any secret key). You can also create role for user, but user will have to assume this role
+With role you should provide Access token and Session Token
 So if user is assigned to 2 groups he would get all permissions from 2 groups at the same time, but if he assigned 2 roles, he can use only one at a time (by assuming one role)
 
-Policy - define the permissions for a user, group, or role
+Tokens
+* Access token - combination of an access key ID (20 characters) and an access secret key (40 characters)
+* Session Token - temporary session token to authenticate
+
+
+Policy - define the permissions for a user, group, or role. Resource is defined with following format `"arn:aws:service:region:account-id:[resourcetype:]resource"`.
+Resource examples:
+```
+Amazon S3 Bucket        arn:aws:s3:us-east-1:123456789012:my_aws_bucket/*
+IAM User                arn:aws:iam:us-east-1:123456789012:user/Jack
+Amazon DynamoDB Table   arn:aws:dynamodb:us-east-1:123456789012:table/myTable
+```
 
 Role for user
 * create role `S3Viewer` of type: Another AWS Account (enter desired accountID or your own) and assign policy  `AmazonS3ReadOnlyAccess`
@@ -414,6 +427,11 @@ You can define permissions by assigning policies to group/user. There are 2 type
 * aws managed - most common policies created by aws (for example s3/ec2 access and so on...)
 * managed by you - custom policies created by end user
 
+Permission evaluation:
+* by default deny is applied
+* if any explicit deny found evaluation is stopped and deny applied
+* if any explicit allow found evaluation continue until it's find deny - then deny applied, or not found deny - allow applied
+* if neither deny/allow find than default deny applied
 Identity federation - grant to external identities ability to secure access aws (both management console & API) without creating iam users
 External identities can be of 2 types
 * corporate IdP (microsoft AD, aws AD)
@@ -426,7 +444,11 @@ But both allows federated user to access the console without having to sign in w
 FU assume iam role and can access aws resources based on this role. Access is intersection of 2 policies (one passed within request + another from iam role).
 So FU request access with some policy attached and his iam role also has some policy they intersect and this is his policy inside aws.
 
-Policy - json file with permission which you attach to IAM identity (user/group/role) or aws resource (some resources can have it's own access policy, like s3 bucket policy - where you can define which user which action should take).
+Principal - IAM identity (user/group/role) that can interact with aws
+* can be permanent/temporary
+* can be repesented by human/application
+* can be root user / iam user / role
+Policy - json file with permission which you attach to IAM identity or aws resource (some resources can have it's own access policy, like s3 bucket policy - where you can define which user which action should take).
 Main difference between identity and resource policy (like s3 bucket policy) is that identity policy doesn't have `Principal` attribute, cause you link it to some iam identity which would be it's principal.
 Contrary to this resource policy have `Principal` attribute where you define to which user this policy is applied. Generally you should use identity policies cause you can define access to multiple resources there, where for resource policy access is limited to this resource only.
 One example where resource policy is useful is when you need to add simple way to grant cross-account access to your S3 environment without creating iam role.
@@ -760,7 +782,8 @@ DynamoDb Stream - stream that provide all write (create/update/delete) operation
 * elasticache (so your cache would be always updated to latest state of db)
 * in case your app need to know about all updates
 
-Global Secondary Index - special read-only table created by dynamoDb to simplify search for indexed fields. Index speed up search but require more memory to store itself.
+Global Secondary Index - special read-only table created by dynamoDb to simplify search for indexed fields. Index speed up search but require more memory to store itself
+Local Secondary Index - same partition as primary key, but different sort key. You can have it only one and it must be created when table is created, just like primary key.
 Scanning - like `select * from` operation in RDS, just go over all records.
 DynamoDb just like s3 is eventual consistent, so if you update data and read it right away you can get old value (cause items are persisted on multiple machines, and depending from what machine you read you can get stale data).
 You can disable eventual consistency by setting `ConsistentRead: true`. In this case `getItem/query/scan` operations would always return correct value, but reads would take longer time.
@@ -776,15 +799,23 @@ You can increase throughput as much as you want but decrease up to 9 times per d
 
 It's the only db that grow/shrink based on load.
 
+DynamoDB Streams - captures a time-ordered sequence of item-level modifications in a DynamoDB table and durably stores the information for up to 24 hours.
+AWS maintains separate endpoints for DynamoDB and DynamoDB Streams. Streams can be enabled or disabled for an Amazon DynamoDB table.
+Stream records are organized into groups, also referred to as shards. 
+
 ###### RedShift
 Database vs Data Warehouse
-* db (single source) - OLTP (Online Transaction Processing) - store current transactions and quick access to them
+* relational db (single source) - OLTP (Online Transaction Processing) - store current transactions and quick access to them
 * warehouse (multiple sources)) - OLAP (Online Analytical Processing) - store large quantities of historical data
 
-RedShift - fully-managed, petabyte-scale data warehouse.
+RedShift - fully-managed, petabyte-scale data warehouse. Redshift - relational db for OLAP, supports ODBC/JDBC, based on industry-standard PostgreSQL.
 It delivers fast query and I/O performance for virtually any size dataset by using columnar storage technology while parallelizing and distributing queries across multiple nodes.
 Redshift only supports Single-AZ deployments. It uses MPP (Massively Parallel Processing) by automatically distribute data/query load across all nodes.
 Single-node can be used to quickly set up cluster and grow later. Multi-node requires leader (who gets client connection and queries) and a few compute nodes, that actually execute load.
+Cluster - consist of leader node (take the query) + 1 or more compute nodes (execute query in parallel). 
+WLM (Workload Management) - queue to prioritize queries.
+Just like rds, RedShift supports snapshots (both automatic and manual).
+
 
 
 ###### QuickSight
@@ -1231,12 +1262,12 @@ There are 2 ways to backup
 * db snapshot - taken by user
 You can recover snapshot on the moment taken or by point-in-time (cause rds keeps db change logs)
 
-multi-AZ (failover):
+multi-AZ (failover) - HA:
 * primary - you main db that performs read/write
 * standby - replica db that has most recent updates from primary. You can't use it for reads, the only purpose is failover - when primary fails, your standby becomes primary, so you won't even notice failure. Replication is synchronous.
 Since Aurora stores data across 3 AZ, if master is failed, it would automatically recreated in another AZ, so for aurora you don't need to set up stand-by replica.
 
-Read replica (replica db only for reading):
+Read replica (replica db only for reading) - horizontal scaling:
 Use it if you want to write to master and read from replica. Read Replica implemented using db (mysql or other) native asynchronous replication, that's why lag can occur, comparing with multi-AZ replication
 where writes are concurrent. Ycd prou can also modify read replica to execute DDL (Data Definition Language) SQL queries. You can promote read replica to become master database.
 

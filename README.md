@@ -81,6 +81,7 @@ TargetGroup:
 * Deploy java app using opsworks stacks
 -----------------------------------------------Advanced-----------------------------------------------
 * create aws microsoft AD and see how it works
+* create iam identity federation with this AD and with Cognito
 * ClientVPN with security as microsoft AD
 * ClientVPN add nat instance so internet would work without tunnel split (yet check it also with tunnel split, and your IP would be different)
 * create custom vpn server in ec2 and try to connect to it (do both use oepnvpn server ami and any ami (OpenVPN Access Server from marketplace which is free tier, in this case you should configure it through browser admin panel) + manually configure openvpn server)
