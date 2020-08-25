@@ -95,3 +95,5 @@ TargetGroup:
 * Try Athena & Aws Glue tutorials
 * aws config CF template (check that ec2 is of specific type and alert when type has been changed)
 * Kinesis firehose real example (with cf template)
+* enable connection draining and see how it works when you de-register instance or it failed
+* create private hosted zone, see how it all works

@@ -450,7 +450,10 @@ Principal - IAM identity (user/group/role) that can interact with aws
 * can be repesented by human/application
 * can be root user / iam user / role
 Policy - json file with permission which you attach to IAM identity or aws resource (some resources can have it's own access policy, like s3 bucket policy - where you can define which user which action should take).
-Main difference between identity and resource policy (like s3 bucket policy) is that identity policy doesn't have `Principal` attribute, cause you link it to some iam identity which would be it's principal.
+Resource policy - policy for single resource:
+* s3 bucket policy
+* SQS Access Control
+Main difference between identity and resource policy is that identity policy doesn't have `Principal` attribute, cause you link it to some iam identity which would be it's principal.
 Contrary to this resource policy have `Principal` attribute where you define to which user this policy is applied. Generally you should use identity policies cause you can define access to multiple resources there, where for resource policy access is limited to this resource only.
 One example where resource policy is useful is when you need to add simple way to grant cross-account access to your S3 environment without creating iam role.
 There are 6 policy types
@@ -1124,6 +1127,8 @@ If you have not equal number of EC2 in different AZ (let's say 2 in az1, and 8 i
 In this case each lb will route it's 50% into 10 instances, so each instances will get 10% of traffic. But if you disable cross-zone balancing, then 50% in first zone would be divided between 2 instances (so each got 25%)
 and 50% from az2 would be divided in 8 instances (so each got 8.25% traffic). With ALB cross-zone balancing enabled by default.
 
+Connection draining - makes sure that any back-end instances you have deregistered will complete requests in progress before the deregistration process starts
+
 LB can be
 * internal (having only private IP)
 * external (facing internet, having both public & private IP)
@@ -1181,7 +1186,10 @@ Route53 also supports WRR (Weighted Round Robin) where you can assign weight ans
 You can also use LBR (Latency Based Routing), in case you have aws resources in multiple regions, route53 will redirect users to region with lowest latency.
 With Route53 you can also have private DNS name within your VPC, and such a name would be unaccesable outside VPC.
 Heath check - a check that requested resource is available. DNS Failover - return result only if health check is fine.
-routing policy
+DNS responses use
+* UDP if size less than 512 KB
+* TCP is size exceeds 512 KB
+Routing policy
 * Simple - default policy to link domain to any aws serivce (elb/ec2/beanstalk)
 * Failover - in case one ec2 fail, to redirect traffic to second one
 * Geolocation - redirect traffic based on user location to record set with nearest geographic aws region
@@ -1190,7 +1198,9 @@ routing policy
 * Multivalue answer - simple routing policy + healthcheck. You can set up to 8 instances, and if first become unavailable traffic goes to random one out of other 7
 * Weighted - 90% of traffic to one ec2, 10 to second
 
-Hosted zone - route53 concept of domain. For each of your domain you have 1 hosted zone where you can have records.
+Hosted zone - route53 concept of domain. For each of your domain you have 1 hosted zone where you can have records. There are 2 types of it:
+* public - available through the internet
+* private - available inside vpc
 Records set - subdomains of your hosted zone. You can easily route any record set to any aws services (s3/elb/cloudFront)
 
 You can create route53 health check for dns failover (you can also choose String matching and not just ensure that response is 200 http status, but check actual content of response)
@@ -1225,15 +1235,18 @@ elb-alb-1qtyacrlf2pd7-248530498.us-east-1.elb.amazonaws.com. 59	IN A 52.202.13.1
 
 DNS record types
 * A - you should assign IPv4 address (blog.example.com A 3.50.51.52)
+* AAAA - maps subdomain to IPv6
 * CNAME - you can assign another subdomain (blog.example.com CNAME test.my.com)
 Classic example when you support both apex & www domain
 An A record for example.com pointing to the server IP address
 A CNAME record for www.example.com pointing to example.com (but not other way around, cause you can't add CNAME record to apex domain)
-* AAAA - maps subdomain to IPv6
 * MX (Mail eXchange) - tells email delivery agents where they should deliver your email
 * TXT - some text
 * SO - singular Start of Authority record kept at the top level of the domain
 * NS - list of dns servers associated with name
+* SPF (Sender Policy Framework) - used by mail servers to combat spam.
+This record tells a mail server what IP addresses are authorized to send an email from your domain name
+* PTR (pointer record) - reverse of A record, used in reverse DNS lookups (when you type IP address and want to get dns name)
 
 You can't assign CNAME to apex domain - the reason is simple. We can have a chain of subdomains all with CNAME records
 ```
@@ -1244,8 +1257,16 @@ test2.example.com => test3.example.com
 ```
 But sooner or later it should end with some apex domain. And since apex domain can't be CNAME we would get desired IP address.
 So if you could assign CNAME to apex domain that would meant that CNAME could be endless.
-
 SOA and NS records are mandatory to be present at the root domain
+FQDN (Fully Qualified Domain Name) - complete name of domain ending with dot - indicating the root, like `aws.amazon.com.`.
+Name Server - translates dns into IP address using Zone Files (text file that contains mappings between dns name and IP address). They are distributed all across the world.
+
+Steps of DNS resolution (when you type dns name in browser)
+* check host file `/etc/hosts`
+* check local dns cache
+* contact dns server to resolve IP
+There are 13 RS (Root Servers) registered by ICANN. When RS receive request it redirects it to TLD (top level domain, like .com, .edu..) Server.
+TLD Server will find IP address of second level domain, but if you are using third or more level domain it will contact Domain Level Name Server to get IP address of third or more level domain.
 
 ###### RDS
 RDS (Relational Database Service) - aws managed service, that make it easy install/operate relational database in the cloud.
@@ -1299,6 +1320,7 @@ On-premise to rds data migration:
 SQS (Simple Queue Service) - managed service that provide asynchronous decoupling and publisher/subscriber (queue) model. There are 2 types
 * standard - ordering is not guaranteed, no limit to number of messages (you should implement custom protection against duplicates)
 * FIFO (first in, first out) - ordering is guaranteed, limit - 300 messages per second
+But you can also use standard queue (unordered) but place order field into each message, and by this you imitate order.
 It guarantee at-least-once delivery. you can use Amazon SQS Java Messaging Library that implements the JMS 1.1 specification and uses Amazon SQS as the JMS provider.
 Dead letter queue - a special queue that receives messages from other queue after some unsuccessful attempt to process it. Used to isolate messages that can't be processed for later analysis.
 You can get time-in-queue (time how long message has been in queue) by subtracting SentTimestamp attribute from current time.
@@ -1307,8 +1329,7 @@ If queue is empty
 * short polling (default) - returns immediately with no results. Only possible way if single thread poll multiple queues, in this case long polling for one empty queue would block other queues, but it generally bad design.
 * long polling - wait till message got into queue, or polling timeout (by default 20 sec) expires (save SQS cost, cause reduce number of empty receives). It's better to always use this type of polling.
 Message retention can be configured from 1 min to 14 days (by default - 4 days).
-Visibility Timeout (0 sec    to 12 hours, default - 30sec) - once you app consume a message it becomes invisible to others. But until your app notify queue that it processed it
-message not deleted. So this timeout - is how long queue can wait.
+Visibility Timeout (0 sec - 12 hours, default - 30 sec) - once you app consume a message it becomes invisible to others. But until your app notify queue that it processed it message not deleted. So this timeout - is how long queue can wait.
 
 You can get twice same message if
 * received message is not deleted during `VisibilityTimeout` (time during which you should handle message and delete it from queue)
@@ -1321,6 +1342,44 @@ SQS is not replace for message broker like Rabbit/Kafka cause it doesn't support
 So it's incorrect to compare sqs to kafka, just like compare DynamoDB to MySQL.
 
 DLQ (dead-letter queue) - queue with messages that failed to processed after n retries (otherwise some messages would retry forever, but you can specify param, so after 10 retry message goes to this queue, and not tried to retry again).
+
+Each message has 3 unique attributes
+* QueueURL - url of sqs queue
+* MessageId - unique id generated by sqs after you send message to queue
+* ReceiptHandle - special ID by which you can delete message. Each time you receive message from queue, sqs generates it for you. So you can delete message only after you read it.
+```
+{
+    "Messages": [
+        {
+            "MessageId": "29340194-279a-4752-af7a-e71e2e5b012a",
+            "ReceiptHandle": "29340194-279a-4752-af7a-e71e2e5b012a#a4dd1399-61da-45ae-a0fc-d711b772ba9d",
+            "MD5OfBody": "79bcbc1d34bcbf4c3de6877dc2994a0f",
+            "Body": "{}"
+        }
+    ]
+}
+```
+
+Although you can use iam to control access to sqs, it's better to use access control. Give access to another account.
+```
+{   
+   "Version": "2012-10-17",
+   "Statement" : [{
+      "Effect": "Allow",           
+      "Principal": {
+         "AWS": [
+            "111122223333"
+         ]
+      },
+      "Action": [
+         "sqs:SendMessage",
+         "sqs:ReceiveMessage"
+      ], 
+      "Resource": "arn:aws:sqs:us-east-2:444455556666:queue2"  
+   }]
+}
+```
+
 
 ###### API Gateway
 API Gateway - managed api service that makes it easy to publish/manage api at any scale. It can
@@ -1723,7 +1782,7 @@ OpsWorks for Puppet Enterprise - managed Puppet Enterprise server and automation
 
 ###### SWF
 Simple Workflow Service - coordinate work (tasks) across distributed apps. With SWF you don't need to use messaging system, cause tasks works as messages.
-SWF offers rich SDK for quick development.
+SWF offers rich SDK for quick development. To coordinate tasks, you write a program that gets the latest state of each task from Amazon SWF and uses it to initiate subsequent tasks.
 Task - any invocation within app (code execution, web-server call, human action), they processed by workers, that take tasks, execute it and return result back.
 Decider i-s a program that controls the coordination of tasks (ordering/concurrency/scheduling).
 You can build your own coordination system, but you should take care that
@@ -1731,6 +1790,8 @@ You can build your own coordination system, but you should take care that
 * tracking and visualizing tasks can be challenging
 * you must ensure that some tasks assigned only once, and tracked all the way down
 So of course you can reinvent the wheel, but it's better to use ready solutions like SWF.
+
+
 
 ### Networking
 ###### NIC
