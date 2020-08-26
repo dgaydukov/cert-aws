@@ -647,7 +647,9 @@ You can control expire date (when CF will check origin server for new version) b
 You can delete item from CF by
 * delete it from origin server, and when expire date come it would be deleted from CF
 * use invalidating api to remove file from CF immediately
-CF doesn't cache following requests: POST, PUT, DELETE, PATCH
+CF doesn't cache following requests: POST, PUT, DELETE, PATCH. By default cache is stored for 24 hours, but you can evict it by calling invalidation API.
+You can also use versioning (`/v1/img/test.png`). In this case once you update your site users will use new versions that not in CF, and edge location will download it from origin server.
+You can serve content from multiple origin servers.
 Field-Level Encryption - encrypt user's upload data and transfer these encrypted data to your origin
 Lambda Edge - lambda functions that allows you to override behavior of request/response to your cloudfront edge locations
 (for example only cognito authenticated user can view content)
@@ -703,6 +705,11 @@ In this case your s3 bucket is public, but can be accessed only by cloudfornt us
 ###### Kinesis
 It is a platform for streaming data on AWS, making it easy to load and analyze streaming data.
 With Kinesis, you can ingest real-time data such as application logs, website clickstreams, IoT telemetry data, and more into your databases, data lakes, and data warehouses, or build your own real-time applications using this data
+* Kinesis Firehose - load massive volumes of streaming data into AWS.
+Receives stream data and stores it in s3/RedShift/ElasticSearch
+* Kinesis Streams - build custom applications for more complex analysis of streaming data in real time
+* Kinesis Analytics - analyze streaming data real time with standard SQL
+
 AntiPattern
 * Small scale consistent throughput (Kinesis Data Streams is designed  and optimized for large data throughputs)
 * Long-term data storage and analytics (By default Kinesis Data Streams stores data 24 hours, you can extend retention up to 7 days, if you need longer you should considered RDS/DynamoDb/S3/Glacier)
@@ -734,7 +741,11 @@ They can also help overcome lambda max 900sec execution time, by joining several
 EMR (Elastic Map Reduce) - highly distributed computing framework for data processing and storing, using Apache Hadoop as its distributed data processing engine.
 Hadoop is open source java framework supports data-intensive distributed apps running on large clusters of commodity hardware. Hive/Pig/HBase are packages that run on top of Hadoop.
 It reduces large workload into smaller jobs and distribute it between EC2 instances of Hadoop cluster (good for big data analyses).
-Hadoop is basically 2 things: a Distributed FileSystem (HDFS) + a Computation or Processing framework (MapReduce)
+Hadoop is basically 2 things: HDFS + a Computation or Processing framework (MapReduce)
+There are 2 types of storage
+* HDFS (Hadoop Distributed File System) - data replicated across several instances. Data can be stored on EBS or instance store
+* EMRFS (EMR File System) - implemetation of HDFS that can store data in s3
+
 AntiPattern
 * Small data sets (EMR for large processing, if your dataset is small enough for one machine/thread it's better to use EC2 or Lambda)
 * ACID transaction requirements (if you need this it's better to use RDS instead of Hadoop)
@@ -1468,6 +1479,18 @@ It consists of
 * node - smallest building block - network-attached RAM
 * shard (node group) - primary node and zero or more read-replicas
 * cluster (replication group) - group of shards
+Vertical scaling - you can't scale existing cluster, you should spin up new cluster and redirect traffic there.
+
+Memcached
+* cluster consists of up to 20 nodes, keys are distributed across nodes. If one node failed, data is lost. So memcached is best if you have data in db and just need a cache layer, and losing cache is not critical.
+* stores objects as blobs, usually you put serialized result of db query
+* new cluster (vertical scaling) starts empty
+Redis
+* cluster consists of up to 15 shards (each shard is 1 primary and up to 5 replica nodes), so totally 15*6 = 90 nodes. So if you need data replication you should use redis. Replication is supported by only redis.
+* support persisting in-memory data to disk
+* supports blob/list/set/array as data types.
+* can also sort/rank data (used for leaderboard)
+* new cluster can be initialized from snapshot
 
 Caching strategies
 * Lazy loading - populate cache on-demand (first hit - request data from db, all subsequent reads - take directly from cache).
@@ -1478,11 +1501,6 @@ Downside if cache is not big enough, when new data arrived, LRU (least recently 
 Cache is implemented as key-value pair. So if you want to store leaderboard in cache you have to store sha256 of query as key and result of query as string value.
 With cluster you distribute load across nodes/shards(in case of redis), it also protection against failure. If you have one node and it failed, your cache is failed, but if you have cluster of 10 nodes, and one node is failed, only 10% of cache is failed.
 
-Memcached cluster vs redis cluster
-* Memcached cluster consists of up to 20 nodes, keys are distributed across nodes. If one node failed, data is lost.
-So memcached is best if you have data in db and just need a cache layer, and losing cache is not critical.
-* Redis cluster consists of up to 15 shards (each shard is 1 primary and up to 5 replica nodes), so totally 15*6 = 90 nodes.
-So if you need data replication you should use redis. Replication is supported by only redis.
 
 ###### Systems Manager
 SM (Systems Manager) - tool that helps you to manage your aws resources and automate some tasks on them:
@@ -1536,6 +1554,7 @@ There are 3 types of logs
 * insights events - CT use ML (Machine Learning) to determine any anomaly (like spike in some api calls) and notify you.
 
 By default logs stored for 90 days. If you need longer you should create trail. Trail stores data in s3, you have to analyze it yourself (usually using Athena).
+All Regions trail - create trail in each region, but stores all record in s3 bucket of your current region.
 Trail can log events from one region or from all regions. Log file validation - guaranty that logs were not tampered with. Mare sure your s3 bucket has correct write policy, otherwise CT won't be able to store logs there.
 You can deliver CT logs to CloudWatch, in this case CT would deliver logs to s3 & CloudWatch logs.
 
