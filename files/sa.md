@@ -67,6 +67,7 @@
 * 2.47 [SSO](#sso)
 * 2.48 [OpsWorks](#opsworks)
 * 2.49 [SWF](#swf)
+* 2.50 [Data Pipeline](#data-pipeline)
 3. [Networking](#networking)
 * 3.1 [NIC](#nic)
 * 3.2 [Hub, Switch, Router](#hub-switch-router)
@@ -1810,6 +1811,15 @@ You can build your own coordination system, but you should take care that
 * you must ensure that some tasks assigned only once, and tracked all the way down
 So of course you can reinvent the wheel, but it's better to use ready solutions like SWF.
 
+###### Data Pipeline
+DP - ELT tool that simplify data movement/processing in aws, integrates with on-premise and cloud-based storage systems.
+You can transfer data between RDS/S3/EMR/DynamoDB. 
+Pipeline - runs activities (common tasks) on data nodes.
+Data node - location where pipeline reads data or where it writes data.
+Example of DP
+* extract log data from on-premise to s3
+* launch transient Amazon EMR cluster, load s3 data, transform it and load transformed data to s3
+* copy transformed data from s3 to RedShift
 
 
 ### Networking

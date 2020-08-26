@@ -99,3 +99,4 @@ TargetGroup:
 * create private hosted zone, see how it all works
 * create both memcached/redis elasticache endgine and check how do they work (add snapshot to redis and recover from snapshot to new cluster, add redis replication group)
 * cloudfront vs global accelerator for speed up of requests
+* create data pipeline to ELT from rds to s3
