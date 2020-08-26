@@ -639,7 +639,10 @@ It's differ from EBS cause it's directly attach to machine (ebs connected via ne
 CloudFront is a CDN (content delivery/distribution network) - that speed up the distribution of your data using edge locations.
 When user request content, CF use nearest edge location and deliver cached version, it's faster that transfer data directly from data center.
 If content not in cache, CF retrieve it directly from s3 or HTTP and cache it. CF is not durable storage, it's just an edge cache.
-To work with CF you should create origin server (s3 in case of static content, ec2 - dynamic). Then you add you origin server to CF, and CF generate link for you.
+To work with CF you should create origin server Then you add you origin server to CF, and CF generate link for you.
+Origin server can be
+* static (s3)
+* dynamic (ec2/elb or any other on-premise http server, also called custom origin)
 Later when user request this link CF check the closest edge location for data, and if found in chane - return, if not request it from origin server and cache it.
 To ensure origin availability you can add backup origin and configure CF in case it get 4xx/5xx response from main origin, to use backup origin.
 Edge cache is smart, it can remove less popular content to make room for other data.
@@ -703,12 +706,17 @@ You should add bucket policy to your bucket like
 When you set OAI from cloudfront you can set `update bucket policy` and aws will itself add such policy to your s3 bucket. Of course you can do it manually, or edit it after this.
 In this case your s3 bucket is public, but can be accessed only by cloudfornt user with OAI=E27OQ9NRS1N0QR.
 
+Anti-pattern
+* all users access website from specific location
+* all users use vpn to access website (users in different locations, but from aws they will use single location of vpn server)
+
 ###### Kinesis
 It is a platform for streaming data on AWS, making it easy to load and analyze streaming data.
 With Kinesis, you can ingest real-time data such as application logs, website clickstreams, IoT telemetry data, and more into your databases, data lakes, and data warehouses, or build your own real-time applications using this data
-* Kinesis Firehose - load massive volumes of streaming data into AWS.
+* Kinesis Firehose - load massive volumes of streaming data into AWS (you can configure lambda to transform you data before loading)
 Receives stream data and stores it in s3/RedShift/ElasticSearch
-* Kinesis Streams - build custom applications for more complex analysis of streaming data in real time
+* Kinesis Streams - ability to process the data in the stream.
+Stream for processing data, firehose - for storing them in s3.
 * Kinesis Analytics - analyze streaming data real time with standard SQL
 
 AntiPattern
@@ -740,12 +748,16 @@ They can also help overcome lambda max 900sec execution time, by joining several
 
 ###### EMR
 EMR (Elastic Map Reduce) - highly distributed computing framework for data processing and storing, using Apache Hadoop as its distributed data processing engine.
+It's good if you have some stored data in s3 and want to process it. If you have real-time data stream it's better to use Kinesis.
 Hadoop is open source java framework supports data-intensive distributed apps running on large clusters of commodity hardware. Hive/Pig/HBase are packages that run on top of Hadoop.
 It reduces large workload into smaller jobs and distribute it between EC2 instances of Hadoop cluster (good for big data analyses).
 Hadoop is basically 2 things: HDFS + a Computation or Processing framework (MapReduce)
 There are 2 types of storage
 * HDFS (Hadoop Distributed File System) - data replicated across several instances. Data can be stored on EBS or instance store
 * EMRFS (EMR File System) - implemetation of HDFS that can store data in s3
+There are 2 types of cluster
+* persistent - runs continiously, should use HDFS
+* transient - do some work and stop, should use EMRFS, so data won't be lost after cluster is stopped or terminated
 
 AntiPattern
 * Small data sets (EMR for large processing, if your dataset is small enough for one machine/thread it's better to use EC2 or Lambda)
@@ -1523,7 +1535,10 @@ For this to work you should assign a role to ec2 with policy `AmazonEC2RoleforSS
 
 
 ###### Config
-Config - manages service that provides aws resources inventory, config history, change notification.
+Config - manages service that provides aws resources inventory, config history, change notification. When you turn it on it create config item for each resource.
+It provides detailed view of the configuration of AWS resources in your AWS account (how the resources are related and how they were configured in the past so that you can see how the configurations and relationships change over time).
+It integrated with cloudTrail, and record CloudTraidID for any resource change.
+Config Item - point-in-time record of aws resource, that include metadata, attributes, relationships, current configuration, and related events
 Config Rule - desired configuration of resource that is evaluated against actual change (and report in case of mismatch).
 Conformance Pack - collection of config rules.
 
