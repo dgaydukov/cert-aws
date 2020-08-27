@@ -101,3 +101,6 @@ TargetGroup:
 * cloudfront vs global accelerator for speed up of requests
 * create data pipeline to ELT from rds to s3
 * create cf template with aws config and see how you can manage config change (add config rule)
+* add `AWS::RDS::DBSecurityGroup` to rds
+* use ssl encryption with talking with rds mysql server
+* create kms and encrypt someting with it

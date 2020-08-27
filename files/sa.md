@@ -68,6 +68,7 @@
 * 2.48 [OpsWorks](#opsworks)
 * 2.49 [SWF](#swf)
 * 2.50 [Data Pipeline](#data-pipeline)
+* 2.51 [CloudSearch](#cloudsearch)
 3. [Networking](#networking)
 * 3.1 [NIC](#nic)
 * 3.2 [Hub, Switch, Router](#hub-switch-router)
@@ -309,6 +310,10 @@ CF uses declarative approach, cause you declare how your stack should look like,
 ###### IAM
 * In case you have one user who requires access to a specific resource, as a best practice, you should create a new AWS group for that access (in case new user would appear you would just assign him to this group)
 * EC2 role access - you can add (for example bucket write access) role to ec2 instance
+Instance Profile - container for an IAM role that you can use to pass role information to an EC2.
+iam user - `who am I` & `what can I do`. But role is just `what can I do`. So for ec2 to use role it should become type of iam instance, that's why we create instance profile.
+When you create ec2 role from console, it automatically created both with same name. But if you are using CLI/CloudFormation you have to manually create it `AWS::IAM::InstanceProfile`
+and in ec2 instance assign it to `IamInstanceProfile`.
 * Cross-account access - you can set up access for account B from account A
 
 There are 3 types of permission
@@ -319,7 +324,8 @@ With role you should provide Access token and Session Token
 So if user is assigned to 2 groups he would get all permissions from 2 groups at the same time, but if he assigned 2 roles, he can use only one at a time (by assuming one role)
 
 Tokens
-* Access token - combination of an access key ID (20 characters) and an access secret key (40 characters)
+* Access token - combination of Access Key ID (20 chars) + Secret Access Key (40 characters)
+aws prevents replay attack by using timestamp in signature and if request older that 15 min, it's rejected.
 * Session Token - temporary session token to authenticate
 
 
@@ -579,6 +585,7 @@ It automatically replicated within AZ to provide higher durability (yet if AZ fa
 Most AMI (Amazon Machine Images) are backed by Amazon EBS, and use an EBS volume to boot EC2 instances.
 You can attach multiple EBS to single EC2, but single EBS can only be attached to 1 EC2.
 EBS allows to create point-in-time snapshots (backup) and store them in s3.
+You can make snapshot available to other aws accounts so they can create ec2 from it.
 
 Snapshots are store in amazon s3 bucket (not in your bucket, so you don't have full control of it, you can't go to bucket and download snapshot) and amazon provides some services to you regarding snapshot
 * create & delete
@@ -841,9 +848,13 @@ It delivers fast query and I/O performance for virtually any size dataset by usi
 Redshift only supports Single-AZ deployments. It uses MPP (Massively Parallel Processing) by automatically distribute data/query load across all nodes.
 Single-node can be used to quickly set up cluster and grow later. Multi-node requires leader (who gets client connection and queries) and a few compute nodes, that actually execute load.
 Cluster - consist of leader node (take the query) + 1 or more compute nodes (execute query in parallel). 
-WLM (Workload Management) - queue to prioritize queries.
-Just like rds, RedShift supports snapshots (both automatic and manual).
-
+WLM (Workload Management) - queue to prioritize queries. Just like rds, RedShift supports snapshots (both automatic and manual).
+Internally each node using ebs to store data, but you can create s3 backups.
+For encryption it uses four-tier hierarchy of encryption keys. These keys are:
+* master key
+* cluster key
+* database key
+* data encryption keys
 
 
 ###### QuickSight
@@ -855,6 +866,10 @@ EC2 (Elastic Compute Cloud) - web service that provides resizable compute capaci
 AntiPattern
 * Managed Service (if you need database, or some other service that is provided by aws, you would better to use it, like RDS)
 * Lack of Expertise or Resources (if your team lack expertise or resource installing and managing some service like database, again if aws provide such service it's better to use aws managed service)
+
+You connect to ec2 
+* linux - use private key to ssh to ec2
+* windows - use private key to decrypt admin password and connect by RDP using this password
 
 Type of EC2
 * On-demand (0% discount) - you got server at any time, and there is no commitment from your (you can terminate it after 10min)
@@ -1836,6 +1851,9 @@ Example of DP
 * launch transient Amazon EMR cluster, load s3 data, transform it and load transformed data to s3
 * copy transformed data from s3 to RedShift
 
+###### CloudSearch
+CS - search service like ElasticSearch, but aws proprietary development.
+You should store your data in s3 and then use CS to search this textual data.
 
 ### Networking
 ###### NIC
@@ -1844,6 +1862,7 @@ If you NIC is inside network that using hub, than hub sends all packets to all p
 Promiscuous mode - you turn off MAC address check, and all packets that are sent to NIC (regardless of destination MAC address) are forwarded to CPU to process. This mode is turned off by default, can be useful for traffic sniffing.
 Traffic sniffing - catch all traffic and analyze it, best tool is [WireShark](https://www.wireshark.org).
 You can detect promiscuous mode by sending a ping (ICMP echo request) with the wrong MAC address but the right IP address. In normal mode NIC would drop packet, but in promiscuous - you would get response.
+It is not possible for ec2 running in promiscuous mode to receive or “sniff” traffic that is intended for a different virtual instance.
 
 Since most modern networks using switch, and it sends data directly to special pc (compare to hub which just replicate packet to everybody in the network), just turning promiscuous mode won't help much, 
 cause switch will route only those packets that are only designated for your NIC, so you can't sniff all network traffic. Hopefully Managed switches provide Port Mirroring (ability to mirror all incoming packets to some specific port, port - is not tcp/udp port but a connection nest inside switch)
