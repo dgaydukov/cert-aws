@@ -1452,6 +1452,12 @@ Cognito also support SAML or OpenID Connect, social identity providers (such as 
 You pay for MAU (monthly active users) - user who within a month made some identity operation signIn/singUp/tokenRefresh/passwordChange.
 Free tier - 50k MAU per month.
 
+There are 3 types of cognito tokens (with accord to OpenID)
+* id token - jwt token that has personal user info (name, email, phone). So you shouldn't use it outside your backend, cause it includes sensitive info
+Usually id token = access token + user's personal details
+* access token - jwt token that includes user's access rights. You can use it outside your backend to get access to other services
+* refresh token - use it to retrieve new ID and access tokens
+Live of id/access token is limited, usually to 1 hour, and that's why you should use refresh token to prolong it.
 
 ###### CodePipeline(CodeCommit/CodeBuild/CodeDeploy)
 CodePipeline - aws ci/cd tool, like jenkins.
