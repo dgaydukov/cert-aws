@@ -11,7 +11,8 @@
 * 1.7 [Egress vs Ingress](#egress-vs-ingress)
 * 1.8 [Bastion vs JumpServer](#bastion-vs-jumpserver)
 * 1.9 [Disaster Recovery](#disaster-recovery)
-* 1.9 [ENI, ENA, EFA](#eni-ena-efa)
+* 1.10 [ENI, ENA, EFA](#eni-ena-efa)
+* 1.11 [Shared Responsibility](#shared-responsibility)
 2. [Services](#services)
 * 2.1 [Corretto](#corretto)
 * 2.2 [CloudFormation](#cloudformation)
@@ -68,7 +69,7 @@
 * 2.48 [OpsWorks](#opsworks)
 * 2.49 [SWF](#swf)
 * 2.50 [Data Pipeline](#data-pipeline)
-* 2.51 [CloudSearch](#cloudsearch)
+* 2.51 [ElasticSearch & CloudSearch](#elasticsearch--cloudsearch)
 3. [Networking](#networking)
 * 3.1 [NIC](#nic)
 * 3.2 [Hub, Switch, Router](#hub-switch-router)
@@ -238,6 +239,10 @@ It allows HPC applications to communicate to talk with each other with low laten
 HPC applications - a group of ec2 instances that perform some high load logic. They are written using MPI (Message Passing Interface) and require fact communication between instances.
 EFA ENIs can only be attached at launch or to stopped instances.
 
+###### Shared Responsibility
+AWS use concept of shared responsibility
+* AWS manages security of the cloud (physical devices, datacenters)
+* you manage security in the cloud (route table, NACL, SG)
 
 ### Services
 ###### Corretto 
@@ -1851,9 +1856,17 @@ Example of DP
 * launch transient Amazon EMR cluster, load s3 data, transform it and load transformed data to s3
 * copy transformed data from s3 to RedShift
 
-###### CloudSearch
+###### ElasticSearch & CloudSearch
+ES - open source search service.
 CS - search service like ElasticSearch, but aws proprietary development.
 You should store your data in s3 and then use CS to search this textual data.
+
+ES has 2 types of nodes
+* data nodes - nodes that upload data to ebs and search data
+* master nodes - increase cluster stability by performing cluster management tasks. For prod you should use 3 master nodes.
+
+CS vs ES
+* CS can use s3/DynamoDB, ES - only ebs
 
 ### Networking
 ###### NIC
@@ -2102,7 +2115,7 @@ IaaS (Infrastructure as a Service) - good example is aws that provides infrastru
 The best practice is to use IAC (Infrastructure as a code) - is an idea that you should code how you want to build your infrastructure. For example to run you microservice app you need to have 3 containers. 
 Of course you can manually create all of them, install all needed software there and deploy it. But you can also add script file that would do it all automatically. Most popular tools is Aws CloudFormation and Terraform.
 
-* SaaS - mail service, ELK (elasticsearch, logstash, kibana) stack
+* SaaS - mail service, ELK (ElasticSearch/LogStash/Kibana) stack
 * PaaS - beanstalk, spring cloudfoundry
 * IaaS - almost all other aws services under networking, computing, storage
 

@@ -104,3 +104,4 @@ TargetGroup:
 * add `AWS::RDS::DBSecurityGroup` to rds
 * use ssl encryption with talking with rds mysql server
 * create kms and encrypt someting with it
+* create cloudsearch/elasticsearch clusters and try to put logs from ec2 there
