@@ -36,7 +36,7 @@
 * 2.19 [Well-Architected Tool](#well-architected-tool)
 * 2.20 [VPC](#vpc)
 * 2.21 [Elastic Beanstalk](#elastic-beanstalk)
-* 2.22 [Database Migration Service](#database-migration-service)
+* 2.22 [DMS](#database-migration-service)
 * 2.22 [ELB](#elb)
 * 2.23 [CloudWatch](#cloudwatch)
 * 2.23 [Key Management Service](#key-management-service)
@@ -725,9 +725,9 @@ Anti-pattern
 ###### Kinesis
 It is a platform for streaming data on AWS, making it easy to load and analyze streaming data.
 With Kinesis, you can ingest real-time data such as application logs, website clickstreams, IoT telemetry data, and more into your databases, data lakes, and data warehouses, or build your own real-time applications using this data
-* Kinesis Firehose - load massive volumes of streaming data into AWS (you can configure lambda to transform you data before loading)
+* Kinesis Firehose (near real time) - load massive volumes of streaming data into AWS (you can configure lambda to transform you data before loading)
 Receives stream data and stores it in s3/RedShift/ElasticSearch
-* Kinesis Streams - ability to process the data in the stream.
+* Kinesis Streams (real time) - ability to process the data in the stream.
 Stream for processing data, firehose - for storing them in s3.
 * Kinesis Analytics - analyze streaming data real time with standard SQL
 
@@ -864,7 +864,7 @@ For encryption it uses four-tier hierarchy of encryption keys. These keys are:
 
 ###### QuickSight
 QuickSight - BI (business intelligence) tool, for building visualizations, perform ad-hoc analysis (can connect to all aws data sources).
-
+It's used inside aws infra, so it's for internal users only (not for external).
 
 ###### EC2
 EC2 (Elastic Compute Cloud) - web service that provides resizable compute capacity
@@ -931,11 +931,19 @@ If you have single ec2 and you need to deploy java project there, you can just s
 
 ###### Athena
 Athena is an interactive query service that makes it easy to analyze data in Amazon S3 using standard SQL. 
+Athena uses presto under the hood. Presto - good solution if you need to connect to multiple data sources.
 You don’t need to load your data into Athena, as it works directly with data stored in S3. Athena integrates with Amazon QuickSight for easy visualization.
 It uses managed data catalog (aws glue - ETL tool) to store tables you create from s3.
 AntiPattern
 * Enterprise Reporting and Business Intelligence (for enterprise level it's better to use RedShift, query engine in Redshift has been optimized to perform especially well on data warehouse workloads)
 * ETL Workloads (for etl you should use EMR/Glue)
+
+Be careful cause each time you run query athena scan your s3, so each query would cost some money.
+
+There are 3 types of aws services
+* ec2 - you manage your server (like install mysql there)
+* managed server - aws manages server for yourself (like rds, you just tell how big server you want, aws provision it)
+* serverless/clusterless - aws hides away server from you (athena - you just write query and don't care how many servers would be needed to execute it)
 
 ###### Organizations
 Organizations - service that allows to tie several accounts to master account and centrally manage them (billing, services, policies)
@@ -1149,8 +1157,8 @@ EB using cloudformation template that build your configuration. After successful
 Keep in mind that for prod deployment it's better to use your own cloudformation script and manage infra with it, eb is good for testing purposes, PoC.
 With EB you shouldn't worry about java installed on ec2, if you select java it would automatically install it into ec2 and use coretton as jdk (same true for other popular env like node.js/tomcat and so on..)
 
-###### Database Migration Service
-DMS - used for easy migration between different db (like from MySql to DynamoDB), and also for data replication.
+###### DMS
+Database Migration Service - used for easy migration between different db (like from MySql to DynamoDB), and also for data replication.
 DMS use SCT (Schema Conversion Tool) for converting between existing schemas.
 
 
@@ -1423,6 +1431,10 @@ Although you can use iam to control access to sqs, it's better to use access con
    }]
 }
 ```
+
+You can send messages
+* 256KB - normal sqs message
+* up to 2GB - using java library, [message is stored in s3](https://aws.amazon.com/about-aws/whats-new/2015/10/now-send-payloads-up-to-2gb-with-amazon-sqs/)
 
 
 ###### API Gateway

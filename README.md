@@ -29,9 +29,20 @@ There are 2 main reasons to get it
 * [AWS Well-Architected](https://aws.amazon.com/architecture/well-architected) - read all whitepapers here
 * [SAP Exam Learning Path](https://jayendrapatil.com/aws-certified-solution-architect-professional-exam-learning-path)
 * Read all FAQ & user guide for every AWS service
-
+* [free exam questions](https://www.examtopics.com/exams/amazon/aws-certified-solutions-architect-associate-saa-c02/)
 
 ### TODO
+* change networking & services of places (networking should go first)
+* dynamodb hot partition (what is partition of table)
+* dynamodb streams
+* kubernetes logstash vs fluentd
+* redshift spectrum for query 10 years old results + redshift to query current result => join them together
+* redshift workload management (put short query before long queries)
+* redshift distribution style (redshift slices)
+* https://aws.amazon.com/sagemaker/faqs
+* https://aws.amazon.com/lake-formation/faqs (parquet vs orc)
+* emr presto/spark
+-----------------------------------------------Advanced-----------------------------------------------
 * add vpc to `cloudformation/ec2-cw-recover-alarm.yml` (in case you run it in region where no default vpc)
 * edit all current cf templates => rewrite efs from default SG to custom (cause it's better to explicitly control SG)
 * edit all current cf templates => add SG to RDS with source as SG of webserver
@@ -79,7 +90,6 @@ TargetGroup:
 * try to create aws sso user with permission set and add 1 free app, and then try to login to both aws console & this app
 * Create vpc with custom DHCP options set and create ec2 instance and see it private/public domain name
 * Deploy java app using opsworks stacks
------------------------------------------------Advanced-----------------------------------------------
 * create aws microsoft AD and see how it works
 * create iam identity federation with this AD and with Cognito
 * ClientVPN with security as microsoft AD
@@ -105,3 +115,6 @@ TargetGroup:
 * use ssl encryption with talking with rds mysql server
 * create kms and encrypt someting with it
 * create cloudsearch/elasticsearch clusters and try to put logs from ec2 there
+* create dynamodb lsi & gsi and compare them
+* try emr on t2
+* migrate rds into s3 using dms
