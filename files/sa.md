@@ -1,7 +1,7 @@
 # Solutions Architect Tips
 
 ### Content
-1. [AWS Basics](#aws-basics)
+1. [Basics](#aws-basics)
 * 1.1 [Free Tier & Cost Management](#free-tier--cost-management)
 * 1.2 [Region, AZ, Edge Location](#region-az-edge-location)
 * 1.3 [AWS Well-Architected Framework](#aws-well-architected-framework)
@@ -13,84 +13,83 @@
 * 1.9 [Disaster Recovery](#disaster-recovery)
 * 1.10 [ENI, ENA, EFA](#eni-ena-efa)
 * 1.11 [Shared Responsibility](#shared-responsibility)
-2. [Services](#services)
-* 2.1 [Corretto](#corretto)
-* 2.2 [CloudFormation](#cloudformation)
-* 2.3 [IAM](#iam)
-* 2.4 [S3](#s3)
-* 2.5 [Glacier](#glacier)
-* 2.6 [EFS](#efs)
-* 2.7 [EBS](#ebs)
-* 2.8 [Instance Store](#ec2-instance-store)
-* 2.9 [CloudFront](#cloudfront)
-* 2.10 [Kinesis](#kinesis)
-* 2.10 [Lambda](#lambda)
-* 2.11 [Step Functions](#step-functions)
-* 2.12 [EMR](#emr)
-* 2.13 [Glue](#glue)
-* 2.14 [DynamoDB](#dynamodb)
-* 2.15 [QuickSight](#quicksight)
-* 2.16 [EC2](#ec2)
-* 2.17 [Athena](#athena)
-* 2.18 [Organizations](#organizations)
-* 2.19 [Well-Architected Tool](#well-architected-tool)
-* 2.20 [VPC](#vpc)
-* 2.21 [Elastic Beanstalk](#elastic-beanstalk)
-* 2.22 [DMS](#database-migration-service)
-* 2.22 [ELB](#elb)
-* 2.23 [CloudWatch](#cloudwatch)
-* 2.23 [Key Management Service](#key-management-service)
-* 2.23 [Route53](#route53)
-* 2.24 [RDS](#rds)
-* 2.25 [SQS](#sqs)
-* 2.26 [API Gateway](#api-gateway)
-* 2.26 [Cognito](#cognito)
-* 2.27 [CodePipeline(CodeCommit/CodeBuild/CodeDeploy)](#codepipelinecodecommitcodebuildcodedeploy)
-* 2.28 [Storage Gateway](#storage-gateway)
-* 2.29 [ECS](#ecs)
-* 2.30 [EKS](#eks)
-* 2.31 [Fargate](#fargate)
-* 2.32 [ElastiCache](#elasticache)
-* 2.33 [Systems Manager](#systems-manager)
-* 2.34 [Config](#config)
-* 2.35 [Aurora](#aurora)
-* 2.36 [CloudTrail](#cloudtrail)
-* 2.37 [Certificate Manager](#certificate-manager)
-* 2.38 [Cloud9](#cloud9)
-* 2.39 [CodeStar](#codestar)
-* 2.40 [Rekognition](#rekognition)
-* 2.41 [EC2 Auto Scaling](#ec2-auto-scaling)
-* 2.42 [Global Accelerator](#global-accelerator)
-* 2.43 [FSx](#fsx)
-* 2.44 [VPN](#vpn)
-* 2.45 [Directory Service](#directory-service)
-* 2.46 [Wavelength](#wavelength)
-* 2.47 [SSO](#sso)
-* 2.48 [OpsWorks](#opsworks)
-* 2.49 [SWF](#swf)
-* 2.50 [Data Pipeline](#data-pipeline)
-* 2.51 [ElasticSearch & CloudSearch](#elasticsearch--cloudsearch)
-3. [Networking](#networking)
-* 3.1 [NIC](#nic)
-* 3.2 [Hub, Switch, Router](#hub-switch-router)
-* 3.3 [Network Topology](#network-topology)
-* 3.4 [OSI Network Model](#osi-network-model)
-* 3.5 [High Level Protocols](#high-level-protocols)
-* 3.6 [Low Level Protocols](#low-level-protocols)
-* 3.7 [SOA and CAA](#soa-and-caa)
-* 3.8 [SSL vs TLS vs HTTPS](#ssl-vs-tls-vs-https)
-* 3.9 [Routing](#routing)
-* 3.10 [MTU & Jumbo frame](#mtu--jumbo-frame)
-4. [Miscellaneous](#miscellaneous)
-* 4.1 [SaaS vs PaaS vs IaaS/IAC](#saas-vs-paas-vs-iaasiac)
-* 4.2 [Virtualization and Containerization](#virtualization-and-containerization)
-* 4.3 [Docker and Kubernetes](#docker-and-kubernetes)
-* 4.4 [Pure Serverless](#pure-serverless)
-* 4.5 [AMI vs Snapshot](#ami-vs-snapshot)
-* 4.6 [AWS CLI](#aws-cli)
-* 4.7 [Useful Linux Commands](#useful-linux-commands)
-* 4.8 [Redirect 301 vs 302](#redirect-301-vs-302)
-* 4.9 [Nmap](#nmap)
+* 1.12 [SaaS vs PaaS vs IaaS/IAC](#saas-vs-paas-vs-iaasiac)
+* 1.13 [Virtualization and Containerization](#virtualization-and-containerization)
+* 1.14 [Docker and Kubernetes](#docker-and-kubernetes)
+* 1.15 [Pure Serverless](#pure-serverless)
+* 1.16 [AMI vs Snapshot](#ami-vs-snapshot)
+* 1.17 [AWS CLI](#aws-cli)
+* 1.18 [Useful Linux Commands](#useful-linux-commands)
+* 1.19 [Redirect 301 vs 302](#redirect-301-vs-302)
+2. [Networking](#networking)
+* 2.1 [NIC](#nic)
+* 2.2 [Hub, Switch, Router](#hub-switch-router)
+* 2.3 [Network Topology](#network-topology)
+* 2.4 [OSI Network Model](#osi-network-model)
+* 2.5 [High Level Protocols](#high-level-protocols)
+* 2.6 [Low Level Protocols](#low-level-protocols)
+* 2.7 [SOA and CAA](#soa-and-caa)
+* 2.8 [SSL vs TLS vs HTTPS](#ssl-vs-tls-vs-https)
+* 2.9 [Routing](#routing)
+* 2.10 [MTU & Jumbo frame](#mtu--jumbo-frame)
+* 2.11 [Nmap](#nmap)
+3. [Services](#services)
+* 3.1 [Corretto](#corretto)
+* 3.2 [CloudFormation](#cloudformation)
+* 3.3 [IAM](#iam)
+* 3.4 [S3](#s3)
+* 3.5 [Glacier](#glacier)
+* 3.6 [EFS](#efs)
+* 3.7 [EBS](#ebs)
+* 3.8 [Instance Store](#ec2-instance-store)
+* 3.9 [CloudFront](#cloudfront)
+* 3.10 [Kinesis](#kinesis)
+* 3.10 [Lambda](#lambda)
+* 3.11 [Step Functions](#step-functions)
+* 3.12 [EMR](#emr)
+* 3.13 [Glue](#glue)
+* 3.14 [DynamoDB](#dynamodb)
+* 3.15 [QuickSight](#quicksight)
+* 3.16 [EC2](#ec2)
+* 3.17 [Athena](#athena)
+* 3.18 [Organizations](#organizations)
+* 3.19 [Well-Architected Tool](#well-architected-tool)
+* 3.20 [VPC](#vpc)
+* 3.21 [Elastic Beanstalk](#elastic-beanstalk)
+* 3.22 [DMS](#database-migration-service)
+* 3.22 [ELB](#elb)
+* 3.23 [CloudWatch](#cloudwatch)
+* 3.23 [Key Management Service](#key-management-service)
+* 3.23 [Route53](#route53)
+* 3.24 [RDS](#rds)
+* 3.25 [SQS](#sqs)
+* 3.26 [API Gateway](#api-gateway)
+* 3.26 [Cognito](#cognito)
+* 3.27 [CodePipeline(CodeCommit/CodeBuild/CodeDeploy)](#codepipelinecodecommitcodebuildcodedeploy)
+* 3.28 [Storage Gateway](#storage-gateway)
+* 3.29 [ECS](#ecs)
+* 3.30 [EKS](#eks)
+* 3.31 [Fargate](#fargate)
+* 3.32 [ElastiCache](#elasticache)
+* 3.33 [Systems Manager](#systems-manager)
+* 3.34 [Config](#config)
+* 3.35 [Aurora](#aurora)
+* 3.36 [CloudTrail](#cloudtrail)
+* 3.37 [Certificate Manager](#certificate-manager)
+* 3.38 [Cloud9](#cloud9)
+* 3.39 [CodeStar](#codestar)
+* 3.40 [Rekognition](#rekognition)
+* 3.41 [EC2 Auto Scaling](#ec2-auto-scaling)
+* 3.42 [Global Accelerator](#global-accelerator)
+* 3.43 [FSx](#fsx)
+* 3.44 [VPN](#vpn)
+* 3.45 [Directory Service](#directory-service)
+* 3.46 [Wavelength](#wavelength)
+* 3.47 [SSO](#sso)
+* 3.48 [OpsWorks](#opsworks)
+* 3.49 [SWF](#swf)
+* 3.50 [Data Pipeline](#data-pipeline)
+* 3.51 [ElasticSearch & CloudSearch](#elasticsearch--cloudsearch)
 
 
 
@@ -100,7 +99,7 @@
 
 
 
-### AWS Basics
+### Basics
 ###### Free Tier & Cost Management
 To pass cert and more generally to understand how it works you should get some hands-on experience. But aws can be costly at times, so aws provide so called [free tier](https://aws.amazon.com/free) to play and see how it works.
 Basically there are a few options:
@@ -243,6 +242,423 @@ EFA ENIs can only be attached at launch or to stopped instances.
 AWS use concept of shared responsibility
 * AWS manages security of the cloud (physical devices, datacenters)
 * you manage security in the cloud (route table, NACL, SG)
+
+
+###### SaaS vs PaaS vs IaaS/IAC 
+SaaS (Software as a Service) - if you want to use third-party software like some crm, but don't want to have it staff to install it to every computer in your office you can just use web-service of such crm. In this case crm completely managed by someone else,
+you just can access it from web browser without need to run it and support. Usually it refers to end-user applications.
+
+PaaS (Platform as a Service) - in this case you develop you application (writing code) and just deploy your code without worry about infrastructure. For example if you are using spring framework, you can use [cloud foundry](https://cloud.spring.io/spring-cloud-cloudfoundry/reference/html/)
+and just deploy your code, and it will provide everything else (container, java, spring framework).
+
+
+IaaS (Infrastructure as a Service) - good example is aws that provides infrastructure (like container/networking/storage/database) as services to end users. Compare to other 2 PaaS/SaaS users of IaaS responsible for managing infrastructure themselves. 
+The best practice is to use IAC (Infrastructure as a code) - is an idea that you should code how you want to build your infrastructure. For example to run you microservice app you need to have 3 containers. 
+Of course you can manually create all of them, install all needed software there and deploy it. But you can also add script file that would do it all automatically. Most popular tools is Aws CloudFormation and Terraform.
+
+* SaaS - mail service, ELK (ElasticSearch/LogStash/Kibana) stack
+* PaaS - beanstalk, spring cloudfoundry
+* IaaS - almost all other aws services under networking, computing, storage
+
+###### Virtualization and Containerization
+Hyperviser is Virtual Machine Monitor (VMM), that runs VM. It works as mediator between virtual OS and hardware. By acting as mediator we can run several virtual OS on one hardware. This is the main advantage, cause one OS can run on one hardware only.
+Originally hypervisors developped to give multiple users simultaneous access to computers that performed batch processing. But over time other solutions for many users/single machine problem appeared including time sharing.
+So virtualization is a simulation of physical hardware for virtual OS.
+Containerization on the other hand is like os-level virtualization. Instead of creating a complete new OS, container share resources with host os, but have it's own file system, and by doing so divide itself from main OS.
+
+Virtual machine like ec2 is part of physical machine in aws datacenter. It's isolated from other virtual machines by hypervisor or alike software. 
+* Host - physical machine where all virtual machines are located
+* Guest - virtual machine
+
+###### Docker and Kubernetes
+Docker - is a tool to quickly create and manage containers (like create/stop/start/destroy). But if you have many containers and they all should interact with each other you need some system to manage all of this.
+Kubernetes - is a tool to manage a group of containers. On container level kuber can use docker or any other container tool.
+Deployed kubernetes environment - called cluster and consists of 2 parts
+* control plane - components that control cluster + cluster's state & configuration
+* compute machines - nodes where pods are running 
+
+
+###### Pure Serverless
+With aws serverless you can build complete backend application without writing code(like java) or using any framework (like spring). 
+For example you can use `API Gateway` to set up a few api endpoints. Then you can use `aws lambda` to set up some logic to handle these endpoints. Then you can use `sns` to send some notification, and possible send emails.
+As you see without writing any application code we can have a simple backend application. But the truth is that this is only good for very simple app, usually for POC (proof of concept).
+The reason is once your application become more complex it would be very hard to ensure that everything is working fine, cause you have no tests. 
+So the conclusion is very simple. Use aws serverless only for POC, or when you want quickly to startup, then you can also create a lot of mock api so your team can start to interact with it.
+But once your system become more complex you will definately need to use some programming like java/spring to have a good software architecture of your product and good test coverage that would ensure that nothing would be broken after changes.
+
+Moreover it can be expensive in certain cases. Consider situation where you have 1 lambda that need internet access to do some stuff (like captcha verification or ip address check).
+For this you need NAT, cause your lambda can't just get internet access from private subnet inside VPC. So you go and create nat gateway, and your lambda can now access internet.
+But in the end of the month you get a bill for 50 cents for lambda + 35$ for Nat Gateway. The reason is that Nat Gateway is prices per hour (0.045 on average, 0.065 for HK) + you also paying per GB transfer through your Nat, 
+but for the example let's imagine that you transfer tiny amount of 100mb per month. So instead of having cheap serverless you pay 35.5$ per month, just your lambda sometime can get internet access.
+When [aws support got pressed](https://forums.aws.amazon.com/thread.jspa?threadID=234959) over the issue, the proposed instead of Nat Gateway create custom Nat Instance (ec2 running with nat), and it would cost only 10$.
+But this idea to run additional ec2 to have internet access for single lambda upends serverless. Why do you need lambdas in the first place, when you can just put them into ec2 itself?
+
+
+###### AMI vs Snapshot
+AMI is region specific (so to use it from another region you should copy it) and same ami will have different AMI_ID in different regions.
+There are 2 types of AMI
+* instance-store - copy of the root instance-store volume + metadata in s3
+* ebs-boot - ebs snapshot + metadata (architecture, kernel, AMI name, description, block device mappings)
+Most ami are of second type (ebs-boot). If you need to launch new ec2 from snapshot, you should first convert snapshot into ami and then just launch ami.
+
+Linux AMI virtualization types
+* HVM (Hardware Virtual Machine) - means that virtualization technology using hardware extensions for faster access to resources
+* PV (paravirtual) - boot with a special boot loader called PV-GRUB, which starts the boot cycle and then chain loads the kernel specified in the menu.lst
+
+AMI doesn't include kernel, it's loaded from AKI (Amazon Kernel Image).
+In November 2017 new virtualization came out as Nitro (combines a KVM-based hypervisor with customized hardware (ASICs) aiming to provide a performance that is indistinguishable from bare metal machines)
+
+###### AWS CLI
+CLI (Command Line Interface) - can be useful to quickly automate some aws manual tasks. Internally it just convert cli calls into aws API calls and wrap results into useful format.
+`help` is very useful command working with cli.
+```
+aws help # show all available services
+aws <service> help # show all available actions to perform on selected service
+aws <service> <action> help # shaw all avaialble action options to perform for specified action 
+```
+
+Basic commands
+```
+# get available regions
+aws ec2 describe-regions --profile=awssa
+
+# get available AZ
+aws ec2 describe-availability-zones --region=us-east-1 --profile=awssa
+```
+
+`--query` - use JMESPath - query language for JSON
+```
+# show imageId of first image
+aws ec2 describe-images --query "Images[0].ImageId"
+
+# show state for all images
+aws ec2 describe-images --query "Images[*].State"
+```
+
+* Create new profile to access aws services from console
+```
+aws configure --profile awssa
+```
+
+* There are 3 env variables that overwrites `~/.aws/config` settings
+```
+export AWS_ACCESS_KEY_ID=123
+export AWS_SECRET_ACCESS_KEY=123
+export AWS_DEFAULT_REGION=us-west-2
+```
+Although default region for `awssa` profile is `us-east-1` (you can check it by `aws configure get region --profile=awssa`), if you set region as env var `AWS_DEFAULT_REGION=us-west-1`, and then run `aws configure list --profile=awssa`
+```
+      Name                    Value             Type    Location
+      ----                    -----             ----    --------
+   profile                    awssa           manual    --profile
+access_key     ****************2JQS shared-credentials-file    
+secret_key     ****************Y+na shared-credentials-file    
+    region                us-west-1              env    AWS_DEFAULT_REGION
+```
+So whenever you run any command with this profile and don't specify region (by setting `--region=us-east-1`), region from env var is used (not from your config setting).
+To remove it just unset the variable `unset AWS_DEFAULT_REGION`, and now if you run `aws configure list --profile=awssa` you will see that region is taken from config
+```
+      Name                    Value             Type    Location
+      ----                    -----             ----    --------
+   profile                    awssa           manual    --profile
+access_key     ****************2JQS shared-credentials-file    
+secret_key     ****************Y+na shared-credentials-file    
+    region                us-east-1      config-file    ~/.aws/config
+```
+And you can run commands from console and default region from config file will be used.
+You can set or unset aws env vars in `~/.bashrc` file.
+
+* Get account Id
+```
+# get arn
+aws iam get-user --query "User.Arn" --profile=awssa
+
+# get arn + userId
+aws sts get-caller-identity --profile=awssa
+```
+
+* S3 (create presign url) 
+```
+aws s3 cp cloudformation/vpc/nested/vpc-bastion.yml s3://my-cloudformation-template-bucket --profile=awssa
+aws s3 cp cloudformation/vpc/nested/ec2-bastion.yml s3://my-cloudformation-template-bucket --profile=awssa
+
+# make file public for 30 sec
+aws s3 presign s3://my-cloudformation-template-example/data.txt --expires-in 30 --profile=awssa
+```
+
+* CloudFormation
+```
+# create stack
+aws cloudformation create-stack --stack-name=mystack --template-body=file://cloudformation/condition.yml --profile=awssa --region=us-east-1
+# update stack and pass params
+aws cloudformation update-stack --stack-name=mystack --template-body=file://cloudformation/condition.yml --parameters=ParameterKey=Env,ParameterValue=prod --profile=awssa --region=us-east-1
+# if you are creating a stack that create iam resouce you should explicitly tell to cloudformation that it's ok to create iam resources
+aws cloudformation update-stack --stack-name=logs --template-body=file://cloudformation/ec2-logs.yml --profile=awssa --region=us-east-1 --capabilities=CAPABILITY_IAM
+```
+
+###### Useful Linux Commands
+* List all userNames `cut -d: -f1 /etc/passwd`
+* Get all groups by userName `groups uName`
+* Get userId `id -u uName`
+* Get groupId by groupName `cut -d: -f3 < <(getent group gName)`
+* Get groupId by groupName `cut -d: -f3 < <(getent group gName)`
+* Get number of cores `nproc` - total number of cores, `lscpu` - total info about cpu cores
+* Imitate processor load `stress --cpu 8 --timeout 30` - load 8 cores for 30 sec
+
+###### Redirect 301 vs 302
+There are 2 main codes of redirects (HTTP method can also change)
+* 301 (permanent) - resource was moved permanently and browser should no longer request old url
+* 302 (temporary) - resource was temporary moved to new url, so browser should continue request old url
+
+Redirects without changing http method. They basically the same as 301/302 only difference is that here HTTP method (GET/POST/PUT..) can't change
+* 307 (temporary)
+* 308 (permanent)
+
+
+
+### Networking
+###### NIC
+NIC (Network interface controller) - hardware component to connect computer to network. It implements electronic circuit that operates on both physical & data link layers using either Ethernet/Wi-Fi protocols.
+If you NIC is inside network that using hub, than hub sends all packets to all pc connected to the network. But you NIC process only those that are intended for it (NIC check MAC address, and if it corresponds to address of NIC it sends frame further to CPU).
+Promiscuous mode - you turn off MAC address check, and all packets that are sent to NIC (regardless of destination MAC address) are forwarded to CPU to process. This mode is turned off by default, can be useful for traffic sniffing.
+Traffic sniffing - catch all traffic and analyze it, best tool is [WireShark](https://www.wireshark.org).
+You can detect promiscuous mode by sending a ping (ICMP echo request) with the wrong MAC address but the right IP address. In normal mode NIC would drop packet, but in promiscuous - you would get response.
+It is not possible for ec2 running in promiscuous mode to receive or “sniff” traffic that is intended for a different virtual instance.
+
+Since most modern networks using switch, and it sends data directly to special pc (compare to hub which just replicate packet to everybody in the network), just turning promiscuous mode won't help much, 
+cause switch will route only those packets that are only designated for your NIC, so you can't sniff all network traffic. Hopefully Managed switches provide Port Mirroring (ability to mirror all incoming packets to some specific port, port - is not tcp/udp port but a connection nest inside switch)
+If your switch is not managed and you can't turn on port mirroring in the switch you can employ ARP-Spoofing.
+ARP is used to by switches to get mac address by ip address. So switch basically sends ARP requests to all connected devices, and if IP address in ARP request match device IP address, device responds with MAC address.
+Key here is that switch has no way to verify response. So for all ARP your host can response with it's onw mac address. In this case all packets that switch receives would be transmitted to your host.
+But to operate normally your host should retransmit these packets to their respective owners. In this case you basically embed your host between switch and all other devices. So you can sniff all traffic.
+
+###### Hub, Switch, Router
+* Hub (концентратор) - device that connects multiple computers in LAN (local area network) and propagate any packet sent from one computer to all other. Today mostly outdated, people use switch instead. Works on the physical layer (Layer 1) of OSI. 
+* Bridge (мост) - connect several hubs into single network. Works on OSI layer 2. As hubs, mostly outdated today.
+* Switch (коммутатор) - device that connects multiple computers in LAN, but knows exactly where to send packet of data, 
+it has internal table where it store which port takes which mac address, and at first it sends ARP to get mac addresses, but once table is full it just send packet to desired node. Works on the data link layer (Layer 2) of OSI.
+* Router (маршрутизатор) - small computer that can route the network traffic. Usually used to connect not computers, but networks such as LAN/WAN. Works on (Layer 3).
+* L3 Switch (L3 коммутатор) - switch that can route traffic, work faster than router.
+There are 2 types of Port
+* Physical port - one inside switch/router is the nest where you plug in your network cable
+* Logical port - one inside OS, and it allows OS to route different protocols for the same IP address
+
+###### Network Topology
+Network Topology - is how your computers are arranges and connected with each other. There are 2 types of topology:
+* Physical - how devices are physically connected
+* Logical - how are packets sent in our network
+
+Types of topology
+* Bus (single line) - we have one cable and all computers are connected to it. Disadvantage - if line disruption happens the whole network is broken. Outdated today.
+* Ring - all computers are connected into a ring. Every computer is connected to 2 neighbors. To secure against disruption there is bidirectional-ring network, where all computers connected with 2 cables instead of 1. Outdated today. 
+* Star - all computers are connected to a single switch.
+* Tree - all computers forming a tree with single node(computer or switch) at the top. The difference from star is physical structure.
+* Mesh - all computers are connected to each other. The advantage is high level of security for failures, but disadvantage is that for n computers you need n! direct connections.
+* Hybrid - composed of 2 or more other topologies.
+
+###### OSI Network Model
+There are 7 levels in OSI model, here is the list from lowest to upper
+* Physical layer - how data are physically transferred. Basically they are translated from electrical/light signals into sequence of bits. There are 3 ways exists
+    * Twisted pair (медная витая пара) - data transferred by means of electrical signals in copper
+    * Optical Fiber - transfer data by light inside cable
+    * WiFi - transfer data without cable using radio waves
+* Data Link layer - transfer data inside local network, validate packets. Ethernet and Mac-addresses are on this level.
+* Network layer - transfer data between different networks. IP (Internet Protocol) address is checked on this level.
+* Transport layer - here you can actually transfer data using ports. TCP/UDP works on this level.
+* Session layer - establish and destroy connection between 2 hosts.
+* Presentation layer - encode/decode information passed between 2 hosts.
+* Application layer - apps works on this level by using HTTP/FTP
+
+On each of this layer passed information is called different.
+* Application/Presentation/Session - PDU
+* Transport - TCP - segments, UDP - datagramm
+* Network - packets
+* Data Link - frames
+
+OSI model is not used in practice, only for education purpose, cause it has been developing for 7 years, and many other models were born. One of them is TCP/IP model. In has 4 levels
+* Application layer - include Application/Presentation/Session from OSI
+* Transport layer - Transport layer in OSI
+* Internet layer - Network layer in OSI
+* Link layer - Data Link + Physical in OSI
+
+There were other models like AppleTalk or IPX/SPX, but they were outdated and nowdays only TCP/IP is mostly used. It also called sometimes DoD (department of defense) cause it was originally developed by USA defense department.
+
+###### High Level Protocols
+These protocols include: HTTP, DNS, DHCP, SMTP, POP3, Telnet, SSH, FTP.
+To better understand these protocols you can download [Cisco Packet Tracer](https://www.netacad.com/courses/packet-tracer) that can help you build networks and see how it all works.
+
+* HTTP(HyperText Transport Protocol, 80)/HTTPS(HyperText Transport Protocol Secure, 443) - client-server data exchange. headers are
+```
+GET / HTTP/1.1
+Host: 192.168.1.10
+```
+* DNS(Domain Name System, 53) - hostname-to-ip resolver. In linux we have `/etc/hosts` - basically same local dns that resolve hostnames. It has priority over external dns server.
+* DHCP(Dynamic Host Configuration Protocol) - allows to dynamically set IP-address, subnet, dns name to remote hosts.
+* POP3(Post Office Protocol Version 3, 110, POP3S-995) - work on get-and-delete principle. Client connect to server, download new mails, and sent delete message to server.
+* IMAP(Internet Message Access Protocol, 143) - more complex analogy of pop3, don't remove messages from server.
+* SMTP(Simple Mail Transfer Protocol, 25) - send mail to mail server.
+* Telnet(terminal network, 23) - allows to communicate with remote OS by sending unencrypted text data. Nowdays mostly outdated and replaced by ssh.
+* SSH(Secure Shell, 22) - like telnet, but exchange encrypted data
+* FTP(File Transfer Protocol, 20) - transfer file to server
+
+###### Low Level Protocols
+* ICMP (Internet Control Message Protocol) - located at network layer - error reporting and query service.
+Ping command use ICMP echo to determine availability of some destination
+* Mac address - unique address of every network device, consists of 48 bits (12 symbols), first 24 - set by IEEE, another 24 - by manufacturer (example: 005555.001234).
+* ARP (Address Resolution Protocol) - used to discover link layer address (mac-address) associated with given network layer address (ip-address). For for IPv4. You can play with in in linux by `arp --help`.
+* NDP (Neighbor Discovery Protocol) - same as ARP, only for IPv6
+* NAT (Network Address Translation) - if you have 1 public IP address that's visible to whole world, and also have a private network with lots of computers there, and you want to route specific request to some computer in your network your router will use NAT. 
+It will change headers in packet and resend it to particular IP address inside private network.
+When you make request from your private ip address 192.168.0.1 to google.com, your router will substitute your ip with it's public ip address. Google will respond to router public ip address and router will got this response, and then will redirect this response back to your machine.
+* IP address - divided between public and private (used for local networks) 
+Private networks:
+10.0.0.0 — 10.255.255.255, subnet mask => 255.0.0.0 (10/8, 24 bits), mostly used in work-related networks.
+172.16.0.0 — 172.31.255.255, subnet mask => 255.240.0.0 (172.16/12, 20 bits), mostly not used anywhere.
+192.168.0.0 — 192.168.255.255 subnet mask => 255.255.0.0 (192.168/16, 16 bits), mostly used in home-related networks.
+* Subnet mask - used to divide ip address into 2 parts: network + host. 
+192.168.0.0/16 - first 16 bytes - network, last - ip address, totally there can be 2**16=65536 ip addresses.
+192.168.0.0/24 - first 24 bytes - network, last 8 - ip address totally 2**8 = 256 ip addresses.
+192.168.0.0/28 - first 28 bytes - network, last 4 - ip address, totally 2**5 = 16 ip addresses.
+So by knowing subnet mask we can determine if 2 ip addresses are on the same network.
+There are 5 classes of network:
+A - subnet /8, first octet => 0-127
+B - subnet /16, first octet => 128-191
+C - subnet /24, first octet => 192-223
+In every network first(all zeros) and last (all ones) are 
+0 - specifies network
+255 - broadcast a message to every host on a network (ARP)
+* Gateway - router specified on a host, which links the host's subnet to other networks. For ordinary users gateway - is Internet provider, cause it connects them to Internet.
+Gateways regulate traffic between two dissimilar networks, while routers regulate traffic between similar networks
+Default gateway - ip address in router for particular network (for every network including Internet router will have it's own ip address)
+When you send packet, tcp/ip will use subnet mask to determine if ip address in the same subnet, it this is the case it will send packet futrher, if false - it will send it to default gateway.
+* CIDR (Classless Inter-Domain Routing) - replace classful network (A-D classes) and allocate ip-addresses without bind it to any class network. Based on VLSM.
+* VLSM (Variable Length Subnet Mask) - when we divide a network into subnet with different length.
+Suppose we have a network 192.168.0.1/24 - totally 254 addresses(actually total - 256, but first and last are reserved)
+We need to divide it into 4 subnets with 10, 50, 2 and 20 hosts. Although we can equally divide our network on 4 and have 64 ip-addresses in each, it's better not to give way more than needed
+In this case we can divide it on min power 2. 
+10 => 16(2**4)
+2 => 4 (2**2)
+50 => 64(2**6)
+20 => 32(2**5)
+* Routing table - a list of ip-addresses and subnet masks of all networks connected to the router, stored in router RAM.
+* VPN (Virtual Private Network) - encrypted connection(also called tunnel) over public network (usually Internet) between 2 or more private networks. It encrypt packet, add new headers.
+Split tunnel. By default all traffic (both to external resources like google.com and to on-premise network) goes through vpn tunnel. But this can be a problem, cause it may overload tunnel.
+To solve this issue there is split of tunnel so based on destination packets are go either though vpn tunnel or directly to internet (take a look at `files/images/vpn-split-tunneling.svg`)
+* iSCSI (Internet Small Computer Systems Interface) - transport layer protocol, works above TCP. Initiator (server) packages SCSI commands into network packets, and sends it to Target (remote storage).
+
+For all subnets you shouldn't use first & last address
+* first address - network identification (refers to the subnet itself and is used for routing purposes)
+Look at the binary representations for the ip address and the subnet mask. In the process of determining the route they are binary combined with AND. 1&0=0, 1&1=1, 0&0=0. The network part of the address remains unaffected, but the host part becomes all-zero. If you could use the .0 address for a host too, how would you different it from the net?
+* last address - broadcast (network devices use it to send messages to all other devices in this network)
+So for /24 network you can have totally 256-2 = 254 IP addresses.
+But in cloud (every cloud, not just aws) 3 IP addresses also would be gone (router, DHCP, DNS) so totally you have 254-3 = 251.
+But in real network you probably gonna have this 3 ip taken also (but you can also host them in one machine)
+
+###### SOA and CAA
+SOA (Start of Authority) - record in DNS containing administrative info about zone, email, last update time.
+You can use dig (domain information groper) utility to group(grip/get) information about dns
+
+You can get it by `dig SOA +multiline google.com`, email is `root@amazon.com`
+```
+amazon.com.		900 IN SOA dns-external-master.amazon.com. root.amazon.com. (
+				2010126527 ; serial
+				180        ; refresh (3 minutes)
+				60         ; retry (1 minute)
+				3024000    ; expire (5 weeks)
+				60         ; minimum (1 minute)
+				)
+
+```
+ 
+CAA (Certification Authority Authorization) - list of autorities who can issue certificates for this domain. You can run `dig CAA +multiline google.com`
+```
+;; ANSWER SECTION:
+google.com.		86400 IN CAA 0 issue "pki.goog"
+```
+
+###### SSL vs TLS vs HTTPS
+SSL (Secure Sockets Layers) - outdated protocol not used today. TLS (Transport Layer Security) - main security protocol used today.
+So you can call TLS more updated & secure version of SSL. But we still call our digital certs as SSL certificates, but in reality when you buy SSL certificate from DigiCert you are buying most up-to-date TLS certificate.
+HTTPS means that our HTTP traffic is secured by TLS protocol with SSL(TLS) certificate.
+
+CA (Certificate Authority) - entity that issues digital trusted certificates (certifies the ownership of a public key by the named subject of the certificate).
+Certificate prevents man-in-the-middle attack by encrypting all packets sent to server with certificate's public key, and on the server side everything is decrypted using private key.
+There are public (low ubiquity, issues certificates for free, like [Let's encrypt](https://letsencrypt.org/getting-started/)) and commercial(high ubiquity, charge you for issuing certificate) CA out there.
+Ubiquity - quantity of internet browsers, other devices and applications which trust a particular CA.
+SSL certificates are verified and issued by a CA. If you are using aws, everything is done inside, and certificate is generated for you.
+But you can also generate public/private keys using `openssl`, and then generate CSR and reqeust CA to issue certificate for you.
+CSR (Certificate Signing Request) - request signed with private key that contains vital information about your organization and domain, so it
+is an encrypted block of text that includes your organization’s information, such as country, email address, fully qualified domain name, etc. It is sent to the Certificate Authority when applying for an SSL certificate.
+Most detailed info [here](https://letsencrypt.org/how-it-works/)
+
+###### Routing
+Routing - process to select path between different networks using 5 addressing method (association)
+* `unicast` - one-to-one between a sender and destination (each destination address uniquely identifies a single receiver endpoint)
+* `broadcast` - one-to-all (single datagram from one sender is routed to all of the possibly multiple endpoints associated with the broadcast address)
+* `multicast` - one-to-many (datagrams are routed simultaneously in a single transmission to many recipients)
+* `anycast` - one-to-nearest (datagrams are routed to any single member of a group of potential receivers that are all identified by the same destination address)
+it allows for multiple machines to share same IP address, and send user request based of the user proximity to server.
+So if one datacenter would go offline, anycast would forward user to the next closest datacenter.
+It's based on BGP and AS. With unicast path would lead to one destination, no matter what distance is.
+* `geocast` - delivery of information to a group of destinations in a network identified by their geographical locations
+
+routing protocol
+* EGP (External Gateway Protocol) - based on based on tree-like (i.e., hierarchical) topologies.
+As internet grows EGP become inefficient to find the quickest route, so new protocol was developed
+AS (Autonomous System) architecture (represented by unique number called an ASN).
+Each AS controls a collection of connected routing prefixes, representing a range of IP addresses. It then determines the routing policy inside the network.
+* BGP (Border Gateway Protocol) - makes internet to work.
+It works like GPS (the best route is determined by different factors, such as traffic congestion, roads temporarily closed for maintenance, etc).
+BGP is designed to exchange routing and reachability information between autonomous systems on the Internet
+
+###### MTU & Jumbo frame
+PDU (Protocol data unit) - single unit of information transmitted between 2 computers. At each layer PDU has it's own name
+* TCP - segment
+* UDP - datagram
+* IP - packet
+
+MTU (Maximum transmission unit) - max size of PDU that can be transferred in single network layer transaction. MTU for Ethernet is 1500 bytes.
+
+Jumbo frame - ethernet frame with more than 1500 bytes MTU, usually up to 9000. 
+The idea is that it's easy to process the contents of single large frame instread of many smaller frames.
+
+You can test all of this with `ping` command
+```
+# by default 84 bytes of data transfered
+ping google.com
+# PING google.com (172.217.161.142) 56(84) bytes of data.
+
+# 1500 is max size
+ping -s 1472 google.com
+# PING google.com (172.217.161.142) 1472(1500) bytes of data.
+
+# if you try more, ping won't work
+ping -s 1473 google.com
+#PING google.com (172.217.161.142) 1473(1501) bytes of data.
+
+# you can force to run large frame
+ping -M do -s 9000 google.com
+# PING google.com (172.217.161.142) 9000(9028) bytes of data.
+# ping: local error: Message too long, mtu=1500
+```
+
+###### Nmap
+Nmap (Network Mapper) - free and open-source utility for network discovery and security auditing.
+First you have to install it `sudo apt-get install nmap -y`. After check version `nmap --version`.
+Nmap - utility to listen and check for available ports. Create ec2 in public network with all icmp and ssh open in SG.
+Then you can scan ports `nmap -Pn 34.207.196.102`. `-Pn` - just check port, without pinging host machine first (useful if icmp protocol turned off by SG).
+```
+Starting Nmap 7.60 ( https://nmap.org ) at 2020-08-14 10:21 HKT
+Nmap scan report for ec2-34-207-196-102.compute-1.amazonaws.com (34.207.196.102)
+Host is up (0.25s latency).
+Not shown: 999 filtered ports
+PORT   STATE SERVICE
+22/tcp open  ssh
+
+Nmap done: 1 IP address (1 host up) scanned in 20.69 seconds
+```
+Nmap check for which port app exist. So even if you open all traffic in SG, namp would show only those ports that have underlying app.
+So in SG you just open ports, if no app exists for this port in ec2, nmap won't see it, cause there is nobody to talk with.
 
 ### Services
 ###### Corretto 
@@ -1885,428 +2301,4 @@ ES has 2 types of nodes
 
 CS vs ES
 * CS can use s3/DynamoDB, ES - only ebs
-
-### Networking
-###### NIC
-NIC (Network interface controller) - hardware component to connect computer to network. It implements electronic circuit that operates on both physical & data link layers using either Ethernet/Wi-Fi protocols.
-If you NIC is inside network that using hub, than hub sends all packets to all pc connected to the network. But you NIC process only those that are intended for it (NIC check MAC address, and if it corresponds to address of NIC it sends frame further to CPU).
-Promiscuous mode - you turn off MAC address check, and all packets that are sent to NIC (regardless of destination MAC address) are forwarded to CPU to process. This mode is turned off by default, can be useful for traffic sniffing.
-Traffic sniffing - catch all traffic and analyze it, best tool is [WireShark](https://www.wireshark.org).
-You can detect promiscuous mode by sending a ping (ICMP echo request) with the wrong MAC address but the right IP address. In normal mode NIC would drop packet, but in promiscuous - you would get response.
-It is not possible for ec2 running in promiscuous mode to receive or “sniff” traffic that is intended for a different virtual instance.
-
-Since most modern networks using switch, and it sends data directly to special pc (compare to hub which just replicate packet to everybody in the network), just turning promiscuous mode won't help much, 
-cause switch will route only those packets that are only designated for your NIC, so you can't sniff all network traffic. Hopefully Managed switches provide Port Mirroring (ability to mirror all incoming packets to some specific port, port - is not tcp/udp port but a connection nest inside switch)
-If your switch is not managed and you can't turn on port mirroring in the switch you can employ ARP-Spoofing.
-ARP is used to by switches to get mac address by ip address. So switch basically sends ARP requests to all connected devices, and if IP address in ARP request match device IP address, device responds with MAC address.
-Key here is that switch has no way to verify response. So for all ARP your host can response with it's onw mac address. In this case all packets that switch receives would be transmitted to your host.
-But to operate normally your host should retransmit these packets to their respective owners. In this case you basically embed your host between switch and all other devices. So you can sniff all traffic.
-
-
-###### Hub, Switch, Router
-* Hub (концентратор) - device that connects multiple computers in LAN (local area network) and propagate any packet sent from one computer to all other. Today mostly outdated, people use switch instead. Works on the physical layer (Layer 1) of OSI. 
-* Bridge (мост) - connect several hubs into single network. Works on OSI layer 2. As hubs, mostly outdated today.
-* Switch (коммутатор) - device that connects multiple computers in LAN, but knows exactly where to send packet of data, 
-it has internal table where it store which port takes which mac address, and at first it sends ARP to get mac addresses, but once table is full it just send packet to desired node. Works on the data link layer (Layer 2) of OSI.
-* Router (маршрутизатор) - small computer that can route the network traffic. Usually used to connect not computers, but networks such as LAN/WAN. Works on (Layer 3).
-* L3 Switch (L3 коммутатор) - switch that can route traffic, work faster than router.
-There are 2 types of Port
-* Physical port - one inside switch/router is the nest where you plug in your network cable
-* Logical port - one inside OS, and it allows OS to route different protocols for the same IP address
-
-###### Network Topology
-Network Topology - is how your computers are arranges and connected with each other. There are 2 types of topology:
-* Physical - how devices are physically connected
-* Logical - how are packets sent in our network
-
-Types of topology
-* Bus (single line) - we have one cable and all computers are connected to it. Disadvantage - if line disruption happens the whole network is broken. Outdated today.
-* Ring - all computers are connected into a ring. Every computer is connected to 2 neighbors. To secure against disruption there is bidirectional-ring network, where all computers connected with 2 cables instead of 1. Outdated today. 
-* Star - all computers are connected to a single switch.
-* Tree - all computers forming a tree with single node(computer or switch) at the top. The difference from star is physical structure.
-* Mesh - all computers are connected to each other. The advantage is high level of security for failures, but disadvantage is that for n computers you need n! direct connections.
-* Hybrid - composed of 2 or more other topologies.
-
-
-###### OSI Network Model
-There are 7 levels in OSI model, here is the list from lowest to upper
-* Physical layer - how data are physically transferred. Basically they are translated from electrical/light signals into sequence of bits. There are 3 ways exists
-    * Twisted pair (медная витая пара) - data transferred by means of electrical signals in copper
-    * Optical Fiber - transfer data by light inside cable
-    * WiFi - transfer data without cable using radio waves
-* Data Link layer - transfer data inside local network, validate packets. Ethernet and Mac-addresses are on this level.
-* Network layer - transfer data between different networks. IP (Internet Protocol) address is checked on this level.
-* Transport layer - here you can actually transfer data using ports. TCP/UDP works on this level.
-* Session layer - establish and destroy connection between 2 hosts.
-* Presentation layer - encode/decode information passed between 2 hosts.
-* Application layer - apps works on this level by using HTTP/FTP
-
-On each of this layer passed information is called different.
-* Application/Presentation/Session - PDU
-* Transport - TCP - segments, UDP - datagramm
-* Network - packets
-* Data Link - frames
-
-OSI model is not used in practice, only for education purpose, cause it has been developing for 7 years, and many other models were born. One of them is TCP/IP model. In has 4 levels
-* Application layer - include Application/Presentation/Session from OSI
-* Transport layer - Transport layer in OSI
-* Internet layer - Network layer in OSI
-* Link layer - Data Link + Physical in OSI
-
-There were other models like AppleTalk or IPX/SPX, but they were outdated and nowdays only TCP/IP is mostly used. It also called sometimes DoD (department of defense) cause it was originally developed by USA defense department.
-
-
-###### High Level Protocols
-These protocols include: HTTP, DNS, DHCP, SMTP, POP3, Telnet, SSH, FTP.
-To better understand these protocols you can download [Cisco Packet Tracer](https://www.netacad.com/courses/packet-tracer) that can help you build networks and see how it all works.
-
-* HTTP(HyperText Transport Protocol, 80)/HTTPS(HyperText Transport Protocol Secure, 443) - client-server data exchange. headers are
-```
-GET / HTTP/1.1
-Host: 192.168.1.10
-```
-* DNS(Domain Name System, 53) - hostname-to-ip resolver. In linux we have `/etc/hosts` - basically same local dns that resolve hostnames. It has priority over external dns server.
-* DHCP(Dynamic Host Configuration Protocol) - allows to dynamically set IP-address, subnet, dns name to remote hosts.
-* POP3(Post Office Protocol Version 3, 110, POP3S-995) - work on get-and-delete principle. Client connect to server, download new mails, and sent delete message to server.
-* IMAP(Internet Message Access Protocol, 143) - more complex analogy of pop3, don't remove messages from server.
-* SMTP(Simple Mail Transfer Protocol, 25) - send mail to mail server.
-* Telnet(terminal network, 23) - allows to communicate with remote OS by sending unencrypted text data. Nowdays mostly outdated and replaced by ssh.
-* SSH(Secure Shell, 22) - like telnet, but exchange encrypted data
-* FTP(File Transfer Protocol, 20) - transfer file to server
-
-
-###### Low Level Protocols
-* ICMP (Internet Control Message Protocol) - located at network layer - error reporting and query service.
-Ping command use ICMP echo to determine availability of some destination
-* Mac address - unique address of every network device, consists of 48 bits (12 symbols), first 24 - set by IEEE, another 24 - by manufacturer (example: 005555.001234).
-* ARP (Address Resolution Protocol) - used to discover link layer address (mac-address) associated with given network layer address (ip-address). For for IPv4. You can play with in in linux by `arp --help`.
-* NDP (Neighbor Discovery Protocol) - same as ARP, only for IPv6
-* NAT (Network Address Translation) - if you have 1 public IP address that's visible to whole world, and also have a private network with lots of computers there, and you want to route specific request to some computer in your network your router will use NAT. 
-It will change headers in packet and resend it to particular IP address inside private network.
-When you make request from your private ip address 192.168.0.1 to google.com, your router will substitute your ip with it's public ip address. Google will respond to router public ip address and router will got this response, and then will redirect this response back to your machine.
-* IP address - divided between public and private (used for local networks) 
-Private networks:
-10.0.0.0 — 10.255.255.255, subnet mask => 255.0.0.0 (10/8, 24 bits), mostly used in work-related networks.
-172.16.0.0 — 172.31.255.255, subnet mask => 255.240.0.0 (172.16/12, 20 bits), mostly not used anywhere.
-192.168.0.0 — 192.168.255.255 subnet mask => 255.255.0.0 (192.168/16, 16 bits), mostly used in home-related networks.
-* Subnet mask - used to divide ip address into 2 parts: network + host. 
-192.168.0.0/16 - first 16 bytes - network, last - ip address, totally there can be 2**16=65536 ip addresses.
-192.168.0.0/24 - first 24 bytes - network, last 8 - ip address totally 2**8 = 256 ip addresses.
-192.168.0.0/28 - first 28 bytes - network, last 4 - ip address, totally 2**5 = 16 ip addresses.
-So by knowing subnet mask we can determine if 2 ip addresses are on the same network.
-There are 5 classes of network:
-A - subnet /8, first octet => 0-127
-B - subnet /16, first octet => 128-191
-C - subnet /24, first octet => 192-223
-In every network first(all zeros) and last (all ones) are 
-0 - specifies network
-255 - broadcast a message to every host on a network (ARP)
-* Gateway - router specified on a host, which links the host's subnet to other networks. For ordinary users gateway - is Internet provider, cause it connects them to Internet.
-Gateways regulate traffic between two dissimilar networks, while routers regulate traffic between similar networks
-Default gateway - ip address in router for particular network (for every network including Internet router will have it's own ip address)
-When you send packet, tcp/ip will use subnet mask to determine if ip address in the same subnet, it this is the case it will send packet futrher, if false - it will send it to default gateway.
-* CIDR (Classless Inter-Domain Routing) - replace classful network (A-D classes) and allocate ip-addresses without bind it to any class network. Based on VLSM.
-* VLSM (Variable Length Subnet Mask) - when we divide a network into subnet with different length.
-Suppose we have a network 192.168.0.1/24 - totally 254 addresses(actually total - 256, but first and last are reserved)
-We need to divide it into 4 subnets with 10, 50, 2 and 20 hosts. Although we can equally divide our network on 4 and have 64 ip-addresses in each, it's better not to give way more than needed
-In this case we can divide it on min power 2. 
-10 => 16(2**4)
-2 => 4 (2**2)
-50 => 64(2**6)
-20 => 32(2**5)
-* Routing table - a list of ip-addresses and subnet masks of all networks connected to the router, stored in router RAM.
-* VPN (Virtual Private Network) - encrypted connection(also called tunnel) over public network (usually Internet) between 2 or more private networks. It encrypt packet, add new headers.
-Split tunnel. By default all traffic (both to external resources like google.com and to on-premise network) goes through vpn tunnel. But this can be a problem, cause it may overload tunnel.
-To solve this issue there is split of tunnel so based on destination packets are go either though vpn tunnel or directly to internet (take a look at `files/images/vpn-split-tunneling.svg`)
-* iSCSI (Internet Small Computer Systems Interface) - transport layer protocol, works above TCP. Initiator (server) packages SCSI commands into network packets, and sends it to Target (remote storage).
-
-For all subnets you shouldn't use first & last address
-* first address - network identification (refers to the subnet itself and is used for routing purposes)
-Look at the binary representations for the ip address and the subnet mask. In the process of determining the route they are binary combined with AND. 1&0=0, 1&1=1, 0&0=0. The network part of the address remains unaffected, but the host part becomes all-zero. If you could use the .0 address for a host too, how would you different it from the net?
-* last address - broadcast (network devices use it to send messages to all other devices in this network)
-So for /24 network you can have totally 256-2 = 254 IP addresses.
-But in cloud (every cloud, not just aws) 3 IP addresses also would be gone (router, DHCP, DNS) so totally you have 254-3 = 251.
-But in real network you probably gonna have this 3 ip taken also (but you can also host them in one machine)
-
-
-
-###### SOA and CAA
-SOA (Start of Authority) - record in DNS containing administrative info about zone, email, last update time.
-You can use dig (domain information groper) utility to group(grip/get) information about dns
-
-You can get it by `dig SOA +multiline google.com`, email is `root@amazon.com`
-```
-amazon.com.		900 IN SOA dns-external-master.amazon.com. root.amazon.com. (
-				2010126527 ; serial
-				180        ; refresh (3 minutes)
-				60         ; retry (1 minute)
-				3024000    ; expire (5 weeks)
-				60         ; minimum (1 minute)
-				)
-
-```
- 
-CAA (Certification Authority Authorization) - list of autorities who can issue certificates for this domain. You can run `dig CAA +multiline google.com`
-```
-;; ANSWER SECTION:
-google.com.		86400 IN CAA 0 issue "pki.goog"
-```
-
-
-###### SSL vs TLS vs HTTPS
-SSL (Secure Sockets Layers) - outdated protocol not used today. TLS (Transport Layer Security) - main security protocol used today.
-So you can call TLS more updated & secure version of SSL. But we still call our digital certs as SSL certificates, but in reality when you buy SSL certificate from DigiCert you are buying most up-to-date TLS certificate.
-HTTPS means that our HTTP traffic is secured by TLS protocol with SSL(TLS) certificate.
-
-CA (Certificate Authority) - entity that issues digital trusted certificates (certifies the ownership of a public key by the named subject of the certificate).
-Certificate prevents man-in-the-middle attack by encrypting all packets sent to server with certificate's public key, and on the server side everything is decrypted using private key.
-There are public (low ubiquity, issues certificates for free, like [Let's encrypt](https://letsencrypt.org/getting-started/)) and commercial(high ubiquity, charge you for issuing certificate) CA out there.
-Ubiquity - quantity of internet browsers, other devices and applications which trust a particular CA.
-SSL certificates are verified and issued by a CA. If you are using aws, everything is done inside, and certificate is generated for you.
-But you can also generate public/private keys using `openssl`, and then generate CSR and reqeust CA to issue certificate for you.
-CSR (Certificate Signing Request) - request signed with private key that contains vital information about your organization and domain, so it
-is an encrypted block of text that includes your organization’s information, such as country, email address, fully qualified domain name, etc. It is sent to the Certificate Authority when applying for an SSL certificate.
-Most detailed info [here](https://letsencrypt.org/how-it-works/)
-
-
-###### Routing
-Routing - process to select path between different networks using 5 addressing method (association)
-* `unicast` - one-to-one between a sender and destination (each destination address uniquely identifies a single receiver endpoint)
-* `broadcast` - one-to-all (single datagram from one sender is routed to all of the possibly multiple endpoints associated with the broadcast address)
-* `multicast` - one-to-many (datagrams are routed simultaneously in a single transmission to many recipients)
-* `anycast` - one-to-nearest (datagrams are routed to any single member of a group of potential receivers that are all identified by the same destination address)
-it allows for multiple machines to share same IP address, and send user request based of the user proximity to server.
-So if one datacenter would go offline, anycast would forward user to the next closest datacenter.
-It's based on BGP and AS. With unicast path would lead to one destination, no matter what distance is.
-* `geocast` - delivery of information to a group of destinations in a network identified by their geographical locations
-
-routing protocol
-* EGP (External Gateway Protocol) - based on based on tree-like (i.e., hierarchical) topologies.
-As internet grows EGP become inefficient to find the quickest route, so new protocol was developed
-AS (Autonomous System) architecture (represented by unique number called an ASN).
-Each AS controls a collection of connected routing prefixes, representing a range of IP addresses. It then determines the routing policy inside the network.
-* BGP (Border Gateway Protocol) - makes internet to work.
-It works like GPS (the best route is determined by different factors, such as traffic congestion, roads temporarily closed for maintenance, etc).
-BGP is designed to exchange routing and reachability information between autonomous systems on the Internet
-
-###### MTU & Jumbo frame
-PDU (Protocol data unit) - single unit of information transmitted between 2 computers. At each layer PDU has it's own name
-* TCP - segment
-* UDP - datagram
-* IP - packet
-
-MTU (Maximum transmission unit) - max size of PDU that can be transferred in single network layer transaction. MTU for Ethernet is 1500 bytes.
-
-Jumbo frame - ethernet frame with more than 1500 bytes MTU, usually up to 9000. 
-The idea is that it's easy to process the contents of single large frame instread of many smaller frames.
-
-You can test all of this with `ping` command
-```
-# by default 84 bytes of data transfered
-ping google.com
-# PING google.com (172.217.161.142) 56(84) bytes of data.
-
-# 1500 is max size
-ping -s 1472 google.com
-# PING google.com (172.217.161.142) 1472(1500) bytes of data.
-
-# if you try more, ping won't work
-ping -s 1473 google.com
-#PING google.com (172.217.161.142) 1473(1501) bytes of data.
-
-# you can force to run large frame
-ping -M do -s 9000 google.com
-# PING google.com (172.217.161.142) 9000(9028) bytes of data.
-# ping: local error: Message too long, mtu=1500
-```
-
-### Miscellaneous
-###### SaaS vs PaaS vs IaaS/IAC 
-SaaS (Software as a Service) - if you want to use third-party software like some crm, but don't want to have it staff to install it to every computer in your office you can just use web-service of such crm. In this case crm completely managed by someone else,
-you just can access it from web browser without need to run it and support. Usually it refers to end-user applications.
-
-PaaS (Platform as a Service) - in this case you develop you application (writing code) and just deploy your code without worry about infrastructure. For example if you are using spring framework, you can use [cloud foundry](https://cloud.spring.io/spring-cloud-cloudfoundry/reference/html/)
-and just deploy your code, and it will provide everything else (container, java, spring framework).
-
-
-IaaS (Infrastructure as a Service) - good example is aws that provides infrastructure (like container/networking/storage/database) as services to end users. Compare to other 2 PaaS/SaaS users of IaaS responsible for managing infrastructure themselves. 
-The best practice is to use IAC (Infrastructure as a code) - is an idea that you should code how you want to build your infrastructure. For example to run you microservice app you need to have 3 containers. 
-Of course you can manually create all of them, install all needed software there and deploy it. But you can also add script file that would do it all automatically. Most popular tools is Aws CloudFormation and Terraform.
-
-* SaaS - mail service, ELK (ElasticSearch/LogStash/Kibana) stack
-* PaaS - beanstalk, spring cloudfoundry
-* IaaS - almost all other aws services under networking, computing, storage
-
-###### Virtualization and Containerization
-Hyperviser is Virtual Machine Monitor (VMM), that runs VM. It works as mediator between virtual OS and hardware. By acting as mediator we can run several virtual OS on one hardware. This is the main advantage, cause one OS can run on one hardware only.
-Originally hypervisors developped to give multiple users simultaneous access to computers that performed batch processing. But over time other solutions for many users/single machine problem appeared including time sharing.
-So virtualization is a simulation of physical hardware for virtual OS.
-Containerization on the other hand is like os-level virtualization. Instead of creating a complete new OS, container share resources with host os, but have it's own file system, and by doing so divide itself from main OS.
-
-Virtual machine like ec2 is part of physical machine in aws datacenter. It's isolated from other virtual machines by hypervisor or alike software. 
-* Host - physical machine where all virtual machines are located
-* Guest - virtual machine
-
-###### Docker and Kubernetes
-Docker - is a tool to quickly create and manage containers (like create/stop/start/destroy). But if you have many containers and they all should interact with each other you need some system to manage all of this.
-Kubernetes - is a tool to manage a group of containers. On container level kuber can use docker or any other container tool.
-Deployed kubernetes environment - called cluster and consists of 2 parts
-* control plane - components that control cluster + cluster's state & configuration
-* compute machines - nodes where pods are running 
-
-
-###### Pure Serverless
-With aws serverless you can build complete backend application without writing code(like java) or using any framework (like spring). 
-For example you can use `API Gateway` to set up a few api endpoints. Then you can use `aws lambda` to set up some logic to handle these endpoints. Then you can use `sns` to send some notification, and possible send emails.
-As you see without writing any application code we can have a simple backend application. But the truth is that this is only good for very simple app, usually for POC (proof of concept).
-The reason is once your application become more complex it would be very hard to ensure that everything is working fine, cause you have no tests. 
-So the conclusion is very simple. Use aws serverless only for POC, or when you want quickly to startup, then you can also create a lot of mock api so your team can start to interact with it.
-But once your system become more complex you will definately need to use some programming like java/spring to have a good software architecture of your product and good test coverage that would ensure that nothing would be broken after changes.
-
-Moreover it can be expensive in certain cases. Consider situation where you have 1 lambda that need internet access to do some stuff (like captcha verification or ip address check).
-For this you need NAT, cause your lambda can't just get internet access from private subnet inside VPC. So you go and create nat gateway, and your lambda can now access internet.
-But in the end of the month you get a bill for 50 cents for lambda + 35$ for Nat Gateway. The reason is that Nat Gateway is prices per hour (0.045 on average, 0.065 for HK) + you also paying per GB transfer through your Nat, 
-but for the example let's imagine that you transfer tiny amount of 100mb per month. So instead of having cheap serverless you pay 35.5$ per month, just your lambda sometime can get internet access.
-When [aws support got pressed](https://forums.aws.amazon.com/thread.jspa?threadID=234959) over the issue, the proposed instead of Nat Gateway create custom Nat Instance (ec2 running with nat), and it would cost only 10$.
-But this idea to run additional ec2 to have internet access for single lambda upends serverless. Why do you need lambdas in the first place, when you can just put them into ec2 itself?
-
-
-###### AMI vs Snapshot
-AMI is region specific (so to use it from another region you should copy it) and same ami will have different AMI_ID in different regions.
-There are 2 types of AMI
-* instance-store - copy of the root instance-store volume + metadata in s3
-* ebs-boot - ebs snapshot + metadata (architecture, kernel, AMI name, description, block device mappings)
-Most ami are of second type (ebs-boot). If you need to launch new ec2 from snapshot, you should first convert snapshot into ami and then just launch ami.
-
-Linux AMI virtualization types
-* HVM (Hardware Virtual Machine) - means that virtualization technology using hardware extensions for faster access to resources
-* PV (paravirtual) - boot with a special boot loader called PV-GRUB, which starts the boot cycle and then chain loads the kernel specified in the menu.lst
-
-AMI doesn't include kernel, it's loaded from AKI (Amazon Kernel Image).
-In November 2017 new virtualization came out as Nitro (combines a KVM-based hypervisor with customized hardware (ASICs) aiming to provide a performance that is indistinguishable from bare metal machines)
-
-###### AWS CLI
-CLI (Command Line Interface) - can be useful to quickly automate some aws manual tasks. Internally it just convert cli calls into aws API calls and wrap results into useful format.
-`help` is very useful command working with cli.
-```
-aws help # show all available services
-aws <service> help # show all available actions to perform on selected service
-aws <service> <action> help # shaw all avaialble action options to perform for specified action 
-```
-
-Basic commands
-```
-# get available regions
-aws ec2 describe-regions --profile=awssa
-
-# get available AZ
-aws ec2 describe-availability-zones --region=us-east-1 --profile=awssa
-```
-
-`--query` - use JMESPath - query language for JSON
-```
-# show imageId of first image
-aws ec2 describe-images --query "Images[0].ImageId"
-
-# show state for all images
-aws ec2 describe-images --query "Images[*].State"
-```
-
-* Create new profile to access aws services from console
-```
-aws configure --profile awssa
-```
-
-* There are 3 env variables that overwrites `~/.aws/config` settings
-```
-export AWS_ACCESS_KEY_ID=123
-export AWS_SECRET_ACCESS_KEY=123
-export AWS_DEFAULT_REGION=us-west-2
-```
-Although default region for `awssa` profile is `us-east-1` (you can check it by `aws configure get region --profile=awssa`), if you set region as env var `AWS_DEFAULT_REGION=us-west-1`, and then run `aws configure list --profile=awssa`
-```
-      Name                    Value             Type    Location
-      ----                    -----             ----    --------
-   profile                    awssa           manual    --profile
-access_key     ****************2JQS shared-credentials-file    
-secret_key     ****************Y+na shared-credentials-file    
-    region                us-west-1              env    AWS_DEFAULT_REGION
-```
-So whenever you run any command with this profile and don't specify region (by setting `--region=us-east-1`), region from env var is used (not from your config setting).
-To remove it just unset the variable `unset AWS_DEFAULT_REGION`, and now if you run `aws configure list --profile=awssa` you will see that region is taken from config
-```
-      Name                    Value             Type    Location
-      ----                    -----             ----    --------
-   profile                    awssa           manual    --profile
-access_key     ****************2JQS shared-credentials-file    
-secret_key     ****************Y+na shared-credentials-file    
-    region                us-east-1      config-file    ~/.aws/config
-```
-And you can run commands from console and default region from config file will be used.
-You can set or unset aws env vars in `~/.bashrc` file.
-
-* Get account Id
-```
-# get arn
-aws iam get-user --query "User.Arn" --profile=awssa
-
-# get arn + userId
-aws sts get-caller-identity --profile=awssa
-```
-
-* S3 (create presign url) 
-```
-aws s3 cp cloudformation/vpc/nested/vpc-bastion.yml s3://my-cloudformation-template-bucket --profile=awssa
-aws s3 cp cloudformation/vpc/nested/ec2-bastion.yml s3://my-cloudformation-template-bucket --profile=awssa
-
-# make file public for 30 sec
-aws s3 presign s3://my-cloudformation-template-example/data.txt --expires-in 30 --profile=awssa
-```
-
-* CloudFormation
-```
-# create stack
-aws cloudformation create-stack --stack-name=mystack --template-body=file://cloudformation/condition.yml --profile=awssa --region=us-east-1
-# update stack and pass params
-aws cloudformation update-stack --stack-name=mystack --template-body=file://cloudformation/condition.yml --parameters=ParameterKey=Env,ParameterValue=prod --profile=awssa --region=us-east-1
-# if you are creating a stack that create iam resouce you should explicitly tell to cloudformation that it's ok to create iam resources
-aws cloudformation update-stack --stack-name=logs --template-body=file://cloudformation/ec2-logs.yml --profile=awssa --region=us-east-1 --capabilities=CAPABILITY_IAM
-```
-
-###### Useful Linux Commands
-* List all userNames `cut -d: -f1 /etc/passwd`
-* Get all groups by userName `groups uName`
-* Get userId `id -u uName`
-* Get groupId by groupName `cut -d: -f3 < <(getent group gName)`
-* Get groupId by groupName `cut -d: -f3 < <(getent group gName)`
-* Get number of cores `nproc` - total number of cores, `lscpu` - total info about cpu cores
-* Imitate processor load `stress --cpu 8 --timeout 30` - load 8 cores for 30 sec
-
-###### Redirect 301 vs 302
-There are 2 main codes of redirects (HTTP method can also change)
-* 301 (permanent) - resource was moved permanently and browser should no longer request old url
-* 302 (temporary) - resource was temporary moved to new url, so browser should continue request old url
-
-Redirects without changing http method. They basically the same as 301/302 only difference is that here HTTP method (GET/POST/PUT..) can't change
-* 307 (temporary)
-* 308 (permanent)
-
-
-###### Nmap
-Nmap (Network Mapper) - free and open-source utility for network discovery and security auditing.
-First you have to install it `sudo apt-get install nmap -y`. After check version `nmap --version`.
-Nmap - utility to listen and check for available ports. Create ec2 in public network with all icmp and ssh open in SG.
-Then you can scan ports `nmap -Pn 34.207.196.102`. `-Pn` - just check port, without pinging host machine first (useful if icmp protocol turned off by SG).
-```
-Starting Nmap 7.60 ( https://nmap.org ) at 2020-08-14 10:21 HKT
-Nmap scan report for ec2-34-207-196-102.compute-1.amazonaws.com (34.207.196.102)
-Host is up (0.25s latency).
-Not shown: 999 filtered ports
-PORT   STATE SERVICE
-22/tcp open  ssh
-
-Nmap done: 1 IP address (1 host up) scanned in 20.69 seconds
-```
-Nmap check for which port app exist. So even if you open all traffic in SG, namp would show only those ports that have underlying app.
-So in SG you just open ports, if no app exists for this port in ec2, nmap won't see it, cause there is nobody to talk with.
 
