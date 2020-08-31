@@ -1204,7 +1204,14 @@ DynamoDB - fully managed NoSQL key-value/document database, kind of mongo, but a
 NoSql terminology
 * Row - item
 * Cell - attribute
-* Primary key - partition key + sort key.
+* Primary key - partition key + sort key
+
+Data Partitioning
+* DynamoDB horizontally shards tables into one or more partitions across multiple servers.
+* Partition - allocation of storage for a table, backed by solid state drives (SSDs) and automatically replicated across multiple AZ.
+* Partition management occurs automatically in the background by DynamoDb.
+* Hot partition - when one partition receive way more traffic than all other (support you write throughput is 4k, and you have 4 partitions. Each get 500 writes, but fourth get 2k. Although totally you have 4k, but because they are evenly distribute you got throttle on fourth partition).
+* Adaptive Capacity - in case you got some hot partition, DynamoDB try to rebalance your data, so it would be evenly stored across all partitions.
 
 Main reason to use NoSql against relation db is that you can scale horizontally.
 With relational db the scale is vertical (add more compute/memory to single node). If you try to scale horizontally relational db you have to use 2PC to support transaction atomicity.

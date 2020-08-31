@@ -32,8 +32,6 @@ There are 2 main reasons to get it
 * [free exam questions](https://www.examtopics.com/exams/amazon/aws-certified-solutions-architect-associate-saa-c02/)
 
 ### TODO
-* change networking & services of places (networking should go first)
-* dynamodb hot partition (what is partition of table)
 * dynamodb streams
 * kubernetes logstash vs fluentd
 * redshift spectrum for query 10 years old results + redshift to query current result => join them together
