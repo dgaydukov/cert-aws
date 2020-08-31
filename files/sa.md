@@ -90,6 +90,7 @@
 * 3.49 [SWF](#swf)
 * 3.50 [Data Pipeline](#data-pipeline)
 * 3.51 [ElasticSearch & CloudSearch](#elasticsearch--cloudsearch)
+* 3.52 [SageMaker](#sagemaker)
 
 
 
@@ -256,7 +257,7 @@ IaaS (Infrastructure as a Service) - good example is aws that provides infrastru
 The best practice is to use IAC (Infrastructure as a code) - is an idea that you should code how you want to build your infrastructure. For example to run you microservice app you need to have 3 containers. 
 Of course you can manually create all of them, install all needed software there and deploy it. But you can also add script file that would do it all automatically. Most popular tools is Aws CloudFormation and Terraform.
 
-* SaaS - mail service, ELK (ElasticSearch/LogStash/Kibana) stack
+* SaaS - mail service, ELK stack
 * PaaS - beanstalk, spring cloudfoundry
 * IaaS - almost all other aws services under networking, computing, storage
 
@@ -1191,10 +1192,18 @@ AntiPattern
 * Small data sets (EMR for large processing, if your dataset is small enough for one machine/thread it's better to use EC2 or Lambda)
 * ACID transaction requirements (if you need this it's better to use RDS instead of Hadoop)
 
+There are several engines you can run on top of emr
+* Hive - data warehouse, you can write SQL-like queries to extract data from Hadoop
+* Hbase - open-source, NoSQL key/value column-oriented database built on top of HDFS
+* Presto - open-source in-memory distributed SQL query engine developed by Facebook. So it's good for ad-hoc sql analytics
+* Spark - general purpose execution framework that is able to run multiple different workloads such as ETL/ML
+Presto faster than spark cause it doesn't care about fault-tolerance. If one of the Presto worker nodes experiences a failure (say, shuts down) in most cases queries that are in progress will abort and need to be restarted.
+Spark supports mid-query fault-tolerance and can recover from such a situation but in order to do that, it needs to do some extra bookkeeping and essentially "plan for failure". That overhead results in slower performance when your cluster does not experience any faults.
+
 ###### Glue
 Glue - fully managed ETL (extract, transform, load) to catalog/clean/enrich/move your data.
 AWS Glue crawlers scan various data stores you own to automatically infer schemas and partition structure and populate the AWS Glue Data Catalog with corresponding table definitions and statistics.
-You can then directly query your data lake with Amazon Athena and Amazon Redshift Spectrum.
+You can then directly query your data lake with Athena and Redshift Spectrum.
 AntiPattern
 * Streaming data (Glue is batch oriented, minimum interval is 5 min, so for streaming data Kinesis is better choice)
 * NoSQL Databases (Glue doesn't support NoSQL databases as source)
@@ -1262,9 +1271,12 @@ You can increase throughput as much as you want but decrease up to 9 times per d
 
 It's the only db that grow/shrink based on load.
 
-DynamoDB Streams - captures a time-ordered sequence of item-level modifications in a DynamoDB table and durably stores the information for up to 24 hours.
+DynamoDB Streams - captures a time-ordered sequence of item-level changes in a DynamoDB table and durably stores the information for up to 24 hours.
 AWS maintains separate endpoints for DynamoDB and DynamoDB Streams. Streams can be enabled or disabled for an Amazon DynamoDB table.
-Stream records are organized into groups, also referred to as shards. 
+Stream records are organized into groups, also referred to as shards. With streams you can
+* build transactional system (based on insert/update/delete records from one table do some operation in another)
+* log/audit/aggregate data
+* replicate data to another regions for query purpose using DynamoDB Cross-Region Replication Library
 
 ###### RedShift
 Database vs Data Warehouse
@@ -1283,6 +1295,19 @@ For encryption it uses four-tier hierarchy of encryption keys. These keys are:
 * cluster key
 * database key
 * data encryption keys
+
+Redshift Spectrum - allows you to query data in s3, it's serverless just like Athena, so you pay for resources you consume.
+Under the hood there is a fleet of thousands Redshift Spectrum nodes spread across multiple AZ.
+Query is submitted to leader node of your Redshift cluster => leader node optimizes, compiles, and pushes the query execution to the compute nodes => compute nodes submit requests to redshift spectrum
+spectrum pool thousands of ec2 and query data from s3 and return it back to cluster.
+So with spectrum you can have store frequently access data in redshift and IA data in s3 and create join of these 2 datasets.
+
+WLM (Redshift workload management) - you can manage priorities within workloads so that short, fast-running queries would be run before long-running queries
+Distribution style - when you create table you can choose
+* AUTO - default style, redshift itself decide style based on table size
+* EVEN - leader node distributes the rows across the slices in a round-robin fashion. Use it when a table does not participate in joins or when there is not a clear choice between KEY distribution and ALL distribution
+* KEY - rows are distributed according to the values in one column, leader node places matching values on the same node slice
+* ALL - copy of the entire table is distributed to every node. While EVEN distribution or KEY distribution place only a portion of a table's rows on each node, ALL distribution ensures that every row is collocated for every join that the table participates in
 
 
 ###### QuickSight
@@ -2298,7 +2323,7 @@ Example of DP
 * copy transformed data from s3 to RedShift
 
 ###### ElasticSearch & CloudSearch
-ES - open source search service.
+ES - open source search service, it's usually a part of ELK stack
 CS - search service like ElasticSearch, but aws proprietary development.
 You should store your data in s3 and then use CS to search this textual data.
 
@@ -2308,4 +2333,23 @@ ES has 2 types of nodes
 
 CS vs ES
 * CS can use s3/DynamoDB, ES - only ebs
+
+ELK stack consists of 3 parts
+* ElasticSearch - log searching
+* LogStash - log collection from ec2 to elasticsearch cluster
+* Kibana - data visualization tool (visualize data from elasticsearch)
+
+Fluentd vs LogStash 
+* has internal in-memory system, so no need for additional tools like redis / internal queue limited to 20 events, so it needs redis to work normally
+* uses standard built-in parsers (JSON, regex, csv) / use external plugins to parse log
+* Logs are directly shipped from STDOUT without requiring an extra log file / need extra plugin to extract logs from docker
+Above comparison shows that for kuber it's better to use Fluentd, due to its built-in Docker logging driver and parser
+
+
+###### SageMaker
+It's managed service, running JN, that provides ability to build, train, and deploy ML models quickly.
+JN (Jupyter Notebook) - interactive computing environment, single document where you can run code, display the output, and also add explanations, formulas, charts.
+SageMaker has 15 built-in ML algorithms, but you can also use your own.
+
+
 

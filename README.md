@@ -24,22 +24,15 @@ There are 2 main reasons to get it
 
 ### Useful Links
 * [Mock exam SAA](https://www.whizlabs.com/aws-solutions-architect-associate)
+* [Free SAA questions](https://www.examtopics.com/exams/amazon/aws-certified-solutions-architect-associate-saa-c02)
 * [Mock exam SAP](https://www.whizlabs.com/aws-solutions-architect-professional)
 * [Udemy Jon Bonso's exam](https://www.udemy.com/course/aws-certified-solutions-architect-associate-amazon-practice-exams-saa-c02)
 * [AWS Well-Architected](https://aws.amazon.com/architecture/well-architected) - read all whitepapers here
 * [SAP Exam Learning Path](https://jayendrapatil.com/aws-certified-solution-architect-professional-exam-learning-path)
 * Read all FAQ & user guide for every AWS service
-* [free exam questions](https://www.examtopics.com/exams/amazon/aws-certified-solutions-architect-associate-saa-c02/)
 
 ### TODO
-* dynamodb streams
-* kubernetes logstash vs fluentd
-* redshift spectrum for query 10 years old results + redshift to query current result => join them together
-* redshift workload management (put short query before long queries)
-* redshift distribution style (redshift slices)
-* https://aws.amazon.com/sagemaker/faqs
 * https://aws.amazon.com/lake-formation/faqs (parquet vs orc)
-* emr presto/spark
 -----------------------------------------------Advanced-----------------------------------------------
 * add vpc to `cloudformation/ec2-cw-recover-alarm.yml` (in case you run it in region where no default vpc)
 * edit all current cf templates => rewrite efs from default SG to custom (cause it's better to explicitly control SG)
@@ -114,5 +107,5 @@ TargetGroup:
 * create kms and encrypt someting with it
 * create cloudsearch/elasticsearch clusters and try to put logs from ec2 there
 * create dynamodb lsi & gsi and compare them
-* try emr on t2
+* try emr on t2 (with different engines hive/hbase/presto/spark)
 * migrate rds into s3 using dms
