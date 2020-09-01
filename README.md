@@ -26,10 +26,7 @@ There are 2 main reasons to get it
 * [Mock exam SAA](https://www.whizlabs.com/aws-solutions-architect-associate)
 * [Free SAA questions](https://www.examtopics.com/exams/amazon/aws-certified-solutions-architect-associate-saa-c02)
 * [Mock exam SAP](https://www.whizlabs.com/aws-solutions-architect-professional)
-* [Udemy Jon Bonso's exam](https://www.udemy.com/course/aws-certified-solutions-architect-associate-amazon-practice-exams-saa-c02)
-* [AWS Well-Architected](https://aws.amazon.com/architecture/well-architected) - read all whitepapers here
-* [SAP Exam Learning Path](https://jayendrapatil.com/aws-certified-solution-architect-professional-exam-learning-path)
-* Read all FAQ & user guide for every AWS service
+
 
 ### TODO
 -----------------------------------------------Advanced-----------------------------------------------

@@ -1,7 +1,7 @@
 # Solutions Architect Tips
 
 ### Content
-1. [Basics](#aws-basics)
+1. [Basics](#basics)
 * 1.1 [Free Tier & Cost Management](#free-tier--cost-management)
 * 1.2 [Region, AZ, Edge Location](#region-az-edge-location)
 * 1.3 [AWS Well-Architected Framework](#aws-well-architected-framework)
@@ -56,7 +56,7 @@
 * 3.19 [Well-Architected Tool](#well-architected-tool)
 * 3.20 [VPC](#vpc)
 * 3.21 [Elastic Beanstalk](#elastic-beanstalk)
-* 3.22 [DMS](#database-migration-service)
+* 3.22 [DMS](#dms)
 * 3.22 [ELB](#elb)
 * 3.23 [CloudWatch](#cloudwatch)
 * 3.23 [Key Management Service](#key-management-service)
@@ -92,9 +92,7 @@
 * 3.51 [ElasticSearch & CloudSearch](#elasticsearch--cloudsearch)
 * 3.52 [SageMaker](#sagemaker)
 * 3.53 [Lake Formation](#lake-formation)
-
-
-
+* 3.53 [Application Discovery Service](#application-discovery-service)
 
 
 
@@ -2371,7 +2369,16 @@ Hadoop Data Formats
 * Parquet - row columnar data format, files consist of row groups, header, and footer. Specialized in efficiently storing and processing nested data types.
 
 
-
+###### Application Discovery Service
+ADS collects and presents data about running apps and help understand the configuration, usage, and behavior of them for migration purposes. 
+With data collected by this service you can perform a TCO (Total Cost of Ownership) and calculate is it reasonable to migrate to cloud.
+There are 2 types of operation mode
+* agent-based - install the Application Discovery Agent on servers and virtual machines (VMs) to collect data
+Agent captures system configuration/performance/running processes/details of the network connections between systems
+Agent uses HTTPS/TLS to transmit data to the ADS
+Agent can be operated in an offline test mode that writes data to a local file so customers can review collected data before enabling online mode
+* agent-less - VMware customers collect VM configuration and performance profiles without deploying the AWS Application Discovery Agent on each host
+You need to install AgentLess Connector as OVA (Open Virtual Appliance) package on VMware vCenter.
 
 
 
