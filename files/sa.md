@@ -91,6 +91,7 @@
 * 3.50 [Data Pipeline](#data-pipeline)
 * 3.51 [ElasticSearch & CloudSearch](#elasticsearch--cloudsearch)
 * 3.52 [SageMaker](#sagemaker)
+* 3.53 [Lake Formation](#lake-formation)
 
 
 
@@ -2350,6 +2351,32 @@ Above comparison shows that for kuber it's better to use Fluentd, due to its bui
 It's managed service, running JN, that provides ability to build, train, and deploy ML models quickly.
 JN (Jupyter Notebook) - interactive computing environment, single document where you can run code, display the output, and also add explanations, formulas, charts.
 SageMaker has 15 built-in ML algorithms, but you can also use your own.
+
+###### Lake Formation
+DL (Data Lake) - scalable central repository of large quantities and varieties of data, both structured and unstructured. There are a few steps
+* ingesting and cataloging data from a variety of sources
+* data is enriched, combined, and cleaned before analysis
+
+LF (Lake Formation) - integrated data lake service where you ingest/clean/catalog/transform/secure your data and make it available for analysis and ML.
+LF provides you single console to ingest you data and then use other aws services like ML/EMR/RedShift to transform and query your data.
+FindMatches ML Transform - solves 2 problems
+* Data Deduplication - identify conceptually the same data using fuzzy logic (it's easy remove duplicates when you have some key like productSKU, but if not you should employ some logic to do this)
+* Record Linkage - join 2 databases using fuzzy join (again it's easy to join by some key, but if you don't have such a key you should employ some logic to do this)
+LF discover all available sources s3/RDS/on-premise db/CloudTrail, ingest it and transform into s3 in data formats for optimized performance and cost.
+LF also manages granular access to your s3 bucket, and can give access to it to all other data analytics services (so you have central place to manage all access).
+
+Hadoop Data Formats
+* Avro - row-based data format, data schema is stored as JSON.
+* ORC - row columnar data format highly optimized for reading, writing, and processing data in Hive. Files are made of stripes of data where each stripe contains index, row data, and footer.
+* Parquet - row columnar data format, files consist of row groups, header, and footer. Specialized in efficiently storing and processing nested data types.
+
+
+
+
+
+
+
+
 
 
 

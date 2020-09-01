@@ -32,7 +32,6 @@ There are 2 main reasons to get it
 * Read all FAQ & user guide for every AWS service
 
 ### TODO
-* https://aws.amazon.com/lake-formation/faqs (parquet vs orc)
 -----------------------------------------------Advanced-----------------------------------------------
 * add vpc to `cloudformation/ec2-cw-recover-alarm.yml` (in case you run it in region where no default vpc)
 * edit all current cf templates => rewrite efs from default SG to custom (cause it's better to explicitly control SG)
@@ -109,3 +108,4 @@ TargetGroup:
 * create dynamodb lsi & gsi and compare them
 * try emr on t2 (with different engines hive/hbase/presto/spark)
 * migrate rds into s3 using dms
+* create data lake with lake formation
