@@ -79,19 +79,18 @@
 * 3.38 [Cloud9](#cloud9)
 * 3.39 [CodeStar](#codestar)
 * 3.40 [Rekognition](#rekognition)
-* 3.41 [EC2 Auto Scaling](#ec2-auto-scaling)
-* 3.42 [Global Accelerator](#global-accelerator)
-* 3.43 [FSx](#fsx)
-* 3.44 [VPN](#vpn)
-* 3.45 [Directory Service](#directory-service)
-* 3.46 [Wavelength](#wavelength)
-* 3.47 [SSO](#sso)
-* 3.48 [OpsWorks](#opsworks)
-* 3.49 [SWF](#swf)
-* 3.50 [Data Pipeline](#data-pipeline)
-* 3.51 [ElasticSearch & CloudSearch](#elasticsearch--cloudsearch)
-* 3.52 [SageMaker](#sagemaker)
-* 3.53 [Lake Formation](#lake-formation)
+* 3.41 [Global Accelerator](#global-accelerator)
+* 3.42 [FSx](#fsx)
+* 3.43 [VPN](#vpn)
+* 3.44 [Directory Service](#directory-service)
+* 3.45 [Wavelength](#wavelength)
+* 3.46 [SSO](#sso)
+* 3.47 [OpsWorks](#opsworks)
+* 3.48 [SWF](#swf)
+* 3.49 [Data Pipeline](#data-pipeline)
+* 3.50 [ElasticSearch & CloudSearch](#elasticsearch--cloudsearch)
+* 3.51 [SageMaker](#sagemaker)
+* 3.52 [Lake Formation](#lake-formation)
 * 3.53 [Application Discovery Service](#application-discovery-service)
 
 
@@ -1369,12 +1368,34 @@ Stopping is required cause Amazon has to move the VM to a different piece of har
 If you are using CF template and change `InstanceType` there, CF smart enough to stop/change/start your instance (so it won't create new one with new instance type).
 * horizontal - add more instances, no need for downtime
 
-ASG (auto-scaling group) - allows you scale up/down system based on some metric like
-* ASGAverageCPUUtilization - based on cpu consumption
-* ALBRequestCountPerTarget - based on number of requests for elb
-* ASGAverageNetworkIn/ASGAverageNetworkOut - based on average number of bytes
+ASG (auto-scaling group) - allows you scale you system dynamic/manual way. Dynamic (as opposed to manual where you manually modify number of running instances) scaling policy types:
+* Simple scaling - scale based on a single scaling adjustment.
+* Step scaling - same as several simple policies joined together by steps (if step1 => add 1 instance, if step2 => add 2 instances, if step3 => add 3 instances)
+* Target tracking scaling - scale based on a target value for a specific metric (ASG create CloudWatch alarms that trigger the scaling policy). So if you don't want to mess with alarms and want smart system that can scale out/in based on some metric you should use it.
+    * ASGAverageCPUUtilization - based on cpu consumption
+    * ALBRequestCountPerTarget - based on number of requests for elb
+    * ASGAverageNetworkIn/ASGAverageNetworkOut - based on average number of bytes
 You can also create your own custom metrics. But it should change based on number of instances (latency is bad and won't work, cause adding/removing instances doesn't directly affect response time)
 If you have single ec2 and you need to deploy java project there, you can just ssh there and put .jar file directly. But if you are managing a fleet of ec2 using ASG you would better to use efs and put your .jar there, so whenever new ec2 is started it would take this .jar and run your app.
+Types of scaling:
+* scale up - remove current instance and create new one with bigger compute/memory capacity
+* scale out - add one or more instances
+* scale down - remove current instance and create new one with lesser compute/memory capacity
+* scale in - remove one or more instances
+Cooldown period - prevent ASG from adding/removing instances before the effects of previous activities are visible, so it helps to prevent the initiation of an additional scaling activity based on stale metrics.
+Fleet management - replacing of unhealthy instances
+Dynamic scaling - scale up/down number of instances based on some metric (cpu/memory utilization)
+Target tracking - you select metric and AS automatically track this metric and scale your fleet
+ASG (Auto Scaling group) - a collection of same ec2 managed by AS. if you delete ASG all instances of it's type would be deleted.
+You can configure SNS to get notification when your ASG scales out/in or replace unhealthy instance.
+LC (launch configuration) - template that ASG uses to launch new instances. One ASG use one LC. You can't modify LC, if you need to change some params you should create new LC and update your ASG.
+You can use on-demand or spot instances in LC, in case of spot you should set bid price in LC.
+ASG can launch your instances across multiple AZ but only within same region.
+lifecycle hooks - you can execute some logic after AS create new instance (useful when you don't have ready to use AMI and need to tune instance after creation).
+Unhealthy instance can be determine by 2 healthchecks
+* elb healthchek - you should use it if you use elb
+* ec2 healthcheck - use it if you don't use elb
+
 
 ###### Athena
 Athena is an interactive query service that makes it easy to analyze data in Amazon S3 using standard SQL. 
@@ -2054,9 +2075,10 @@ There are 3 types of logs
 * data events - api calls to modify actual data (s3 get/put/delete object + lambda calls)
 * insights events - CT use ML (Machine Learning) to determine any anomaly (like spike in some api calls) and notify you.
 
-By default logs stored for 90 days. If you need longer you should create trail. Trail stores data in s3, you have to analyze it yourself (usually using Athena).
-All Regions trail - create trail in each region, but stores all record in s3 bucket of your current region.
-Trail can log events from one region or from all regions. Log file validation - guaranty that logs were not tampered with. Mare sure your s3 bucket has correct write policy, otherwise CT won't be able to store logs there.
+By default logs stored for 90 days and only management events stored. If you need longer you should create trail. Trail stores data in s3, you have to analyze it yourself (usually using Athena).
+By default trail collects data from all regions. You can create single region trail [only from cli](https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-create-and-update-a-trail-by-using-the-aws-cli-create-trail.html#cloudtrail-create-and-update-a-trail-by-using-the-aws-cli-examples-single).
+So there is no way to create single-region trail from console.
+Log file validation - guaranty that logs were not tampered with. Mare sure your s3 bucket has correct write policy, otherwise CT won't be able to store logs there.
 You can deliver CT logs to CloudWatch, in this case CT would deliver logs to s3 & CloudWatch logs.
 
 ###### Certificate Manager
@@ -2109,33 +2131,6 @@ You can specify conditions (discard results with low confidence score) under whi
 Terminology
 * label - object/concept found in image based on description (for example, human/face/sun and so on..)
 * confidence score - number 0-100 that indicates the probability that prediction is correct
-
-###### EC2 Auto Scaling
-* scale up - remove current instance and create new one with bigger compute/memory capacity
-* scale out - add one or more instances
-* scale down - remove current instance and create new one with lesser compute/memory capacity
-* scale in - remove one or more instances
-
-AS (Auto Scaling) - managed service that can create/delete ec2 instances to ensure that you always have a suitable number of running ec2 according to your load.
-So when you need to manage a fleet of ec2 you should use AS, cause it helps you
-* scale out - when load increases AS will create new ec2 instances
-* scale in - once load is low AS will terminate redundant ec2
-* check health - in case some ec2 is unhealthy for any reason, AS will terminate it and create new one
-
-Fleet management - replacing of unhealthy instances
-Dynamic scaling - scale up/down number of instances based on some metric (cpu/memory utilization)
-Target tracking - you select metric and AS automatically track this metric and scale your fleet
-
-ASG (Auto Scaling group) - a collection of same ec2 managed by AS. if you delete ASG all instances of it's type would be deleted.
-You can configure SNS to get notification when your ASG scales out/in or replace unhealthy instance.
-LC (launch configuration) - template that ASG uses to launch new instances. One ASG use one LC. You can't modify LC, if you need to change some params you should create new LC and update your ASG.
-You can use on-demand or spot instances in LC, in case of spot you should set bid price in LC.
-ASG can launch your instances across multiple AZ but only within same region.
-
-lifecycle hooks - you can execute some logic after AS create new instance (useful when you don't have ready to use AMI and need to tune instance after creation).
-Unhealthy instance can be determine by 2 healthchecks
-* elb healthchek - you should use it if you use elb
-* ec2 healthcheck - use it if you don't use elb
 
 ###### Global Accelerator
 GA allows you to create 2 static anycast IP addresses and routing users to nearest server to them.

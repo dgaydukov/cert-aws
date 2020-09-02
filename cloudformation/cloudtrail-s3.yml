@@ -1,0 +1,99 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+# Create 2 trails with separate s3 buckets to track management/data events separately
+
+# Bucket policy should be created before trail, that's why dependsOn attribute
+# Condition s3:x-amz-acl - means every put request should include header `x-amz-acl: bucket-owner-full-control`
+
+Resources:
+  ManagementEventS3Bucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    Properties:
+      BucketName: !Sub ${AWS::StackName}-my-s3-cf-management-event-log-bucket
+  ManagementEventS3Policy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref ManagementEventS3Bucket
+      PolicyDocument:
+        Statement:
+          - Sid: CloudTrailAclCheck
+            Effect: Allow
+            Principal:
+              Service: cloudtrail.amazonaws.com
+            Action: s3:GetBucketAcl
+            Resource: !Sub arn:aws:s3:::${ManagementEventS3Bucket}
+          - Sid: CloudTrailWrite
+            Effect: Allow
+            Principal:
+              Service: cloudtrail.amazonaws.com
+            Action: s3:PutObject
+            Resource: !Sub arn:aws:s3:::${ManagementEventS3Bucket}/AWSLogs/${AWS::AccountId}/*
+            Condition:
+              StringEquals:
+                s3:x-amz-acl: bucket-owner-full-control
+
+  DataEventS3Bucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    Properties:
+      BucketName: !Sub ${AWS::StackName}-my-s3-cf-data-event-log-bucket
+  DataEventS3Policy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref DataEventS3Bucket
+      PolicyDocument:
+        Statement:
+          - Sid: CloudTrailAclCheck
+            Effect: Allow
+            Principal:
+              Service: cloudtrail.amazonaws.com
+            Action: s3:GetBucketAcl
+            Resource: !Sub arn:aws:s3:::${DataEventS3Bucket}
+          - Sid: CloudTrailWrite
+            Effect: Allow
+            Principal:
+              Service: cloudtrail.amazonaws.com
+            Action: s3:PutObject
+            Resource: !Sub arn:aws:s3:::${DataEventS3Bucket}/AWSLogs/${AWS::AccountId}/*
+            Condition:
+              StringEquals:
+                s3:x-amz-acl: bucket-owner-full-control
+
+  ManagementEventTrail:
+    DependsOn: ManagementEventS3Policy
+    Type: AWS::CloudTrail::Trail
+    Properties:
+      S3BucketName: !Ref ManagementEventS3Bucket
+      TrailName: ManagementEventTrail
+      IsLogging: true
+      IsMultiRegionTrail: true
+      IncludeGlobalServiceEvents: true
+      EnableLogFileValidation: true
+      Tags:
+          - Key: Name
+            Value: !Sub ${AWS::StackName}-ManagementEventTrail
+
+  DataEventTrail:
+    DependsOn: DataEventS3Policy
+    Type: AWS::CloudTrail::Trail
+    Properties:
+      S3BucketName: !Ref DataEventS3Bucket
+      TrailName: DataEventTrail
+      IsLogging: true
+      IsMultiRegionTrail: true
+      IncludeGlobalServiceEvents: true
+      EnableLogFileValidation: true
+      EventSelectors:
+        - DataResources:
+            - Type: AWS::S3::Object
+              Values:
+                - "arn:aws:s3:::"
+            - Type: AWS::Lambda::Function
+              Values:
+                - arn:aws:lambda
+          IncludeManagementEvents: false
+          ReadWriteType: All
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-DataEventTrail
