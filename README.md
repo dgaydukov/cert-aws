@@ -85,11 +85,11 @@ TargetGroup:
 * vpc endpoint service (add ec2 (with basic httpd service)+NLB and share it to vpc from another region)
 * route 53 resolver
 * transit gateway - add on-premise network imitated by third vpc (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-transitgateway.html - guide to add on-premise, https://theithollow.com/2018/12/12/setup-aws-transit-gateway)
-* put spring app into ECS and EKS and compare the difference (try fargate too)
+* put spring app into ECS and EKS and compare the difference (try fargate too). Try auto scaling in eks/ecs
 * Try maximum automate site-to-site vpn cloudformation template (try to extract somehow all IP addresses and PSK secret string and put it into ec2 userdata for VpnServer)
 * Try some other vpn server in on-premise site of site-to-site vpn
 * Install ec2 with openswan and use it as personal vpn server
-* Try Athena & Aws Glue tutorials
+* Try Athena & Aws Glue with cloudformation/cloudtrail-s3.yml (combine all json files into one. Find who put object into s3)
 * aws config CF template (check that ec2 is of specific type and alert when type has been changed)
 * Kinesis firehose real example (with cf template)
 * enable connection draining and see how it works when you de-register instance or it failed

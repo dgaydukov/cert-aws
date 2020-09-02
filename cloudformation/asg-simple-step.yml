@@ -1,0 +1,153 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+# Create vpc with single public subnet and asg
+
+# Cooldown (SimpleScaling) - how long to wait before initiate next scaling
+# EstimatedInstanceWarmup (TargetTrackingScaling, StepScaling) - how long until a newly launched instance can contribute to the CloudWatch metrics
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.100.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value:  !Sub ${AWS::StackName}-VPC-A
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    DependsOn: VPC
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-VPC-A-IGW
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.100.1.0/24
+      AvailabilityZone: us-east-1a
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-VPC-A-Public
+  PublicRT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-VPC-A-Public-RT
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: !Ref PublicRT
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+  PublicSubnetRTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref PublicRT
+
+  WebServerSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH/HTTP access from anywhere
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-VPC-A-WebServer-SG
+
+  LaunchConfig:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-09d95fab7fff3776c
+      KeyName: mykey
+      AssociatePublicIpAddress: true
+      UserData:
+        Fn::Base64:
+          !Sub |
+          #!/usr/bin/env bash
+          sudo yum install httpd -y
+          sudo service httpd start
+          sudo echo "<h1>App #$(shuf -i 99-999 -n 1)</h1>" > /var/www/html/index.html
+          sudo amazon-linux-extras install epel -y
+          sudo yum install stress -y
+      SecurityGroups:
+        - !GetAtt WebServerSG.GroupId
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 8
+  ASG:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: !Sub ${AWS::StackName}-VPC-A-ASG
+      LaunchConfigurationName: !Ref LaunchConfig
+      MinSize: 1
+      MaxSize: 4
+      HealthCheckGracePeriod: 10
+      VPCZoneIdentifier:
+        - !Ref PublicSubnet
+
+  SimpleScaleOut:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AutoScalingGroupName: !Ref ASG
+      AdjustmentType: ChangeInCapacity
+      PolicyType: SimpleScaling
+      Cooldown: 300
+      ScalingAdjustment: 1
+
+  StepScaleOut:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AutoScalingGroupName: !Ref ASG
+      AdjustmentType: ChangeInCapacity
+      PolicyType: StepScaling
+      MetricAggregationType: Average
+      EstimatedInstanceWarmup: 60
+      StepAdjustments:
+        - MetricIntervalLowerBound: 0
+          MetricIntervalUpperBound: 40
+          ScalingAdjustment: 1
+        - MetricIntervalLowerBound: 40
+          MetricIntervalUpperBound: 70
+          ScalingAdjustment: 2
+        - MetricIntervalLowerBound: 70
+          ScalingAdjustment: 3
+
+  CpuAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      EvaluationPeriods: 3
+      Statistic: Average
+      Threshold: 30
+      AlarmDescription: Alarm if CPU more than 30% for 3 consecutive minutes
+      Period: 60
+      AlarmActions:
+        - !Ref SimpleScaleOut
+        - !Ref StepScaleOut
+      Namespace: AWS/EC2
+      Dimensions:
+        - Name: AutoScalingGroupName
+          Value: !Ref ASG
+      ComparisonOperator: GreaterThanThreshold
+      MetricName: CPUUtilization
