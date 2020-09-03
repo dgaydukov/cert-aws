@@ -414,8 +414,27 @@ Redirects without changing http method. They basically the same as 301/302 only 
 * 307 (temporary)
 * 308 (permanent)
 
+###### crontab
+crontab notation is used in many places, including
+* ASG scheduled action
 
-
+n a crontab file, the fields are: `* * * * *`
+```
+minute of the hour
+hour of the day
+day of the month
+month of the year
+day of the week
+```
+You can also see `files/images/crontab.png`
+Combining these 5 you can create anything from 1 min to 1 year:
+* Run job every minute `* * * * *`
+* Run job once in a year `0 0 1 1 *` => At 00:00 on 1st of January
+* Run job 10 min past every hour: `10 * * * *`
+* Run job 10,20 min past every hour: `10,20 * * * *`
+* Run job every 10 min: `10,20,30,40,50 * * * *` => `*/10 * * * *` (short notation)
+* Run job every day at 5.30 `30 17 * * *`
+* Run job At 12.05,12.10 on 10th of every month and day should be Monday: `5,10 0 10 * 1`
 
 ### Networking
 ###### NIC
@@ -1392,15 +1411,42 @@ Types of scaling:
 * scale down - remove current instance and create new one with lesser compute/memory capacity
 * scale in - remove one or more instances
 Cooldown period - prevent ASG from adding/removing instances before the effects of previous activities are visible, so it helps to prevent the initiation of an additional scaling activity based on stale metrics.
-Fleet management - replacing of unhealthy instances
-Dynamic scaling - scale up/down number of instances based on some metric (cpu/memory utilization)
-Target tracking - you select metric and AS automatically track this metric and scale your fleet
+Lifecycle hooks - you can execute some logic after AS create new instance (useful when you don't have ready to use AMI and need to tune instance after creation), see `cloudformation/asg-sqs-hook.yml`.
+lifecycle hook puts the instance into a wait state (Pending:Wait or Terminating:Wait). The instance is paused until you continue or the timeout period ends. 
+Yet if you launch instance it will become available immediately and can serve requests. When you launch new instance you can receive sqs message
+```
+{
+  "LifecycleHookName": "asg-ScaleOutHook-VH7PGTZ201TI",
+  "AccountId": "530313143429",
+  "RequestId": "7395d14c-d028-458a-2649-2ac9a3c24aa3",
+  "LifecycleTransition": "autoscaling:EC2_INSTANCE_LAUNCHING",
+  "AutoScalingGroupName": "asg-VPC-A-ASG",
+  "Service": "AWS Auto Scaling",
+  "Time": "2020-09-03T09:03:06.567Z",
+  "EC2InstanceId": "i-0d2c7deb9eaf6507f",
+  "LifecycleActionToken": "c2cf8cb6-6b7f-45c8-bd9e-240c52c86b08"
+}
+```
+When you terminate instance it will wait for `HeartbeatTimeout` (default 1 hour) and only after this terminated
+```
+{
+  "LifecycleHookName": "asg-ScaleInHook-1X3I4VRP056CX",
+  "AccountId": "530313143429",
+  "RequestId": "ed35d14c-f6de-9dbf-3319-244af435d1a9",
+  "LifecycleTransition": "autoscaling:EC2_INSTANCE_TERMINATING",
+  "AutoScalingGroupName": "asg-VPC-A-ASG",
+  "Service": "AWS Auto Scaling",
+  "Time": "2020-09-03T09:13:09.206Z",
+  "EC2InstanceId": "i-0d2c7deb9eaf6507f",
+  "LifecycleActionToken": "1bc18789-bbe5-41ad-8c2e-14ef6bf9ef62"
+}
+```
+To complete you should call `aws autoscaling complete-lifecycle-action --lifecycle-action-result=CONTINUE --instance-id=i-01b8eb322fb0e88e7 --lifecycle-hook-name=asg-ScaleInHook-1X3I4VRP056CX --auto-scaling-group-name=asg-VPC-A-ASG --profile=awssa`
 ASG (Auto Scaling group) - a collection of same ec2 managed by AS. if you delete ASG all instances of it's type would be deleted.
 You can configure SNS to get notification when your ASG scales out/in or replace unhealthy instance.
 LC (launch configuration) - template that ASG uses to launch new instances. One ASG use one LC. You can't modify LC, if you need to change some params you should create new LC and update your ASG.
 You can use on-demand or spot instances in LC, in case of spot you should set bid price in LC.
 ASG can launch your instances across multiple AZ but only within same region.
-lifecycle hooks - you can execute some logic after AS create new instance (useful when you don't have ready to use AMI and need to tune instance after creation).
 Unhealthy instance can be determine by 2 healthchecks
 * elb healthchek - you should use it if you use elb
 * ec2 healthcheck - use it if you don't use elb

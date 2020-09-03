@@ -127,10 +127,10 @@ Resources:
             Action:
               - sts:AssumeRole
       Path: "/"
-  LogRolePolicy:
+  LogPolicy:
     Type: AWS::IAM::Policy
     Properties:
-      PolicyName: !Sub ${AWS::StackName}-MyVpc-LogRolePolicy
+      PolicyName: !Sub ${AWS::StackName}-MyVpc-LogPolicy
       PolicyDocument:
         Version: 2012-10-17
         Statement:

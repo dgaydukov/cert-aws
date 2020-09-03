@@ -1,9 +1,11 @@
 AWSTemplateFormatVersion: 2010-09-09
 
-# Create vpc with single public subnet and asg, schedule load based on time
+# Create vpc with single public subnet and asg and lifecycle hook
+# When you launch/terminate instances notification is sent to ec2
+# You can test manually by going to asg and modifying desired capacity. By doing this asg will automatically add/remove ec2 instances
 
-# When you scale in, asg will remove instances up to max number, not min. So if you have 5 running ec2, and you scale in to min=1, max=4 => only 1 ec2 would be deleted, cause you are allowed to run 4 max.
-# Instead of Recurrence (which happens every period) you can set StartTime (which would happen only once)
+# if you don't specify DefaultResult (abandon by default), when you launch new ec2, by the end of timeout ec2 would be terminated
+# To finish hook you should call `aws autoscaling complete-lifecycle-action` from cli or sdk
 
 Resources:
   VPC:
@@ -107,17 +109,50 @@ Resources:
       VPCZoneIdentifier:
         - !Ref PublicSubnet
 
-  ScheduledActionOut:
-    Type: AWS::AutoScaling::ScheduledAction
+  AsgEventQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: AsgEventQueue
+  AsgRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - autoscaling.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+  SqsAccessPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub ${AWS::StackName}-sqs
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - "sqs:GetQueueUrl"
+              - "sqs:SendMessage"
+            Resource: !GetAtt AsgEventQueue.Arn
+      Roles:
+        - !Ref AsgRole
+  ScaleOutHook:
+    Type: AWS::AutoScaling::LifecycleHook
     Properties:
       AutoScalingGroupName: !Ref ASG
-      MinSize: 3
-      MaxSize: 6
-      Recurrence: "30 * * * *"
-  ScheduledActionIn2:
-    Type: AWS::AutoScaling::ScheduledAction
+      LifecycleTransition: autoscaling:EC2_INSTANCE_LAUNCHING
+      HeartbeatTimeout: 600
+      NotificationTargetARN: !GetAtt AsgEventQueue.Arn
+      RoleARN: !GetAtt AsgRole.Arn
+  ScaleInHook:
+    Type: AWS::AutoScaling::LifecycleHook
     Properties:
       AutoScalingGroupName: !Ref ASG
-      MinSize: 1
-      MaxSize: 1
-      Recurrence: "40 * * * *"
+      LifecycleTransition: autoscaling:EC2_INSTANCE_TERMINATING
+      HeartbeatTimeout: 600
+      NotificationTargetARN: !GetAtt AsgEventQueue.Arn
+      RoleARN: !GetAtt AsgRole.Arn
