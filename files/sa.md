@@ -1370,7 +1370,13 @@ If you are using CF template and change `InstanceType` there, CF smart enough to
 
 ASG (auto-scaling group) - allows you scale you system dynamic/manual way. Dynamic (as opposed to manual where you manually modify number of running instances) scaling policy types:
 * Simple scaling - scale based on a single scaling adjustment.
-* Step scaling - same as several simple policies joined together by steps (if step1 => add 1 instance, if step2 => add 2 instances, if step3 => add 3 instances)
+* Step scaling - same as several simple policies joined together by steps.
+Suppose you want to increase number of ec2 based on cpu utilization, and have following rules:
+0% < cpu < 30% -- add 1 ec2
+30% < cpu < 60% -- add 2 ec2
+cpu > 60% -- add 3 ec2
+Of course you can create 3 simple policy and 3 CloudWatch alarm for each step. But it too much, so it's better to have 1 alarm and 1 step policy.
+** Be aware that step policy `MetricIntervalLowerBound/MetricIntervalUpperBound` add this value to value from CloudWatch alarm. So if you don't want you should leave lower bound, cause you are not allowed to set negative values  (take a look at `cloudformation/asg-simple-step.yml`)
 * Target tracking scaling - scale based on a target value for a specific metric (ASG create CloudWatch alarms that trigger the scaling policy). So if you don't want to mess with alarms and want smart system that can scale out/in based on some metric you should use it.
     * ASGAverageCPUUtilization - based on cpu consumption
     * ALBRequestCountPerTarget - based on number of requests for elb

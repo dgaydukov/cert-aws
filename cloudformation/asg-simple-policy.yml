@@ -1,9 +1,10 @@
 AWSTemplateFormatVersion: 2010-09-09
 
 # Create vpc with single public subnet and asg
+# Use stress utility to imitate cpu load `stress --cpu 1 --timeout 180`
+# Since you should scale out fast but scale in slow, CloudWatch alarms time is different
 
 # Cooldown (SimpleScaling) - how long to wait before initiate next scaling
-# EstimatedInstanceWarmup (TargetTrackingScaling, StepScaling) - how long until a newly launched instance can contribute to the CloudWatch metrics
 
 Resources:
   VPC:
@@ -115,39 +116,44 @@ Resources:
       PolicyType: SimpleScaling
       Cooldown: 300
       ScalingAdjustment: 1
-
-  StepScaleOut:
-    Type: AWS::AutoScaling::ScalingPolicy
-    Properties:
-      AutoScalingGroupName: !Ref ASG
-      AdjustmentType: ChangeInCapacity
-      PolicyType: StepScaling
-      MetricAggregationType: Average
-      EstimatedInstanceWarmup: 60
-      StepAdjustments:
-        - MetricIntervalLowerBound: 0
-          MetricIntervalUpperBound: 40
-          ScalingAdjustment: 1
-        - MetricIntervalLowerBound: 40
-          MetricIntervalUpperBound: 70
-          ScalingAdjustment: 2
-        - MetricIntervalLowerBound: 70
-          ScalingAdjustment: 3
-
-  CpuAlarm:
+  HighCpuAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      EvaluationPeriods: 3
+      EvaluationPeriods: 2
       Statistic: Average
-      Threshold: 30
-      AlarmDescription: Alarm if CPU more than 30% for 3 consecutive minutes
+      Threshold: 50
+      AlarmDescription: Alarm in case of high CPU utilization
       Period: 60
       AlarmActions:
         - !Ref SimpleScaleOut
-        - !Ref StepScaleOut
       Namespace: AWS/EC2
       Dimensions:
         - Name: AutoScalingGroupName
           Value: !Ref ASG
       ComparisonOperator: GreaterThanThreshold
+      MetricName: CPUUtilization
+
+  SimpleScaleIn:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AutoScalingGroupName: !Ref ASG
+      AdjustmentType: ChangeInCapacity
+      PolicyType: SimpleScaling
+      Cooldown: 300
+      ScalingAdjustment: -1
+  LowCpuAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      EvaluationPeriods: 5
+      Statistic: Average
+      Threshold: 10
+      AlarmDescription: Alarm in case of low CPU utilization
+      Period: 60
+      AlarmActions:
+        - !Ref SimpleScaleIn
+      Namespace: AWS/EC2
+      Dimensions:
+        - Name: AutoScalingGroupName
+          Value: !Ref ASG
+      ComparisonOperator: LessThanThreshold
       MetricName: CPUUtilization
