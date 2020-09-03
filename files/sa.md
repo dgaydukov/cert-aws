@@ -21,6 +21,7 @@
 * 1.17 [AWS CLI](#aws-cli)
 * 1.18 [Useful Linux Commands](#useful-linux-commands)
 * 1.19 [Redirect 301 vs 302](#redirect-301-vs-302)
+* 1.20 [crontab](#crontab)
 2. [Networking](#networking)
 * 2.1 [NIC](#nic)
 * 2.2 [Hub, Switch, Router](#hub-switch-router)
@@ -412,6 +413,7 @@ There are 2 main codes of redirects (HTTP method can also change)
 Redirects without changing http method. They basically the same as 301/302 only difference is that here HTTP method (GET/POST/PUT..) can't change
 * 307 (temporary)
 * 308 (permanent)
+
 
 
 
@@ -1381,6 +1383,7 @@ Of course you can create 3 simple policy and 3 CloudWatch alarm for each step. B
     * ASGAverageCPUUtilization - based on cpu consumption
     * ALBRequestCountPerTarget - based on number of requests for elb
     * ASGAverageNetworkIn/ASGAverageNetworkOut - based on average number of bytes
+* Scheduled policy - specify changin of min/max instances based on some scheduled value (for example you know your peak hours every day). crontab notation is used for this.
 You can also create your own custom metrics. But it should change based on number of instances (latency is bad and won't work, cause adding/removing instances doesn't directly affect response time)
 If you have single ec2 and you need to deploy java project there, you can just ssh there and put .jar file directly. But if you are managing a fleet of ec2 using ASG you would better to use efs and put your .jar there, so whenever new ec2 is started it would take this .jar and run your app.
 Types of scaling:
