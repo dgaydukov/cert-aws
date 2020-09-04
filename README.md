@@ -106,3 +106,5 @@ TargetGroup:
 * try emr on t2 (with different engines hive/hbase/presto/spark)
 * migrate rds into s3 using dms
 * create data lake with lake formation
+* request and run spot fleet
+* redshift enhanced vpc routing (send data inside vpc between redhshift & s3 and view vpc flow logs)

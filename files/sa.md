@@ -214,6 +214,10 @@ There are 2 types of DR in aws
 * warm standby - constantly running scaled in version of your main infra
 * multi site
 
+HA vs DR
+* HA - run some ec2 in another AZ and use elb to forward request to this AZ. In case one AZ fail you can still use your service. Yet this won't protect against whole region failure
+* DR - run some critical stuff in another region and use route53 failover to this region. But major part is restored once you start DR. When we talk about DR we usually assume entire region goes down.
+
 HA vs FT
 * HA (High availability) - system can recover with short downtime
 * FT (fault tolerance) - system continue provide services even in case of failures. You build FT by introducing redundancy.
@@ -233,6 +237,7 @@ Every instance in VPC has a default ENI - primary network interface, you can't d
 
 Both ENA & EFA are ENI that provide some advanced networking
 * ENA (Elastic Network Adapter) - ENI that provides enhanced networking capabilities. There is a selected [set of instance](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/enhanced-networking-ena.html#ena-requirements) that support ena. You can ssh to ec2 and run `modinfo ena` if you see response your ENI is ENA.
+When you need several ec2 to have low latency & high network throughput it's better to put them into cluster PG, instead of just adding ean to each of them.
 * EFA (Elastic Fabric Adapter) - ENA + OS bypass hardware interface (without involving the instance kernel) that use hardware-provided reliable transport communication.
 It allows HPC applications to communicate to talk with each other with low latency and higher throughput than traditional TCP channels.
 HPC applications - a group of ec2 instances that perform some high load logic. They are written using MPI (Message Passing Interface) and require fact communication between instances.
@@ -748,6 +753,10 @@ Name of ssh key is not the only one, here is full list of [AWS-specific paramete
 Internally CF is nothing but a service that parse your JSON/YAML, creates dependency graph and turn it into aws API calls (from bottom to top so dependencies would work).
 CF uses declarative approach, cause you declare how your stack should look like, you are not telling what CF should do to in order to build it (imperative approach).
 
+DD (Drift Detection) - find difference between template values and actual property values in aws (can happen if someone change resource directly from console/cli). 
+DD only checks values explicitly set in template, it doesn't check default values (so if you change some default prorepty directly from console/cli, DD won't find it).
+If you want include default props into DD result you should add all these default properties into CF template.
+
 ###### IAM
 * In case you have one user who requires access to a specific resource, as a best practice, you should create a new AWS group for that access (in case new user would appear you would just assign him to this group)
 * EC2 role access - you can add (for example bucket write access) role to ec2 instance
@@ -768,7 +777,6 @@ Tokens
 * Access token - combination of Access Key ID (20 chars) + Secret Access Key (40 characters)
 aws prevents replay attack by using timestamp in signature and if request older that 15 min, it's rejected.
 * Session Token - temporary session token to authenticate
-
 
 Policy - define the permissions for a user, group, or role. Resource is defined with following format `"arn:aws:service:region:account-id:[resourcetype:]resource"`.
 Resource examples:
@@ -985,10 +993,21 @@ Event notification - you can send events (sns/sqs/lambda) base on s3 action (get
 To achieve better performance you are adviced to use random names for objects, but [it's not longer required](https://aws.amazon.com/about-aws/whats-new/2018/07/amazon-s3-announces-increased-request-rate-performance). 
 Randomized named worked better cause when names are sequential all data store in the same place and it's harder to extract it.
 
+Storage Classes - can be configured at the object level and a single bucket can contain objects stored across Standard/Intelligent/Standard-IA/Single-Zone-IA
+You can also use S3 Lifecycle policies to automatically transition objects between storage classes without any application changes
+Storage Class Analysis - filters that helps analyse access pattern for whole bucket or list of objects 
+* Standard - low latency, high throughput, 3 AZ replication
+* Intelligent - when you don't know access pattern. It has 2 access types - frequent/infrequent, and based on access pattern moves objects between these 2 types and save money
+* Standard-IA
+* Single-Zone-IA - store data only inside single AZ
+* Glacier - 4h to read data
+* Glacier Deep Archive - 12h to read data
+
 ###### Glacier
 Glacier - low-cost tape-drive storage value with  $0.007 per gigabyte per month. Used to store backups that you don't need frequently.
 Access to data can take from few minutes to a few hours. You store data as archives.
 Vault - same as bucket for s3, actual place where your archives are stored. You control access by using iam identity or vault policy.
+Vault Lock - compliance control policy like WORM (write once read many) where you put object only once and lock applied and you can't overwrite it
 
 When you should never use glacier
 * rapidly changing data (use EBS/EFS/RDS/DynamoDB)
@@ -998,6 +1017,11 @@ You can also use multipart upload to speed up upload by dividing large files int
 Just like s3 you can use REST API to work with glacier
 You can set up s3 lifecycle, after which objects from s3 would be moved to glacier (but to view them you should use s3 api, if you use glacier api you won't see this objects)
 You can retrieve up to 5% of your average monthly storage for free each month (rated daily), above this you are charged additional fee
+
+Retrieval Options
+* Standard - 3-5 hours
+* Expedited - 1-5 min, most expensive
+* Bulk - 5-12 hours, cheapest
 
 ###### EFS
 EFS (Elastic File System) - delivers simple network filesystem for EC2. It supports NFSv4/4.1 (Network file system).
@@ -1036,7 +1060,7 @@ When you take snapshot of running ebs, it would be available immediately (there 
 But when you recover snapshot ebs is read immediately, but data is loaded lazyly.
 
 IOPS vs Throughput vs Bandwidth
-* IOPS - number of read/write operations per second
+* IOPS - number of read/write operations per second, good for transactional db where we need to make lot of small writes
     * General Purpose SSD (gp2)
     * Provisioned IOPS SSD (io1)
 * Throughput - number of bits read/written per second
@@ -1297,6 +1321,8 @@ Stream records are organized into groups, also referred to as shards. With strea
 * log/audit/aggregate data
 * replicate data to another regions for query purpose using DynamoDB Cross-Region Replication Library
 
+DAX (DynamoDB Accelerator) - in-memory cache for dynamoDb, can expedite up to 10 times. The benefit is that you don't have to modify source code, you just enable cache and it works.
+
 ###### RedShift
 Database vs Data Warehouse
 * relational db (single source) - OLTP (Online Transaction Processing) - store current transactions and quick access to them
@@ -1328,6 +1354,10 @@ Distribution style - when you create table you can choose
 * KEY - rows are distributed according to the values in one column, leader node places matching values on the same node slice
 * ALL - copy of the entire table is distributed to every node. While EVEN distribution or KEY distribution place only a portion of a table's rows on each node, ALL distribution ensures that every row is collocated for every join that the table participates in
 
+Enhanced VPC routing - forces `COPY/UNLOAD` traffic between your cluster and your data repositories through your Amazon VPC. These allows you
+* use all features of vpc
+* see vpc flow logs for `COPY/UNLOAD` commands
+* use vpc endpoint (route traffic between s3 & redshift)
 
 ###### QuickSight
 QuickSight - BI (business intelligence) tool, for building visualizations, perform ad-hoc analysis (can connect to all aws data sources).
@@ -1399,6 +1429,7 @@ cpu > 60% -- add 3 ec2
 Of course you can create 3 simple policy and 3 CloudWatch alarm for each step. But it too much, so it's better to have 1 alarm and 1 step policy.
 ** Be aware that step policy `MetricIntervalLowerBound/MetricIntervalUpperBound` add this value to value from CloudWatch alarm. So if you don't want you should leave lower bound, cause you are not allowed to set negative values  (take a look at `cloudformation/asg-simple-step.yml`)
 * Target tracking scaling - scale based on a target value for a specific metric (ASG create CloudWatch alarms that trigger the scaling policy). So if you don't want to mess with alarms and want smart system that can scale out/in based on some metric you should use it.
+With this smart policy cloudwatch alarm and step adjusment policy created behind the scene, and manage number of ec2 based on target
     * ASGAverageCPUUtilization - based on cpu consumption
     * ALBRequestCountPerTarget - based on number of requests for elb
     * ASGAverageNetworkIn/ASGAverageNetworkOut - based on average number of bytes
@@ -1442,6 +1473,18 @@ When you terminate instance it will wait for `HeartbeatTimeout` (default 1 hour)
 }
 ```
 To complete you should call `aws autoscaling complete-lifecycle-action --lifecycle-action-result=CONTINUE --instance-id=i-01b8eb322fb0e88e7 --lifecycle-hook-name=asg-ScaleInHook-1X3I4VRP056CX --auto-scaling-group-name=asg-VPC-A-ASG --profile=awssa`
+Termination policy - customizing how asg would terminate your instances:
+* Default
+* OldestInstance - remove oldest instances first, useful when you're upgrading the instances
+* OldestLaunchConfiguration - remove instances that have the oldest launch configuration, useful when you're updating a group and phasing out the instances from a previous configuration
+* NewestInstance - remove newest instance first, useful when you're testing a new launch configuration but don't want to keep it
+* ClosestToNextInstanceHour - remove instances that are closest to the next billing hour
+* OldestLaunchTemplate - remove instances that have the oldest launch template
+* AllocationStrategy - remove instances to align the remaining instances to the allocation strategy for the type of instance that is terminating (either a Spot Instance or an On-Demand Instance)
+Launch template - similar to launch configuration but with additional props like:
+* allows you to have multiple versions of a template
+* allowed to add multiple instance types instead of one single type (you can launch both Spot and On-Demand ec2)
+* provide more advanced features (dedicated hosts, )
 ASG (Auto Scaling group) - a collection of same ec2 managed by AS. if you delete ASG all instances of it's type would be deleted.
 You can configure SNS to get notification when your ASG scales out/in or replace unhealthy instance.
 LC (launch configuration) - template that ASG uses to launch new instances. One ASG use one LC. You can't modify LC, if you need to change some params you should create new LC and update your ASG.
@@ -1651,7 +1694,7 @@ So use
 * subnet layer - NACL decide which traffic to allow
 * ec2 layer - SG
 
-PG (Placement group) - create ec2 in underlying hardware in such a way as to avoid correlated failures. There are 2 types
+PG (Placement group) - create ec2 in underlying hardware in such a way as to avoid correlated failures:
 * cluster - packs instances close together inside AZ (good when you need high speed node-to-node communication, used in HPC apps). t2.micro can't be placed into cluster PG
 * partition (up to 7 per AZ) - spread instances between different hardware partitions (so group in instances inside one partition don't share any hardware with group of instances from another partition)
 * spread - strictly place instances into distinct hardware to reduce correlated failures
@@ -1770,7 +1813,8 @@ Routing policy
 * Geolocation - redirect traffic based on user location to record set with nearest geographic aws region
 * Geoproximity - you choose region and set bias value, and based on this value region border is drawn then traffic goes according to these drawn by you borders
 * Latency - redirect traffic to the region that provides the lowest latency.
-* Multivalue answer - simple routing policy + healthcheck. You can set up to 8 instances, and if first become unavailable traffic goes to random one out of other 7
+* Multivalue answer - simple routing policy + healthcheck. You can set up to 8 instances, and if first become unavailable traffic goes to random one out of other 7.
+Route53 gives different answers to different DNS resolvers. If a web server becomes unavailable after a resolver caches a response, client software can try another IP address in the response.
 * Weighted - 90% of traffic to one ec2, 10 to second
 
 Hosted zone - route53 concept of domain. For each of your domain you have 1 hosted zone where you can have records. There are 2 types of it:
@@ -2132,7 +2176,7 @@ There are 3 types of logs
 
 By default logs stored for 90 days and only management events stored. If you need longer you should create trail. Trail stores data in s3, you have to analyze it yourself (usually using Athena).
 By default trail collects data from all regions. You can create single region trail [only from cli](https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-create-and-update-a-trail-by-using-the-aws-cli-create-trail.html#cloudtrail-create-and-update-a-trail-by-using-the-aws-cli-examples-single).
-So there is no way to create single-region trail from console.
+So there is no way to create single-region trail from console. When aws launch new region, in case of all region trail - new trail would be created in newly launched region.
 Log file validation - guaranty that logs were not tampered with. Mare sure your s3 bucket has correct write policy, otherwise CT won't be able to store logs there.
 You can deliver CT logs to CloudWatch, in this case CT would deliver logs to s3 & CloudWatch logs.
 
