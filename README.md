@@ -29,6 +29,7 @@ There are 2 main reasons to get it
 
 
 ### TODO
+* https://aws.amazon.com/artifact/faq
 -----------------------------------------------Advanced-----------------------------------------------
 * add vpc to `cloudformation/ec2-cw-recover-alarm.yml` (in case you run it in region where no default vpc)
 * edit all current cf templates => rewrite efs from default SG to custom (cause it's better to explicitly control SG)

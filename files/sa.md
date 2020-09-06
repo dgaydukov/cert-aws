@@ -1188,7 +1188,7 @@ With Kinesis, you can ingest real-time data such as application logs, website cl
 * Kinesis Firehose (near real time) - load massive volumes of streaming data into AWS (you can configure lambda to transform you data before loading)
 Receives stream data and stores it in s3/RedShift/ElasticSearch
 * Kinesis Streams (real time) - ability to process the data in the stream.
-Stream for processing data, firehose - for storing them in s3.
+Stream for processing data, firehose - for storing them in s3/redshift.
 * Kinesis Analytics - analyze streaming data real time with standard SQL
 
 AntiPattern
@@ -1207,7 +1207,7 @@ AntiPattern
 * Long Running Applications (Lambda max time is 900sec. If you need some long running jobs you should consider EC2)
 * Dynamic Websites (although you can use Lambda to create static website, it's better to use some programming language like java/node.js and deploy it to EC2)
 * Stateful Applications (Lambda is stateless, if you need state it's better to create app in java/node.js and deploy it ot EC2 + RDS/DynamoDb)
-Cold Start - when you first run your lambda and aws search for idle server and run your lambda on this sever, delay may happen. 
+Cold Start - when you first run your lambda and aarch for idle server and run your lambda on this sever, delay may happen. 
 When you first run your code aws create new execution context (download code, set up env vars, load code) and it can take from few millisec to a few sec.
 When you run it for second and consecutive time, there is no delay.
 By default lambda runs in no VPC (so it has internet access), if you want your lambda to talk with other services you should put it into VPC, if your lambda need internet access you have to configure nat for it.
@@ -1272,7 +1272,7 @@ Data Partitioning
 * Partition - allocation of storage for a table, backed by solid state drives (SSDs) and automatically replicated across multiple AZ.
 * Partition management occurs automatically in the background by DynamoDb.
 * Hot partition - when one partition receive way more traffic than all other (support you write throughput is 4k, and you have 4 partitions. Each get 500 writes, but fourth get 2k. Although totally you have 4k, but because they are evenly distribute you got throttle on fourth partition).
-* Adaptive Capacity - in case you got some hot partition, DynamoDB try to rebalance your data, so it would be evenly stored across all partitions.
+* Adaptive Capacity - in case you got some hot partitiws seon, DynamoDB try to rebalance your data, so it would be evenly stored across all partitions.
 
 Main reason to use NoSql against relation db is that you can scale horizontally.
 With relational db the scale is vertical (add more compute/memory to single node). If you try to scale horizontally relational db you have to use 2PC to support transaction atomicity.
@@ -1351,6 +1351,7 @@ For encryption it uses four-tier hierarchy of encryption keys. These keys are:
 * data encryption keys
 
 Redshift Spectrum - allows you to query data in s3, it's serverless just like Athena, so you pay for resources you consume.
+It different from Athena, cause it allows you to join current redshift tables with data from s3.
 Under the hood there is a fleet of thousands Redshift Spectrum nodes spread across multiple AZ.
 Query is submitted to leader node of your Redshift cluster => leader node optimizes, compiles, and pushes the query execution to the compute nodes => compute nodes submit requests to redshift spectrum
 spectrum pool thousands of ec2 and query data from s3 and return it back to cluster.
@@ -1735,6 +1736,7 @@ With EB you shouldn't worry about java installed on ec2, if you select java it w
 ###### DMS
 Database Migration Service - used for easy migration between different db (like from MySql to DynamoDB), and also for data replication.
 DMS use SCT (Schema Conversion Tool) for converting between existing schemas.
+You can use dms to migrate any supported db into s3 using `csv/parquet` format
 
 
 ###### ELB
@@ -2457,7 +2459,7 @@ SageMaker has 15 built-in ML algorithms, but you can also use your own.
 DL (Data Lake) - scalable central repository of large quantities and varieties of data, both structured and unstructured. There are a few steps
 * ingesting and cataloging data from a variety of sources
 * data is enriched, combined, and cleaned before analysis
-
+You can use dms to convert db into s3 and replace read replica with data lake. But if you have many updates you should use Redshift/Hive
 LF (Lake Formation) - integrated data lake service where you ingest/clean/catalog/transform/secure your data and make it available for analysis and ML.
 LF provides you single console to ingest you data and then use other aws services like ML/EMR/RedShift to transform and query your data.
 FindMatches ML Transform - solves 2 problems
