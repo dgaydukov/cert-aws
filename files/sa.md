@@ -1223,13 +1223,22 @@ EMR (Elastic Map Reduce) - highly distributed computing framework for data proce
 It's good if you have some stored data in s3 and want to process it. If you have real-time data stream it's better to use Kinesis.
 Hadoop is open source java framework supports data-intensive distributed apps running on large clusters of commodity hardware. Hive/Pig/HBase are packages that run on top of Hadoop.
 It reduces large workload into smaller jobs and distribute it between EC2 instances of Hadoop cluster (good for big data analyses).
-Hadoop is basically 2 things: HDFS + a Computation or Processing framework (MapReduce)
+Hadoop is basically 2 things: HDFS + a Computation or Processing framework (MapReduce - hadoop api name)
 There are 2 types of storage
 * HDFS (Hadoop Distributed File System) - data replicated across several instances. Data can be stored on EBS or instance store
 * EMRFS (EMR File System) - implemetation of HDFS that can store data in s3
 There are 2 types of cluster
 * persistent - runs continiously, should use HDFS
 * transient - do some work and stop, should use EMRFS, so data won't be lost after cluster is stopped or terminated
+
+Hadoop vs Spark:
+Hadoop - just storage system (HDFS) + api by which you can process this info. 
+But hadoop api is not fast enough to process big data and here come spark which can help to expedite data processing.
+If you want to run spark on cluster (for testing purposes you can run it on local machine) you need cluster manager.
+There are 2 cluster managers - yarn/mesos. Since yarn is built into hadoop you need hadoop to run spark. But you can use mesos and run spark without hadoop.
+Cluster manager - coordinate code execution on different machines. 
+You can use spring+java+spark to have all features of java/spring to write good code for spark
+Data Locality - process data on the machines where they are located instead of transfer all data to single machine and proecess them there.
 
 AntiPattern
 * Small data sets (EMR for large processing, if your dataset is small enough for one machine/thread it's better to use EC2 or Lambda)
