@@ -239,9 +239,10 @@ Both ENA & EFA are ENI that provide some advanced networking
 * ENA (Elastic Network Adapter) - ENI that provides enhanced networking capabilities. There is a selected [set of instance](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/enhanced-networking-ena.html#ena-requirements) that support ena. You can ssh to ec2 and run `modinfo ena` if you see response your ENI is ENA.
 When you need several ec2 to have low latency & high network throughput it's better to put them into cluster PG, instead of just adding ean to each of them.
 * EFA (Elastic Fabric Adapter) - ENA + OS bypass hardware interface (without involving the instance kernel) that use hardware-provided reliable transport communication.
-It allows HPC applications to communicate to talk with each other with low latency and higher throughput than traditional TCP channels.
-HPC applications - a group of ec2 instances that perform some high load logic. They are written using MPI (Message Passing Interface) and require fact communication between instances.
-EFA ENIs can only be attached at launch or to stopped instances.
+    * allows HPC applications to communicate to talk with each other with low latency and higher throughput than traditional TCP channels.
+    * EFA ENIs can only be attached at launch or to stopped instances
+    * best suited for HPC/ML. HPC applications - a group of ec2 instances that perform some high load logic. They are written using MPI (Message Passing Interface) and require fact communication between instances
+    * OS-bypass traffic is limited to a single subnet. In other words, EFA traffic cannot be sent from one subnet to another. Normal IP traffic from the EFA can be sent from one subnet to another
 
 ###### Shared Responsibility
 AWS use concept of shared responsibility

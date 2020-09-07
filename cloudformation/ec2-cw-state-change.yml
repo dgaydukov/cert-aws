@@ -1,0 +1,107 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+# Store logs when ec2 state (stop/start/terminate) changes
+# Log group name should start with `/aws/events/`
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.100.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value:  !Sub ${AWS::StackName}-MyVpc
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    DependsOn: VPC
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-IGW
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.100.2.0/24
+      AvailabilityZone: us-east-1a
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-Public
+  PublicRT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-Public-RT
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: !Ref PublicRT
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+  PublicSubnetRTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref PublicRT
+
+  SshSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref VPC
+      GroupDescription: Enable SSH access from anywhere
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-Ssh-SG
+  PublicInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-09d95fab7fff3776c
+      KeyName: mykey
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: 0
+          SubnetId: !Ref PublicSubnet
+          GroupSet:
+            - !GetAtt SshSG.GroupId
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 8
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-Public
+
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/events/${AWS::StackName}-MyVpc-LogGroup
+      RetentionInDays: 7
+  StateChangeEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: Rule to log state change events
+      EventPattern:
+        source:
+          - aws.ec2
+        detail-type:
+          - EC2 Instance State-change Notification
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt LogGroup.Arn
+          Id: StateChangeLogGroup

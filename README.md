@@ -109,3 +109,4 @@ TargetGroup:
 * create data lake with lake formation
 * request and run spot fleet
 * redshift enhanced vpc routing (send data inside vpc between redhshift & s3 and view vpc flow logs)
+* configure alarm to start instance if it was stopped `cloudformation/ec2-cw-state-change.yml` + use lambda to store it in dynamodb
