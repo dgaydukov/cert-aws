@@ -93,6 +93,7 @@
 * 3.51 [SageMaker](#sagemaker)
 * 3.52 [Lake Formation](#lake-formation)
 * 3.53 [Application Discovery Service](#application-discovery-service)
+* 3.54 [Artifact](#artifact)
 
 
 
@@ -238,7 +239,7 @@ Every instance in VPC has a default ENI - primary network interface, you can't d
 Both ENA & EFA are ENI that provide some advanced networking
 * ENA (Elastic Network Adapter) - ENI that provides enhanced networking capabilities. There is a selected [set of instance](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/enhanced-networking-ena.html#ena-requirements) that support ena. You can ssh to ec2 and run `modinfo ena` if you see response your ENI is ENA.
 When you need several ec2 to have low latency & high network throughput it's better to put them into cluster PG, instead of just adding ean to each of them.
-* EFA (Elastic Fabric Adapter) - ENA + OS bypass hardware interface (without involving the instance kernel) that use hardware-provided reliable transport communication.
+* EFA (Elastic Fabric Adapter) - gENA + OS bypass hardware interface (without involving the instance kernel) that use hardware-provided reliable transport communication.
     * allows HPC applications to communicate to talk with each other with low latency and higher throughput than traditional TCP channels.
     * EFA ENIs can only be attached at launch or to stopped instances
     * best suited for HPC/ML. HPC applications - a group of ec2 instances that perform some high load logic. They are written using MPI (Message Passing Interface) and require fact communication between instances
@@ -1918,11 +1919,14 @@ You can recover snapshot on the moment taken or by point-in-time (cause rds keep
 multi-AZ (failover) - HA:
 * primary - you main db that performs read/write
 * standby - replica db that has most recent updates from primary. You can't use it for reads, the only purpose is failover - when primary fails, your standby becomes primary, so you won't even notice failure. Replication is synchronous.
+You have no control for standby, so you can't promote it to be read replica.
 Since Aurora stores data across 3 AZ, if master is failed, it would automatically recreated in another AZ, so for aurora you don't need to set up stand-by replica.
 
 Read replica (replica db only for reading) - horizontal scaling:
-Use it if you want to write to master and read from replica. Read Replica implemented using db (mysql or other) native asynchronous replication, that's why lag can occur, comparing with multi-AZ replication
-where writes are concurrent. Ycd prou can also modify read replica to execute DDL (Data Definition Language) SQL queries. You can promote read replica to become master database.
+* write to master and read from replica
+* can be cross-AZ and cross-region
+* implemented using db (mysql or other) native asynchronous replication, that's why lag can occur, comparing with multi-AZ replication (synchronous replication)
+* can be promoted to become master database.
 
 Enhanced monitoring - allows you to view all metrics with 1 sec granularity
 
@@ -1946,6 +1950,12 @@ to get token and to access your db using this token (token would be valid for 15
 On-premise to rds data migration:
 * copy dump to s3 and from s3 import into rds (you can also use ec2, but create new ec2 for this purpose in to wise, yet this would work: copy dump to ec2 within same vpc as rds, go to ec2, connect from there to rds, and pump data into rds)
 * use DMS for more complex scenario
+
+You can create encrypted rds only during creation time. If you created unecnrypted db and want to encrypt it you should
+* create db snapshot
+* copy snapshot
+* encrypt copied snapshot
+* recreate encrypted db from encrypted snapshot
 
 ###### SQS
 SQS (Simple Queue Service) - managed service that provide asynchronous decoupling and publisher/subscriber (queue) model. There are 2 types
@@ -2040,8 +2050,9 @@ You can migrate your users into cognito, but password won't be migrated. If you 
 when user signin to your app - you signin him within cognito, if user doesn't exist in cognito you sign-up him with username/password.
 Cognito also support SAML or OpenID Connect, social identity providers (such as Facebook, Twitter, Amazon) and you can also integrate your own identity provider.
 * Identity Pool - temporary credentials to access aws services. If your users don't need to access aws resources, you don't need identity pool, user pool would be enough.
+You can use users from User Pool or Federated Pool (Facebook, Google) as users to whom give temporary credentials.
 You pay for MAU (monthly active users) - user who within a month made some identity operation signIn/singUp/tokenRefresh/passwordChange.
-Free tier - 50k MAU per month.
+Free tier - 50k MAU per month. You can call `AssumeRoleWithWebIdentity` to get temporary credentials.
 
 There are 3 types of cognito tokens (with accord to OpenID)
 * id token - jwt token that has personal user info (name, email, phone). So you shouldn't use it outside your backend, cause it includes sensitive info
@@ -2487,7 +2498,11 @@ Agent can be operated in an offline test mode that writes data to a local file s
 You need to install AgentLess Connector as OVA (Open Virtual Appliance) package on VMware vCenter.
 
 
-
+###### Artifact
+Artifact - portal that provides customers with ability to download AWS security and compliance documents, such as AWS ISO certifications, Payment Card Industry (PCI), and System and Organization Control (SOC) reports.
+There are 2 types of docs
+* agreements - you can accept it or terminate, so 2 statuses - active/inactive
+* report
 
 
 
