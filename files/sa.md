@@ -60,7 +60,7 @@
 * 3.22 [DMS](#dms)
 * 3.22 [ELB](#elb)
 * 3.23 [CloudWatch](#cloudwatch)
-* 3.23 [Key Management Service](#key-management-service)
+* 3.23 [KMS](#kms)
 * 3.23 [Route53](#route53)
 * 3.24 [RDS](#rds)
 * 3.25 [SQS](#sqs)
@@ -94,6 +94,8 @@
 * 3.52 [Lake Formation](#lake-formation)
 * 3.53 [Application Discovery Service](#application-discovery-service)
 * 3.54 [Artifact](#artifact)
+* 3.55 [Server Migration Service](#server-migration-service)
+* 3.56 [Resource Access Manager](#resource-access-manager)
 
 
 
@@ -272,7 +274,7 @@ Hyperviser is Virtual Machine Monitor (VMM), that runs VM. It works as mediator 
 Originally hypervisors developped to give multiple users simultaneous access to computers that performed batch processing. But over time other solutions for many users/single machine problem appeared including time sharing.
 So virtualization is a simulation of physical hardware for virtual OS.
 Containerization on the other hand is like os-level virtualization. Instead of creating a complete new OS, container share resources with host os, but have it's own file system, and by doing so divide itself from main OS.
-
+Hyper-V - Windows Server Virtualization, server computer running Hyper-V can be configured to expose individual virtual machines to one or more networks.
 Virtual machine like ec2 is part of physical machine in aws datacenter. It's isolated from other virtual machines by hypervisor or alike software. 
 * Host - physical machine where all virtual machines are located
 * Guest - virtual machine
@@ -323,6 +325,13 @@ aws help # show all available services
 aws <service> help # show all available actions to perform on selected service
 aws <service> <action> help # shaw all avaialble action options to perform for specified action 
 ```
+
+Service endpoint - you use it to connect to aws services. When you are using cli/sdk it automatically get api url for service you are going to use.
+Endpoint url built like `protocol://service.region.amazonaws.com` (for example https://dynamodb.us-east-1.amazonaws.com).
+FIPS endpoint - endpoint that use a TLS software library that complies with Federal Information Processing Standards.
+So for kms you have 2 endpoints:
+* kms.us-east-1.amazonaws.com
+* kms-fips.us-east-1.amazonaws.com
 
 Basic commands
 ```
@@ -1505,7 +1514,9 @@ ASG can launch your instances across multiple AZ but only within same region.
 Unhealthy instance can be determine by 2 healthchecks
 * elb healthchek - you should use it if you use elb
 * ec2 healthcheck - use it if you don't use elb
-
+ASG troubleshoot
+* more than 1 policy triggered by single event -> in this case asg launch policy with the greater impact (if one policy add 2 ec2 and another 4 -> 4 ec2 would be added)
+* scale-out and scale-in triggered by single event -> in this case scale-out wins 
 
 ###### Athena
 Athena is an interactive query service that makes it easy to analyze data in Amazon S3 using standard SQL. 
@@ -1534,6 +1545,8 @@ There are 2 types of policies
 * SCP (Service Control Policy) - policy you can apply to a group of aws accounts, defines service actions (like run EC2 instance), it follows the same rules as IAM policies.
 You can attach a policy to the root/OU/account. SCP overwrites IAM permissions (if you create SCP to block ec2 creation for all accounts, even root user form child account won't be able to launch any ec2 except for t2.micro)
 Order of execution - most restrictive policies take precedence.
+It never grant permission, they work like permission boundary - defining max set of permission accounts in organization can have.
+It will never limit permission to internal user of current account who has permission to access resources (for these purposes you have to use permission boundary) 
 * TP (Tag policy) - set of rules regarding tags (which resource should have which tags)
 
 ###### Well-Architected Tool
@@ -1802,11 +1815,11 @@ By default ec2 monitoring interval is 5min, but you can enable detailed monitori
 In ec2 you can create alarm too (when cpu goes above 80% - stop instance).
 If you want to track ec2 memory/cpu usage you have to install cloudwatch agent into ec2.
 
-###### Key Management Service
-KMS - a service for generating/storing/auditing keys. If you have a lot of encryption it's better to use central key management service.
+###### KMS
+Key Management Service - a service for generating/storing/auditing keys. If you have a lot of encryption it's better to use central key management service.
 You start working with KMS by creating CMK (customer master keys), or if you are using encryption from other aws resource, it would create CMK automatically for you.
 You can import only symmetric keys. You can't export CMK symmetric key or asymmetric private key.
-
+KMS keys are region specific (you can't transfer them into another region), so if you create key in one region you can't get it by accessing endpoint for another region.
 
 
 ###### Route53
@@ -2504,7 +2517,16 @@ There are 2 types of docs
 * agreements - you can accept it or terminate, so 2 statuses - active/inactive
 * report
 
+###### Server Migration Service
+SMS - agentless service that helps migrate on-premise workload to aws, significant enhancement of ec2 VM Import. You can migrate virtual machines from VMware vSphere, Windows Hyper-V, or Microsoft Azure to aws.
+Connector - pre-configured FreeBSD virtual machine that you install in your on-premise. This connector replicate volumes into ami and transfer it into aws using TLS.
+SMS schedule/coordinate/track incremental replication of many on-premise instances, so helping you to make large-scale server migrations.
 
-
-
-
+###### Resource Access Manager
+RAM - helps securely share your resources across AWS accounts or within your Organization. Shared resources can't be re-shared.
+To share resources, you create a Resource Share, give it a name, add one or more of your resources to it, and grant access to other AWS accounts.
+Account iam policy & scp applied to shared resource same way they are applied to provisioned resource in that account.
+There are 2 types of sharing
+* sharing with organization - share resource with whole organization or with OU.
+For this to work master account should enable resource sharing within organization. If it's not done you can't share resources with organization, but you can still use individual sharing.
+* individual sharing - share resource with individual account
