@@ -96,6 +96,7 @@
 * 3.54 [Artifact](#artifact)
 * 3.55 [Server Migration Service](#server-migration-service)
 * 3.56 [Resource Access Manager](#resource-access-manager)
+* 3.57 [DataSync](#datasync)
 
 
 
@@ -1014,6 +1015,11 @@ Storage Class Analysis - filters that helps analyse access pattern for whole buc
 * Glacier - 4h to read data
 * Glacier Deep Archive - 12h to read data
 
+TA (Transfer Acceleration) - fast (up to 5 times) file transfer over long distances between on-premise and s3, by using CloudFront edge locations, so when you upload file to s3, it first goes to nearest edge location, and from there transferred to s3 using aws internal network.
+To use TA your app should use `.s3-accelerate.amazonaws.com/.s3-accelerate.dualstack.amazonaws.com` endpoints. You can also use standard endpoints to access s3. So you can use different endpoints for standard and accelerated s3 access.
+So use TA if you have geographically distributed customers or you constantly moves GB/TB of data across continents. 
+If you file less than 1GB you should use CloudFront’s PUT/POST, otherwise use TA.
+
 ###### Glacier
 Glacier - low-cost tape-drive storage value with  $0.007 per gigabyte per month. Used to store backups that you don't need frequently.
 Access to data can take from few minutes to a few hours. You store data as archives.
@@ -1036,24 +1042,22 @@ Retrieval Options
 
 ###### EFS
 EFS (Elastic File System) - delivers simple network filesystem for EC2. It supports NFSv4/4.1 (Network file system).
-System size is grow as you add more files to file system.
-It allows parallel access from multiple EC2 within the same region
-It accessed by EC2 using mount targets which are created by AZ
-If you need temporary storage EFS not the best option, look at EC2 Local Instance Store
-There are 2 performance model
+System size is grow as you add more files to file system. It allows parallel access from multiple EC2 within the same region.
+It accessed by EC2 using mount targets which are created by AZ. If you need temporary storage EFS not the best option, look at EC2 Local Instance Store.
+There are 2 performance model:
 * General (if you need less then 7k file operation per second) 
 * Max I/O
-AWS DataSync - service that make it faster transfer data between on-premise data and EFS
-
 When you create efs it creates mount target in each az. Instances in each az talk to efs by using this mount targets.
 To mount efs to ec2, NFS Client should be installed and running. You can install it by
 ```
 sudo yum install -y amazon-efs-utils
 sudo mount -t efs fs-bc0a413f:/ ./mnt
 ```
-Some AMI (Amazon Linux/RHEL/Ubuntu) it's already installed, you just need to start it. You can check the status by `sudo service nfs status`
+For some AMI (Amazon Linux/RHEL/Ubuntu) it's already installed, you just need to start it. You can check the status by `sudo service nfs status`
 By default anybody can read, but root (UID 0) user can write. You can also use Access Points to create dirs in your efs for different users to read/write.
 You can also do `sudo chmod 777 /mnt/efs/` to give access to anybody to read/write. To check if directory is mounted to efs run `df /mnt/efs/`.
+EFS has only 2 storage classes: standard & IA.
+Lifecycle policy - move infrequently accessed files into Infrequent Access (IA) storage class after some period (For example file hasn't been access for 7 days, let's move it).
 
 ###### EBS
 EBS (Elastic Block Storage) - simple block storage for EC2. After EBS is attached to EC2 you can format it with desired file system.
@@ -1186,8 +1190,9 @@ You should add bucket policy to your bucket like
     ]
 }
 ```
-When you set OAI from cloudfront you can set `update bucket policy` and aws will itself add such policy to your s3 bucket. Of course you can do it manually, or edit it after this.
-In this case your s3 bucket is public, but can be accessed only by cloudfornt user with OAI=E27OQ9NRS1N0QR.
+When you set OAI from cf you can set `update bucket policy` and aws will itself add such policy to your s3 bucket. Of course you can do it manually, or edit it after this.
+In this case your s3 bucket is public, but can be accessed only by cf user with OAI=E27OQ9NRS1N0QR.
+Accelerated file upload - you can enable POST/PUT/PATCH methods for your cf distribution, and so accelerate file uploads. So now you upload your files to nearest cf edge location and from there it's uploaded to s3/ec2 using aws internal low-latency network.
 
 Anti-pattern
 * all users access website from specific location
@@ -2530,3 +2535,32 @@ There are 2 types of sharing
 * sharing with organization - share resource with whole organization or with OU.
 For this to work master account should enable resource sharing within organization. If it's not done you can't share resources with organization, but you can still use individual sharing.
 * individual sharing - share resource with individual account
+
+###### DataSync
+DataSync - online data transfer service that simplifies/automates/accelerates copying large amounts of data to and from s3/efs/FSx over the internet/Direct Connect.
+How it works:
+* uses a purpose-built network protocol and scale-out architecture to accelerate transfer to and from AWS.
+* automatically scales and handles moving files and objects, scheduling data transfers, monitoring the progress of transfers, encryption, verification of data transfers, and notifying customers of any issues
+If you want to migrate on-premise data to aws you should:
+* make an initial copy of your entire dataset
+* schedule subsequent incremental transfers of changing data until the final cut-over from on-premises to AWS
+During migration DataSync:
+* includes encryption and integrity validation to help make sure your data arrives securely, intact, and ready to use
+* can schedule your migration to run during off-hours, limit network bandwidth to offload network
+* can preserve metadata between storage systems that have similar metadata structures
+* can use filters to include/exclude specific set of files
+* migrate archive data directory to Glacier
+* can build your data lake, by automating the transfer of valuable on-premises data sets to s3
+* performs integrity checks to ensure transfered data is correspond to source data, by calculating file checksum and sompare it with on-premise file checksum
+* you can monitor transfer progress in CloudWatch (how many files and total volume)
+* ensure file transfer even if some interruption (like network problem). In this case DataSync will resume file transfer and complete it after failed attempt
+* use direct connect + vpc endpoint so data transfer happens inside vpc and doesn't go outside aws network
+To transfer data you should do 3 things
+* Deploy a DataSync agent in on-premise VM. Agent can be installed on ec2 by using AMI.
+* Create a data transfer task
+* start transfer
+When you transfer data from s3 to some destination, DataSync first retrieve all files, so for Standard-IA/One-Zone-IA retrieval incur additional fees.
+When to use it:
+* storage gateway: use datasync to quickly migrate data to s3 and storage gateway to retain access to s3 data from on-premise
+* snowball: key difference from snow family is that datasync - online transfer, white snowball - for offline
+* S3 Transfer Acceleration: if your app already integrated with s3 it's better to use s3 TA, otherwise (or if you have other than s3 destination) use datasync

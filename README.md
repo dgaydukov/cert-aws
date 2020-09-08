@@ -110,3 +110,4 @@ TargetGroup:
 * redshift enhanced vpc routing (send data inside vpc between redhshift & s3 and view vpc flow logs)
 * configure alarm to start instance if it was stopped `cloudformation/ec2-cw-state-change.yml` + use lambda to store it in dynamodb
 * signin with userpool/identitypool (is signin the same or not)
+* deploy datasync agent on ec2 and imitate data transfer to s3~~~~
