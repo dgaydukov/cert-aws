@@ -97,6 +97,7 @@
 * 3.55 [Server Migration Service](#server-migration-service)
 * 3.56 [Resource Access Manager](#resource-access-manager)
 * 3.57 [DataSync](#datasync)
+* 3.58 [Transfer Family](#transfer-family)
 
 
 
@@ -2564,3 +2565,18 @@ When to use it:
 * storage gateway: use datasync to quickly migrate data to s3 and storage gateway to retain access to s3 data from on-premise
 * snowball: key difference from snow family is that datasync - online transfer, white snowball - for offline
 * S3 Transfer Acceleration: if your app already integrated with s3 it's better to use s3 TA, otherwise (or if you have other than s3 destination) use datasync
+* Transfer Family: if you have FTP/SFTP it's better to use TF, otherwise use datasync
+
+###### Transfer Family
+TF - 3 services for transfer from on-premise into s3:
+* FTP (File Transfer Protocol) - network protocol for the transfer of data, use separate channel for control and data transfers.
+Control channel is open until terminated or inactivity timeout, the data channel is active for the duration of the transfer.
+* FTPS (FTP over SSL) - secure extension for FTP, allows encryption of both the control and data channel connections either concurrently or independently
+* SFTP (SSH FTP) - network protocol for secure transfer of data over the internet, required single channel for commands and data. It's newer than FTPS so it's better to use it for new projects.
+If you want any of these protocols and want to move data to aws you have to host and manage your own file transfer service, so TF solve this problem by providing managed file transfer service.
+After creating TF you get:
+* always-on server endpoint enabled for FTP/SFTP/FTPS. Endpoint can be accessible from within vpc or from public internet.
+FTP endpoint will only be available inside vpc cause it's not secure. If you need internet facing endpoint choose FTPS/SFTP.
+You can also create single endpoint that supports multiple protocols (yet if one of the supported protocol FTP - endpoint would be accessible only within vpc)
+* set up users by integrating with microsoft AD, LDAP, any custom identity provider
+* assign IAM role to provide access to s3 bucket
