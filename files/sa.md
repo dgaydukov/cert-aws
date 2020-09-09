@@ -224,8 +224,8 @@ HA vs DR
 * DR - run some critical stuff in another region and use route53 failover to this region. But major part is restored once you start DR. When we talk about DR we usually assume entire region goes down.
 
 HA vs FT
-* HA (High availability) - system can recover with short downtime
-* FT (fault tolerance) - system continue provide services even in case of failures. You build FT by introducing redundancy.
+* HA (High availability) - system can recover with short downtime. Example - add ec2 into another region.
+* FT (fault tolerance) - system continue provide services even in case of failures. You build FT by introducing redundancy. Example - add elb + asg.
 
 Availability vs. Durability on ebs example
 * Availability - ebs available 99.9% time, but in case of AZ failure it won't be available (cause ebs is linked to subnet/AZ). But when AZ becomes again available your data won't be lost.
@@ -330,6 +330,9 @@ aws <service> <action> help # shaw all avaialble action options to perform for s
 
 Service endpoint - you use it to connect to aws services. When you are using cli/sdk it automatically get api url for service you are going to use.
 Endpoint url built like `protocol://service.region.amazonaws.com` (for example https://dynamodb.us-east-1.amazonaws.com).
+Since s3 is global service but has region 2 urls are possible
+* without region - `https://my-test-s3-bucket-1.s3.amazonaws.com/index.html`
+* with region    - `https://s3.us-east-1.amazonaws.com/my-test-s3-bucket-1/index.html`
 FIPS endpoint - endpoint that use a TLS software library that complies with Federal Information Processing Standards.
 So for kms you have 2 endpoints:
 * kms.us-east-1.amazonaws.com
@@ -855,7 +858,7 @@ If you want to delete it you should go to permission->bucket policy and remove t
     "Resource": "arn:aws:s3:::you-bucket-name"
 }
 ```
-
+You can create policy that allows some action only with MFA, for this you should add mfa condition
 You can assume only 1 role at a time. So if you want to assume 2 roles, it would be 2 different set of permissions, you can't make any union operation on them.
 Moreover in cli you can add profiles only for single role. If you try to add profile for 2 or more roles like
 ```
@@ -1018,8 +1021,14 @@ Storage Class Analysis - filters that helps analyse access pattern for whole buc
 
 TA (Transfer Acceleration) - fast (up to 5 times) file transfer over long distances between on-premise and s3, by using CloudFront edge locations, so when you upload file to s3, it first goes to nearest edge location, and from there transferred to s3 using aws internal network.
 To use TA your app should use `.s3-accelerate.amazonaws.com/.s3-accelerate.dualstack.amazonaws.com` endpoints. You can also use standard endpoints to access s3. So you can use different endpoints for standard and accelerated s3 access.
-So use TA if you have geographically distributed customers or you constantly moves GB/TB of data across continents. 
-If you file less than 1GB you should use CloudFront’s PUT/POST, otherwise use TA.
+So use TA if you have geographically distributed customers or you constantly moves GB/TB of data across continents. If you file less than 1GB you should use CloudFront’s PUT/POST, otherwise use TA.
+If you need to transfer large amount of data from single space, SnowBall can be a good option, cause TA is mostly for many users from different locations.
+TA doesn't cache data in edge location, so if you want low latency then it's better to use plain cf distribution, cause in this case all files would be cached in all edge locations.
+
+Replication - automatic & asynchronous copy of data between 2 s3 buckets, can be within same account or between different aws accounts. There are 2 types:
+* SRR (Same-Region replication)
+* CRR (Cross-Region replication)
+  
 
 ###### Glacier
 Glacier - low-cost tape-drive storage value with  $0.007 per gigabyte per month. Used to store backups that you don't need frequently.
@@ -1078,9 +1087,9 @@ But when you recover snapshot ebs is read immediately, but data is loaded lazyly
 IOPS vs Throughput vs Bandwidth
 * IOPS - number of read/write operations per second, good for transactional db where we need to make lot of small writes
     * General Purpose SSD (gp2)
-    * Provisioned IOPS SSD (io1)
+    * Provisioned IOPS SSD (io1) - for transactional load, usually db
 * Throughput - number of bits read/written per second
-    * Throughput Optimized HDD (st1)
+    * Throughput Optimized HDD (st1) - log processing, big data, data warehouse
     * Cold HDD (sc1)
 * Bandwidth - pipe, throughput - water running through pipe
 
@@ -1152,8 +1161,12 @@ There are 4 types
 * viewer response - before CF responds to viewer
 
 You can protect CF data by using 
-* Signed url (like pre-signed s3 url) - temporary access to CF data (end-datetime is mandatory cause we need to know when access to particular file is over, start-datetime - optional).
-* Signed cookie - you can access multiple CF objects with same signed cookie. So use this method if you want to have access to multiple files with same cookie, and want to use standard url (without any signature as url params).
+* Signed url (like pre-signed s3 url) - temporary access to CF data. Support both web & RTMP distribution.
+* Signed cookie - you can access multiple CF objects with same signed cookie. So use this method if you want to have access to multiple files with same cookie, and want to use standard url (without any signature as url params). Not supported for RTMP distribution.
+When creating signed url/cookie you can set 3 params:
+* end-datetime   (mandatory) - we need to know when access to particular file is over
+* start-datetime (optional)
+* ip-address     (optional) - single IP address or IP range
 In order to create pre-sign url you need to create CF keypair. You can do it only as root account (iam user won't work in this case). Login as root, go to `Account=>Security Credentials`, from there go to `CloudFront key pairs` and create new key pair.
 Don't confuse it with ec2 key pairs and with CF public key. They both for different purpose.
 You can make CF private by setting `Restrict Viewer Access` to yes (in this case you can also set which accounts can create signed urls, so other accounts can also generate urls to access data).
@@ -1191,9 +1204,19 @@ You should add bucket policy to your bucket like
     ]
 }
 ```
+You can also achieve the same by updating bucket acl, and it's more granular cause you can add permission to each object separately.
+It's granular cause you can't add read to all objects, only list. So if you want to read the object you should go to that object and add `Read` permission to it explicitly.
 When you set OAI from cf you can set `update bucket policy` and aws will itself add such policy to your s3 bucket. Of course you can do it manually, or edit it after this.
 In this case your s3 bucket is public, but can be accessed only by cf user with OAI=E27OQ9NRS1N0QR.
 Accelerated file upload - you can enable POST/PUT/PATCH methods for your cf distribution, and so accelerate file uploads. So now you upload your files to nearest cf edge location and from there it's uploaded to s3/ec2 using aws internal low-latency network.
+There are 3 ways to limit access to cf:
+* using pre-sign url/cookie
+* use geo-restriction (whitelist/blacklist specific countries)
+* use WAF for all other restriction (for example whitelist/blacklist by list of IP addresses)
+
+If you run PCI-compliant or HIPAA-compliant workloads you should:
+* enable cf access logs - save all request to access cf data
+* save all management cf request to CloudTrail
 
 Anti-pattern
 * all users access website from specific location
@@ -1318,9 +1341,9 @@ Although dynamoDb is proprietary solution with closed source code there are 2 op
 * use it from localstack
 But don't use it in production, cause it only for dev purposes, api is the same, but underlying design is different (not suitable for prod highload).
 
-DynamoDb Stream - stream that provide all write (create/update/delete) operations. It's useful for
+DynamoDb Stream - stream that provide all modification (create/update/delete) operations. It's useful for
 * replicating
-* elasticache (so your cache would be always updated to latest state of db)
+* update elasticache (so your cache would be always updated to latest state of db)
 * in case your app need to know about all updates
 
 Global Secondary Index - special read-only table created by dynamoDb to simplify search for indexed fields. Index speed up search but require more memory to store itself
@@ -1576,6 +1599,7 @@ That is because this RT - is default. If you create new RT and associate subnet 
 Every RT has routes with 2 fields (if you want to get to such destination go to this target)
 * Internet Gateway - entry point between your VPC and Internet. It allows EC2 in VPC directly access Internet. You can use public IP or elastic IP(won't change after stop/start) to both communicate with Internet and receive requests from outside web-servers.
 * NAT Gateway - Network address resolution service in private subnet to access the Internet. Instances without public IP use NAT gateway to access Internet. Nat allows outbound communication, but doesn't allows machines on the Internet to access instances inside VPC.
+Since Nat GateWay created per AZ for HA it's suggested to create it in every AZ where you have instances. In this case single AZ failure will not block internet access from other private networks
 With IG you have both outbound and inbound access, but with Nat gateway - only outbound (your instance can access Internet, but is unaccessable from Internet)
 * Virtual private gateway - VPC+VPN
 * Peering Connection - create private secure connection between 2 VPC
@@ -1682,11 +1706,14 @@ LAG (Link Aggregation Groups) - ability to order multiple direct connect ports a
 DCG (Direct Connect Gateway) - grouping of VGW (virtual private gateways) and VIF (private virtual interfaces). Multi-account DCG allows to associate up to 10 VPC (from different accounts) or up to 3 Transit Gateway.
 Direct Connect and DCG support both 1500 and 9001 MTU (you can also modify it if you need).
 
-VPC ClassicLink
-* before 2013 there were no default VPC and all EC2 where launched in flat network shared with other aws users
-* allows to connect your VPC with EC2 classic, EC2 becomes a member of VPC Security Group
+Don't confuse:
+* VPC PrivateLink - expose aws services (except s3/dynamoDb who are using gateway endpoint) or private ec2 to vpc in the same or other aws account, by adding eni inside vpc for exposed service
+* VPC ClassicLink - connect classic ec2 to vpc
+    * before 2013 there were no default VPC and all EC2 where launched in flat network shared with other aws users
+    * allows to connect your VPC with EC2 classic, EC2 becomes a member of VPC Security Group
+* VPC Link - connect private ec2 to API GateWay
 
-VPC Endpoint
+VPC Endpoint:
 * endpoint services (used to call AWS PrivateLink) - you create some service (ec2) and add NLB(not application/classic lb), and other aws accounts can connect to your service via interface endpoint
 So using this you can create private service provider that would provide some logic to other aws accounts on vpc-to-vpc basis
 Of course you can access your NLB form the internet (you should have at least one RT with internet gateway route to access NLB/ALB by dns name), but using privatelink will ensure that all traffic is within aws , and no traverse the internet (same as this service running inside your vpc),
@@ -1756,8 +1783,10 @@ With EB you shouldn't worry about java installed on ec2, if you select java it w
 
 ###### DMS
 Database Migration Service - used for easy migration between different db (like from MySql to DynamoDB), and also for data replication.
-DMS use SCT (Schema Conversion Tool) for converting between existing schemas.
-You can use dms to migrate any supported db into s3 using `csv/parquet` format
+You can use dms to migrate any supported db into s3 using `csv/parquet` format.
+There are 2 types of conversion:
+* engine conversion - homogeneous, when source and target - same db (for example both are mysql)
+* SCT (Schema Conversion Tool) - heterogeneous, for converting between existing schemas
 
 
 ###### ELB
@@ -1826,7 +1855,8 @@ Key Management Service - a service for generating/storing/auditing keys. If you 
 You start working with KMS by creating CMK (customer master keys), or if you are using encryption from other aws resource, it would create CMK automatically for you.
 You can import only symmetric keys. You can't export CMK symmetric key or asymmetric private key.
 KMS keys are region specific (you can't transfer them into another region), so if you create key in one region you can't get it by accessing endpoint for another region.
-
+CMK Rotation - automatic (once per year) change of underlying backing key without change logical resource. 
+Yet previous backing key is stored perpetually until you delete cmk, so all data encrypted with previous key can easily be decrypted. But for all new encryption new key is used.
 
 ###### Route53
 Route53 - is amazon DNS service that help to transform domain name into IP address. It's called 53, cause 53 - port of DNS.
@@ -1932,8 +1962,10 @@ if you want to import data you have to
 
 There are 2 ways to backup
 * automatic backup - snapshots takes by RDS daily, retained for limited period (by default 7 days)
-* db snapshot - taken by user
-You can recover snapshot on the moment taken or by point-in-time (cause rds keeps db change logs)
+First snapshot contains full db instance, subsequent - incremental taking only what has been changed
+Storage volume snapshot - take daily during backup window + store transaction logs every 5 min - this allow for point-in-time recovery
+* manual backup - full snapshot taken by user at any time manually
+You can recover snapshot on the moment taken or by  (cause rds keeps db change logs)
 
 multi-AZ (failover) - HA:
 * primary - you main db that performs read/write
@@ -2564,8 +2596,9 @@ When you transfer data from s3 to some destination, DataSync first retrieve all 
 When to use it:
 * storage gateway: use datasync to quickly migrate data to s3 and storage gateway to retain access to s3 data from on-premise
 * snowball: key difference from snow family is that datasync - online transfer, white snowball - for offline
-* S3 Transfer Acceleration: if your app already integrated with s3 it's better to use s3 TA, otherwise (or if you have other than s3 destination) use datasync
+* S3 TA: if your app already integrated with s3 it's better to use s3 TA, otherwise (or if you have other than s3 destination) use datasync
 * Transfer Family: if you have FTP/SFTP it's better to use TF, otherwise use datasync
+You can turn off integrity check for initial transfer if data in source are constantly changing - this would expedite initial sync, and then turn it on after finish initial transfer.
 
 ###### Transfer Family
 TF - 3 services for transfer from on-premise into s3:

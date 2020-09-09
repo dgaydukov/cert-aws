@@ -30,6 +30,9 @@ There are 2 main reasons to get it
 
 ### TODO
 -----------------------------------------------Advanced-----------------------------------------------
+* add cross-account access to s3
+* what is stronger bucket policy or acl
+* iam policy with mfa condition to delete objects from s3
 * add vpc to `cloudformation/ec2-cw-recover-alarm.yml` (in case you run it in region where no default vpc)
 * edit all current cf templates => rewrite efs from default SG to custom (cause it's better to explicitly control SG)
 * edit all current cf templates => add SG to RDS with source as SG of webserver
@@ -64,23 +67,7 @@ TargetGroup:
     Matcher:
         HttpCode: 200-299
 ```
-* Create custom cloudwatch metric and alarm based on this metric
-* Create lambda and cloudwatch rule to run lambda every minute (scheduled lambda)
-* Create auto-scale group with ec2 httpd (but store data in efs, this would guarantee that if instance launched in another AZ data won't be lost)
-* Add do sleep while enf not enabled (instead of just sleep for 10 sec) to all cloudformation templates that use efs
-* Create auto-scale group with single ec2 and eip and after terminate associate same eip to new ec2 (in launch config userdata add ability to associate eip to current ec2 + you need role for ec2 to be able to associate eip to itself)
-* Simple elb with 2 ec2 from 2 private subnets (use nat gateway to install httpd)
-* Rewrite cf templates random httpd to display privateIP
-* Add auto-scaling example for specific time range with `AWS::AutoScaling::ScheduledAction`
-+ add based on number of messages in sqs
-* cloudformation template iam create identity provider with both saml & openId connect, and with cognito/aws AD (by the way learn how AD works internally)
-* try to create aws sso user with permission set and add 1 free app, and then try to login to both aws console & this app
-* Create vpc with custom DHCP options set and create ec2 instance and see it private/public domain name
-* Deploy java app using opsworks stacks
-* create aws microsoft AD and see how it works
-* create iam identity federation with this AD and with Cognito
-* ClientVPN with security as microsoft AD
-* ClientVPN add nat instance so internet would work without tunnel split (yet check it also with tunnel split, and your IP would be different)
+
 * create custom vpn server in ec2 and try to connect to it (do both use oepnvpn server ami and any ami (OpenVPN Access Server from marketplace which is free tier, in this case you should configure it through browser admin panel) + manually configure openvpn server)
 * vpc endpoint service (add ec2 (with basic httpd service)+NLB and share it to vpc from another region)
 * route 53 resolver
@@ -112,3 +99,23 @@ TargetGroup:
 * signin with userpool/identitypool (is signin the same or not)
 * deploy datasync agent on ec2 and imitate data transfer to s3
 * create transfer family server endpoint ftps/sftp and transfer files to s3
+* create cognito identity with cognito user pool and other social providers (use basic java app to test it). Looks like cognito identity doesn't have it's own credentials but use credentials from IdP (https://docs.aws.amazon.com/cognito/latest/developerguide/authentication-flow.html)
+* create vpc link and connect http api to ec2 in private subnet
+* trigger lambda when dynamodb change happend with dynamodb streams
+* Create custom cloudwatch metric and alarm based on this metric
+* Create lambda and cloudwatch rule to run lambda every minute (scheduled lambda)
+* Create auto-scale group with ec2 httpd (but store data in efs, this would guarantee that if instance launched in another AZ data won't be lost)
+* Add do sleep while enf not enabled (instead of just sleep for 10 sec) to all cloudformation templates that use efs
+* Create auto-scale group with single ec2 and eip and after terminate associate same eip to new ec2 (in launch config userdata add ability to associate eip to current ec2 + you need role for ec2 to be able to associate eip to itself)
+* Simple elb with 2 ec2 from 2 private subnets (use nat gateway to install httpd)
+* Rewrite cf templates random httpd to display privateIP
+* Add auto-scaling example for specific time range with `AWS::AutoScaling::ScheduledAction`
++ add based on number of messages in sqs
+* cloudformation template iam create identity provider with both saml & openId connect, and with cognito/aws AD (by the way learn how AD works internally)
+* try to create aws sso user with permission set and add 1 free app, and then try to login to both aws console & this app
+* Create vpc with custom DHCP options set and create ec2 instance and see it private/public domain name
+* Deploy java app using opsworks stacks
+* create aws microsoft AD and see how it works
+* create iam identity federation with this AD and with Cognito
+* ClientVPN with security as microsoft AD
+* ClientVPN add nat instance so internet would work without tunnel split (yet check it also with tunnel split, and your IP would be different)
