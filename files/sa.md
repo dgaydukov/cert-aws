@@ -8,7 +8,7 @@
 * 1.4 [What is DevOps](#what-is-devops)
 * 1.5 [AWS Tagging](#aws-tagging)
 * 1.6 [AWS LoadBalancer vs App LoadBalancer](#aws-loadbalancer-vs-app-loadbalancer)
-* 1.7 [Egress vs Ingress](#egress-vs-ingress)
+* 1.7 [Ingress vs Egress](#ingress-vs-egress)
 * 1.8 [Bastion vs JumpServer](#bastion-vs-jumpserver)
 * 1.9 [Disaster Recovery](#disaster-recovery)
 * 1.10 [ENI, ENA, EFA](#eni-ena-efa)
@@ -109,62 +109,53 @@
 To pass cert and more generally to understand how it works you should get some hands-on experience. But aws can be costly at times, so aws provide so called [free tier](https://aws.amazon.com/free) to play and see how it works.
 Basically there are a few options:
 * always free - services that always would be free
-* 12 month sign-up free - services for free for the first 12 month since sing-up
+* 12 month sign-up free - services for free for the first 12 month after sing-up
 * random proposals - some random limited features that can be available at some time
-
 So to start I would suggest to create aws account (it's free) and play with free tier. You can use almost 90% of what you need in free tier.
-
 There are 2 types of billing alarms
-* aws budget - has more settings than CloudWatch, can warn based on forecasted spend for a month, quarter or year
 * CloudWatch billing alarm
-
-You can view your costs by going to `My Billing DashBoard` => there you would see total incurred cost divided by services (for example 2$ for EC2).
-You can go to `Bills` on the left menu and thee you would see detailed info on what exactly cost and how much. 
-
+* aws budget - has more settings than CloudWatch, can warn based on forecast spend for a month, quarter or year
+You can view your costs by going to `My Billing DashBoard`, there you would see total incurred cost divided by services (for example 2$ for EC2).
+You can go to `Bills` on the left menu and there you would see detailed info on what exactly cost and how much. 
 
 ###### Region, AZ, Edge Location
 There are different geographic regions across the globe where aws data centers are located. One region is divided between several AZ (availability zone).
 Each regions is completely independent and connected through Internet (no private cables between regions).
 Each AZ is isolated within a regions, but connected through low-latency links (not through public Internet).
-AZ is regions + az identifier like `us-east-1a`. AZ consists of one or more discrete data centers. 
-To distribute load equally AZ letter is different for every account (for accountA letter `a` point to AZ1, but for accountB letter `a` point to another AZ, so by this equal distribution of loads across different AZ is achieved)
+AZ name is region + az identifier like `us-east-1a`. AZ consists of one or more discrete data centers. 
+To distribute load equally AZ letter is different for every account (for accountA letter `a` point to AZ1, but for accountB letter `a` point to another AZ2, so by this equal distribution of loads across different AZ is achieved)
 LZ (local zone) - extension of region closer to your users.
 Edge location - A site that CloudFront uses to cache copies of your content for faster delivery to users at any location
 
-
-
 ###### AWS Well-Architected Framework
-It describes best practices to deliver app to aws cloud. Based on 5 pillars:
+It describes best practices to deliver app to aws cloud, based on 5 pillars:
 * operational excellence - running and monitoring systems to deliver business value, and continually improving processes and procedures
 * security - protecting information & systems
 * reliability - ability to prevent, and quickly recover from failures to meet business and customer demand
 * performance efficiency - using computing resources efficiently
 * cost optimization - avoiding un-needed costs
 
-
 ###### What is DevOps
 DevOps is implementation of agile to ops team.
 Before agile developers write code and throw it to ops team. After agile developers started to make more changes, but ops still take a lot of time to go to prod.
 Here come agile for operations, which become DevOps. Basic concepts of DevOps are:
-* Infrastructure as code (AWS CloudFormation) - treat infrastructure the same way developers treat code
-* Continuous deployment (AWS CodeCommit/CodeBuild/CodeDeploy/CodePipeline) -  enable the automated deployment of production-ready application code.
+* Infrastructure as code (TerraForm or CloudFormation) - treat infrastructure the same way developers treat code
+* ci/cd pipeline (Jenkins or CodeCommit/CodeBuild/CodeDeploy/CodePipeline) - enable the automated deployment of production-ready application code.
 Continuous deployment is continuous delivery that deploys to production (delivery more general term, refer to any deployment).
-* Automation (AWS Elastic Beanstalk/OpsWorks) - setup, configuration, deployment, and support of infrastructure and the applications that run on it
-* Monitoring (AWS CloudWatch/CloudTrail)
-* Security (AWS IAM)
+* Automation (Elastic Beanstalk/OpsWorks) - setup, configuration, deployment, and support of infrastructure and the applications that run on it
+* Monitoring (CloudWatch/CloudTrail)
+* Security (IAM)
 Dev side of DevOps is responsible for:
 * code building
 * code coverage
 * unit testing
-* packaging,
+* packaging
 * deployment
 Ops side of DevOps is responsible for:
 * provisioning
 * configuration
 * orchestration
 * deployment
-
-
 
 ###### AWS Tagging
 Tags - metadata that describes resources, a simple key-value pair (value can be empty), that used for:
@@ -173,107 +164,84 @@ Tags - metadata that describes resources, a simple key-value pair (value can be 
 * automation (start/stop dev env during non-business hours to reduce costs)
 * iam supports tag-based conditions
 Tags should be used consistently, otherwise there is no point.
-Defatut tag `Name` should be used for every resource for easier cost balance calculation
-
+Default tag `Name` should be used for every resource for easier cost balance calculation
 
 ###### AWS LoadBalancer vs App LoadBalancer
 ELB (Elastic Load Balancer) - aws load balancer that includes 3 types
 * ALB (Application Load Balancer) - used for http/https request
 * NLB (Network Load Balancer) - used for any tcp request
-* CLB (Classic Load Balancer) - basic lb accross multiple EC2
-
+* CLB (Classic Load Balancer) - old lb, now mostly outdated
 App loadbalancer (in our case spring app) - is EC2 instance with Eureka (Service Discovery) + Ribbon (Load Balancer) - a separate spring app 
 that discovers all instances and allows you to use human readable names instead of urls.
 
-###### Egress vs Ingress
-Egress - traffic that exits an entity, so all traffic (data) that leaves your VPC into public internet.
+###### Ingress vs Egress
 Ingress - traffic that enters an entity, so it's a request sent from public Internet to private cloud.
+Egress - traffic that exits an entity, so all traffic (data) that leaves your VPC into public internet.
 Traffic often is translated using NAT in and out of a private network like the cloud.
-So to simplify egress- response, ingress - request.
-
+So to simplify ingress - request, egress - response.
 
 ###### Bastion vs JumpServer
 They both serve the same purpose - to separate private network from public traffic. Usually you connect to it through SSH and from there you can connect to any private machine in the network.
-Bastion - outside your security zone (DNS/VPN/FTP server)
-JumpServer - used to manage other servers
-
-Here is example of CloudFormation stack to run jump server
-```
-ssh -i mykey.pem -o IdentitiesOnly=yes ec2-user@3.92.236.6
-ping google.com
-ping 10.100.2.33
-nano mykey.pem
-chmod 400 mykey.pem
-ssh -i mykey.pem ec2-user@10.100.2.33
-ping google.com
-```
+Bastion - outside your security zone (DNS/VPN/FTP server).
+JumpServer - used to manage other servers (only SSH access to JumpServer available).
+But in the essence both are the same as both provide access to internal resources not available to outside users.
+Bastion VPN server - selected users can connect to vpn using IpSec protocol and now they can request all internal resources from their local machine
+Bastion SSH server - selected users can connect using ssh protocol and from this server they can access all internal resources
 
 ###### Disaster Recovery
 There are 2 main concepts of DR
-* RTO (Recovery Time Objective) - how fast can you recover your infra (if RTО is 5 hours => at 2 am AZ was flooded, at 7 am you have fully running infra in another region)
+* RTO (Recovery Time Objective) - how fast can you recover your infra (if RTО is 5 hours => at 2 am AZ was flooded, at 7 am you have fully running infra in another AZ/region)
 * RPO (Recovery Point Objective) - to which point can you recover (you make backups every hour, at 1.30 AZ was flooded, so your RPO - 1 hour)
-
-There are 2 types of DR in aws
-* backup store - you store all you backups if tape (e.g. using iron mountain)
+There are 4 types of DR in aws
+* backup store - you store all you backups on tape (e.g. using iron mountain)
 * pilot light - you have replica of your main infra, but it always down. So when disaster happen you just start everything. White it's down every 1-3 month you update it (run ec2, install patches..)
 * warm standby - constantly running scaled in version of your main infra
-* multi site
-
+* multi site - the fastest cause we constantly have complete copy running in another region
 HA vs DR
 * HA - run some ec2 in another AZ and use elb to forward request to this AZ. In case one AZ fail you can still use your service. Yet this won't protect against whole region failure
 * DR - run some critical stuff in another region and use route53 failover to this region. But major part is restored once you start DR. When we talk about DR we usually assume entire region goes down.
-
 HA vs FT
-* HA (High availability) - system can recover with short downtime. Example - add ec2 into another region.
+* HA (High availability) - system can recover with short downtime. Example - start new ec2 from ami and use ebs from down ec2 in case of failure.
 * FT (fault tolerance) - system continue provide services even in case of failures. You build FT by introducing redundancy. Example - add elb + asg.
-
 Availability vs. Durability on ebs example
 * Availability - ebs available 99.9% time, but in case of AZ failure it won't be available (cause ebs is linked to subnet/AZ). But when AZ becomes again available your data won't be lost.
-* Availability - ebs 99.9% durable, that means if you have 1000 volumes you can expect to lose 1 volume per year.
+* Durability - ebs 11 9 durable (after dot we have 11 nines), that means if you have 1000 volumes you can expect to lose 1 volume per year.
 
 ###### ENI, ENA, EFA
 ENI (elastic network interface) - logical networking component in a VPC that represents a virtual network card that has attributes:
 * primary private IPv4 (from VPC range)
-* public IPv4
-* elastic IPv4 (static public IP, can't change after stop/start)
+* public IPv4 (changes after stop/start)
+* elastic IPv4 (static public IP, won't be changed after stop/start)
 * IPv6, mac-address, security groups and so on...
 You can create ENI by going to `EC2 => Network & Security => Network interfaces` and create network interface and attach/detach it to ec2 instance.
 Every instance in VPC has a default ENI - primary network interface, you can't detach it. You can create new and attach. Number of ni that can be attached to ec2 depends on it's size (more computing power - more ni can be attached).
-
 Both ENA & EFA are ENI that provide some advanced networking
-* ENA (Elastic Network Adapter) - ENI that provides enhanced networking capabilities. There is a selected [set of instance](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/enhanced-networking-ena.html#ena-requirements) that support ena. You can ssh to ec2 and run `modinfo ena` if you see response your ENI is ENA.
+* ENA (Elastic Network Adapter) - ENI that provides enhanced networking capabilities. There is a selected [set of instances](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/enhanced-networking-ena.html#ena-requirements) that support ena. You can ssh to ec2 and run `modinfo ena` if you see response your ENI is ENA.
 When you need several ec2 to have low latency & high network throughput it's better to put them into cluster PG, instead of just adding ean to each of them.
-* EFA (Elastic Fabric Adapter) - gENA + OS bypass hardware interface (without involving the instance kernel) that use hardware-provided reliable transport communication.
+* EFA (Elastic Fabric Adapter) - ENA + OS bypass hardware interface (without involving the instance kernel) that use hardware-provided reliable transport communication.
     * allows HPC applications to communicate to talk with each other with low latency and higher throughput than traditional TCP channels.
-    * EFA ENIs can only be attached at launch or to stopped instances
-    * best suited for HPC/ML. HPC applications - a group of ec2 instances that perform some high load logic. They are written using MPI (Message Passing Interface) and require fact communication between instances
+    * EFA can only be attached at launch or to stopped instance
+    * best suited for HPC/ML. HPC applications - a group of ec2 instances that perform some high load logic. They are written using MPI (Message Passing Interface) and require fast communication between instances
     * OS-bypass traffic is limited to a single subnet. In other words, EFA traffic cannot be sent from one subnet to another. Normal IP traffic from the EFA can be sent from one subnet to another
 
 ###### Shared Responsibility
 AWS use concept of shared responsibility
-* AWS manages security of the cloud (physical devices, datacenters)
+* aws manages security of the cloud (physical devices, datacenters)
 * you manage security in the cloud (route table, NACL, SG)
 
-
 ###### SaaS vs PaaS vs IaaS/IAC 
-SaaS (Software as a Service) - if you want to use third-party software like some crm, but don't want to have it staff to install it to every computer in your office you can just use web-service of such crm. In this case crm completely managed by someone else,
-you just can access it from web browser without need to run it and support. Usually it refers to end-user applications.
-
-PaaS (Platform as a Service) - in this case you develop you application (writing code) and just deploy your code without worry about infrastructure. For example if you are using spring framework, you can use [cloud foundry](https://cloud.spring.io/spring-cloud-cloudfoundry/reference/html/)
-and just deploy your code, and it will provide everything else (container, java, spring framework).
-
-
-IaaS (Infrastructure as a Service) - good example is aws that provides infrastructure (like container/networking/storage/database) as services to end users. Compare to other 2 PaaS/SaaS users of IaaS responsible for managing infrastructure themselves. 
-The best practice is to use IAC (Infrastructure as a code) - is an idea that you should code how you want to build your infrastructure. For example to run you microservice app you need to have 3 containers. 
+* SaaS (Software as a Service) - if you want to use third-party software like some crm, but don't want to have it staff to install it to every computer in your office, you can just use web-service of such crm. In this case crm completely managed by someone else,
+you just can access it from web browser without need to run it and support. Usually it refers to end-user applications (crm, office365, ELK stack).
+* PaaS (Platform as a Service) - in this case you develop you application (writing code) and just deploy your code without worry about infrastructure. For example if you are using spring framework, you can use [cloud foundry](https://cloud.spring.io/spring-cloud-cloudfoundry/reference/html)
+and just deploy your code, and it will provide everything else (container, java, spring framework). BeanStalk - good example where you just upload your code and aws provision all required infra for you.
+* IaaS (Infrastructure as a Service) - good example is aws that provides infrastructure (like container/networking/storage/database) as services to end users. Comparing with PaaS/SaaS users of IaaS responsible for managing infrastructure themselves. 
+The best practice is to use IAC (Infrastructure as a code) - an idea that you should code how you want to build your infrastructure. For example to run you microservice app you need to have 3 containers. 
 Of course you can manually create all of them, install all needed software there and deploy it. But you can also add script file that would do it all automatically. Most popular tools is Aws CloudFormation and Terraform.
 
-* SaaS - mail service, ELK stack
-* PaaS - beanstalk, spring cloudfoundry
-* IaaS - almost all other aws services under networking, computing, storage
-
 ###### Virtualization and Containerization
-Hyperviser is Virtual Machine Monitor (VMM), that runs VM. It works as mediator between virtual OS and hardware. By acting as mediator we can run several virtual OS on one hardware. This is the main advantage, cause one OS can run on one hardware only.
-Originally hypervisors developped to give multiple users simultaneous access to computers that performed batch processing. But over time other solutions for many users/single machine problem appeared including time sharing.
+Hyperviser is VMM (Virtual Machine Monitor), that runs VM. It works as mediator between virtual OS and hardware. By acting as mediator we can run several virtual OS on one hardware at the same time.
+This is the main advantage, cause one OS can run on one hardware only at the same time (cause you can have have several OS installed on disk and run one at a time).
+Originally hypervisors developed to give multiple users simultaneous access to computers that performed batch processing. But over time other solutions for many users/single machine problem appeared including time sharing.
 So virtualization is a simulation of physical hardware for virtual OS.
 Containerization on the other hand is like os-level virtualization. Instead of creating a complete new OS, container share resources with host os, but have it's own file system, and by doing so divide itself from main OS.
 Hyper-V - Windows Server Virtualization, server computer running Hyper-V can be configured to expose individual virtual machines to one or more networks.
@@ -283,27 +251,24 @@ Virtual machine like ec2 is part of physical machine in aws datacenter. It's iso
 
 ###### Docker and Kubernetes
 Docker - is a tool to quickly create and manage containers (like create/stop/start/destroy). But if you have many containers and they all should interact with each other you need some system to manage all of this.
-Kubernetes - is a tool to manage a group of containers. On container level kuber can use docker or any other container tool.
-Deployed kubernetes environment - called cluster and consists of 2 parts
+Kubernetes - orchestration tool, helps to manage a group of containers. On container level kuber can use docker or any other container tool.
+Kuber Cluster - deployed kubernetes environment, that consists of 2 parts
 * control plane - components that control cluster + cluster's state & configuration
 * compute machines - nodes where pods are running 
 
-
 ###### Pure Serverless
 With aws serverless you can build complete backend application without writing code(like java) or using any framework (like spring). 
-For example you can use `API Gateway` to set up a few api endpoints. Then you can use `aws lambda` to set up some logic to handle these endpoints. Then you can use `sns` to send some notification, and possible send emails.
+For example you can use `API Gateway` to set up a few api endpoints. Then you can use `aws lambda` to set up some logic to handle these endpoints. Then you can use `sns` to send some notification/emails.
 As you see without writing any application code we can have a simple backend application. But the truth is that this is only good for very simple app, usually for POC (proof of concept).
 The reason is once your application become more complex it would be very hard to ensure that everything is working fine, cause you have no tests. 
 So the conclusion is very simple. Use aws serverless only for POC, or when you want quickly to startup, then you can also create a lot of mock api so your team can start to interact with it.
-But once your system become more complex you will definately need to use some programming like java/spring to have a good software architecture of your product and good test coverage that would ensure that nothing would be broken after changes.
-
+But once your system become more complex you will definitely need to use some programming like java/spring to have a good software architecture of your product and good test coverage that would ensure that nothing would be broken after changes.
 Moreover it can be expensive in certain cases. Consider situation where you have 1 lambda that need internet access to do some stuff (like captcha verification or ip address check).
 For this you need NAT, cause your lambda can't just get internet access from private subnet inside VPC. So you go and create nat gateway, and your lambda can now access internet.
-But in the end of the month you get a bill for 50 cents for lambda + 35$ for Nat Gateway. The reason is that Nat Gateway is prices per hour (0.045 on average, 0.065 for HK) + you also paying per GB transfer through your Nat, 
+But in the end of the month you get a bill for 50 cents for lambda + 35$ for Nat Gateway. The reason is that Nat Gateway price per hour is 0.045$ + you also paying per GB transfer through your Nat, 
 but for the example let's imagine that you transfer tiny amount of 100mb per month. So instead of having cheap serverless you pay 35.5$ per month, just your lambda sometime can get internet access.
 When [aws support got pressed](https://forums.aws.amazon.com/thread.jspa?threadID=234959) over the issue, the proposed instead of Nat Gateway create custom Nat Instance (ec2 running with nat), and it would cost only 10$.
-But this idea to run additional ec2 to have internet access for single lambda upends serverless. Why do you need lambdas in the first place, when you can just put them into ec2 itself?
-
+But this idea to run additional ec2 to have internet access for single lambda upends serverless. Why do you need lambdas in the first place, when you can just put app into ec2 itself?
 
 ###### AMI vs Snapshot
 AMI is region specific (so to use it from another region you should copy it) and same ami will have different AMI_ID in different regions.
@@ -311,11 +276,10 @@ There are 2 types of AMI
 * instance-store - copy of the root instance-store volume + metadata in s3
 * ebs-boot - ebs snapshot + metadata (architecture, kernel, AMI name, description, block device mappings)
 Most ami are of second type (ebs-boot). If you need to launch new ec2 from snapshot, you should first convert snapshot into ami and then just launch ami.
-
+You can't remove snapshot if it has ami created from it, yet after you de-register ami you can delete snapshot. That means inside aws ami is just logical representation of snapshot.
 Linux AMI virtualization types
 * HVM (Hardware Virtual Machine) - means that virtualization technology using hardware extensions for faster access to resources
 * PV (paravirtual) - boot with a special boot loader called PV-GRUB, which starts the boot cycle and then chain loads the kernel specified in the menu.lst
-
 AMI doesn't include kernel, it's loaded from AKI (Amazon Kernel Image).
 In November 2017 new virtualization came out as Nitro (combines a KVM-based hypervisor with customized hardware (ASICs) aiming to provide a performance that is indistinguishable from bare metal machines)
 
@@ -327,17 +291,15 @@ aws help # show all available services
 aws <service> help # show all available actions to perform on selected service
 aws <service> <action> help # shaw all avaialble action options to perform for specified action 
 ```
-
 Service endpoint - you use it to connect to aws services. When you are using cli/sdk it automatically get api url for service you are going to use.
-Endpoint url built like `protocol://service.region.amazonaws.com` (for example https://dynamodb.us-east-1.amazonaws.com).
-Since s3 is global service but has region 2 urls are possible
+Endpoint url built like `protocol://service.region.amazonaws.com` (for example `https://dynamodb.us-east-1.amazonaws.com`).
+Since s3 is global service but has region, 2 urls are possible:
+* standard url   - `https://s3.us-east-1.amazonaws.com/my-test-s3-bucket-1/index.html`
 * without region - `https://my-test-s3-bucket-1.s3.amazonaws.com/index.html`
-* with region    - `https://s3.us-east-1.amazonaws.com/my-test-s3-bucket-1/index.html`
 FIPS endpoint - endpoint that use a TLS software library that complies with Federal Information Processing Standards.
 So for kms you have 2 endpoints:
-* kms.us-east-1.amazonaws.com
-* kms-fips.us-east-1.amazonaws.com
-
+* `kms.us-east-1.amazonaws.com`
+* `kms-fips.us-east-1.amazonaws.com`
 Basic commands
 ```
 # get available regions
@@ -346,22 +308,16 @@ aws ec2 describe-regions --profile=awssa
 # get available AZ
 aws ec2 describe-availability-zones --region=us-east-1 --profile=awssa
 ```
-
-`--query` - use JMESPath - query language for JSON
+Query command `--query` uses JMESPath (query language for JSON)
 ```
 # show imageId of first image
-aws ec2 describe-images --query "Images[0].ImageId"
+aws ec2 describe-images --query "Images[0].ImageId" --profile=awssa
 
 # show state for all images
-aws ec2 describe-images --query "Images[*].State"
+aws ec2 describe-images --query "Images[*].State" --profile=awssa
 ```
-
-* Create new profile to access aws services from console
-```
-aws configure --profile awssa
-```
-
-* There are 3 env variables that overwrites `~/.aws/config` settings
+Create new profile to access aws services from console `aws configure --profile awssa`.
+There are 3 env variables that overwrites `~/.aws/config` settings
 ```
 export AWS_ACCESS_KEY_ID=123
 export AWS_SECRET_ACCESS_KEY=123
@@ -369,26 +325,21 @@ export AWS_DEFAULT_REGION=us-west-2
 ```
 Although default region for `awssa` profile is `us-east-1` (you can check it by `aws configure get region --profile=awssa`), if you set region as env var `AWS_DEFAULT_REGION=us-west-1`, and then run `aws configure list --profile=awssa`
 ```
-      Name                    Value             Type    Location
-      ----                    -----             ----    --------
-   profile                    awssa           manual    --profile
-access_key     ****************2JQS shared-credentials-file    
-secret_key     ****************Y+na shared-credentials-file    
-    region                us-west-1              env    AWS_DEFAULT_REGION
+Name                    Value             Type    Location
+----                    -----             ----    --------
+profile               awssa               manual    --profile
+region                us-west-1              env    AWS_DEFAULT_REGION
 ```
 So whenever you run any command with this profile and don't specify region (by setting `--region=us-east-1`), region from env var is used (not from your config setting).
 To remove it just unset the variable `unset AWS_DEFAULT_REGION`, and now if you run `aws configure list --profile=awssa` you will see that region is taken from config
 ```
-      Name                    Value             Type    Location
-      ----                    -----             ----    --------
-   profile                    awssa           manual    --profile
-access_key     ****************2JQS shared-credentials-file    
-secret_key     ****************Y+na shared-credentials-file    
-    region                us-east-1      config-file    ~/.aws/config
+Name                    Value             Type    Location
+----                    -----             ----    --------
+profile               awssa           manual        --profile
+region                us-east-1      config-file    ~/.aws/config
 ```
 And you can run commands from console and default region from config file will be used.
 You can set or unset aws env vars in `~/.bashrc` file.
-
 * Get account Id
 ```
 # get arn
@@ -397,16 +348,7 @@ aws iam get-user --query "User.Arn" --profile=awssa
 # get arn + userId
 aws sts get-caller-identity --profile=awssa
 ```
-
-* S3 (create presign url) 
-```
-aws s3 cp cloudformation/vpc/nested/vpc-bastion.yml s3://my-cloudformation-template-bucket --profile=awssa
-aws s3 cp cloudformation/vpc/nested/ec2-bastion.yml s3://my-cloudformation-template-bucket --profile=awssa
-
-# make file public for 30 sec
-aws s3 presign s3://my-cloudformation-template-example/data.txt --expires-in 30 --profile=awssa
-```
-
+* S3 (create presign url, make file public for 30 sec) `aws s3 presign s3://my-cloudformation-template-example/data.txt --expires-in 30 --profile=awssa`
 * CloudFormation
 ```
 # create stack
@@ -430,16 +372,14 @@ aws cloudformation update-stack --stack-name=logs --template-body=file://cloudfo
 There are 2 main codes of redirects (HTTP method can also change)
 * 301 (permanent) - resource was moved permanently and browser should no longer request old url
 * 302 (temporary) - resource was temporary moved to new url, so browser should continue request old url
-
 Redirects without changing http method. They basically the same as 301/302 only difference is that here HTTP method (GET/POST/PUT..) can't change
 * 307 (temporary)
 * 308 (permanent)
 
 ###### crontab
-crontab notation is used in many places, including
+crontab notation is used in many places, including:
 * ASG scheduled action
-
-n a crontab file, the fields are: `* * * * *`
+In a crontab command, the fields are: `* * * * *`
 ```
 minute of the hour
 hour of the day
@@ -464,10 +404,9 @@ If you NIC is inside network that using hub, than hub sends all packets to all p
 Promiscuous mode - you turn off MAC address check, and all packets that are sent to NIC (regardless of destination MAC address) are forwarded to CPU to process. This mode is turned off by default, can be useful for traffic sniffing.
 Traffic sniffing - catch all traffic and analyze it, best tool is [WireShark](https://www.wireshark.org).
 You can detect promiscuous mode by sending a ping (ICMP echo request) with the wrong MAC address but the right IP address. In normal mode NIC would drop packet, but in promiscuous - you would get response.
-It is not possible for ec2 running in promiscuous mode to receive or “sniff” traffic that is intended for a different virtual instance.
-
+It is not possible for ec2 running in promiscuous mode to receive/sniff traffic that is intended for a different virtual instance.
 Since most modern networks using switch, and it sends data directly to special pc (compare to hub which just replicate packet to everybody in the network), just turning promiscuous mode won't help much, 
-cause switch will route only those packets that are only designated for your NIC, so you can't sniff all network traffic. Hopefully Managed switches provide Port Mirroring (ability to mirror all incoming packets to some specific port, port - is not tcp/udp port but a connection nest inside switch)
+cause switch will route only those packets that are only designated for your NIC, so you can't sniff all network traffic. Hopefully Managed switches provide Port Mirroring (ability to mirror all incoming packets to some specific port, port - is not tcp/udp port but physical connection nest inside switch)
 If your switch is not managed and you can't turn on port mirroring in the switch you can employ ARP-Spoofing.
 ARP is used to by switches to get mac address by ip address. So switch basically sends ARP requests to all connected devices, and if IP address in ARP request match device IP address, device responds with MAC address.
 Key here is that switch has no way to verify response. So for all ARP your host can response with it's onw mac address. In this case all packets that switch receives would be transmitted to your host.
@@ -477,8 +416,8 @@ But to operate normally your host should retransmit these packets to their respe
 * Hub (концентратор) - device that connects multiple computers in LAN (local area network) and propagate any packet sent from one computer to all other. Today mostly outdated, people use switch instead. Works on the physical layer (Layer 1) of OSI. 
 * Bridge (мост) - connect several hubs into single network. Works on OSI layer 2. As hubs, mostly outdated today.
 * Switch (коммутатор) - device that connects multiple computers in LAN, but knows exactly where to send packet of data, 
-it has internal table where it store which port takes which mac address, and at first it sends ARP to get mac addresses, but once table is full it just send packet to desired node. Works on the data link layer (Layer 2) of OSI.
-* Router (маршрутизатор) - small computer that can route the network traffic. Usually used to connect not computers, but networks such as LAN/WAN. Works on (Layer 3).
+it has internal table where it store which port takes which mac address, and at first it sends ARP to get mac addresses, but once table is full it just sends packet to desired node. Works on the data link layer (Layer 2) of OSI.
+* Router (маршрутизатор) - small computer that can route the network traffic. Usually used to connect networks such as LAN/WAN. Works on (Layer 3).
 * L3 Switch (L3 коммутатор) - switch that can route traffic, work faster than router.
 There are 2 types of Port
 * Physical port - one inside switch/router is the nest where you plug in your network cable
@@ -487,8 +426,7 @@ There are 2 types of Port
 ###### Network Topology
 Network Topology - is how your computers are arranges and connected with each other. There are 2 types of topology:
 * Physical - how devices are physically connected
-* Logical - how are packets sent in our network
-
+* Logical - how are packets sent inside network
 Types of topology
 * Bus (single line) - we have one cable and all computers are connected to it. Disadvantage - if line disruption happens the whole network is broken. Outdated today.
 * Ring - all computers are connected into a ring. Every computer is connected to 2 neighbors. To secure against disruption there is bidirectional-ring network, where all computers connected with 2 cables instead of 1. Outdated today. 
@@ -498,8 +436,8 @@ Types of topology
 * Hybrid - composed of 2 or more other topologies.
 
 ###### OSI Network Model
-There are 7 levels in OSI model, here is the list from lowest to upper
-* Physical layer - how data are physically transferred. Basically they are translated from electrical/light signals into sequence of bits. There are 3 ways exists
+There are 7 levels in OSI model, here is the list from lowest to upper:
+* Physical layer - how data are physically transferred. Basically they are translated from electrical/light signals into sequence of bits. There are 3 ways:
     * Twisted pair (медная витая пара) - data transferred by means of electrical signals in copper
     * Optical Fiber - transfer data by light inside cable
     * WiFi - transfer data without cable using radio waves
@@ -509,38 +447,34 @@ There are 7 levels in OSI model, here is the list from lowest to upper
 * Session layer - establish and destroy connection between 2 hosts.
 * Presentation layer - encode/decode information passed between 2 hosts.
 * Application layer - apps works on this level by using HTTP/FTP
-
 On each of this layer passed information is called different.
 * Application/Presentation/Session - PDU
 * Transport - TCP - segments, UDP - datagramm
 * Network - packets
 * Data Link - frames
-
 OSI model is not used in practice, only for education purpose, cause it has been developing for 7 years, and many other models were born. One of them is TCP/IP model. In has 4 levels
 * Application layer - include Application/Presentation/Session from OSI
 * Transport layer - Transport layer in OSI
 * Internet layer - Network layer in OSI
 * Link layer - Data Link + Physical in OSI
-
-There were other models like AppleTalk or IPX/SPX, but they were outdated and nowdays only TCP/IP is mostly used. It also called sometimes DoD (department of defense) cause it was originally developed by USA defense department.
+There were other models like AppleTalk or IPX/SPX, but they were outdated and nowadays only TCP/IP is mostly used. It also called sometimes DoD (department of defense) cause it was originally developed by USA defense department.
 
 ###### High Level Protocols
-These protocols include: HTTP, DNS, DHCP, SMTP, POP3, Telnet, SSH, FTP.
 To better understand these protocols you can download [Cisco Packet Tracer](https://www.netacad.com/courses/packet-tracer) that can help you build networks and see how it all works.
-
-* HTTP(HyperText Transport Protocol, 80)/HTTPS(HyperText Transport Protocol Secure, 443) - client-server data exchange. headers are
+* HTTP (HyperText Transport Protocol, 80)/HTTPS(HyperText Transport Protocol Secure, 443) - client-server data exchange. headers are
 ```
 GET / HTTP/1.1
 Host: 192.168.1.10
 ```
-* DNS(Domain Name System, 53) - hostname-to-ip resolver. In linux we have `/etc/hosts` - basically same local dns that resolve hostnames. It has priority over external dns server.
-* DHCP(Dynamic Host Configuration Protocol) - allows to dynamically set IP-address, subnet, dns name to remote hosts.
-* POP3(Post Office Protocol Version 3, 110, POP3S-995) - work on get-and-delete principle. Client connect to server, download new mails, and sent delete message to server.
-* IMAP(Internet Message Access Protocol, 143) - more complex analogy of pop3, don't remove messages from server.
-* SMTP(Simple Mail Transfer Protocol, 25) - send mail to mail server.
-* Telnet(terminal network, 23) - allows to communicate with remote OS by sending unencrypted text data. Nowdays mostly outdated and replaced by ssh.
-* SSH(Secure Shell, 22) - like telnet, but exchange encrypted data
-* FTP(File Transfer Protocol, 20) - transfer file to server
+* DNS (Domain Name System, 53) - hostname-to-ip resolver. In linux we have `/etc/hosts` - basically same local dns that resolve hostnames. It has priority over external dns server
+* DHCP (Dynamic Host Configuration Protocol, 67/68) - allows to dynamically set IP-address, subnet, dns name to remote hosts
+It uses connectionless service model using UDP. It is implemented with two UDP port numbers for its operations which are the same as for the bootstrap protocol (BOOTP). UDP port number 67 is the destination port of a server, and UDP port number 68 is used by the client.
+* POP3 (Post Office Protocol Version 3, 110, POP3S-995) - work on get-and-delete principle. Client connect to server, download new mails, and sent delete message to server
+* IMAP (Internet Message Access Protocol, 143) - more complex analogy of pop3, don't remove messages from server
+* SMTP (Simple Mail Transfer Protocol, 25) - send mail to mail server. Don't cofuse IMAP/POP3 - read email from mailServer, SMTP - send email to mailServer
+* Telnet (terminal network, 23) - allows to communicate with remote OS by sending unencrypted text data. Nowadays mostly outdated and replaced by ssh
+* SSH (Secure Shell, 22) - like telnet, but exchange encrypted data
+* FTP (File Transfer Protocol, 20) - transfer file to server, unsecured. You can use FTPS(port 21) or FTPS (port 22) for secure file transfer 
 
 ###### Low Level Protocols
 * ICMP (Internet Control Message Protocol) - located at network layer - error reporting and query service.
@@ -561,19 +495,25 @@ Private networks:
 192.168.0.0/24 - first 24 bytes - network, last 8 - ip address totally 2**8 = 256 ip addresses.
 192.168.0.0/28 - first 28 bytes - network, last 4 - ip address, totally 2**5 = 16 ip addresses.
 So by knowing subnet mask we can determine if 2 ip addresses are on the same network.
-There are 5 classes of network:
-A - subnet /8, first octet => 0-127
-B - subnet /16, first octet => 128-191
-C - subnet /24, first octet => 192-223
-In every network first(all zeros) and last (all ones) are 
-0 - specifies network
-255 - broadcast a message to every host on a network (ARP)
-* Gateway - router specified on a host, which links the host's subnet to other networks. For ordinary users gateway - is Internet provider, cause it connects them to Internet.
+In every network first/last addresses are: 
+* first (all zeros, 0) - specifies network
+* last (all ones, 255) - broadcast a message to every host on a network (ARP)
+Gateway - router specified on a host, which links the host's subnet to other networks. For ordinary users gateway - Internet provider, cause it connects them to Internet.
 Gateways regulate traffic between two dissimilar networks, while routers regulate traffic between similar networks
-Default gateway - ip address in router for particular network (for every network including Internet router will have it's own ip address)
-When you send packet, tcp/ip will use subnet mask to determine if ip address in the same subnet, it this is the case it will send packet futrher, if false - it will send it to default gateway.
-* CIDR (Classless Inter-Domain Routing) - replace classful network (A-D classes) and allocate ip-addresses without bind it to any class network. Based on VLSM.
-* VLSM (Variable Length Subnet Mask) - when we divide a network into subnet with different length.
+Default gateway - ip address of router for particular network (for every network including Internet, router will have it's own ip address)
+When you send packet, tcp/ip will use subnet mask to determine if ip address in the same subnet, in this case it will send packet further, if false - it will send it to default gateway.
+There are 2 types of networks:
+* Classful - there are 5 classes of network:
+    * A - subnet /8, first octet => 0-127
+    * B - subnet /16, first octet => 128-191
+    * C - subnet /24, first octet => 192-223
+    * D (multicast) - first octet => 224-239. It is reserved for multicast and cannot be used for regular unicast traffic
+    * E (reserved) - first octet => 240-255. It is reserved and cannot be used on the public Internet
+* CIDR (Classless Inter-Domain Routing) - replace classful network (A-D classes) and allocate ip-addresses without bind it to any class network.
+There are 2 ways how IP address space is assigned within each organization:
+* VLSM (Variable Length Subnet Mask) - when we divide a network into subnet with different length
+* FLSM (Fixed Length Subnet Masks) - all networks within your infra are the same size. So if you have 2 networks and one is 200 and another is 20, both would be /24 size.
+As you already guess most private networks on-premise and on aws vpc are built using CIDR+VLSM
 Suppose we have a network 192.168.0.1/24 - totally 254 addresses(actually total - 256, but first and last are reserved)
 We need to divide it into 4 subnets with 10, 50, 2 and 20 hosts. Although we can equally divide our network on 4 and have 64 ip-addresses in each, it's better not to give way more than needed
 In this case we can divide it on min power 2. 
@@ -586,7 +526,6 @@ In this case we can divide it on min power 2.
 Split tunnel. By default all traffic (both to external resources like google.com and to on-premise network) goes through vpn tunnel. But this can be a problem, cause it may overload tunnel.
 To solve this issue there is split of tunnel so based on destination packets are go either though vpn tunnel or directly to internet (take a look at `files/images/vpn-split-tunneling.svg`)
 * iSCSI (Internet Small Computer Systems Interface) - transport layer protocol, works above TCP. Initiator (server) packages SCSI commands into network packets, and sends it to Target (remote storage).
-
 For all subnets you shouldn't use first & last address
 * first address - network identification (refers to the subnet itself and is used for routing purposes)
 Look at the binary representations for the ip address and the subnet mask. In the process of determining the route they are binary combined with AND. 1&0=0, 1&1=1, 0&0=0. The network part of the address remains unaffected, but the host part becomes all-zero. If you could use the .0 address for a host too, how would you different it from the net?
@@ -598,7 +537,6 @@ But in real network you probably gonna have this 3 ip taken also (but you can al
 ###### SOA and CAA
 SOA (Start of Authority) - record in DNS containing administrative info about zone, email, last update time.
 You can use dig (domain information groper) utility to group(grip/get) information about dns
-
 You can get it by `dig SOA +multiline google.com`, email is `root@amazon.com`
 ```
 amazon.com.		900 IN SOA dns-external-master.amazon.com. root.amazon.com. (
@@ -610,10 +548,8 @@ amazon.com.		900 IN SOA dns-external-master.amazon.com. root.amazon.com. (
 				)
 
 ```
- 
 CAA (Certification Authority Authorization) - list of autorities who can issue certificates for this domain. You can run `dig CAA +multiline google.com`
 ```
-;; ANSWER SECTION:
 google.com.		86400 IN CAA 0 issue "pki.goog"
 ```
 
@@ -621,7 +557,6 @@ google.com.		86400 IN CAA 0 issue "pki.goog"
 SSL (Secure Sockets Layers) - outdated protocol not used today. TLS (Transport Layer Security) - main security protocol used today.
 So you can call TLS more updated & secure version of SSL. But we still call our digital certs as SSL certificates, but in reality when you buy SSL certificate from DigiCert you are buying most up-to-date TLS certificate.
 HTTPS means that our HTTP traffic is secured by TLS protocol with SSL(TLS) certificate.
-
 CA (Certificate Authority) - entity that issues digital trusted certificates (certifies the ownership of a public key by the named subject of the certificate).
 Certificate prevents man-in-the-middle attack by encrypting all packets sent to server with certificate's public key, and on the server side everything is decrypted using private key.
 There are public (low ubiquity, issues certificates for free, like [Let's encrypt](https://letsencrypt.org/getting-started/)) and commercial(high ubiquity, charge you for issuing certificate) CA out there.
@@ -642,8 +577,7 @@ it allows for multiple machines to share same IP address, and send user request 
 So if one datacenter would go offline, anycast would forward user to the next closest datacenter.
 It's based on BGP and AS. With unicast path would lead to one destination, no matter what distance is.
 * `geocast` - delivery of information to a group of destinations in a network identified by their geographical locations
-
-routing protocol
+Routing protocol:
 * EGP (External Gateway Protocol) - based on based on tree-like (i.e., hierarchical) topologies.
 As internet grows EGP become inefficient to find the quickest route, so new protocol was developed
 AS (Autonomous System) architecture (represented by unique number called an ASN).
@@ -657,12 +591,9 @@ PDU (Protocol data unit) - single unit of information transmitted between 2 comp
 * TCP - segment
 * UDP - datagram
 * IP - packet
-
 MTU (Maximum transmission unit) - max size of PDU that can be transferred in single network layer transaction. MTU for Ethernet is 1500 bytes.
-
-Jumbo frame - ethernet frame with more than 1500 bytes MTU, usually up to 9000. 
-The idea is that it's easy to process the contents of single large frame instread of many smaller frames.
-
+Jumbo frame - ethernet frame with more than 1500 bytes MTU, usually up to 9000.
+The idea is that it's easy to process the contents of single large frame instead of many smaller frames.
 You can test all of this with `ping` command
 ```
 # by default 84 bytes of data transfered
@@ -1161,17 +1092,17 @@ There are 4 types
 * viewer response - before CF responds to viewer
 
 You can protect CF data by using 
-* Signed url (like pre-signed s3 url) - temporary access to CF data. Support both web & RTMP distribution.
+* Signed url (like presigned s3 url) - temporary access to CF data. Support both web & RTMP distribution.
 * Signed cookie - you can access multiple CF objects with same signed cookie. So use this method if you want to have access to multiple files with same cookie, and want to use standard url (without any signature as url params). Not supported for RTMP distribution.
 When creating signed url/cookie you can set 3 params:
 * end-datetime   (mandatory) - we need to know when access to particular file is over
 * start-datetime (optional)
 * ip-address     (optional) - single IP address or IP range
-In order to create pre-sign url you need to create CF keypair. You can do it only as root account (iam user won't work in this case). Login as root, go to `Account=>Security Credentials`, from there go to `CloudFront key pairs` and create new key pair.
+In order to create presign url you need to create CF keypair. You can do it only as root account (iam user won't work in this case). Login as root, go to `Account=>Security Credentials`, from there go to `CloudFront key pairs` and create new key pair.
 Don't confuse it with ec2 key pairs and with CF public key. They both for different purpose.
 You can make CF private by setting `Restrict Viewer Access` to yes (in this case you can also set which accounts can create signed urls, so other accounts can also generate urls to access data).
 So if you restricted access and try to access url you got error `Missing Key-Pair-Id query parameter or cookie value`.
-You can create pre-signed url with following command `aws cloudfront sign --url=https://d3l9m9kf4m2kpm.cloudfront.net/info.html --key-pair-id=APKAJDZCS7VF4FG32EWA  --private-key=file://cfkey.pem  --date-less-than=2020-08-19` (this command is local and doesn't call aws api, so we don't need to pass profile)
+You can create presigned url with following command `aws cloudfront sign --url=https://d3l9m9kf4m2kpm.cloudfront.net/info.html --key-pair-id=APKAJDZCS7VF4FG32EWA  --private-key=file://cfkey.pem  --date-less-than=2020-08-19` (this command is local and doesn't call aws api, so we don't need to pass profile)
 This will create signed url by which you can access your data from CF.
 
 You can also use CF to distribute dynamic content (like ec2/api requests). Although at first it seems unreasonable cause for every dynamic request CF should forward it to underlying ec2.
@@ -1210,7 +1141,7 @@ When you set OAI from cf you can set `update bucket policy` and aws will itself 
 In this case your s3 bucket is public, but can be accessed only by cf user with OAI=E27OQ9NRS1N0QR.
 Accelerated file upload - you can enable POST/PUT/PATCH methods for your cf distribution, and so accelerate file uploads. So now you upload your files to nearest cf edge location and from there it's uploaded to s3/ec2 using aws internal low-latency network.
 There are 3 ways to limit access to cf:
-* using pre-sign url/cookie
+* using presign url/cookie
 * use geo-restriction (whitelist/blacklist specific countries)
 * use WAF for all other restriction (for example whitelist/blacklist by list of IP addresses)
 

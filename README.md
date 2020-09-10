@@ -119,3 +119,4 @@ TargetGroup:
 * create iam identity federation with this AD and with Cognito
 * ClientVPN with security as microsoft AD
 * ClientVPN add nat instance so internet would work without tunnel split (yet check it also with tunnel split, and your IP would be different)
+* create template with both cloudwatch & aws budget cost alarms (when your usage above 1$ and 5$)
