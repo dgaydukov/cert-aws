@@ -2257,7 +2257,6 @@ Fluentd vs LogStash
 * Logs are directly shipped from STDOUT without requiring an extra log file / need extra plugin to extract logs from docker
 Above comparison shows that for kuber it's better to use Fluentd, due to its built-in Docker logging driver and parser
 
-
 ###### SageMaker
 It's managed service, running JN, that provides ability to build, train, and deploy ML models quickly.
 JN (Jupyter Notebook) - interactive computing environment, single document where you can run code, display the output, and also add explanations, formulas, charts.
@@ -2280,7 +2279,6 @@ Hadoop Data Formats
 * ORC - row columnar data format highly optimized for reading, writing, and processing data in Hive. Files are made of stripes of data where each stripe contains index, row data, and footer.
 * Parquet - row columnar data format, files consist of row groups, header, and footer. Specialized in efficiently storing and processing nested data types.
 
-
 ###### Application Discovery Service
 ADS collects and presents data about running apps and help understand the configuration, usage, and behavior of them for migration purposes. 
 With data collected by this service you can perform a TCO (Total Cost of Ownership) and calculate is it reasonable to migrate to cloud.
@@ -2291,7 +2289,6 @@ Agent uses HTTPS/TLS to transmit data to the ADS
 Agent can be operated in an offline test mode that writes data to a local file so customers can review collected data before enabling online mode
 * agent-less - VMware customers collect VM configuration and performance profiles without deploying the AWS Application Discovery Agent on each host
 You need to install AgentLess Connector as OVA (Open Virtual Appliance) package on VMware vCenter.
-
 
 ###### Artifact
 Artifact - portal that provides customers with ability to download AWS security and compliance documents, such as AWS ISO certifications, Payment Card Industry (PCI), and System and Organization Control (SOC) reports.
@@ -2328,7 +2325,7 @@ During migration DataSync:
 * can use filters to include/exclude specific set of files
 * migrate archive data directory to Glacier
 * can build your data lake, by automating the transfer of valuable on-premises data sets to s3
-* performs integrity checks to ensure transfered data is correspond to source data, by calculating file checksum and sompare it with on-premise file checksum
+* performs integrity checks to ensure transferred data is correspond to source data, by calculating file checksum and sompare it with on-premise file checksum
 * you can monitor transfer progress in CloudWatch (how many files and total volume)
 * ensure file transfer even if some interruption (like network problem). In this case DataSync will resume file transfer and complete it after failed attempt
 * use direct connect + vpc endpoint so data transfer happens inside vpc and doesn't go outside aws network

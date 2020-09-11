@@ -1,6 +1,5 @@
 # AWS Solutions Architect certification
 
-
 ### Description
 Here is my experience for taking [SAA-C02](https://aws.amazon.com/certification/certified-solutions-architect-associate) and [SAP](https://aws.amazon.com/certification/certified-solutions-architect-professional) certification.
 You can also take a look at [Available AWS Certifications](https://aws.amazon.com/certification) for complete list of available certifications.
@@ -11,24 +10,23 @@ and [here](https://aws.amazon.com/about-aws/whats-new/2019/02/new-aws-certificat
 If you go with associate + professional => you pay 150 + 300 with 50% discount (so you will pay only 150 for second exam) = 300 totally. 
 If you go straight to professional you just pay 300. But I would encourage you to take both, since during preparation for both of them you will learn a lot of new funny stuff.
 
-
 ### Why do you need it
 There are 2 main reasons to get it
 1. During preparation you will learn a lot of new stuff
 2. It may help your career
 
-
 ### Contents
 * [Solutions Architect Tips](https://github.com/dgaydukov/cert-aws-sa/blob/master/files/sa.md)
 
-
 ### Useful Links
 * [Mock exam SAA](https://www.whizlabs.com/aws-solutions-architect-associate)
-* [Free SAA questions](https://www.examtopics.com/exams/amazon/aws-certified-solutions-architect-associate-saa-c02)
 * [Mock exam SAP](https://www.whizlabs.com/aws-solutions-architect-professional)
-
+* [Free SAA questions](https://www.examtopics.com/exams/amazon/aws-certified-solutions-architect-associate-saa-c02)
+* [Free SAP questions](https://www.examtopics.com/exams/amazon/aws-certified-solutions-architect-professional)
 
 ### TODO
+add to spring5: RestTemplate vs OkHttpClient vs Retrofit2 vs Feign
+add to spring5: @Transactional example with lazy loading
 -----------------------------------------------Advanced-----------------------------------------------
 * add cross-account access to s3
 * what is stronger bucket policy or acl
@@ -67,7 +65,6 @@ TargetGroup:
     Matcher:
         HttpCode: 200-299
 ```
-
 * create custom vpn server in ec2 and try to connect to it (do both use oepnvpn server ami and any ami (OpenVPN Access Server from marketplace which is free tier, in this case you should configure it through browser admin panel) + manually configure openvpn server)
 * vpc endpoint service (add ec2 (with basic httpd service)+NLB and share it to vpc from another region)
 * route 53 resolver
