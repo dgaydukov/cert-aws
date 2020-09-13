@@ -1241,6 +1241,7 @@ For encryption it uses four-tier hierarchy of encryption keys. These keys are:
 * database key
 * data encryption keys
 Redshift Spectrum - allows you to query data in s3, it's serverless just like Athena, so you pay for resources you consume.
+So it basically allows you to separate storage & compute.
 It different from Athena, cause it allows you to join current redshift tables with data from s3.
 Under the hood there is a fleet of thousands Redshift Spectrum nodes spread across multiple AZ.
 Query is submitted to leader node of your Redshift cluster => leader node optimizes, compiles, and pushes the query execution to the compute nodes => compute nodes submit requests to redshift spectrum

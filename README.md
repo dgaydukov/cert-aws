@@ -25,9 +25,25 @@ There are 2 main reasons to get it
 * [Free SAP questions](https://www.examtopics.com/exams/amazon/aws-certified-solutions-architect-professional)
 
 ### TODO
-add to spring5: RestTemplate vs OkHttpClient vs Retrofit2 vs Feign
-add to spring5: @Transactional example with lazy loading
+* https://aws.amazon.com/blogs/compute/nginx-reverse-proxy-sidecar-container-on-amazon-ecs
+* how we send emails in obd (ses vs sns for sending emails)
+* https://aws.amazon.com/appsync/faqs
+* https://aws.amazon.com/servicecatalog/faqs
+* dynamodb global table (cross-region replication)
+* ask devops why we can't have single elb to eks (why do we need multiple elb)
+* https://read.acloud.guru/deep-dive-into-aws-kinesis-at-scale-2e131ffcfa08
+* kinesis vs apache storm vs kafka
+* ec2 hibernation
+* redshift table prioritization
+* several qa profiles with half uploaded documents to check backward compatibility
+* add to spring5: RestTemplate vs OkHttpClient vs Retrofit2 vs Feign
+* add to spring5: @Transactional example with lazy loading
+* find out why @MockBean doesn't substitue bean in List<KycTask> but instead add new bean to list
 -----------------------------------------------Advanced-----------------------------------------------
+* s3 call lambda(custom api) when file is updated
+* elb logs to s3
+* asg with both on-demand and spot instances (when no spot avaialbe run on-demand)
+* authenticate user on elb level using cognito
 * add cross-account access to s3
 * what is stronger bucket policy or acl
 * iam policy with mfa condition to delete objects from s3
@@ -91,6 +107,7 @@ TargetGroup:
 * migrate rds into s3 using dms
 * create data lake with lake formation
 * request and run spot fleet
+* create sqs queue and spot fleet that monitory queue, run spot fleet based on queue load, shut down fleet if queue is empty
 * redshift enhanced vpc routing (send data inside vpc between redhshift & s3 and view vpc flow logs)
 * configure alarm to start instance if it was stopped `cloudformation/ec2-cw-state-change.yml` + use lambda to store it in dynamodb
 * signin with userpool/identitypool (is signin the same or not)
