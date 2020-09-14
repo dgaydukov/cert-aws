@@ -98,7 +98,9 @@
 * 3.56 [Resource Access Manager](#resource-access-manager)
 * 3.57 [DataSync](#datasync)
 * 3.58 [Transfer Family](#transfer-family)
-* 3.58 [SNS](#sns)
+* 3.59 [SNS](#sns)
+* 3.60 [AppSync](#appsync)
+* 3.61 [Service Catalog](#service-catalog)
 
 
 
@@ -1394,7 +1396,20 @@ Unhealthy instance can be determine by 2 healthchecks
 * ec2 healthcheck - use it if you don't use elb
 ASG troubleshoot
 * more than 1 policy triggered by single event -> in this case asg launch policy with the greater impact (if one policy add 2 ec2 and another 4 -> 4 ec2 would be added)
-* scale-out and scale-in triggered by single event -> in this case scale-out wins 
+* scale-out and scale-in triggered by single event -> in this case scale-out wins
+Hibernation (suspend-to-disk) - like OS sleep command, temporary store RAM in ebs volume, and restore RAM from ebs on wake-up (ebs volume must be large enough to store RAM and be encrypted).
+When wake-up happens:
+* ram is restored from ebs
+* all running processes are resumed
+* all attached data volumes are reattached
+If instance takes long time to bootstrap you can pre-warm it:
+* launch it with hibernation enabled
+* bring it to desired state
+* hibernate it until you need it
+You are not charged for hibernated instance in stop state, but you are charged for ebs that store ram snapshot.
+If you have custom AMI, you should first enable hibernation for it, by installing `ec2-hibinit-agent`.
+You can't hibernate instance in ASG/ECS. If you try to hibernate instance in ASG, it will mark it as unhealthy (cause from asg perspective instance is stopped), terminate it and launch new replacement.
+You can't hibernate instance with more that 150GB RAM or for more than 60 days.
 
 ###### Athena
 Athena is an interactive query service that makes it easy to analyze data in Amazon S3 using standard SQL. 
@@ -2395,3 +2410,18 @@ SNS vs SES for email sending - although both can be used to send emails, there a
     * to receive emails user must be subscribed to email topic
 * ses - sending emails for end users
     * supports custom email header fields, and many MIME types
+    
+###### AppSync
+AppSync- allows developers to manage/synchronize mobile app data across devices, access/modify data when mobile device in offline state, so basically your app can work in offline mode.
+It supports Android/iOS/JavaScript. You can use open source clients to connect to AppSync GraphQL endpoint to fetch/save data.
+You can use dynamoDB/ElasticSearch/Lambda as data sources for AppSync.
+
+###### Service Catalog
+SC helps IT administrators & devops create/manage aws resources to end users. So you can control which users have access to which products.
+So end users only need IAM role to access SC itself, and from there they can create aws resources that are allowed in SC for them.
+You can manage all aws resources manually and create access policy to each user for each resources. But can create SC with a set of aws resources and add access to it to user. 
+And this user will get access to all resources inside SC. You create portfolio add products and gran users permissions to chosen portfolio.
+End users have simple portal where they can discover allowed services (products) and launch them.
+Portfolio - collection of products. Product - cloudFormation template with a list of aws resources. Users then can launch any product in portfolio.
+You can share portfolio with other aws accounts. By using cloudFormation params you can customize user experience (for example end users can choose what type of ec2 instance to run).
+Product has versioning, so end users can choose new version or update their stack to new version.
