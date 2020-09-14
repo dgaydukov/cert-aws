@@ -98,6 +98,7 @@
 * 3.56 [Resource Access Manager](#resource-access-manager)
 * 3.57 [DataSync](#datasync)
 * 3.58 [Transfer Family](#transfer-family)
+* 3.58 [SNS](#sns)
 
 
 
@@ -173,6 +174,15 @@ ELB (Elastic Load Balancer) - aws load balancer that includes 3 types
 * CLB (Classic Load Balancer) - old lb, now mostly outdated
 App loadbalancer (in our case spring app) - is EC2 instance with Eureka (Service Discovery) + Ribbon (Load Balancer) - a separate spring app 
 that discovers all instances and allows you to use human readable names instead of urls.
+There are 2 types of proxy
+* forward proxy - sits in front of client and redirect client's request to server, yet client can still directly connect to server. Use cases:
+    * protect identity/privacy
+    * avoid country/region blocks
+* reverse proxy - sits in front of server and hides server from the client, client can't directly connect to server, cause server is shielded by reverse proxy. User cases:
+    * load balancing
+    * security (by implementing WAF you can filter on proxy level all unwanted requests, so they don't even go to your app server)
+    * cpu offload (for example you should response with gzip, your app server can response with plain text but nginx would convert it to gzip)
+
 
 ###### Ingress vs Egress
 Ingress - traffic that enters an entity, so it's a request sent from public Internet to private cloud.
@@ -2355,3 +2365,33 @@ FTP endpoint will only be available inside vpc cause it's not secure. If you nee
 You can also create single endpoint that supports multiple protocols (yet if one of the supported protocol FTP - endpoint would be accessible only within vpc)
 * set up users by integrating with microsoft AD, LDAP, any custom identity provider
 * assign IAM role to provide access to s3 bucket
+
+###### SNS
+Simple Notification Service - allows you to send notification to sqs/email/http/sms/lambda/mobilePush. It uses pub-sub model, so notification is pushed to consumer, no need for polling.
+Message Filtering - allows to subscriber create a filter and receive not all messages from sns, but only subset that conforms to filter.
+There are 2 types of emails:
+* json-email - in case emails are processing by some api, then whole email body would be json
+* email - in case emails are processing by end users, who view them in their mail client (with html, links and so on)
+SNS supports only standard sqs queue (not FIFO). You can subscribe multiple sqs/lambda to sns, so when message sent by sns it would be pushed to all subscribed sqs queues or lambdas.
+Subscription registration - topic must confirm subscription before starting to get messages to prevent spamming. So you should confirm that you own api/sqs/email:
+* http(s) - sns POST the confirmation message (containing a token) to the specified URL, your api should call `/ConfirmSubscription` with this token.
+* email(email-json) - sns send email with link, use should click the link
+* sqs - sns sends challenge message containing a token, you should call `/ConfirmSubscription` api to confirm you have access to sqs queue
+SNS is durable storage, it stores message across several AZ before confirming message receipt.
+Just like sqs, sns may occasionally deliver message trice due to distributed nature, so try to design your subscribers to be idempotent.
+If subscriber unavailable for specified retry number (for example http method was removed from your api), message would be discarded.
+There are 2 types of sms:
+* transactional - sms would be delivered over routes with the highest delivery reliability (otp or pin code)
+* promotional - sent over routes that have a reasonable delivery reliability, but cheaper than transactional
+Multiple size of sms is 140 chars, if size exceeds this, sns split message into several messages.
+Mobile push notification can be sent to mobile devices where your app is installed and user allowed push notification.
+Direct addressing - you can push notification to single subscriber instead of pushing to all subscribers.
+SNS vs SQS:
+* sns - push based, consumer don't need to poll data, data would be pushed to them
+* sqs - poll based, once message in queue, consumer need to poll it, handle and remove from queue
+SNS vs SES for email sending - although both can be used to send emails, there are some differences
+* sns - for sending emails for developers in case some failures
+    * body limit - 8KB, so you can't send attachments
+    * to receive emails user must be subscribed to email topic
+* ses - sending emails for end users
+    * supports custom email header fields, and many MIME types
