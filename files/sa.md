@@ -1254,22 +1254,26 @@ Multi-master replication ensures that updates propagate to all regions and that 
 Database vs Data Warehouse
 * relational db (single source) - OLTP (Online Transaction Processing) - store current transactions and quick access to them
 * warehouse (multiple sources)) - OLAP (Online Analytical Processing) - store large quantities of historical data
-RedShift - fully-managed, petabyte-scale data warehouse. Redshift - relational db for OLAP, supports ODBC/JDBC, based on industry-standard PostgreSQL.
+RedShift - relational data warehouse, fully-managed, petabyte-scale, massively parallel. Redshift - relational db for OLAP, supports ODBC/JDBC, based on industry-standard PostgreSQL.
 It delivers fast query and I/O performance for virtually any size dataset by using columnar storage technology while parallelizing and distributing queries across multiple nodes.
+It's fully transactional but implements only serializable isolation level. So if you have big workflow that do lot's of modification, wrap it into transaction, cause otherwise redshift will use new transaction for every change.
+Columnar storage more faster for aggregation operations. If you need to do sum/average in row storage you have to scan all pages to get result it's a lot of IO, but with columnar you get single IO to get whole column.
+Column data persisted to 1MB immutable blocks. Data sorting used to optimize zone maps, usually on columns that you use for filtering, usually low cardinality.
+So if you have column with high cardinality (timestamp with millisec) there is no point to add such column to sort key, it won't improve performance.
+Zone maps - in-memory data structures that store column's min/max value, so when you make query it's checked can data possibly be in this block, if not block is not scanned.
 Redshift only supports Single-AZ deployments. It uses MPP (Massively Parallel Processing) by automatically distribute data/query load across all nodes.
 Single-node can be used to quickly set up cluster and grow later. Multi-node requires leader (who gets client connection and queries) and a few compute nodes, that actually execute load.
 Cluster - consist of leader node (take the query) + 1 or more compute nodes (execute query in parallel).
 Compute node consists of node slices (depending on type of node there can be 2/16/32 slices within single node), they are kind of virtual compute node, and these slices actually do computational work.
 primary goal in selecting a table’s DISTSTYLE is to evenly distribute the data throughout the cluster for parallel processing.
-WLM (Workload Management) - queue to prioritize queries. Just like rds, RedShift supports snapshots (both automatic and manual).
-Internally each node using ebs to store data, but you can create s3 backups.
-For encryption it uses four-tier hierarchy of encryption keys. These keys are:
-* master key
-* cluster key
-* database key
-* data encryption keys
+WLM (Workload Management) - queue to prioritize queries. Each query assigned to queue, and based on queue priority - executed.
+SQA (Short query acceleration) - when query in queue, redshift determine that this query will run short time, and put it into beginning of queue, so it would be executed first.
+Concurrency Scaling - if turned on, add transient cluster (take incremental snapshot to s3 and spin new cluster form it in seconds, we can take incremental cause backup automatically enabled so we already have full snapshot) when queues are full.
+For every 24 hours of running cluster you accrue 1 hour of free transient cluster.
+Just like rds, RedShift supports snapshots (both automatic and manual). Internally each node using ebs to store data, but you can create s3 backups.
+For encryption it uses four-tier hierarchy of encryption keys. These keys are: master/cluster/database/data encryption keys
 Redshift Spectrum - allows you to query data in s3, it's serverless just like Athena, so you pay for resources you consume.
-So it basically allows you to separate storage & compute.
+So it basically allows you to separate storage & compute. You can also use it to insert data into redshift from s3.
 It different from Athena, cause it allows you to join current redshift tables with data from s3.
 Under the hood there is a fleet of thousands Redshift Spectrum nodes spread across multiple AZ.
 Query is submitted to leader node of your Redshift cluster => leader node optimizes, compiles, and pushes the query execution to the compute nodes => compute nodes submit requests to redshift spectrum
@@ -1277,14 +1281,43 @@ spectrum pool thousands of ec2 and query data from s3 and return it back to clus
 So with spectrum you can have store frequently access data in redshift and IA data in s3 and create join of these 2 datasets.
 WLM (Redshift workload management) - you can manage priorities within workloads so that short, fast-running queries would be run before long-running queries
 Distribution style (`DISTSTYLE`) - when you load data into table, redshift distributes the rows to each of the compute nodes:
-* AUTO - default style, redshift itself decide style based on table size
+* AUTO - start with ALL style, if table grows beyond certain limit, switch to EVEN.
 * EVEN - leader node distributes the rows across the slices in a round-robin fashion. Use it when a table does not participate in joins or when there is not a clear choice between KEY distribution and ALL distribution
 * KEY - rows are distributed according to the values in one column (this column must be defined as a `DISTKEY`), leader node places matching values on the same node slice
+Key is good if you have some foreign key (like departmentId in employee table) and so all employees for particular department would be stored in single slice
 * ALL - copy of the entire table is distributed to every node. While EVEN distribution or KEY distribution place only a portion of a table's rows on each node, ALL distribution ensures that every row is collocated for every join that the table participates in
+All is for small tables, less than 3million records.
 Enhanced VPC routing - forces `COPY/UNLOAD` traffic between your cluster and your data repositories through your Amazon VPC. These allows you
 * use all features of vpc
 * see vpc flow logs for `COPY/UNLOAD` commands
 * use vpc endpoint (route traffic between s3 & redshift)
+Migration:
+* lift-and-shift - is a bad practice cause performance depends on distkey/sortkey/dataCompression and when you just move you current warehouse without redesigning tables you won't get query performance.
+* best practice - to denormalize data if you migrate from heavily normalized database.
+Table design important upfront, cause for mysql/aurora you can create table and when you query pattern changes you just add index, but there is no indexes in redshift
+Changing distkey/sortkey will require table rebuilding. Primary/Foreign/Unique keys are not enforced, so you can add duplicating entry into primary key, yet some query patterns can benefit from these constraints, so if you can enforce them from your app it's better to do so.
+You can insert data by single/bulk insert - bad practice cause you will use leader node for this. So you can use `copy` command to load data directly into slices.
+`COPY` - load data into redshift, best performance when you specify source as s3 bucket, automatically compress data before insertion. Best practice to use as many input files as slices in the cluster (if you use single file - single slice would copy all other would sit idle)
+Optimal file size 1MB-1GB. If file size too small - lots of time is overhead to request file from s3, if too large - then you may get 99% uploaded and then failed.
+Managed Storage (`RA3` compute type) - decouple storage & compute, each node can support up to 64TB compressed storage. RA3 - redshift analytics + S3. DC2 - dense compute. DS2 - dense storage, now outdated.
+Compression applied independently for each column (totally 13 types of compression), we able to do this because redshift - columnar storage.
+AZ64 - aws own compression encoding algorithm designed with high compression value and improved query processing. For int/date - use AZ64, char/varchar - LZO/ZSTD.
+Deduuplication/Upsert (update + insert):
+* use `copy` to load data into staging table from s3
+* remove duplicates from prod table
+* insert data from staging table into prod table
+```
+BEGIN; # start transaction, cause it's batch of operations
+CREATE TEMP TABLE staging(LIKE prod); # copy distkey/sortkey from prod table
+COPY staging from s3://bucket/data.csv COMPUPDATE OFF; # disable compression to speed up insertion
+DELETE from prod p USING staging s on p.user_id=s.user_id;
+INSET INTO prod SELECT * FROM staging;
+COMMIT; 
+```
+For large copy (billions of records) use `ALTER TABLE APPEND` instead of `INSERT INTO SELECT`
+`VACCUM` do 2 things:
+* remove deleted records (when we delete records they are marked for deletion, but actual removal happens later)
+* globally sort tables
 
 ###### QuickSight
 QuickSight - BI (business intelligence) tool, for building visualizations, perform ad-hoc analysis (can connect to all aws data sources).
