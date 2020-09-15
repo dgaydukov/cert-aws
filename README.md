@@ -25,14 +25,7 @@ There are 2 main reasons to get it
 * [Free SAP questions](https://www.examtopics.com/exams/amazon/aws-certified-solutions-architect-professional)
 
 ### TODO
-* dynamodb global table (cross-region replication)
-* redshift table prioritization
-* https://read.acloud.guru/deep-dive-into-aws-kinesis-at-scale-2e131ffcfa08
-* kinesis vs apache storm vs kafka
-* add to spring5: RestTemplate vs OkHttpClient vs Retrofit2 vs Feign
-* add to spring5: @Transactional example with lazy loading
-* send email via JavaMailSender/AmazonSimpleEmailService/AmazonSimpleNotificationServiceClient
-* find out why @MockBean doesn't substitue bean in List<KycTask> but instead add new bean to list
+* https://www.youtube.com/watch?v=ZikizZ3rV6k (redshift deep dive)
 -----------------------------------------------Advanced-----------------------------------------------
 * create elb with eks with several apps deployed there, and use elb path routing to route to eks nodeport. So we have single elb and multiple microservices in eks and all works (internal pathes not exposed by elb, and can be accessed only inside eks cluster)
 * sas vs sns on calling lambda when new message arrived

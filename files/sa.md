@@ -1106,10 +1106,8 @@ Anti-pattern
 ###### Kinesis
 It is a platform for streaming data on AWS, making it easy to load and analyze streaming data.
 With Kinesis, you can ingest real-time data such as application logs, website clickstreams, IoT telemetry data, and more into your databases, data lakes, and data warehouses, or build your own real-time applications using this data
-* Kinesis Firehose (near real time) - load massive volumes of streaming data into AWS (you can configure lambda to transform you data before loading)
-Receives stream data and stores it in s3/RedShift/ElasticSearch
-* Kinesis Streams (real time) - ability to process the data in the stream.
-Stream for processing data, firehose - for storing them in s3/redshift.
+* Kinesis Firehose (near real time) - load massive volumes of streaming data into AWS (you can configure lambda to transform you data before loading). Receives stream data and stores it in s3/RedShift/ElasticSearch
+* Kinesis Streams (real time) - ability to process the data in the stream. Stream for processing data, firehose - for storing them in s3/redshift.
 * Kinesis Analytics - analyze streaming data real time with standard SQL
 AntiPattern
 * Small scale consistent throughput (Kinesis Data Streams is designed  and optimized for large data throughputs)
@@ -1117,6 +1115,19 @@ AntiPattern
 Queue vs Streaming
 * queue (not reactive) - you have to poll data, once it polled it removed from queue
 * streaming (reactive) - many consumer notify of changes, events stay for long time (not deleted)
+Write and Read to stream with java:
+* [KPL (Kinesis Producer Library)](https://github.com/awslabs/amazon-kinesis-producer) - allows you to write to kinesis data streams (c++ code, but use java binding)
+It has built-in batching & multithreading logic to collect many small events, batch them and send to kinesis
+If you use KCL to retrieve message from kineiss that consist of multiple KPL records, you can use KPL on client side to retreive these records
+It emits throughput/error/other metrics to cloudWatch
+It uses async architecture - so call to put record returns immediately with `Future` object from KPL
+* [KCL (Client Library Consumer)](https://github.com/awslabs/amazon-kinesis-client) - allows you to read from kinensis data streams (java library)
+Kinesis vs Kafka vs Apache Storm
+Both are message brokers - middleman between data streaming source and it's consumers
+* kafka - data stored in Kafka Partition, config store - Apache Zookeeper, replica instances - can be configured
+* kinesis - data stored in Shards, config store - DynamoDB, synchronously replicates across 3 AZ
+* storm - middleman between hadoop (which works with batches only) and streaming source. So storm take incoming stream, organize data into packages and sent it to hadoop for further processing.
+Data sources are called spouts and each processing node is a bolt.
 
 ###### Lambda
 Lambda - piece of code that can be executed without any server env (just write code in javascript and it will run).
@@ -1235,6 +1246,9 @@ Stream records are organized into groups, also referred to as shards. With strea
 * log/audit/aggregate data
 * replicate data to another regions for query purpose using DynamoDB Cross-Region Replication Library
 DAX (DynamoDB Accelerator) - in-memory cache for dynamoDb, can expedite up to 10 times. The benefit is that you don't have to modify source code, you just enable cache and it works.
+Global Tables (cross-region replication) - multi-region/master db that automatically replicates across multiple regions. It is multiple replica tables (one per region) that DynamoDB treats as a single unit.
+When app write data to replica table in one region, dynamoDb propagate changes to all regions, so if one region would be unavailable your app continue to work normally.
+Multi-master replication ensures that updates propagate to all regions and that data eventually consistent.
 
 ###### RedShift
 Database vs Data Warehouse
@@ -1244,7 +1258,9 @@ RedShift - fully-managed, petabyte-scale data warehouse. Redshift - relational d
 It delivers fast query and I/O performance for virtually any size dataset by using columnar storage technology while parallelizing and distributing queries across multiple nodes.
 Redshift only supports Single-AZ deployments. It uses MPP (Massively Parallel Processing) by automatically distribute data/query load across all nodes.
 Single-node can be used to quickly set up cluster and grow later. Multi-node requires leader (who gets client connection and queries) and a few compute nodes, that actually execute load.
-Cluster - consist of leader node (take the query) + 1 or more compute nodes (execute query in parallel). 
+Cluster - consist of leader node (take the query) + 1 or more compute nodes (execute query in parallel).
+Compute node consists of node slices (depending on type of node there can be 2/16/32 slices within single node), they are kind of virtual compute node, and these slices actually do computational work.
+primary goal in selecting a table’s DISTSTYLE is to evenly distribute the data throughout the cluster for parallel processing.
 WLM (Workload Management) - queue to prioritize queries. Just like rds, RedShift supports snapshots (both automatic and manual).
 Internally each node using ebs to store data, but you can create s3 backups.
 For encryption it uses four-tier hierarchy of encryption keys. These keys are:
@@ -1260,10 +1276,10 @@ Query is submitted to leader node of your Redshift cluster => leader node optimi
 spectrum pool thousands of ec2 and query data from s3 and return it back to cluster.
 So with spectrum you can have store frequently access data in redshift and IA data in s3 and create join of these 2 datasets.
 WLM (Redshift workload management) - you can manage priorities within workloads so that short, fast-running queries would be run before long-running queries
-Distribution style - when you create table you can choose
+Distribution style (`DISTSTYLE`) - when you load data into table, redshift distributes the rows to each of the compute nodes:
 * AUTO - default style, redshift itself decide style based on table size
 * EVEN - leader node distributes the rows across the slices in a round-robin fashion. Use it when a table does not participate in joins or when there is not a clear choice between KEY distribution and ALL distribution
-* KEY - rows are distributed according to the values in one column, leader node places matching values on the same node slice
+* KEY - rows are distributed according to the values in one column (this column must be defined as a `DISTKEY`), leader node places matching values on the same node slice
 * ALL - copy of the entire table is distributed to every node. While EVEN distribution or KEY distribution place only a portion of a table's rows on each node, ALL distribution ensures that every row is collocated for every join that the table participates in
 Enhanced VPC routing - forces `COPY/UNLOAD` traffic between your cluster and your data repositories through your Amazon VPC. These allows you
 * use all features of vpc
