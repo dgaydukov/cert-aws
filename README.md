@@ -25,11 +25,17 @@ There are 2 main reasons to get it
 * [Free SAP questions](https://www.examtopics.com/exams/amazon/aws-certified-solutions-architect-professional)
 
 ### TODO
+* разобрать тесты
 * finish task / fix post reupload data / check all ui, is it works correctly / add trading url to cors
 * create user with 2fa and use code to automatically assume role to list buckets (or generally reset every 30 min env variables, so everything would work on your local machine)
 https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_mfa_sample-code.html
 https://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/prog-services-sts.html
 * add local api to comparing of rest clients
+* lambda global state (https://medium.com/tensult/aws-lambda-function-issues-with-global-variables-eb5785d4b876) and how to solve it (javascript v8 isolate)
+* aws account boundary
+* auto-scaling kinesis data streams number of shards (based on load)
+* https://ruhighload.com/%D0%98%D0%BD%D0%B4%D0%B5%D0%BA%D1%81%D1%8B+%D0%B2+mysql
+* https://docs.aws.amazon.com/neptune/latest/userguide/access-graph-gremlin.html
 -----------------------------------------------Advanced-----------------------------------------------
 * add vpc to `cloudformation/ec2-cw-recover-alarm.yml` (in case you run it in region where no default vpc)
 * edit all current cf templates => rewrite efs from default SG to custom (cause it's better to explicitly control SG)
