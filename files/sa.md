@@ -1254,6 +1254,9 @@ Multi-master replication ensures that updates propagate to all regions and that 
 Database vs Data Warehouse
 * relational db (single source) - OLTP (Online Transaction Processing) - store current transactions and quick access to them
 * warehouse (multiple sources)) - OLAP (Online Analytical Processing) - store large quantities of historical data
+JDBC (Jave Database Connectivity) vs ODBC (Open Database Connectivity):
+* odbc - introduced by Microsoft in 1992, platform dependent - only for windows, procedural as most of the code in C/C++
+* jdbc - introduced by SUN in 1997, platform-independent, purely object-oriented type driver
 RedShift - relational data warehouse, fully-managed, petabyte-scale, massively parallel. Redshift - relational db for OLAP, supports ODBC/JDBC, based on industry-standard PostgreSQL.
 It delivers fast query and I/O performance for virtually any size dataset by using columnar storage technology while parallelizing and distributing queries across multiple nodes.
 It's fully transactional but implements only serializable isolation level. So if you have big workflow that do lot's of modification, wrap it into transaction, cause otherwise redshift will use new transaction for every change.
@@ -2001,6 +2004,9 @@ There are several network modes:
 ###### EKS
 EKS (Elastic Kubernetes Service) - manages service that runs kubernetes cluster (so you don't need to deploy it from scratch).
 It provisions/manages Kubernetes control plane and worker nodes for you.
+eks cluster consists of 2 vpc:
+* eks-managed vpc - where kuber control plane (control plane nodes that run the kuber software, such as `etcd` and the kuber API server) resides
+* customer-managed vpc - vpc created by you, where nodes resides
 
 ###### Fargate
 Fargate is serverless compute engine for containers running in ECS/EKS, it removes the need to provision and manage servers.

@@ -25,17 +25,12 @@ There are 2 main reasons to get it
 * [Free SAP questions](https://www.examtopics.com/exams/amazon/aws-certified-solutions-architect-professional)
 
 ### TODO
-* jdbc vs odbc
+* finish task / fix post reupload data / check all ui, is it works correctly / add trading url to cors
+* create user with 2fa and use code to automatically assume role to list buckets (or generally reset every 30 min env variables, so everything would work on your local machine)
+https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_mfa_sample-code.html
+https://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/prog-services-sts.html
+* add local api to comparing of rest clients
 -----------------------------------------------Advanced-----------------------------------------------
-* create elb with eks with several apps deployed there, and use elb path routing to route to eks nodeport. So we have single elb and multiple microservices in eks and all works (internal pathes not exposed by elb, and can be accessed only inside eks cluster)
-* sas vs sns on calling lambda when new message arrived
-* s3 call lambda(custom api) when file is updated
-* elb logs to s3
-* asg with both on-demand and spot instances (when no spot avaialbe run on-demand)
-* authenticate user on elb level using cognito
-* add cross-account access to s3
-* what is stronger bucket policy or acl
-* iam policy with mfa condition to delete objects from s3
 * add vpc to `cloudformation/ec2-cw-recover-alarm.yml` (in case you run it in region where no default vpc)
 * edit all current cf templates => rewrite efs from default SG to custom (cause it's better to explicitly control SG)
 * edit all current cf templates => add SG to RDS with source as SG of webserver
@@ -73,6 +68,15 @@ TargetGroup:
 * create custom vpn server in ec2 and try to connect to it (do both use oepnvpn server ami and any ami (OpenVPN Access Server from marketplace which is free tier, in this case you should configure it through browser admin panel) + manually configure openvpn server)
 * vpc endpoint service (add ec2 (with basic httpd service)+NLB and share it to vpc from another region)
 * route 53 resolver
+* create elb with eks with several apps deployed there, and use elb path routing to route to eks nodeport. So we have single elb and multiple microservices in eks and all works (internal pathes not exposed by elb, and can be accessed only inside eks cluster)
+* sas vs sns on calling lambda when new message arrived
+* s3 call lambda(custom api) when file is updated
+* elb logs to s3
+* asg with both on-demand and spot instances (when no spot avaialbe run on-demand)
+* authenticate user on elb level using cognito
+* add cross-account access to s3
+* what is stronger bucket policy or acl
+* iam policy with mfa condition to delete objects from s3
 * transit gateway - add on-premise network imitated by third vpc (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-transitgateway.html - guide to add on-premise, https://theithollow.com/2018/12/12/setup-aws-transit-gateway)
 * put spring app into ECS and EKS and compare the difference (try fargate too). Try auto scaling in eks/ecs
 * Try maximum automate site-to-site vpn cloudformation template (try to extract somehow all IP addresses and PSK secret string and put it into ec2 userdata for VpnServer)
