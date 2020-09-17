@@ -31,6 +31,9 @@ https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_mfa_sample-code.
 https://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/prog-services-sts.html
 * add local api to comparing of rest clients
 * check bucket my-lifecycle-s3-bucket-1, if files were moved to glacier. You glacier console to restore these objects.
+* https://aws.amazon.com/shield/faqs (https://docs.aws.amazon.com/waf/latest/developerguide/ddos-overview.html)
+* https://docs.aws.amazon.com/neptune/latest/userguide/feature-overview-db-clusters.html
+* https://aws.amazon.com/greengrass/faqs
 -----------------------------------------------Advanced-----------------------------------------------
 * add vpc to `cloudformation/ec2-cw-recover-alarm.yml` (in case you run it in region where no default vpc)
 * edit all current cf templates => rewrite efs from default SG to custom (cause it's better to explicitly control SG)

@@ -1526,6 +1526,8 @@ You are not charged for hibernated instance in stop state, but you are charged f
 If you have custom AMI, you should first enable hibernation for it, by installing `ec2-hibinit-agent`.
 You can't hibernate instance in ASG/ECS, instance root volume store (only with ebs store, cause instance root volume would be flushed when instances moved to stop state), more that 150GB RAM or for more than 60 days. 
 If you try to hibernate instance in ASG, it will mark it as unhealthy (cause from asg perspective instance is stopped), terminate it and launch new replacement.
+Spot fleet - a list of spot ec2 instances you can request
+EC2 fleet - a list of spot/on-demand/reserved instances you can request
 
 ###### Athena
 Athena is an interactive query service that makes it easy to analyze data in Amazon S3 using standard SQL. 
