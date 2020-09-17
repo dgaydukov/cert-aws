@@ -22,6 +22,7 @@
 * 1.18 [Useful Linux Commands](#useful-linux-commands)
 * 1.19 [Redirect 301 vs 302](#redirect-301-vs-302)
 * 1.20 [crontab](#crontab)
+* 1.21 [MySql Index Design](#mysql-index-design)
 2. [Networking](#networking)
 * 2.1 [NIC](#nic)
 * 2.2 [Hub, Switch, Router](#hub-switch-router)
@@ -101,6 +102,8 @@
 * 3.59 [SNS](#sns)
 * 3.60 [AppSync](#appsync)
 * 3.61 [Service Catalog](#service-catalog)
+* 3.62 [Inspector](#inspector)
+* 3.63 [Neptune](#neptune)
 
 
 
@@ -305,9 +308,13 @@ aws <service> <action> help # shaw all avaialble action options to perform for s
 ```
 Service endpoint - you use it to connect to aws services. When you are using cli/sdk it automatically get api url for service you are going to use.
 Endpoint url built like `protocol://service.region.amazonaws.com` (for example `https://dynamodb.us-east-1.amazonaws.com`).
-Since s3 is global service but has region, 2 urls are possible:
-* standard url   - `https://s3.us-east-1.amazonaws.com/my-test-s3-bucket-1/index.html`
-* without region - `https://my-test-s3-bucket-1.s3.amazonaws.com/index.html`
+Since s3 is global service but has region, 5 urls are possible:
+* default url without region        `https://s3.amazonaws.com/www.aumingo.com/index.html`
+* default url with region           `https://s3.us-east-1.amazonaws.com/www.aumingo.com/index.html`
+* bucket name first without region  `https://www.aumingo.com.s3.amazonaws.com/index.html`
+* bucket name first with region     `https://www.aumingo.com.s3.us-east-1.amazonaws.com/index.html`
+* static website                    `http://www.aumingo.com.s3-website-us-east-1.amazonaws.com`
+There is no way to set https for static website.
 FIPS endpoint - endpoint that use a TLS software library that complies with Federal Information Processing Standards.
 So for kms you have 2 endpoints:
 * `kms.us-east-1.amazonaws.com`
@@ -408,6 +415,18 @@ Combining these 5 you can create anything from 1 min to 1 year:
 * Run job every 10 min: `10,20,30,40,50 * * * *` => `*/10 * * * *` (short notation)
 * Run job every day at 5.30 `30 17 * * *`
 * Run job At 12.05,12.10 on 10th of every month and day should be Monday: `5,10 0 10 * 1`
+
+###### MySql Index Design
+File stored in memory in a sequence of blocks. Each block knows where next is located. 
+Usually blocks go one after another, but can be scattered around - fragmentation, in this case performance is donwgraded (that's why there are a lot of tools - defragmentators that may expedite your system).
+If you search column without index, then mysql would extract all rows in table (yup since it's not columnar it would extract all table from memory), filter your column and return result. As you see - highly ineffective.
+Index - create a sorted column representation, and when you search by column for which we have index, only values from that index would be extracted from memory.
+So now most important question on designing - on which columns to put indexes. Of course you can put it on all columns, but don't forget that indexes have their own overhead - memory.
+Best rule - analyze your query pattern and create indexes for all columns that are participate in `WHERE/ORDER BY` clauses.
+Unique index - means after first match mysql won't proceed in searching. MySql support only 1 index per query, so if you have multiple columns in `WHERE` clause - you have to use composite index.
+The order of columns in composite index is very important. It should go from low to high cardinality.
+Suppose we have age and gender. For each age value - on average 100 rows, but for each gender - 5000. So age_gender index is better than gender_age.
+Cause in first case index first filter by age, and leave 100 values, and then filter by gender.
 
 ### Networking
 ###### NIC
@@ -661,6 +680,7 @@ It's aws solution to IAC. There are 2 concepts:
 * template - json/yaml file with describe desired infrastructure
 * stack - template deployed to cloud (you can run commands like describe/list/create/update stack). If you create/update stack and errors occur all would be rolled back and you can be notified by SNS
 SAM (Serverless Application Model) - framework to build serverless apps, provide a shorthand syntax to write IAC using yaml templates. Later it anyway transformed into CF full template, so you can just learn CF and stick with it.
+[sam local](https://github.com/aws/aws-sam-cli) - cli tool to test lambda locally, simulate s3/dynamoDB/kinesis/sns, it uses built-in CodeBuild/CodeDeploy to build and deploy app to cloud.
 Supported formats are JSON/YAML. Resource naming is supported not for all product, this is due to possible naming conflicts (when you update template, some resources would be recreated, but if names are not updated error would happen).
 To assign real name, you use stack + logical name, this ensures unique names. You can add deletion policy (for example you delete stack and want to preserve s3 buckets and take RDS snapshot).
 CF Registry - managed service that lets you register, use, and discover AWS and third party resource providers. You can use conditions inside templates (for example create ec2 based on input params).
@@ -910,7 +930,9 @@ Event notification - you can send events (sns/sqs/lambda) base on s3 action (get
 To achieve better performance you are adviced to use random names for objects, but [it's not longer required](https://aws.amazon.com/about-aws/whats-new/2018/07/amazon-s3-announces-increased-request-rate-performance). 
 Randomized named worked better cause when names are sequential all data store in the same place and it's harder to extract it.
 Storage Classes - can be configured at the object level and a single bucket can contain objects stored across Standard/Intelligent/Standard-IA/Single-Zone-IA
-You can also use S3 Lifecycle policies to automatically transition objects between storage classes without any application changes
+You can also use S3 Lifecycle policies to:
+* automatically transition objects between storage classes without any application changes
+* remove partially uploaded files (they are not removed by default, so if you don't have this policy you risk being spammed by these files)
 Storage Class Analysis - filters that helps analyse access pattern for whole bucket or list of objects 
 * Standard - low latency, high throughput, 3 AZ replication
 * Intelligent - when you don't know access pattern. It has 2 access types - frequent/infrequent, and based on access pattern moves objects between these 2 types and save money
@@ -926,12 +948,17 @@ TA doesn't cache data in edge location, so if you want low latency then it's bet
 Replication - automatic & asynchronous copy of data between 2 s3 buckets, can be within same account or between different aws accounts. There are 2 types:
 * SRR (Same-Region replication)
 * CRR (Cross-Region replication)
-  
+CORS (Cross-origin resource sharing) - ability to load data from `non-static url`. So for example if you use domain name to host content you may get error when try to load html/javascript files from s3. To get rid of error enable cors.
+Object Lock - store objects using WORM (write-once-read-many), so you can prevent objects to be deleted/overwritten for some time or indefinitely. There are two retention modes:
+* Governance mode - you can set permission to alter retention period or delete object (can be used for testing purpose before implementing compliance mode)
+* Compliance mode - there is no way to delete/overwrite object in this mode, even for root user
+In version enabled bucket each version can have it's own retention period. So you can update/delete object, but can't remove underlying versions.
+
 ###### Glacier
 Glacier - low-cost tape-drive storage value with  $0.007 per gigabyte per month. Used to store backups that you don't need frequently.
 Access to data can take from few minutes to a few hours. You store data as archives.
 Vault - same as bucket for s3, actual place where your archives are stored. You control access by using iam identity or vault policy.
-Vault Lock - compliance control policy like WORM (write once read many) where you put object only once and lock applied and you can't overwrite it
+Vault Lock - compliance control policy like WORM (write-once-read-many) where you put object only once and lock applied and you can't overwrite it
 When you should never use glacier
 * rapidly changing data (use EBS/EFS/RDS/DynamoDB)
 * immediate access (use S3)
@@ -943,6 +970,25 @@ Retrieval Options
 * Standard - 3-5 hours
 * Expedited - 1-5 min, most expensive
 * Bulk - 5-12 hours, cheapest
+If you want to move your glacier files to s3 intelligent tier you have to:
+* use glacier console to restore files to original s3 bucket
+* use bucket policy to move these files into intelligent tier
+Glacier Select - ability to run sql query directly in archive without prior retrieving of full archive. So now you can find only what you need instead of restoring full archive. Soon it would be integrated with Athena and Reshift Spectrum.
+You [can't upload file into glacier from console](https://docs.aws.amazon.com/amazonglacier/latest/dev/getting-started-upload-archive.html). So if you want to upload you have to use CLI/SDK.
+For many cli commands you hve to pass `--account-id`, this is strange cause your credentials that you use to authenticate your requests already include accountId. Even documentation explicitly states `This value must match the AWS account ID associated with the credentials used to sign the request`.
+So it looks like some relict from previous releases. But good thing we can use `-` instead of passing 12 digit number every time.
+```
+# list all vaults
+aws glacier list-vaults --account-id=- --profile=awssa
+# upload file to vault. You get archiveId in response, which you should store in you db, so you can retreive this archive by it's id
+aws glacier upload-archive --account-id=- --vault-name=test --body=file.txt --profile=awssa
+# to download archive, list files you should run job. This command will initiate a job to get vault inventory - which is updated once per day. Save jobId by which you can retreive results when job is done
+aws glacier initiate-job --account-id=- --vault-name=test --job-parameters='{"Type": "inventory-retrieval"}' --profile=awssa
+# you can list all current and recently complted jobs. After job is completed it would stay in this list for some time, but would be eventually removed from the list
+aws glacier list-jobs --account-id=- --vault-name=test --profile=awssa
+# get job result. Depending on job type result can be downloaded file or inventory list. Job should be completed, otherwise you get error: The job is not currently available for download
+aws glacier get-job-output --account-id=- --vault-name=test --job-id={JOB_ID} --profile=awssa result.json
+```
 
 ###### EFS
 EFS (Elastic File System) - delivers simple network filesystem for EC2. It supports NFSv4/4.1 (Network file system).
@@ -1102,12 +1148,17 @@ If you run PCI-compliant or HIPAA-compliant workloads you should:
 Anti-pattern
 * all users access website from specific location
 * all users use vpn to access website (users in different locations, but from aws they will use single location of vpn server)
+Canned vs custom policy (you write a policy statement in JSON format that specifies the restrictions on the signed URL) for signed url/cookie:
+* canned - date and time that users can no longer access your content
+* custom - canned policy + reuse policy for multiple files by using wildcard characters in the Resource object, date and time that users can begin to access your content, IP range of users who can access, signed URL includes a base64-encoded version of the policy
+So for basic need you can use either canned/custom, but if you want more elaborate restriction (multiple files, IP address, start using after certain date, wildcard) you have to use custom policy.
 
 ###### Kinesis
 It is a platform for streaming data on AWS, making it easy to load and analyze streaming data.
 With Kinesis, you can ingest real-time data such as application logs, website clickstreams, IoT telemetry data, and more into your databases, data lakes, and data warehouses, or build your own real-time applications using this data
 * Kinesis Firehose (near real time) - load massive volumes of streaming data into AWS (you can configure lambda to transform you data before loading). Receives stream data and stores it in s3/RedShift/ElasticSearch
 * Kinesis Streams (real time) - ability to process the data in the stream. Stream for processing data, firehose - for storing them in s3/redshift.
+Although there is no native auto-scale solution to scale out/in number of shards you can implement your own using CloudWatch (collect metrics and issue alarm if threshold was crossed) + Lambda (add/remove number of shards based on data from CloudWatch).
 * Kinesis Analytics - analyze streaming data real time with standard SQL
 AntiPattern
 * Small scale consistent throughput (Kinesis Data Streams is designed  and optimized for large data throughputs)
@@ -1142,6 +1193,18 @@ When you first run your code aws create new execution context (download code, se
 When you run it for second and consecutive time, there is no delay.
 By default lambda runs in no VPC (so it has internet access), if you want your lambda to talk with other services you should put it into VPC, if your lambda need internet access you have to configure nat for it.
 Lambda doesn't run `npm install`. So if you add new package you have to build it locally, create `.zip` file with your project (including `node_modules`) and upload it to aws lambda.
+Global state - lambda can run on the same container or on new container (aws shuts down inactive containers after ~20 minutes, so after this new call will run lambda on new container).
+So when lambda run on the same container global variables (those outside handler function) can be leaked between invocations.
+```
+const messages = [];
+exports.handler = async (event) => {
+    messages.push(event);
+};
+```
+So if different users call it with some personal info, other can see it. Yet if we wait for 20-30 min and then rerun it, messages would be empty.
+There are a few solutions:
+* don't use global variables (if you need some global state - store in in DynamoDB)
+* v8 isolate (VM instance with its own heap) - so every lambda is wrapped into vm instance
 
 ###### Step Functions
 Step Functions - visual tool that allows you to build complex logic based on lambda and EC2 calls.
@@ -1188,6 +1251,7 @@ AntiPattern
 
 ###### DynamoDB
 DynamoDB - fully managed NoSQL key-value/document database, kind of mongo, but aws proprietary solution. Stores data across 3 AZ. 
+It's serverless, so if you have to choose between DynamoDB/RDS if you are building serverless app - dynamoDB - your best choice.
 NoSql terminology
 * Row - item
 * Cell - attribute
@@ -1460,8 +1524,8 @@ If instance takes long time to bootstrap you can pre-warm it:
 * hibernate it until you need it
 You are not charged for hibernated instance in stop state, but you are charged for ebs that store ram snapshot.
 If you have custom AMI, you should first enable hibernation for it, by installing `ec2-hibinit-agent`.
-You can't hibernate instance in ASG/ECS. If you try to hibernate instance in ASG, it will mark it as unhealthy (cause from asg perspective instance is stopped), terminate it and launch new replacement.
-You can't hibernate instance with more that 150GB RAM or for more than 60 days.
+You can't hibernate instance in ASG/ECS, instance root volume store (only with ebs store, cause instance root volume would be flushed when instances moved to stop state), more that 150GB RAM or for more than 60 days. 
+If you try to hibernate instance in ASG, it will mark it as unhealthy (cause from asg perspective instance is stopped), terminate it and launch new replacement.
 
 ###### Athena
 Athena is an interactive query service that makes it easy to analyze data in Amazon S3 using standard SQL. 
@@ -1481,6 +1545,7 @@ There are 3 types of aws services
 Organizations - service that allows to tie several accounts to master account and centrally manage them (billing, services, policies)
 Organization is a collection of AWS accounts that you can organize into a hierarchy and manage centrally.
 Master Account - aws account from which you create your organization. From there you can also create/invite/delete other accounts. It's charged to pay all bills by all accounts. Once chosen, you can't change master account.
+As long as you have organization and your account - master account, it can't accept invitation to join other organizations. If you want it to become member account, you have to delete your organization first.
 OU (Organization Unit) - group of accounts under one name, can be used to build hierarchical structure.
 Account can be a member of only 1 organization/OU at a time. OU can be a member of only 1 OU at a time.
 Typical use case is to have 2 accounts (dev + prod) to separate concerns, but to manage them from single one.
@@ -1491,6 +1556,9 @@ Order of execution - most restrictive policies take precedence.
 It never grant permission, they work like permission boundary - defining max set of permission accounts in organization can have.
 It will never limit permission to internal user of current account who has permission to access resources (for these purposes you have to use permission boundary) 
 * TP (Tag policy) - set of rules regarding tags (which resource should have which tags)
+Feature sets (you select it when you create organization) - how your organization manage its accounts:
+* Consolidated billing - provides only shared billing functionality (you can't define SCP/TP with this type)
+* all - all available features including consolidating bulling
 
 ###### Well-Architected Tool
 Well-Architected Tool is a aws service that allows you to validate your current infrastructure against 5 pillars of well-arhitected framework.
@@ -1526,6 +1594,7 @@ EC2-to-EC2 communication through public IP
 * When in different Regions that connected with VPC peering - inside aws network
 * When in different Regions - not guaranteed to communicate inside aws network (probably communicate through Internet)
 SG (Security group) - also called virtual firewall, decide which traffic (both inbound & outbound) on which port to allow to ec2.
+Some firewalls let you filter on source ports, but SG - only on destination ports. So you can't say allow only tcp requests coming from port 80.
 * inbound - check traffic based on source (source -  IP address or SG)
 * outbound - check traffic based on destination (destination - IP address or SG)
 [Connection tracking](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-security-groups.html#security-group-connection-tracking)
@@ -1554,7 +1623,7 @@ So if you need 2 ec2 to talk with each other you can assign both of them same SG
 To monitor traffic you can use
 * VPC traffic mirroring (it copies traffic and send it to NLB with a UDP listener)
 * VPC flow logs (it includes information about allowed and denied traffic, source and destination IP addresses, ports, protocol number, packet and byte counts, and an action: accept or reject)
-VPC peering
+VPC peering:
 * you can create peering between VPC in 2 regions or in 2 accounts (in this case one account should accept peering request from another)
 * traffic of peering within same region is not encrypted, but isolated, just like traffic between 2 EC2 in the same VPC
 * traffic of peering within different regions is encrypted
@@ -1563,6 +1632,7 @@ multiple VPC connection (3 ways)
 Peering is non-transitive connection type (basically it's one-to-one). So if A has a peering with B, and B has a peering with C, A has no access to C, in order for them to access each other you have to create peering between them too
 It's good when you need to connect 2 or 3 vpc, but in case you have to connect 10 vpc, that means you would have to create `n*(n-1)/2` peering connection between each and every vpc.
 Good news is that peering can be cross-account and cross-region. Basic cloudformation example here `cloudformation/advanced-networking/vpc-peering.yml`
+If you want just to connect 2 services from 2 vpc without exposing all other services you should use PrivateLink.
 * transit vpc (2016) - a way to connect multiple vpc (form different regions) and your on-premises data center without creating hundreds of peering connections.
 Transit vpc is not aws service, it's just a concept or architecture how you should design such a transit vpc that would connect all other vpc with each other.
 The idea is to create one vpc with ec2 and IGW and install there some software from Cisco/Aviatrix (software is commercial, you buy ami with Cisco Cloud Services Router 1000V Series).
@@ -1610,6 +1680,7 @@ DCG (Direct Connect Gateway) - grouping of VGW (virtual private gateways) and VI
 Direct Connect and DCG support both 1500 and 9001 MTU (you can also modify it if you need).
 Don't confuse:
 * VPC PrivateLink - expose aws services (except s3/dynamoDb who are using gateway endpoint) or private ec2 to vpc in the same or other aws account, by adding eni inside vpc for exposed service
+If you have 3 vpc and ec2 in each of them, and you want to connect these 3 ec2 you can use either privateLink or vpc peering. PrivateLink is better solution, cause it allows you to connect only these 3 ec2, without exposing all other services from these vpc to each other.
 * VPC ClassicLink - connect classic ec2 to vpc
     * before 2013 there were no default VPC and all EC2 where launched in flat network shared with other aws users
     * allows to connect your VPC with EC2 classic, EC2 becomes a member of VPC Security Group
@@ -1673,6 +1744,8 @@ You simply upload a `.war/.jar` (in case of java) file, and beanstalk run tomcat
 EB using cloudformation template that build your configuration. After successfull deployment you can see your rds/ec2/elb and configure them separately.
 Keep in mind that for prod deployment it's better to use your own cloudformation script and manage infra with it, eb is good for testing purposes, PoC.
 With EB you shouldn't worry about java installed on ec2, if you select java it would automatically install it into ec2 and use coretton as jdk (same true for other popular env like node.js/tomcat and so on..)
+You can use EB with Docker, you deploy docker file or built image. Use this when you want one docker per ec2 instance. If docker instance crushed/killed EB would restart it automatically.
+You can use multicontainer Docker platform for EB, in this case you will have multiple containers per ec2.
 
 ###### DMS
 Database Migration Service - used for easy migration between different db (like from MySql to DynamoDB), and also for data replication.
@@ -1766,7 +1839,8 @@ Records set - subdomains of your hosted zone. You can easily route any record se
 You can create route53 health check for dns failover (you can also choose String matching and not just ensure that response is 200 http status, but check actual content of response)
 Apex domain - second level domain (example.com). All other like www.example.com, test.example.com - are third level domains
 Alias record - way route53 allows you to bind domain (both apex and any subdomain) to dns record of s3/elb/cloudfront/beanstack/api_gateway/vpc_endpoint (by default you should add IP address, but IP associated with these services can be changed due to scaling up/down)
-Alias is not the same as CNAME record. Internally route53 will substitute alias with appropriate IP address for A record. Of course you can take dns name of (let's say elb) and create CNAME record for this dns, and it would work the same way as alias for A record.
+Alias is not the same as CNAME record. Internally route53 will substitute alias with appropriate IP address for `A` record. Of course you can take dns name of (let's say elb) and create CNAME record for this dns, and it would work the same way as alias for A record.
+Alias can be assigned to root domain, CNAME can't, only for subdomains. This is the main difference.
 But alias is better cause it gives IP. Alias automatically changes IP address in case it was changed in aws (suppose you have alias for elb dns, and elb ip has been changed => aws would change dns A record and propagate it to all dns servers)
 A record with Alias for elb `dig elb.aumingo.com`
 ```
@@ -1867,6 +1941,9 @@ You can create encrypted rds only during creation time. If you created unecnrypt
 * copy snapshot
 * encrypt copied snapshot
 * recreate encrypted db from encrypted snapshot
+If you have problems with writes and need more capacity you have 2 options
+* use sqs queue to offload writes, if you need to continue to use your current db
+* switch to dynamoDB (if you don't need relational model)
 
 ###### SQS
 SQS (Simple Queue Service) - managed service that provide asynchronous decoupling and publisher/subscriber (queue) model. There are 2 types
@@ -2290,8 +2367,8 @@ There are 3 solutions
 OpsWorks Stacks - manages apps and servers in aws and on-premises, you model your app as stack containing different layers (elb, rds, ec2).
 You run Chef recipes using Chef Solo to automate package installation/deployment/management of your stack.
 So it helps you provision/manage your app in aws using Chef solo installed in one of ec2. 
-Difference with other platform
-* stacks - config management platform (using Chef to automate deployment/management, has less service coverage, just the most basic like vpc/iam/ec2/elb/cloudWatch)
+Difference with other platform:
+* stacks - config management platform (using Chef to automate deployment/management, has less service coverage, just the most basic like vpc/iam/ec2/elb/cloudWatch). Best practice to have separate stack for each env (dev/prod).
 * beanstalk - app management platform (you just upload code and beanstalk configure everything else use it's own CF templates)
 * cloudFormation - infra management platform
 OpsWorks Stacks create lifecycle events and on each of them some recipes could be executed (default events - setup/configure/deploy/undeploy/shutdown).
@@ -2480,3 +2557,19 @@ End users have simple portal where they can discover allowed services (products)
 Portfolio - collection of products. Product - cloudFormation template with a list of aws resources. Users then can launch any product in portfolio.
 You can share portfolio with other aws accounts. By using cloudFormation params you can customize user experience (for example end users can choose what type of ec2 instance to run).
 Product has versioning, so end users can choose new version or update their stack to new version.
+
+###### Inspector 
+It's automated security assessment service that test the network accessibility of your ec2 and apps running on them.
+You install agent on your OS, and it collects data and send it to inspector for analyzing. 
+Assessment template - configuration based on which inspector validates your system.
+
+###### Neptune
+It's fully-manages graph database (not relational) service optimized for storing billions of relationships and querying the graph with milliseconds latency. 
+It's ACID compliant with immediate consistency. It's uses operational technology (lifecycle management, encryption-at-rest with KMS) shared with RDS.
+It replicates all data 6 times across 3 AZ (neptune divide your storage on 10GB chunk and replicate each chunk 6 times).
+Automated backups enabled by default. You can take manual snapshot any time. You can restore snapshot only into new database.
+You can also share snapshot with other aws accounts. It runs inside vpc so you can use NACL/SG to secure neptune instance.
+It's best suited for: recommendation engines, fraud detection, knowledge graphs. It support 2 graph query languages:
+* Apache TinkerPop Gremlin graph traversal language - neptune provides Gremlin Websocket Server
+* RDF/SPARQL (Resource Description Framework) query language - neptune provides SPARQL 1.1 Protocol REST endpoint
+Gremlin - imperative/declarative graph traversal language. TinkerPop/Gremlin to graph db - the same as jdbc/sql for relational db.
