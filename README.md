@@ -25,15 +25,7 @@ There are 2 main reasons to get it
 * [Free SAP questions](https://www.examtopics.com/exams/amazon/aws-certified-solutions-architect-professional)
 
 ### TODO
-* finish task / fix post reupload data / check all ui, is it works correctly / add trading url to cors / add better logging with profileId to every function where we use log.info
-* create user with 2fa and use code to automatically assume role to list buckets (or generally reset every 30 min env variables, so everything would work on your local machine)
-https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_mfa_sample-code.html
-https://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/prog-services-sts.html
-* add local api to comparing of rest clients
-* check bucket my-lifecycle-s3-bucket-1, if files were moved to glacier. You glacier console to restore these objects.
-* https://aws.amazon.com/shield/faqs (https://docs.aws.amazon.com/waf/latest/developerguide/ddos-overview.html)
-* https://docs.aws.amazon.com/neptune/latest/userguide/feature-overview-db-clusters.html
-* https://aws.amazon.com/greengrass/faqs
+* check bucket my-lifecycle-s3-bucket-1, if files were moved to glacier. Use glacier console to restore these objects (can we use s3 console to restore objects?).
 -----------------------------------------------Advanced-----------------------------------------------
 * add vpc to `cloudformation/ec2-cw-recover-alarm.yml` (in case you run it in region where no default vpc)
 * edit all current cf templates => rewrite efs from default SG to custom (cause it's better to explicitly control SG)

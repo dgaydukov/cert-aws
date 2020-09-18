@@ -104,6 +104,9 @@
 * 3.61 [Service Catalog](#service-catalog)
 * 3.62 [Inspector](#inspector)
 * 3.63 [Neptune](#neptune)
+* 3.64 [Greengrass](#greengrass)
+* 3.64 [WAF & Shield](#waf--shield)
+
 
 
 
@@ -1141,7 +1144,7 @@ Accelerated file upload - you can enable POST/PUT/PATCH methods for your cf dist
 There are 3 ways to limit access to cf:
 * using presign url/cookie
 * use geo-restriction (whitelist/blacklist specific countries)
-* use WAF for all other restriction (for example whitelist/blacklist by list of IP addresses)
+* use WAF for all other restriction (for example whitelist/blacklist by IP)
 If you run PCI-compliant or HIPAA-compliant workloads you should:
 * enable cf access logs - save all request to access cf data
 * save all management cf request to CloudTrail
@@ -2575,3 +2578,26 @@ It's best suited for: recommendation engines, fraud detection, knowledge graphs.
 * Apache TinkerPop Gremlin graph traversal language - neptune provides Gremlin Websocket Server
 * RDF/SPARQL (Resource Description Framework) query language - neptune provides SPARQL 1.1 Protocol REST endpoint
 Gremlin - imperative/declarative graph traversal language. TinkerPop/Gremlin to graph db - the same as jdbc/sql for relational db.
+Cluster - one or more db instances + cluster volume. Made up of 2 types of instances:
+* primary - support read/write, does all data modification in cluster volume
+* replica - connected to the same volume and does only read operations. Neptune uses Multi-AZ, so in fail, read replica would be promoted to primary.
+
+###### Greengrass
+It allows your devices process the data they generate locally, while still taking advantage of AWS services when an internet connection is available.
+You can use programming language and then install this software on Raspberry Pi.
+So you can have aws lambda, wrap it into greengrass and then ship it ot IoT device. Of course if device in offline mode, and lambda use dynamoDB, calls would fail.
+Local Resource - buses/peripherals that are physically present on the device. You can also build ML model with SageMaker Nero and then install into device.
+
+###### WAF & Shield
+3 security services joined under single tab in aws:
+* waf (web application firewall) - you add rules that allow/deny/count web requests based on conditions that you define. Conditions are: HTTP header/body, URL string, SQL injection, XSS (for example you can block specific user-agents).
+Underlying service send request to waf, waf validate it based on rules you defined and instruct you service to block/allow request to proceed. It's integrated with CloudFront/ALB/Api Gateway.
+Rate-Base Rule - allows you to set a number of allowed request per IP address during predefined time (100 requests per 5 min - once this IP send 101 request, it would be blocked, until 5 min period ends, and new starts).
+Managed Rule - default rules that automatically updated by AWS Marketplace security Sellers, protects against common known issues.
+In case of rule fail you can configure CloudFront to show error page. Rules take a minute to propagate worldwide. It inspects both HTTP/HTTPS traffic.
+* shield - provides protection against DDoS (Distributed Denial of Service) attack. There are 2 types of this service:
+    * standard - free, activated by default for all accounts. Protect all aws infra (layer 3 and 4) against most common attacks like SYN/UDP floods or reflection attacks.
+    * advanced - paid, protect against more sophisticated attacks, like layer 7 HTTP & DNS floods. It constantly monitors network traffic and provides near real-time notifications of suspected DDoS incidents.
+You can use shield to protect on-premise servers. For this use aws endpoint with shield in front of your on-premise server. Shield notify about attack by sending metrics to CloudWatch.
+* FM (Firewall Manager) - tool that makes it easier for you to configure your WAF rules and vpc SG across your accounts. So if you have single account no need to use FM, but if you have aws organization with many accounts
+it's better to use single tool to configure waf across all accounts, cause FM integrated with organization so have a single place to quickly respond to incidents.
