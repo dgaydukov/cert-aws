@@ -26,6 +26,10 @@ There are 2 main reasons to get it
 
 ### TODO
 * check bucket my-lifecycle-s3-bucket-1, if files were moved to glacier. Use glacier console to restore these objects (can we use s3 console to restore objects?).
+* add to iam https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_condition_operators.html
+* cloudfront origin failover (another region)
+* http://www.kelvinlawrence.net/book/PracticalGremlin.pdf add to a list of read books
+* https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/AutoScaling.html
 -----------------------------------------------Advanced-----------------------------------------------
 * add vpc to `cloudformation/ec2-cw-recover-alarm.yml` (in case you run it in region where no default vpc)
 * edit all current cf templates => rewrite efs from default SG to custom (cause it's better to explicitly control SG)
