@@ -25,11 +25,6 @@ There are 2 main reasons to get it
 * [Free SAP questions](https://www.examtopics.com/exams/amazon/aws-certified-solutions-architect-professional)
 
 ### TODO
-* check bucket my-lifecycle-s3-bucket-1, if files were moved to glacier. Use glacier console to restore these objects (can we use s3 console to restore objects?).
-* add to iam https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_condition_operators.html
-* cloudfront origin failover (another region)
-* http://www.kelvinlawrence.net/book/PracticalGremlin.pdf add to a list of read books
-* https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/AutoScaling.html
 -----------------------------------------------Advanced-----------------------------------------------
 * add vpc to `cloudformation/ec2-cw-recover-alarm.yml` (in case you run it in region where no default vpc)
 * edit all current cf templates => rewrite efs from default SG to custom (cause it's better to explicitly control SG)
@@ -45,7 +40,7 @@ SET mykey myvalue
 SET mykey myvalue EX 5
 ```
 * add cf template for iam database authentication (then go to public ec2 and try to access db with both regular username/password and iam token)
-* create cf template with dynamodb vpc endpoint and access dynamodb from ec2 in private subnet (add scaling policy to dynamoDb)
+* create cf template with dynamodb vpc endpoint and access dynamodb from ec2 in private subnet (add auto scaling to dynamoDb)
 * rewrite template comments to multi-line description https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-description-structure.html
 * connect 2 vpc with privatelink (access ec2 from one vpc from another)
 * ELB access logs store to s3 => trigger lambda to process logs and put them into elasticsearch
