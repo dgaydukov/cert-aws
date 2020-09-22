@@ -109,7 +109,7 @@
 * 3.66 [Trusted Advisor](#trusted-advisor)
 * 3.67 [CloudHSM](#cloudhsm)
 * 3.68 [Polly](#polly)
-
+* 3.69 [MQ](#mq)
 
 
 
@@ -982,15 +982,61 @@ TA doesn't cache data in edge location, so if you want low latency then it's bet
 Replication - automatic & asynchronous copy of data between 2 s3 buckets, can be within same account or between different aws accounts. There are 2 types:
 * SRR (Same-Region replication)
 * CRR (Cross-Region replication)
-CORS (Cross-origin resource sharing) - ability to load data from `non-static url`. So for example if you use domain name to host content you may get error when try to load html/javascript files from s3. To get rid of error enable cors.
+CORS - ability to load data from `non-static url`. So for example if you use domain name to host content you may get error when try to load html/javascript files from s3. To get rid of error enable cors.
+Below rule allows POST/DELETE cors requests from example.com origin. 
+```
+<CORSConfiguration>
+ <CORSRule>
+   <AllowedOrigin>http://www.example.com</AllowedOrigin>
+   <AllowedMethod>POST</AllowedMethod>
+   <AllowedMethod>DELETE</AllowedMethod>
+   <AllowedHeader>*</AllowedHeader>
+ </CORSRule>
+</CORSConfiguration>
+```
+Useful elements:
+* `AllowedMethod` can be one of GET/PUT/POST/DELETE/HEAD, if request is non-simple, OPTIONS automatically would work for such request (you shouldn't and can't add OPTIONS to AllowedMethod tag).
+* `AllowedHeader` - specifies which headers are allowed in a preflight request in `Access-Control-Request-Headers` header
+* `ExposeHeader` - header in the response that you want customers to be able to access from their applications
 Object Lock - store objects using WORM (write-once-read-many), so you can prevent objects to be deleted/overwritten for some time or indefinitely. There are two retention modes:
 * Governance mode - you can set permission to alter retention period or delete object (can be used for testing purpose before implementing compliance mode)
 * Compliance mode - there is no way to delete/overwrite object in this mode, even for root user
 In version enabled bucket each version can have it's own retention period. So you can update/delete object, but can't remove underlying versions.
-You can retrieve objects in s3 console (not glacier console, cause there is no vault created in glacier for lifecycle policy), specify number of days copy would be available in s3. Retrieval Options:
+You can retrieve (restoration) objects in s3 console (not glacier console, cause there is no vault created in glacier for lifecycle policy), specify number of days copy would be available in s3. Retrieval Options:
 * bulk - 5-12 hours, cheapest
 * standard - 3-5 hours
 * expedited - 1-5 min, most expensive
+When you restore object you should specify: Number of days the restored copy is available - during this time, when you go to object you would be able to download it using it normal url.
+Policy to allow cloudTrail write
+```
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "Service": "cloudtrail.amazonaws.com"
+            },
+            "Action": "s3:GetBucketAcl",
+            "Resource": "arn:aws:s3:::my-test-s3-bucket-1"
+        },
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "Service": "cloudtrail.amazonaws.com"
+            },
+            "Action": "s3:PutObject",
+            "Resource": "arn:aws:s3:::my-test-s3-bucket-1/*",
+            "Condition": {
+                "StringEquals": {
+                    "s3:x-amz-acl": "bucket-owner-full-control"
+                }
+            }
+        }
+    ]
+}
+```
+`x-amz-acl` - special header that give full control to owner of account. So you have to call putObject with `aws s3 cp example.jpg s3://awsexamplebucket --acl bucket-owner-full-control`.
 
 ###### Glacier
 Glacier - low-cost tape-drive storage value with  $0.007 per gigabyte per month. Used to store backups that you don't need frequently.
@@ -1058,11 +1104,17 @@ When you take snapshot of running ebs, it would be available immediately (there 
 But when you recover snapshot ebs is read immediately, but data is loaded lazyly.
 IOPS vs Throughput vs Bandwidth
 * IOPS - number of read/write operations per second, good for transactional db where we need to make lot of small writes
-    * General Purpose SSD (gp2) - non-transactional db. 1GB-16TB
-    * Provisioned IOPS SSD (io1) - for transactional load, usually db. 4GB-16TB
+    * General Purpose SSD (gp2) - non-transactional db. 
+    * Provisioned IOPS SSD (io1) - for transactional load, usually db. 
 * Throughput - number of bits read/written per second
-    * Throughput Optimized HDD (st1) - log processing, big data, data warehouse, kafka, media transcoding. 500GB-16TB
-    * Cold HDD (sc1) - file sharing, archive storage. 500GB-16TB
+    * Throughput Optimized HDD (st1) - log processing, big data, data warehouse, kafka, media transcoding. 
+    * Cold HDD (sc1) - file sharing, archive storage. 
+Type    Size           IOPS                    Throughput
+gp2     1GB-16TB       16,000 (16 KiB I/O)     250 MiB/s
+io1     4GB-16TB       64,000 (16 KiB I/O)     1,000 MiB/s
+st1     500GB-16TB     500 (1 MiB I/O)         500 MiB/s
+sc1     500GB-16TB     250 (1 MiB I/O)         250 MiB/s
+Now you see that iops is for many writes of small data, but Throughput for small number of writes but of large amount. But in the end total throughput is approx the same.
 * Bandwidth - pipe, throughput - water running through pipe
 EBS Volume Types
 * HDD (large streaming workloads where throughput (measured in MiB/s) is a better performance measure than IOPS - has a platter and 
@@ -1200,6 +1252,7 @@ With Kinesis, you can ingest real-time data such as application logs, website cl
 * Kinesis Firehose (near real time) - load massive volumes of streaming data into AWS (you can configure lambda to transform you data before loading). Receives stream data and stores it in s3/RedShift/ElasticSearch
 * Kinesis Streams (real time) - ability to process the data in the stream. Stream for processing data, firehose - for storing them in s3/redshift.
 Although there is no native auto-scale solution to scale out/in number of shards you can implement your own using CloudWatch (collect metrics and issue alarm if threshold was crossed) + Lambda (add/remove number of shards based on data from CloudWatch).
+Retention period - time between message go into stream and stays there until removed, 24 (default) - 168 hours.
 * Kinesis Analytics - analyze streaming data real time with standard SQL
 AntiPattern
 * Small scale consistent throughput (Kinesis Data Streams is designed  and optimized for large data throughputs)
@@ -1317,7 +1370,7 @@ So we have 2 SK with same ORDER#orderID, one - for users, another for items. To 
 and now you have partitionKey - ORDER#orderID, sortKey - USER#userID/ITEM#itemID.
 If you have several address for single user, just add them as json attribute - until you have access pattern by address (like found all users by single address)
 So you store both profiles and orders in the same table, yet they have different attributes.
-DynamoDB - fully managed NoSQL key-value/document database, kind of mongo, but aws proprietary solution. Stores data across 3 AZ. 
+DynamoDB - fully managed, highly available out of the box(there is no such thing as multi-AZ deployment and read replica) NoSQL key-value/document database, kind of mongo, but aws proprietary solution. Stores data across 3 AZ. 
 It's serverless, so if you have to choose between DynamoDB/RDS if you are building serverless app - dynamoDB - your best choice.
 NoSql terminology
 * Row - item
@@ -1598,9 +1651,9 @@ You can configure SNS to get notification when your ASG scales out/in or replace
 LC (launch configuration) - template that ASG uses to launch new instances. One ASG use one LC. You can't modify LC, if you need to change some params you should create new LC and update your ASG.
 You can use on-demand or spot instances in LC, in case of spot you should set bid price in LC.
 ASG can launch your instances across multiple AZ but only within same region.
-Unhealthy instance can be determine by 2 healthchecks
-* elb healthchek - you should use it if you use elb
-* ec2 healthcheck - use it if you don't use elb
+Unhealthy instance can be determine by 2 healthchecks:
+* ec2 healthcheck (default check for asg, check only status of instance itself) - use it if you don't use elb
+* elb healthchek - more elaborated check (for example to check if instance return status 200)
 ASG troubleshoot
 * more than 1 policy triggered by single event -> in this case asg launch policy with the greater impact (if one policy add 2 ec2 and another 4 -> 4 ec2 would be added)
 * scale-out and scale-in triggered by single event -> in this case scale-out wins
@@ -1846,6 +1899,12 @@ You can use dms to migrate any supported db into s3 using `csv/parquet` format.
 There are 2 types of conversion:
 * engine conversion - homogeneous, when source and target - same db (for example both are mysql)
 * SCT (Schema Conversion Tool) - heterogeneous, for converting between existing schemas
+To run migration you need:
+* create replication instance - instance that would run migration (download from source, transform, upload to destination)
+You can use multi-AZ deployment, in this case if during middle of migration your replication instance failed for some reason, migration would continue with failover instance. Otherwise there is a risk that migration would be half-completed.
+You should put replication instance into the same vpc as your source or target, but you can use different vpc and connect them with vpc peering.
+* specify source and target endpoints
+* create & monitor tasks
 
 ###### ELB
 ELB (Elastic Load Balancing) - is a proxy that accept traffic (using listeners) from clients and route it to targets (usually EC2), so it basically distribute your traffic between different ec2 instances.
@@ -2054,13 +2113,15 @@ SQS (Simple Queue Service) - managed service that provide asynchronous decouplin
 * FIFO (first in, first out) - ordering is guaranteed, limit - 300 messages per second
 But you can also use standard queue (unordered) but place order field into each message, and by this you imitate order.
 It guarantee at-least-once delivery. you can use Amazon SQS Java Messaging Library that implements the JMS 1.1 specification and uses Amazon SQS as the JMS provider.
-Dead letter queue - a special queue that receives messages from other queue after some unsuccessful attempt to process it. Used to isolate messages that can't be processed for later analysis.
-You can get time-in-queue (time how long message has been in queue) by subtracting SentTimestamp attribute from current time.
-In anonymous access SenderId - IP address of sender (otherwise accountId).
-If queue is empty
+DLQ (Dead letter queue) - a special queue that receives messages from other queue after some unsuccessful attempt to process it. Used to isolate messages that can't be processed for later analysis.
+When you create a queue you can specify dlq (it should be the same type, for standard - standard dlq, for fifo - fifo dlq) with max retry. So after your queue consume message 3 times (and you max retry is 3) and not delete it, it would automatically moved to dlq.
+You can get time-in-queue (time how long message has been in queue) by subtracting SentTimestamp attribute from current time. In anonymous access SenderId - IP address of sender (otherwise accountId).
+When you set dlq for sqs queue, it got attribute `RedrivePolicy: {"deadLetterTargetArn":"arn:aws:sqs:us-east-1:ACCOUNT_ID:my_dlq","maxReceiveCount":"3"}`
+`SqsMessageDeletionPolicy.NO_REDRIVE` - would remove message if no redrive policy (dlq) specified. But if it specified messages won't be deleted automatically, you have to manually remove them from code. If message is not deleted several times (max retry), it would be moved to dlq.
+If queue is empty:
 * short polling (default) - returns immediately with no results. Only possible way if single thread poll multiple queues, in this case long polling for one empty queue would block other queues, but it generally bad design.
 * long polling - wait till message got into queue, or polling timeout (by default 20 sec) expires (save SQS cost, cause reduce number of empty receives). It's better to always use this type of polling.
-Message retention can be configured from 1 min to 14 days (by default - 4 days).
+Retention period - how long message stays in queue until removed by sqs. 60 seconds - 14 days, default - 4 days.
 Visibility Timeout (0 sec - 12 hours, default - 30 sec) - once you app consume a message it becomes invisible to others. But until your app notify queue that it processed it message not deleted. So this timeout - is how long queue can wait.
 You can get twice same message if
 * received message is not deleted during `VisibilityTimeout` (time during which you should handle message and delete it from queue)
@@ -2128,6 +2189,17 @@ Stage - like a tag, allows your api have multiple versions, like dev stage - mya
 You can add documentation to your api and expose it as swagger file.
 Api Gateway can generate client-side SSL certificate, and you backend can get public key, so it can verify that requests are coming from Api Gateway.
 Api Gateway calls are supported by CloudFront, so your api is highly available.
+CORS (Cross-origin resource sharing) - request made to another domain/subdomain of the same domain/port/protocol. There are 2 types:
+* simple - you should add `Access-Control-Allow-Origin` header in response. Request simple if:
+    * it's GET/HEAD/POST, for POST it should include `Origin` header
+    * content type is `text/plain`/`multipart/form-data`/`application/x-www-form-urlencoded`
+    * there is no custom headers
+* non-simple. CORS protocol require browser to send pre-flight OPTIONS request (it must have 3 headers: Origin/Access-Control-Request-Method/Access-Control-Request-Headers) for all non-simple cors requests.
+To support cors, api should response to this pre-flight request with 3 headers: 
+* Access-Control-Allow-Methods - methods which are allow to be executed
+* Access-Control-Allow-Headers - indicate which HTTP headers can be used during the actual request
+* Access-Control-Allow-Origin - actual origin that allows to call request
+To enable cors for api gateway you have to add support to OPTIONS request with 3 headers and for simple request just add single `Access-Control-Allow-Origin` header.
 
 ###### Cognito
 Cognito - managed user service that add user sing-in/sign-up/management email/phone verification/2FA logic.
@@ -2283,11 +2355,44 @@ By default:
 * logs stored for 90 days and only management events stored. If you need longer you should create trail. Trail stores data in s3, you have to analyze it yourself (usually using Athena)
 * trail viewable in region where it's created. for all-region trail - it's viewable in all regions.
 * trail collects data from all regions. You can create single region trail [only from cli](https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-create-and-update-a-trail-by-using-the-aws-cli-create-trail.html#cloudtrail-create-and-update-a-trail-by-using-the-aws-cli-examples-single), no way to create single-region trail from console. 
+* trail created with GSE enabled (it's true for both when you create from console and from cli. Although when you create trail from cli you can specify `--no-include-global-service-events` not to include GSE into this trail)
 When aws launch new region, in case of all region trail - new trail would be created in newly launched region.
 * trail in s3  encrypted using SSE. You can set custom encryption with KMS.
-Log file validation - guaranty that logs were not tampered with. Mare sure your s3 bucket has correct write policy, otherwise CT won't be able to store logs there.
-Organization trail - created by master account to log all events in all aws accounts for this organization (can be one/all region)
-You can deliver CT logs to CloudWatch, in this case CT would deliver logs to s3 & CloudWatch logs.
+Log file validation - guaranty that logs were not tampered with. When turn in, ct create a hash for each log file, and every hour store all these hashes in digest file in the same s3 bucket. 
+Each digest file is signed with private key that generated by ct. You can download public keys with `list-public-keys` command, and validate signed files. But you have no access to private keys - they are managed by ct.
+Private key is unique for each region within aws account. When you retrieve public keys you specify time range - 1 or more public keys may be returned. Mare sure your s3 bucket has correct write policy, otherwise CT won't be able to store logs there.
+Organization trail - created by master account to log all events in all aws accounts for this organization (can be one/all region). You can deliver CT logs to CloudWatch, in this case CT would deliver logs to s3 & CloudWatch logs.
+GSE (Global Service Events) - services like IAM/STS/CloudFront add logs to all trails that support GSE. It's turn on by default. You can turn it off only from cli/sdk.
+* create trail `aws cloudtrail create-trail --name=multiRegionTrail --s3-bucket-name=my-test-s3-bucket-1 --is-multi-region-trail --profile=awssa`
+S3 bucket should have both `s3:GetBucketAcl/s3:PutObject` enabled in bucket policy, otherwise you got `Incorrect S3 bucket policy is detected for bucket`.
+```
+{
+    "Name": "multiRegionTrail",
+    "S3BucketName": "my-test-s3-bucket-1",
+    "IncludeGlobalServiceEvents": true,
+    "IsMultiRegionTrail": true,
+    "TrailARN": "arn:aws:cloudtrail:us-east-1:ACCOUNT_ID:trail/multiRegionTrail",
+    "LogFileValidationEnabled": false,
+    "IsOrganizationTrail": false
+}
+```
+* change trail to single region `aws cloudtrail update-trail --name=multiRegionTrail --no-is-multi-region-trail --profile=awssa`.
+In this case trail would remain in the region in which it was created, and all it's shadow trails in other regions would be removed.
+```
+{
+    "Name": "multiRegionTrail",
+    "S3BucketName": "my-test-s3-bucket-1",
+    "IncludeGlobalServiceEvents": true,
+    "IsMultiRegionTrail": false,
+    "TrailARN": "arn:aws:cloudtrail:us-east-1:ACCOUNT_ID:trail/multiRegionTrail",
+    "LogFileValidationEnabled": false,
+    "IsOrganizationTrail": false
+}
+```
+* Remove GSE `aws cloudtrail update-trail --name=multiRegionTrail --no-include-global-service-events --profile=awssa`
+* Change back to multi-region `aws cloudtrail update-trail --name=multiRegionTrail --is-multi-region-trail --profile=awssa`
+You get `Multi-Region trail must include global service events.`. So you should do both `aws cloudtrail update-trail --name=multiRegionTrail --is-multi-region-trail --include-global-service-events --profile=awssa`.
+So You can't remove GSE from multi-region trail.
 
 ###### Certificate Manager
 ACM (Amazon Certificate Manager) - service that allows you to create/deploy public/private SSL/TLS certificates.
@@ -2649,6 +2754,8 @@ Mobile push notification can be sent to mobile devices where your app is install
 Direct addressing - you can push notification to single subscriber instead of pushing to all subscribers.
 SNS vs SQS:
 * sns - push based, consumer don't need to poll data, data would be pushed to them
+You can use fanout - push single messages into multiple subscribers (push 1 message to 5 sqs queues).
+To implement fanout with pure sqs you would need to write complex sync logic (so polling queue should check if all other queue read this message, and only in this case remove message from fanout queue using dynamoDB - as you see a lot of work).
 * sqs - poll based, once message in queue, consumer need to poll it, handle and remove from queue
 SNS vs SES for email sending - although both can be used to send emails, there are some differences
 * sns - for sending emails for developers in case some failures
@@ -2736,14 +2843,35 @@ You can use with database or with nginx to off-load ssl. Best practice to sync a
 It's built with physical and logical tamper-protection, so it trigger key deletion (zeroization) in case of breach.
 
 ###### Polly
-It turns text into lifelike speech. 
+It turns text into lifelike speech. You can supply polly with either simple text or SSML format.
 Pronunciation lexicon - enable you to customize pronunciation of words. You can create/store lexicon in region (so if you want to use one lexicon in 2 regions, you have to create second lexicon in second region and copy first).
+Lexicon is written using xml-like language of PLS (Pronunciation Lexicon Specification) W3C recommendation.
 You can apply up to 5 lexicons to single text. If more that 1 lexicon contains the same grapheme, first applied would be used. So if you want at different texts use different grapheme you should change lexicon order.
 Below is grapheme example:
 ```
+<lexicon>
   <lexeme> 
     <grapheme>S3</grapheme>
     <alias>Simple Storage Service</alias>
   </lexeme>
 </lexicon>
 ```
+SSML (Speech Synthesis Markup Language) - xml-like language to define text to be pronounced by polly.
+There are several reserved chars in ssml like `"&'<>`. Main tag is `<speak/>`, you should put your text inside it.
+To emphasize you can use `<emphasis>` tag with `value` attr:
+* strong - increase the volume and slow the speaking rate so that the speech is louder and slower
+* moderate - same as strong but less strong
+* reduced - decrease the volume and speed up the speaking rate. Speech is softer and faster
+Example of using ssml:
+```
+<speak>
+     I already told you I <emphasis level="strong">really like</emphasis> that person.
+</speak>
+```
+
+###### MQ
+MQ (Message queue) - managed Apache ActiveMQ message broker. It stores data in EFS and provides HA.
+It provides both push-based and poll-based messaging model.
+MQ vs SQS:
+* sqs - simple queue with post/poll options only
+* mq - complex solution with message routing, fanouts, distribution lists, that supports AMQP/JMS protocols

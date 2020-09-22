@@ -25,7 +25,14 @@ There are 2 main reasons to get it
 * [Free SAP questions](https://www.examtopics.com/exams/amazon/aws-certified-solutions-architect-professional)
 
 ### TODO
+https://www.youtube.com/watch?v=dCucC1SKkvI
+https://www.youtube.com/watch?v=4-JmX6MIDDI
+
 -----------------------------------------------Advanced-----------------------------------------------
+* spring5: spring & hibernate sharding (https://github.com/apache/shardingsphere)
+* spring5: validate cors issue, compare simple vs non-simple requests, check how different headers like `Access-Control-Request-Method/Access-Control-Request-Headers` affect response 
+* spring5: if SqsMessageDeletionPolicy.NO_REDRIVE remove message on success (without manual message deletion)
+* add HealthCheck to elb + default ec2 healthcheck from asg (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-elb-health-check.html)
 * add vpc to `cloudformation/ec2-cw-recover-alarm.yml` (in case you run it in region where no default vpc)
 * edit all current cf templates => rewrite efs from default SG to custom (cause it's better to explicitly control SG)
 * edit all current cf templates => add SG to RDS with source as SG of webserver
@@ -122,4 +129,3 @@ TargetGroup:
 * ClientVPN with security as microsoft AD
 * ClientVPN add nat instance so internet would work without tunnel split (yet check it also with tunnel split, and your IP would be different)
 * create template with both cloudwatch & aws budget cost alarms (when your usage above 1$ and 5$)
-* spring & hibernate sharding (https://github.com/apache/shardingsphere)
