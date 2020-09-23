@@ -129,3 +129,4 @@ TargetGroup:
 * ClientVPN with security as microsoft AD
 * ClientVPN add nat instance so internet would work without tunnel split (yet check it also with tunnel split, and your IP would be different)
 * create template with both cloudwatch & aws budget cost alarms (when your usage above 1$ and 5$)
+* create site-to-site vpn with 2 locations so each of this can communicate with each other using VPN CloudHub (each location is imitated by separate vpc)

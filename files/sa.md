@@ -110,6 +110,7 @@
 * 3.67 [CloudHSM](#cloudhsm)
 * 3.68 [Polly](#polly)
 * 3.69 [MQ](#mq)
+* 3.70 [X-Ray](#x-ray)
 
 
 
@@ -214,7 +215,7 @@ There are 2 main concepts of DR
 * RTO (Recovery Time Objective) - how fast can you recover your infra (if RTО is 5 hours => at 2 am AZ was flooded, at 7 am you have fully running infra in another AZ/region)
 * RPO (Recovery Point Objective) - to which point can you recover (you make backups every hour, at 1.30 AZ was flooded, so your RPO - 1 hour)
 There are 4 types of DR in aws
-* backup store - you store all you backups on tape (e.g. using iron mountain)
+* backup and restore - you store all you backups on tape (e.g. using iron mountain)
 * pilot light - you have replica of your main infra, but it always down. So when disaster happen you just start everything. White it's down every 1-3 month you update it (run ec2, install patches..)
 * warm standby - constantly running scaled in version of your main infra
 * multi site - the fastest cause we constantly have complete copy running in another region
@@ -969,6 +970,7 @@ You can also use S3 Lifecycle policies to:
 * remove partially uploaded files (they are not removed by default, so if you don't have this policy you risk being spammed by these files)
 Storage Class Analysis - filters that helps analyse access pattern for whole bucket or list of objects (go to management->analytics to analyze objects)
 * Standard - low latency, high throughput, 3 AZ replication
+* RRS (Reduced Redundancy Storage) - for non-critical data, durability - 4 nines - 99.99%. !important => s3 standard is cheaper now, so rrs is outdated, don't use it.
 * Intelligent - when you don't know access pattern. It has 2 access types - frequent/infrequent, and based on access pattern moves objects between these 2 types and save money
 * Standard-IA
 * Single-Zone-IA - store data only inside single AZ
@@ -1787,7 +1789,8 @@ first - egress traffic from vpc (that goes to transit vpc), second - egress traf
 underneath it's all these vpc and on-premises centers are connected to each other through vpn and transit vpc basically works as vpn server and routing this vpn traffic.
 * transit gateway (2018) - it's aws managed service that works like transit vpc, but don't have all it's complexity of installing and configuring.
 You create TGW and then just attach VPC/VPN configurations and add route tables.
-Connect vpc to on-premise network (2 ways)
+VPN ECMP (Equal Cost Multipath) support - you can enable when you create TGW, vpn connection must use dynamic routing
+Connect vpc to on-premise network (2 ways):
 * site-to-site VPN
 Route propagation allows a virtual private gateway to automatically propagate routes to the route tables - so you don't need to manually update RT (works for both static & dynamic routing)
 After running `cloudformation/advanced-networking/site-to-site-vpn.yml` you will have to manually go to site-to-site vpn and download configuration (select openswan as router).
@@ -1820,8 +1823,12 @@ echo "conn Tunnel1
 echo '3.237.1.182 52.6.121.143: PSK "wCfcjn4X6xF895fHM3Tgq6XvSPiEuBcp"' > /etc/ipsec.d/aws.secrets
 service ipsec restart
 ```
-* Direct Connect - private connection between aws region and you (aws router to your on-premise router) or your ISP (internet service provider).
-LAG (Link Aggregation Groups) - ability to order multiple direct connect ports as manage them single larger connection (max number is 4 ports, port types should be the same, all 1GB, or all 10GB)
+* DX (Direct Connect) - private connection between aws region and you (aws router to your on-premise router) or your ISP (internet service provider).
+    DX vs VPN:
+    * dx - private secure connection between on-premise and aws region. Use it if you need high bandwidth.
+    * vpn - IPSec connection over the public internet between on-premise and aws region. It's slower than dc since it use public internet. But can be setup very quickly. 
+You can use vpn above dc, but it's redundant, cause dx is already secured. Best practice to configure vpn as failover for dx (in case it failed).
+LAG (Link Aggregation Groups) - ability to order multiple direct connect ports and manage them as single larger connection (max number is 4 ports, port types should be the same, all 1GB, or all 10GB)
 DCG (Direct Connect Gateway) - grouping of VGW (virtual private gateways) and VIF (private virtual interfaces). Multi-account DCG allows to associate up to 10 VPC (from different accounts) or up to 3 Transit Gateway.
 Direct Connect and DCG support both 1500 and 9001 MTU (you can also modify it if you need).
 Don't confuse:
@@ -1830,7 +1837,7 @@ If you have 3 vpc and ec2 in each of them, and you want to connect these 3 ec2 y
 * VPC ClassicLink - connect classic ec2 to vpc
     * before 2013 there were no default VPC and all EC2 where launched in flat network shared with other aws users
     * allows to connect your VPC with EC2 classic, EC2 becomes a member of VPC Security Group
-* VPC Link - connect private ec2 to API GateWay
+* VPC Link - connect API GateWay to private ec2
 VPC Endpoint:
 * endpoint services (used to call AWS PrivateLink) - you create some service (ec2) and add NLB(not application/classic lb), and other aws accounts can connect to your service via interface endpoint
 So using this you can create private service provider that would provide some logic to other aws accounts on vpc-to-vpc basis
@@ -2081,8 +2088,16 @@ RDS Proxy - database proxy that helps
 * reduce db failover time for 66%
 * enforce IAM access to db
 When you reboot you can option to restart rds in new AZ
-DB Subnet group - a list of VPC subnets (you should have at least 2 subnets in 2 different AZ) where rds would create your db.
-DB Parameter Group - a list of db config values that can be applied to 1 or many rds instances
+There are 3 types of groups:
+* Subnet group - a list of VPC subnets (you should have at least 2 subnets in 2 different AZ) where rds would create your db.
+* PG (Parameter Group) - a list of db config values that can be applied to 1 or many rds instances (for example you can increase a number of connections to rds here). You can't modify default PG (that would be created when you create db instance). If you want custom params add them to new pg and associate it with db.
+* OP (Option group) - a list of features that are available for db instance. By default empty op is assigned when you create db, you can't modify it, but you can create new op - add options, and assign it to db.
+    There are 2 types of options:
+    * persistent - can't be removed from an op while DB instances are associated with this op
+    * permanent - can never be removed from 
+    There are 2 options available for mysql (for other engines other options available):
+    * MariaDB Audit Plugin - records db activity like users logging or queries
+    * MySQL memcached - enables apps to use InnoDB tables in a manner similar to NoSQL key-value data stores
 Get current database `SELECT DATABASE() FROM DUAL;`
 You can enable encryption when you create db, but once created you can't enable it. So if you create unencrypted db and want to turn on encryption you have to take snapshot encrypt it and create new encrypted db from it, then remove old db.
 IAM db auth - you can add db user and use iam user to authenticate to your db. You still have your initial username/password and can you them to access db, but you can also use temporary tokens generated by `aws rds generate-db-auth-token` command
@@ -2106,11 +2121,18 @@ Single table can also be partitioned by some key. Each shard contains table with
 ReSharding - adding more shards or splitting one shards into multiple in case of scale-out or merging several shards into one in case of scale-in.
 Scale-out is pretty simple with RDS, you just create read replica, promote it to standalone db and then use 2 databases as 2 shards (since Aurora read replica use same storage you have to clone database to achieve the same).
 If you think that sharding is looks like NoSql you are right, and if you got limit with relational db and using shards, it may be the better option to use NoSql, cause with sharding you have to modify your source code to support multiple db.
+Storage autoscaling - when you create db you can enable it. Once enabled it would automatically add more storage capacity when free space would be less than 10%. It would be incremented in chunks of 5GB each, until it reach max auto scale capacity.
 
 ###### SQS
 SQS (Simple Queue Service) - managed service that provide asynchronous decoupling and publisher/subscriber (queue) model. There are 2 types
 * standard - ordering is not guaranteed, no limit to number of messages (you should implement custom protection against duplicates)
-* FIFO (first in, first out) - ordering is guaranteed, limit - 300 messages per second
+* FIFO (first in, first out) - ordering is guaranteed, limit - 300 messages per second. There a few concept specific to this queue:
+    * you have to provide deduplicationID & groupID with each message you send
+    * deduplicationID (required) - used for deduplication of sent messages
+    * Exactly-once processing - if you send message with same deduplicationID within 5 min deduplication interval (it's fixed, you can't change it), message won't be received by queue. You can either set-up content-based deduplication (use hash of contect to calculate deduplicationID) or send deduplicationID manually
+    * groupID (required) - specifies that a message belongs to a specific message group, group messages always processed one by one
+    * Receive request attempt ID - used for deduplication of ReceiveMessage calls
+    * Sequence number - assigned to each messages by sqs
 But you can also use standard queue (unordered) but place order field into each message, and by this you imitate order.
 It guarantee at-least-once delivery. you can use Amazon SQS Java Messaging Library that implements the JMS 1.1 specification and uses Amazon SQS as the JMS provider.
 DLQ (Dead letter queue) - a special queue that receives messages from other queue after some unsuccessful attempt to process it. Used to isolate messages that can't be processed for later analysis.
@@ -2485,13 +2507,17 @@ Lustre has integration with s3 so you can access objects from s3 as files
 
 ###### VPN
 On the high level vpn server is just bastion server but for end users. Bastion server is for developers/administrators, you explicitly access it though ssh, and from there you access all internal resources.
-With vpn server everything the same, only difference - connecting is hide before some user-friendly program, like [openvpn client](https://openvpn.net/download-open-vpn), but once connected, end user has all
-the same access to all internal resources. When you access resources in both cases it looks like you are accessing them from inside vpc, and thus you can add SG rule to allow not all public IP addresses (`0.0.0.0/0`)
-but only CIDR addresses of vpn server allocated CIDR block, or from bastion server internal IP.
-You can associate only one subnet per AZ
-AWS VPN consists of 2 services
-* AWS Site-to-Site VPN (has 2 tunnels for redundancy) - connect your on-premises network with vpc
+With vpn server everything the same, only difference - connecting is hide before some user-friendly program, like [openvpn client](https://openvpn.net/download-open-vpn), but once connected, end user has all the same access to all internal resources. 
+When you access resources in both cases it looks like you are accessing them from inside vpc, and thus you can add SG rule to allow not all public IP addresses (`0.0.0.0/0`) but only CIDR addresses of vpn server allocated CIDR block, or from bastion server internal IP.
+AWS VPN consists of 3 services:
 * AWS Client VPN - connect users to aws vpc or on-premises network
+* AWS Site-to-Site VPN (has 2 tunnels for redundancy) - connect your on-premises network with vpc
+Redundant site-to-site vpn - create 2 customer gateways (with 2 separate devices in on-premise) and 2 vpn to single virtual private gateway.
+* CloudHub - allows multiple sites (that all connected to your vpc) to communicate with each other (they already can communicate with vpc using site-to-site vpn). To establish it you must:
+    * use single VGW
+    * use separate customer gateway for each site and assign unique BGP ASN (Autonomous System Number) for each
+    * each site should have non-overlapping IP range (VGW acts as hub and re-advertise these ranges to other sites, so they communicate with each other)
+    * create site-to-site vpn for each site but with same virtual gateway (many CGW to single VGW)
 Both of them using IPSec protocol (encrypt all IP packets of data before sending over the internet and decrypt them back on receiving).
 Client VPN endpoint - allows end users to access aws network over TLS. Target network (vpc subnet) - network that you associate with VPN endpoint, so end users can access it.
 You create vpn endpoint, associate it with target network and distribute vpn config file with end users. End user download openVpn and using your config connect to vpc.
@@ -2506,7 +2532,6 @@ There are 2 types of Site-to-Site VPN connections
 * dynamically-routed VPN connection
 Aws supports Phase 1 and Phase 2 of Diffie-Hellman groups.
 Accelerated Site-to-Site VPN - achieve faster package delivery by using not public internet but aws global network (so packet goes to closest aws region datacenter and from there goes to desired aws region inside fast aws global network).
-
 You can create certs. Don't forget to set Common Name (e.g. server FQDN or YOUR name) => it's domain name
 ```
 1. Generate the CA:
@@ -2548,11 +2573,11 @@ AWS DS - managed service replicated across multiple AZ. There are 3 types of aws
 Trust Relationship - you can build it between aws microsoft AD and your on-premise microsoft AD, and store your users/passwords in your on-premise AD
 but use aws microsoft AD to access aws services based on users from on-premises AD. 
 So you can use it as either standalone AD or as trust relationship to on-premise AD.
-    * deployed in 2 AZ
-    * connected to VPC
-    * backups automatically taken once per day
-    * EBS by default encrypted
-    * failed domain controllers automatically replaced in the same AZ using the same IP address
+* deployed in 2 AZ
+* connected to VPC
+* backups automatically taken once per day
+* EBS by default encrypted
+* failed domain controllers automatically replaced in the same AZ using the same IP address
 * simple AD - Linux-Samba AD deployed & managed in the cloud
 you can singIn to aws management console with simple AD account
 it doesn't support trust relationship, schema extension, multi-factor auth.
@@ -2589,7 +2614,7 @@ So it helps you provision/manage your app in aws using Chef solo installed in on
 Difference with other platform:
 * stacks - config management platform (using Chef to automate deployment/management, has less service coverage, just the most basic like vpc/iam/ec2/elb/cloudWatch). Best practice to have separate stack for each env (dev/prod).
 * beanstalk - app management platform (you just upload code and beanstalk configure everything else use it's own CF templates)
-* cloudFormation - infra management platform
+* cloudFormation - infra management platform. If you need to provision a lot of resources use cloudformation, if you have something like LAMP stack use beanstalk
 OpsWorks Stacks create lifecycle events and on each of them some recipes could be executed (default events - setup/configure/deploy/undeploy/shutdown).
 OpsWorks for Chef Automate - fully managed Chef server and automation tools for ci/cd. You can migrate to it from Stacks, but you would need to rewrite some recipes, but most recipes would work without any change.
 OpsWorks for Puppet Enterprise - managed Puppet Enterprise server and automation tools for ci/cd (including orchestration/provisioning/deploying services in ec2)
@@ -2617,7 +2642,7 @@ Example of DP
 
 ###### ElasticSearch & CloudSearch
 ES - open source search service, it's usually a part of ELK stack
-CS - search service like ElasticSearch, but aws proprietary development.
+CS - search service like ElasticSearch, but aws proprietary development. With cs you can search txt/json/pdf/html/cvs/xls documents (so you can use it to search for scanned pdf documents too).
 You should store your data in s3 and then use CS to search this textual data.
 ES has 2 types of nodes
 * data nodes - nodes that upload data to ebs and search data
@@ -2875,3 +2900,15 @@ It provides both push-based and poll-based messaging model.
 MQ vs SQS:
 * sqs - simple queue with post/poll options only
 * mq - complex solution with message routing, fanouts, distribution lists, that supports AMQP/JMS protocols
+
+###### X-Ray
+it's distributed tracing tool (like zipkin & jaeger) that:
+* helps developers analyze/debug production/distributed apps built using microservices.
+* provides an end-to-end view of requests as they travel through your app, and shows a map of underlying components
+with x-ray you can:
+* build service map - by tracking request inside your app, x-ray builds map of services
+* find errors and bugs - x-ray find all bugs by analyzing responses to all requests
+key concepts:
+* agent - can be installed into ec2 and collect logs there to send them to x-ray for analysis
+* sampling - you can collect info only about small set of requests to be cost-effective (so if you want to test x-ray with cost-optimized you must sampling at low rate)
+* filter expression - can be used to filter all requests from x-ray
