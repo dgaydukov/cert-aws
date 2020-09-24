@@ -111,6 +111,9 @@
 * 3.68 [Polly](#polly)
 * 3.69 [MQ](#mq)
 * 3.70 [X-Ray](#x-ray)
+* 3.71 [WorkDocs](#workdocs)
+* 3.71 [WorkSpaces](#workspaces)
+* 3.72 [Batch](#batch)
 
 
 
@@ -411,7 +414,8 @@ minute of the hour
 hour of the day
 day of the month
 month of the year
-day of the week
+day of the week (0-6, Sunday to Saturday)
+year (1970-2099) - not required, only supported by modern versions
 ```
 You can also see `files/images/crontab.png`
 Combining these 5 you can create anything from 1 min to 1 year:
@@ -1039,6 +1043,12 @@ Policy to allow cloudTrail write
 }
 ```
 `x-amz-acl` - special header that give full control to owner of account. So you have to call putObject with `aws s3 cp example.jpg s3://awsexamplebucket --acl bucket-owner-full-control`.
+Versioning - if turn on, when you make any operation update/delete it create new version:
+* update - old object stored with some version, new object created with new version. If you run get - you will get latest version, if you run get with version - you got your object.
+* delete - object marked with delete marker, it still stored with some version. If you run get - you will get 404, if you run get with version - you got your object. 
+You can't add delete marker, only if you use versioning and delete file, s3 add this market itself. 
+You can permanently remove real object by specifying it's versionID in DELETE request. If you DELETE a delete marker, s3 would add another delete marker on top of this (so you have 2 versioned delete markers).
+You can permanently remove delete marker by specifying it's versionID in DELETE request. In this case delete marker would be removed and from now simple GET request would return latest version of object (only object owner can DELETE delete marker).
 
 ###### Glacier
 Glacier - low-cost tape-drive storage value with  $0.007 per gigabyte per month. Used to store backups that you don't need frequently.
@@ -1071,6 +1081,7 @@ aws glacier list-jobs --account-id=- --vault-name=test --profile=awssa
 # get job result. Depending on job type result can be downloaded file or inventory list. Job should be completed, otherwise you get error: The job is not currently available for download
 aws glacier get-job-output --account-id=- --vault-name=test --job-id={JOB_ID} --profile=awssa result.json
 ```
+There is no lifecycle rules for glacier, they only available in s3.
 
 ###### EFS
 EFS (Elastic File System) - delivers simple network filesystem for EC2. It supports NFSv4/4.1 (Network file system).
@@ -1176,14 +1187,13 @@ CF doesn't cache following requests: POST, PUT, DELETE, PATCH. By default cache 
 You can also use versioning (`/v1/img/test.png`). In this case once you update your site users will use new versions that not in CF, and edge location will download it from origin server.
 You can serve content from multiple origin servers.
 Field-Level Encryption - encrypt user's upload data and transfer these encrypted data to your origin
-Lambda Edge - lambda functions that allows you to override behavior of request/response to your cloudfront edge locations
-(for example only cognito authenticated user can view content)
-There are 4 types
+Lambda Edge - lambda functions that allows you to override behavior of request/response to your CloudFront edge locations. You can solve common tasks like only cognito authenticated user can view content or visitor prioritization on a website.
+You create single lambda in 1 region, and associate it with cf distribution. After this all global requests are handled by this lambda. There are 4 types of lambda edge:
 * viewer request - when CF receive request from user
 * origin request - before CF forward request to origin server
 * origin response - when CF receive response from origin server
 * viewer response - before CF responds to viewer
-You can protect CF data by using 
+You can protect CF data by using:
 * Signed url (like presigned s3 url) - temporary access to CF data. Support both web & RTMP distribution.
 * Signed cookie - you can access multiple CF objects with same signed cookie. So use this method if you want to have access to multiple files with same cookie, and want to use standard url (without any signature as url params). Not supported for RTMP distribution.
 When creating signed url/cookie you can set 3 params:
@@ -1252,7 +1262,7 @@ Origin Failover - ability to fail over to second origin in case first origin is 
 It is a platform for streaming data on AWS, making it easy to load and analyze streaming data.
 With Kinesis, you can ingest real-time data such as application logs, website clickstreams, IoT telemetry data, and more into your databases, data lakes, and data warehouses, or build your own real-time applications using this data
 * Kinesis Firehose (near real time) - load massive volumes of streaming data into AWS (you can configure lambda to transform you data before loading). Receives stream data and stores it in s3/RedShift/ElasticSearch
-* Kinesis Streams (real time) - ability to process the data in the stream. Stream for processing data, firehose - for storing them in s3/redshift.
+* Kinesis Streams (real time) - ability to process the data in the stream. Stream for processing data it can't load data directly to s3/redshift - additional processing required, firehose - for storing data directly in s3/redshift.
 Although there is no native auto-scale solution to scale out/in number of shards you can implement your own using CloudWatch (collect metrics and issue alarm if threshold was crossed) + Lambda (add/remove number of shards based on data from CloudWatch).
 Retention period - time between message go into stream and stays there until removed, 24 (default) - 168 hours.
 * Kinesis Analytics - analyze streaming data real time with standard SQL
@@ -1344,6 +1354,8 @@ You can then directly query your data lake with Athena and Redshift Spectrum.
 AntiPattern
 * Streaming data (Glue is batch oriented, minimum interval is 5 min, so for streaming data Kinesis is better choice)
 * NoSQL Databases (Glue doesn't support NoSQL databases as source)
+Job - glue can run ETL on s3 and load it to any other target.
+Job Bookmark - glue use it to keep track of processed data. When you add more data to s3, glue won't run etl for whole bucket again, but only changes that were added.
 
 ###### DynamoDB
 If you come from relational to NoSql you must forget:
@@ -1424,8 +1436,8 @@ DynamoDb Stream - stream that provide all modification (create/update/delete) op
 * replicating
 * update elasticache (so your cache would be always updated to latest state of db)
 * in case your app need to know about all updates
-GSI (Global Secondary Index) - special read-only table created by dynamoDb to simplify search for indexed fields. Index speed up search but require more memory to store itself
-LSI (Local Secondary Index) - same partition as primary key, but different sort key. You can have it only one and it must be created when table is created, just like primary key.
+GSI (Global Secondary Index) - special read-only table created by dynamoDb to simplify search for indexed fields. Index speed up search but require more memory to store itself. You should configure separate read/write capacity for this.
+LSI (Local Secondary Index) - same partition as primary key, but different sort key. You can have it only one and it must be created when table is created, just like primary key. It uses the same read/write capacity as table.
 Scanning - like `select * from` operation in RDS, just go over all records.
 DynamoDb just like s3 is eventual consistent, so if you update data and read it right away you can get old value (cause items are persisted on multiple machines, and depending from what machine you read you can get stale data).
 You can disable eventual consistency by setting `ConsistentRead: true`. In this case `getItem/query/scan` operations would always return correct value, but reads would take longer time.
@@ -1484,6 +1496,8 @@ SQA (Short query acceleration) - when query in queue, redshift determine that th
 Concurrency Scaling - if turned on, add transient cluster (take incremental snapshot to s3 and spin new cluster form it in seconds, we can take incremental cause backup automatically enabled so we already have full snapshot) when queues are full.
 For every 24 hours of running cluster you accrue 1 hour of free transient cluster.
 Just like rds, RedShift supports snapshots (both automatic and manual). Internally each node using ebs to store data, but you can create s3 backups.
+Cross-Region Snapshot - automated or manual copy of data into another aws region. If you created encrypted db (select KMS encryption when you create cluster), you can't transfer keys between regions (KMS bound to region where it was created).
+In this case you have to configure snapshot copy grant - redshift would create snapshot, decrypt it, then copy to another region and encrypt it with KMS key from that region.
 For encryption it uses four-tier hierarchy of encryption keys. These keys are: master/cluster/database/data encryption keys
 Redshift Spectrum - allows you to query data in s3, it's serverless just like Athena, so you pay for resources you consume.
 So it basically allows you to separate storage & compute. You can also use it to insert data into redshift from s3.
@@ -1582,21 +1596,24 @@ It usually takes longer time to stop instance then to reboot. The reason is when
 Stopping is required cause Amazon has to move the VM to a different piece of hardware with the available resources for the size change.
 If you are using CF template and change `InstanceType` there, CF smart enough to stop/change/start your instance (so it won't create new one with new instance type).
 * horizontal - add more instances, no need for downtime
-ASG (auto-scaling group) - allows you scale you system dynamic/manual way. Dynamic (as opposed to manual where you manually modify number of running instances) scaling policy types:
-* Simple scaling - scale based on a single scaling adjustment.
-* Step scaling - same as several simple policies joined together by steps.
-Suppose you want to increase number of ec2 based on cpu utilization, and have following rules:
-0% < cpu < 30% -- add 1 ec2
-30% < cpu < 60% -- add 2 ec2
-cpu > 60% -- add 3 ec2
-Of course you can create 3 simple policy and 3 CloudWatch alarm for each step. But it too much, so it's better to have 1 alarm and 1 step policy.
-** Be aware that step policy `MetricIntervalLowerBound/MetricIntervalUpperBound` add this value to value from CloudWatch alarm. So if you don't want you should leave lower bound, cause you are not allowed to set negative values  (take a look at `cloudformation/asg-simple-step.yml`)
-* Target tracking scaling - scale based on a target value for a specific metric (ASG create CloudWatch alarms that trigger the scaling policy). So if you don't want to mess with alarms and want smart system that can scale out/in based on some metric you should use it.
-With this smart policy cloudwatch alarm and step adjusment policy created behind the scene, and manage number of ec2 based on target
-    * ASGAverageCPUUtilization - based on cpu consumption
-    * ALBRequestCountPerTarget - based on number of requests for elb
-    * ASGAverageNetworkIn/ASGAverageNetworkOut - based on average number of bytes
-* Scheduled policy - specify changin of min/max instances based on some scheduled value (for example you know your peak hours every day). crontab notation is used for this.
+ASG (auto-scaling group) - allows you scale you system. There are 3 types:
+* manual scaling - manually change number of mix/max/desired instances in asg, so it would add/remove ec2 accordingly
+* predictive scaling (proactive approach) - dynamically change number of running instances based on ML algo that would predict load on the next 48 hours, based on previous load
+* on demand or dynamic scaling (reactive approach) - dynamically change number of running instances based on some params:
+    * Simple scaling - scale based on a single scaling adjustment.
+    * Step scaling - same as several simple policies joined together by steps.
+    Suppose you want to increase number of ec2 based on cpu utilization, and have following rules:
+    0% < cpu < 30% -- add 1 ec2
+    30% < cpu < 60% -- add 2 ec2
+    cpu > 60% -- add 3 ec2
+    Of course you can create 3 simple policy and 3 CloudWatch alarm for each step. But it too much, so it's better to have 1 alarm and 1 step policy.
+    Be aware that step policy `MetricIntervalLowerBound/MetricIntervalUpperBound` add this value to value from CloudWatch alarm. So if you don't want you should leave lower bound, cause you are not allowed to set negative values  (take a look at `cloudformation/asg-simple-step.yml`)
+    * Target tracking scaling - scale based on a target value for a specific metric (ASG create CloudWatch alarms that trigger the scaling policy). So if you don't want to mess with alarms and want smart system that can scale out/in based on some metric you should use it.
+    With this smart policy cloudwatch alarm and step adjustment policy created behind the scene, and manage number of ec2 based on target
+        * ASGAverageCPUUtilization - based on cpu consumption
+        * ALBRequestCountPerTarget - based on number of requests for elb
+        * ASGAverageNetworkIn/ASGAverageNetworkOut - based on average number of bytes
+* Scheduled scaling - specify changing of min/max instances based on some scheduled value (for example you know your peak hours every day). crontab notation is used for this.
 You can also create your own custom metrics. But it should change based on number of instances (latency is bad and won't work, cause adding/removing instances doesn't directly affect response time)
 If you have single ec2 and you need to deploy java project there, you can just ssh there and put .jar file directly. But if you are managing a fleet of ec2 using ASG you would better to use efs and put your .jar there, so whenever new ec2 is started it would take this .jar and run your app.
 Types of scaling:
@@ -1688,6 +1705,12 @@ There are 3 types of aws services
 * ec2 - you manage your server (like install mysql there)
 * managed server - aws manages server for yourself (like rds, you just tell how big server you want, aws provision it)
 * serverless/clusterless - aws hides away server from you (athena - you just write query and don't care how many servers would be needed to execute it)
+Because you pay for each query based on the amount of scanned data, you can reduce costs by:
+* data partition - reduce amount of scanned data for each query. Use hive for partitioning. You can partition by any key, good practice partition based on date/time or location.
+You specify partition in WHERE clause, so athena scan only this single partition instead of whole bucket.
+It can also help avoid errors, cause if data not partitioned and you run query against whole bucket you may get exceptions.
+* use workgroups - you can separate users/apps and set limits on amount of data each query or the entire workgroup can process, and to track costs.
+You use iam policy to control access to workgroups.
 
 ###### Organizations
 Organizations - service that allows to tie several accounts to master account and centrally manage them (billing, services, policies)
@@ -1732,7 +1755,6 @@ Since Nat GateWay created per AZ for HA it's suggested to create it in every AZ 
 With IG you have both outbound and inbound access, but with Nat gateway - only outbound (your instance can access Internet, but is unaccessable from Internet)
 * Virtual private gateway - VPC+VPN
 * Peering Connection - create private secure connection between 2 VPC
-* VPC Endpoints - private connection to AWS services without Internet Gateway/NAT/VPN. It make sure all traffic goes inside aws network.
 * Egress-only Internet Gateway - egress(going out) only access from VPC to Internet over IPv6
 Old terminology
 * VPC == VRF (virtual routing and forwarding)
@@ -1788,8 +1810,7 @@ Implicit drawback is cost: since you pay for every traffic exiting (egress) your
 first - egress traffic from vpc (that goes to transit vpc), second - egress traffic from transit vpc itself (from there it goes to public internet).
 underneath it's all these vpc and on-premises centers are connected to each other through vpn and transit vpc basically works as vpn server and routing this vpn traffic.
 * transit gateway (2018) - it's aws managed service that works like transit vpc, but don't have all it's complexity of installing and configuring.
-You create TGW and then just attach VPC/VPN configurations and add route tables.
-VPN ECMP (Equal Cost Multipath) support - you can enable when you create TGW, vpn connection must use dynamic routing
+You create TGW and then just attach VPC/VPN configurations and add route tables. VPN ECMP (Equal Cost Multipath) support - you can enable when you create TGW, vpn connection must use dynamic routing
 Connect vpc to on-premise network (2 ways):
 * site-to-site VPN
 Route propagation allows a virtual private gateway to automatically propagate routes to the route tables - so you don't need to manually update RT (works for both static & dynamic routing)
@@ -1828,9 +1849,13 @@ service ipsec restart
     * dx - private secure connection between on-premise and aws region. Use it if you need high bandwidth.
     * vpn - IPSec connection over the public internet between on-premise and aws region. It's slower than dc since it use public internet. But can be setup very quickly. 
 You can use vpn above dc, but it's redundant, cause dx is already secured. Best practice to configure vpn as failover for dx (in case it failed).
-LAG (Link Aggregation Groups) - ability to order multiple direct connect ports and manage them as single larger connection (max number is 4 ports, port types should be the same, all 1GB, or all 10GB)
+LAG (Link Aggregation Groups) - ability to order multiple direct connect ports and manage them as single larger connection (max number is 4 ports, port types should be the same, all 1GB, or all 10GB). LAG connections operate in Active/Active mode.
 DCG (Direct Connect Gateway) - grouping of VGW (virtual private gateways) and VIF (private virtual interfaces). Multi-account DCG allows to associate up to 10 VPC (from different accounts) or up to 3 Transit Gateway.
 Direct Connect and DCG support both 1500 and 9001 MTU (you can also modify it if you need).
+DX VIF (you have to create one of the following VIF to start using dx):
+* private - access vpc using private IP
+* public - access all aws public services using public IP. If you want to use vpn over dx you have to create this VIF.
+* transit - access vpc Transit Gateway associated with dx
 Don't confuse:
 * VPC PrivateLink - expose aws services (except s3/dynamoDb who are using gateway endpoint) or private ec2 to vpc in the same or other aws account, by adding eni inside vpc for exposed service
 If you have 3 vpc and ec2 in each of them, and you want to connect these 3 ec2 you can use either privateLink or vpc peering. PrivateLink is better solution, cause it allows you to connect only these 3 ec2, without exposing all other services from these vpc to each other.
@@ -1838,17 +1863,17 @@ If you have 3 vpc and ec2 in each of them, and you want to connect these 3 ec2 y
     * before 2013 there were no default VPC and all EC2 where launched in flat network shared with other aws users
     * allows to connect your VPC with EC2 classic, EC2 becomes a member of VPC Security Group
 * VPC Link - connect API GateWay to private ec2
-VPC Endpoint:
-* endpoint services (used to call AWS PrivateLink) - you create some service (ec2) and add NLB(not application/classic lb), and other aws accounts can connect to your service via interface endpoint
+VPC Endpoint - private connection to AWS services without Internet Gateway/NAT/VPN. It make sure all traffic goes inside aws network. There are 2 types:
+* Gateway endpoint — target for a route in your route table for traffic destined to a supported AWS service (s3/dynamoDB)
+* Interface endpoint — ENI with a private IP address from the IP address range of your subnet that serves as an entry point for traffic destined to a supported service.
+So instead of calling public dns name of some service, aws create ENI inside your subnet, and so you don't need internet access anymore. You can directly call this private IP since it's inside your vpc.
+Using this enables you to connect to services powered by AWS PrivateLink (so basically all aws services + your custom created via endpoint services, except those in gateway endpoint).
+Endpoint services - you create some service (ec2) and add NLB(not application/classic lb), and other aws accounts can connect to your service via interface endpoint.
 So using this you can create private service provider that would provide some logic to other aws accounts on vpc-to-vpc basis
 Of course you can access your NLB form the internet (you should have at least one RT with internet gateway route to access NLB/ALB by dns name), but using privatelink will ensure that all traffic is within aws , and no traverse the internet (same as this service running inside your vpc),
 and to access your service from privatelink you don't need to have internet gateway (cause all traffic inside aws and doesn't go to outside Internet)
 So you can access service (ec2) of one vpc from another without vpc peering/internet gateway/vpn
-If you share your service with aws marketplace you can get vanity dns name like `us-east-1.vpce.mycoolsite.com`
-* Gateway endpoint — target for a route in your route table for traffic destined to a supported AWS service (s3/dynamoDB)
-* Interface endpoint — ENI with a private IP address from the IP address range of your subnet that serves as an entry point for traffic destined to a supported service.
-So instead of calling public dns name of some service, aws create ENI inside your subnet, and so you don't need internet access anymore. You can directly call this private IP since it's inside your vpc.
-Using this enables you to connect to services powered by AWS PrivateLink (so basically all aws services + your custom created via endpoint, except those in gateway endpoint, are aws privatelink)
+If you share your service with aws marketplace you can get vanity dns name like `us-east-1.vpce.mycoolsite.com`.
 By default ec2 instances dns name is disabled (only ip address is given). You can enable it for vpc by going to `Actions=>Edit DNS Hostname`.
 You can change subnet setting `Actions=>Modify auto-assign IP settings` and in this case when you create ec2, it would by default select subnet settings (enable/disable auto-assign public IP address). Of course you can also change it on ec2 level.
 VPC Tenancy
@@ -1863,7 +1888,10 @@ Flow Logs - you can configure flow logs for
 * vpc - flow logs would be for all ENI in whole vpc
 * subnet - flow logs would be written for all ENI in this subnet
 * network interface - flow logs would be written only for this particular ENI
-Format of flow logs `${version} ${account-id} ${interface-id} ${srcaddr} ${dstaddr} ${srcport} ${dstport} ${protocol} ${packets} ${bytes} ${start} ${end} ${action} ${log-status}`
+Example & format of flow logs:
+    `${version} ${account-id} ${interface-id} ${srcaddr} ${dstaddr} ${srcport} ${dstport} ${protocol} ${packets} ${bytes} ${start} ${end} ${action} ${log-status}`
+    SSH traffic (destination port 22, TCP protocol) to network interface eni-1235b8ca123456789 in account 123456789010 was allowed
+    `2 123456789010 eni-1235b8ca123456789 172.31.16.139 172.31.16.21 20641 22 6 20 4249 1418530010 1418530070 ACCEPT OK`
 As you see there is no actual payload, only fact that somebody try to send some tcp/udp message to someone. If you want actual payload you should use Traffic Mirroring.
 So use
 * Flow Logs - troubleshoot connectivity and security issues, make sure that the network access rules are working as expected
@@ -1947,13 +1975,15 @@ Since we can modify rules, you can use elb to hide some api endpoints. For examp
 * rule-1 - forward /api requests to /api endpoint in your app
 * default rule - always return 403
 So with this only `/api` endpoint would be available. All other endpoints would return 403.
-Usefule features
-* cross-zone for eqaul load distribution across all instances, no matter in which AZ they are.
+Useful features:
+* cross-zone for equal load distribution across all instances, no matter in which AZ they are.
 * Sticky Sessions - when you send `AWSELB` cookie and elb remember to which ec2 instance to route request
-Health check can be
+Health check can be:
 * ping
 * connection attempt
 * page that is checked periodically
+Access logs - contains clientIP/latency/request path/response - can be collected by CloudWatch and analyzed later.
+If you have problems with ELB you have to analyze access logs, cause vpc flow logs don't provide desired info (like request path or server response).
 
 ###### CloudWatch
 CloudWatch - monitoring service for aws resources and apps running in aws cloud. IAM permission for CloudWatch are given to a resource as a whole (so you can't give access for only some of EC2, you give either for all EC2 instances or none).
@@ -1971,6 +2001,7 @@ KMS keys are region specific (you can't transfer them into another region), so i
 CMK Rotation - automatic (once per year) change of underlying backing key without change logical resource. 
 Yet previous backing key is stored perpetually until you delete cmk, so all data encrypted with previous key can easily be decrypted. But for all new encryption new key is used.
 Data Key (limited to a region) - generated by CMK and used to encrypt data larger than 4KB (CMK can encrypt only less than 4KB) and be used outside KMS.
+Envelope encryption - you encrypt data with data key, then encrypt data key with master key (stored securely by kms)
 
 ###### Route53
 Route53 - is amazon DNS service that help to transform domain name into IP address. It's called 53, cause 53 - port of DNS.
@@ -2278,6 +2309,8 @@ There are several network modes:
 * awsvpc - every task get ENI with private ip address, just like any ec2 instance
 * bridge - docker's default network type. All containers connected to bridge can communicate with each other
 * host - container is exposed to host (if you docker has port 80, this port would be accessible from host)
+[ECS Container Agent](https://github.com/aws/amazon-ecs-agent) - special software that included in ecs ami (specially built for ecs) for ec2, that help ec2 to communicate with ecs cluster.
+You can install it into your own ec2, and by doing this to be able to connect your running ec2 to ecs cluster.
 
 ###### EKS
 EKS (Elastic Kubernetes Service, also called ECS (Elastic Container Service) for Kubernetes) - manages service that runs kubernetes cluster (so you don't need to deploy it from scratch).
@@ -2311,7 +2344,10 @@ Redis
 * supports blob/list/set/array as data types.
 * can also sort/rank data (used for leaderboard)
 * new cluster can be initialized from snapshot
-Caching strategies
+Redis security (when you create redis cluster you can enable 2 types of security):
+* encryption at-rest - you specify cmk to encrypt data while at rest
+* encryption in-transit - you specify Redis AUTH Token (16-128 chars) that you will use for every request to redis
+Caching strategies:
 * Lazy loading - populate cache on-demand (first hit - request data from db, all subsequent reads - take directly from cache).
 For this to work you should set TTL (time to live) to ensure that you always have last data (so if you ttl - 1 month, data would be stored in cache for 1 month, although they have been updated in underlying db after 2 minutes).
 * Write through - whenever update happened you first update cache and then db (or first update dy and then async update of cache)
@@ -2912,3 +2948,37 @@ key concepts:
 * agent - can be installed into ec2 and collect logs there to send them to x-ray for analysis
 * sampling - you can collect info only about small set of requests to be cost-effective (so if you want to test x-ray with cost-optimized you must sampling at low rate)
 * filter expression - can be used to filter all requests from x-ray
+
+###### WorkDocs
+It's managed/secure storage & share service with strong administrative controls. Users can comment on files, send them to others, upload new versions.
+You can use wd from web browser or install special app for ios/android/desktop. By default all uploaded files are private, but users can share their file with other users.
+Users use directory credentials to access wd. If you already have active directory you can integrate it, otherwise wd will create new directory for you in the cloud.
+You can mound your drive to WorkSpaces and have access to all your document from there.
+Users don't need aws account, yet wd admin need aws account. To remove user form wd you have to remove user from directory.
+There are 4 roles in wd:
+* admin (paid) - has administrative permissions for wd including user & settings management
+* power user (paid) - can be given special set of permission by admin
+* user (paid) - can save files and collaborate with others
+* guest user (unpaid) - can only view files
+Power user and just user called managed users.
+Admin can set following permissions:
+* public share - who can create publicly shared links: no one / only power users / all managed users
+* external invitee - who can invite external users to wd: no one / only power users / all managed users
+
+###### WorkSpaces
+It's managed/secure cloud desktop. Don't confuse with cloud9 which is web IDE, where ws is complete desktop (you can install any IDE there).
+Users can use their browser or special desktop client to user ws. To authenticate they should use directory service. If you have directory you can integrate it with ws, otherwise ws would create new directory for you.
+
+###### Batch
+It's a set of batch management tools that allows to run hundreds of thousands of batch computing jobs on AWS. Resources are dynamically provisioned.
+It handles job execution and compute resource management and you can concentrate on code. It's best suited for: deep learning, genomics analysis, image processing, media transcoding.
+You simply submit jobs to batch and it provision ec2 or spot fleet and run your jobs there. Job Definition - specify params, env vars, RAM & CPU number requirements.
+It uses ecs to execute containerized jobs, so ecs agent should be installed on ec2 (you can use ecs ami or create your own).
+When you create your own ami, it should include:
+* linux of latest version
+* docker daemon running
+* ECS container agent
+* awslogs log driver with `ECS_AVAILABLE_LOGGING_DRIVERS` env var
+You can have multiple queues running at the same time. For example:
+* high priority queue with on-demand instances
+* low priority queue with spot instances

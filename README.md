@@ -27,11 +27,14 @@ There are 2 main reasons to get it
 ### TODO
 https://www.youtube.com/watch?v=dCucC1SKkvI
 https://www.youtube.com/watch?v=4-JmX6MIDDI
+https://www.youtube.com/watch?v=s-E_V5Xyg6k
 
 -----------------------------------------------Advanced-----------------------------------------------
 * spring5: spring & hibernate sharding (https://github.com/apache/shardingsphere)
 * spring5: validate cors issue, compare simple vs non-simple requests, check how different headers like `Access-Control-Request-Method/Access-Control-Request-Headers` affect response 
 * spring5: if SqsMessageDeletionPolicy.NO_REDRIVE remove message on success (without manual message deletion)
+* use AWS::AutoScalingPlans::ScalingPlan to create asg based on predictive scaling (https://docs.aws.amazon.com/autoscaling/plans/userguide/what-is-aws-auto-scaling.html)
+* add elb to 2 vpc (load traffic between 2 vpc)
 * add HealthCheck to elb + default ec2 healthcheck from asg (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-elb-health-check.html)
 * add vpc to `cloudformation/ec2-cw-recover-alarm.yml` (in case you run it in region where no default vpc)
 * edit all current cf templates => rewrite efs from default SG to custom (cause it's better to explicitly control SG)
@@ -76,9 +79,11 @@ TargetGroup:
 * elb logs to s3
 * asg with both on-demand and spot instances (when no spot avaialbe run on-demand)
 * authenticate user on elb level using cognito
+* elb to ec2 using https (https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/configuring-https-endtoend.html). By default elb terminate https traffic and forward to ec2 just http, since it's inside aws and can't be listened by anybody.
 * add cross-account access to s3
 * what is stronger bucket policy or acl
 * iam policy with mfa condition to delete objects from s3
+* add extensive comments to all cf templates
 * transit gateway - add on-premise network imitated by third vpc (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-transitgateway.html - guide to add on-premise, https://theithollow.com/2018/12/12/setup-aws-transit-gateway)
 * put spring app into ECS and EKS and compare the difference (try fargate too). Try auto scaling in eks/ecs
 * Try maximum automate site-to-site vpn cloudformation template (try to extract somehow all IP addresses and PSK secret string and put it into ec2 userdata for VpnServer)
