@@ -30,9 +30,12 @@ https://www.youtube.com/watch?v=4-JmX6MIDDI
 https://www.youtube.com/watch?v=s-E_V5Xyg6k
 
 -----------------------------------------------Advanced-----------------------------------------------
+* rename repo cert-aws-sa => cert-aws-solutions-architect
+* rename repo how-to-become-a-senior-js-developer => how-to-become-lead-architect
 * spring5: spring & hibernate sharding (https://github.com/apache/shardingsphere)
 * spring5: validate cors issue, compare simple vs non-simple requests, check how different headers like `Access-Control-Request-Method/Access-Control-Request-Headers` affect response 
 * spring5: if SqsMessageDeletionPolicy.NO_REDRIVE remove message on success (without manual message deletion)
+* ec2 instance assume role from another account
 * use AWS::AutoScalingPlans::ScalingPlan to create asg based on predictive scaling (https://docs.aws.amazon.com/autoscaling/plans/userguide/what-is-aws-auto-scaling.html)
 * add elb to 2 vpc (load traffic between 2 vpc)
 * add HealthCheck to elb + default ec2 healthcheck from asg (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-elb-health-check.html)
@@ -81,6 +84,7 @@ TargetGroup:
 * authenticate user on elb level using cognito
 * elb to ec2 using https (https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/configuring-https-endtoend.html). By default elb terminate https traffic and forward to ec2 just http, since it's inside aws and can't be listened by anybody.
 * add cross-account access to s3
+* create codepipeline with cf template and use codedeploy/beanstalk as deploy stage (compare them)
 * what is stronger bucket policy or acl
 * iam policy with mfa condition to delete objects from s3
 * add extensive comments to all cf templates
@@ -121,7 +125,7 @@ TargetGroup:
 * Create auto-scale group with ec2 httpd (but store data in efs, this would guarantee that if instance launched in another AZ data won't be lost)
 * Add do sleep while enf not enabled (instead of just sleep for 10 sec) to all cloudformation templates that use efs
 * Create auto-scale group with single ec2 and eip and after terminate associate same eip to new ec2 (in launch config userdata add ability to associate eip to current ec2 + you need role for ec2 to be able to associate eip to itself)
-* Simple elb with 2 ec2 from 2 private subnets (use nat gateway to install httpd)
+* Simple elb with 2 ec2 from 2 private subnets (use nat gateway to install httpd) https://stackoverflow.com/questions/22541895/amazon-elb-for-ec2-instances-in-private-subnet-in-vpc
 * Rewrite cf templates random httpd to display privateIP
 * Add auto-scaling example for specific time range with `AWS::AutoScaling::ScheduledAction`
 + add based on number of messages in sqs

@@ -1117,6 +1117,7 @@ Snapshots are store in amazon s3 bucket (not in your bucket, so you don't have f
 * create & delete
 * recover
 * copy to other region
+If you copy snapshot with another CMK - complete new non-incremental copy of snapshot is created.
 When you take snapshot of running ebs, it would be available immediately (there is no delay).
 But when you recover snapshot ebs is read immediately, but data is loaded lazyly.
 IOPS vs Throughput vs Bandwidth
@@ -1131,7 +1132,7 @@ gp2     1GB-16TB       16,000 (16 KiB I/O)     250 MiB/s
 io1     4GB-16TB       64,000 (16 KiB I/O)     1,000 MiB/s
 st1     500GB-16TB     500 (1 MiB I/O)         500 MiB/s
 sc1     500GB-16TB     250 (1 MiB I/O)         250 MiB/s
-Now you see that iops is for many writes of small data, but Throughput for small number of writes but of large amount. But in the end total throughput is approx the same.
+Now you see that IOPS is for many writes of small data, but Throughput for small number of writes but of large amount. But in the end total throughput is approx the same.
 * Bandwidth - pipe, throughput - water running through pipe
 EBS Volume Types
 * HDD (large streaming workloads where throughput (measured in MiB/s) is a better performance measure than IOPS - has a platter and 
@@ -1161,7 +1162,24 @@ df -h
 sudo dd if=/dev/zero of=/mnt/volume/tmpfile bs=1M count=1024
 sudo dd if=/mnt/volume/tmpfile of=/dev/null bs=1M count=1024
 ```
-Incremental Snapshots available only for rds for other types (ec2 instance store, efs you have to manully make backups)
+Multi-volume snapshots - point-in-time snapshots for all ebs volumes attached to an ec2. After creation each snapshot treated as separate one.
+It's a best practice to tag multi-volume snapshots so you can manage them as single entity.
+DLM (Data Lifecycle Manager) - manage the lifecycle of snapshot creating for ebs. If you combine it with CloudWatch and CloudTrail you get complete backup solution for ebs.
+You can create/manage snapshots manually but using DLM is best practice. DLM execute snapshot management based on policies defined when you create dlm.
+When you create snapshot policy you have to enter:
+* resource type: VOLUME - for single ebs volume, INSTANCE - for all ebs volumes for ec2 (multi-volume snapshot)
+* target tags - tags for ebs volume or ec2 instance for which this policy would be applied
+* schedules - start time when run snapshot creation. You have 1 mandatory schedule and 3 optional - so you can create snapshots at different frequency using single policy.
+If several schedules trigger at the same time, DLM will create only 1 snapshot.
+* retention - how to retain, you can use either based on total count (retain last 5 snapshots) or age (for how long you would like to keep snapshots)
+Snapshot deletion may not reduce costs, cause snapshot is incremental backup, and if other snapshot use same data, when you delete snapshot - you in no way change total size.
+Suppose we have 3 snapshots:
+* A - 10GB
+* B - 4GB (4GB was overwritten)
+* C - 2GB (2GB of new data has been added)
+So totally - 16GB.
+If you remove A - only 4GB would be removed, cause 6 is still used by latest snapshot.
+If you remove B - nothing would be removed, cause 4GB of B is still used by latest snapshot.
 
 ###### EC2 Instance Store
 Similar to EBS, but located on the same machine as EC2 (EBS connected through network), available only during lifetime of EC2.
@@ -1930,7 +1948,7 @@ EB using cloudformation template that build your configuration. After successful
 Keep in mind that for prod deployment it's better to use your own cloudformation script and manage infra with it, eb is good for testing purposes, PoC.
 With EB you shouldn't worry about java installed on ec2, if you select java it would automatically install it into ec2 and use coretton as jdk (same true for other popular env like node.js/tomcat and so on..)
 You can use EB with Docker, you deploy docker file or built image. Use this when you want one docker per ec2 instance. If docker instance crushed/killed EB would restart it automatically.
-You can use multicontainer Docker platform for EB, in this case you will have multiple containers per ec2.
+You can use multicontainer Docker platform for EB, in this case eb would manage ecs cluster for you. So you don't need to manually create ecs and decide how many nodes should be running there.
 
 ###### DMS
 Database Migration Service - used for easy migration between different db (like from MySql to DynamoDB), and also for data replication.
@@ -1988,6 +2006,12 @@ Health check can be:
 * page that is checked periodically
 Access logs - contains clientIP/latency/request path/response - can be collected by CloudWatch and analyzed later.
 If you have problems with ELB you have to analyze access logs, cause vpc flow logs don't provide desired info (like request path or server response).
+You can use elb with ec2 from private subnet. For this you should have public subnet within same AZ as private subnet and NAT. In this case you ec2 would be completely hidden behind elb.
+TLS Listener - used by nlb for secure connection. To use it you must:
+* deploy 1 server certificate (from ACM) - terminate the front-end connection and decrypt requests from clients, before sending decrypted data to TG
+* select security policy (TLS negotiation configuration) - combination of protocols and ciphers. Negotiate TLS connections between a client and nlb. Custom policies not supported.
+Protocol - establish secure connection between nlb and client. Cipher - encryption algorithm. NLB doesn't support TLS renegotiation.
+Security policy doesn't depend on protocol. You can have 10 TLS listeners with different protocols, but 1 security policy with default settings.
 
 ###### CloudWatch
 CloudWatch - monitoring service for aws resources and apps running in aws cloud. IAM permission for CloudWatch are given to a resource as a whole (so you can't give access for only some of EC2, you give either for all EC2 instances or none).
@@ -2157,6 +2181,8 @@ ReSharding - adding more shards or splitting one shards into multiple in case of
 Scale-out is pretty simple with RDS, you just create read replica, promote it to standalone db and then use 2 databases as 2 shards (since Aurora read replica use same storage you have to clone database to achieve the same).
 If you think that sharding is looks like NoSql you are right, and if you got limit with relational db and using shards, it may be the better option to use NoSql, cause with sharding you have to modify your source code to support multiple db.
 Storage autoscaling - when you create db you can enable it. Once enabled it would automatically add more storage capacity when free space would be less than 10%. It would be incremented in chunks of 5GB each, until it reach max auto scale capacity.
+`IS NULL / IS NOT NULL` - use it when you want to check if column null or not null. Comparison operators like `<>` or `!=` won't work when you compare with null, cause null is absence of value.
+In SQL, anything you evaluate/compute with `NULL` results into `UNKNOWN`, that's why if you are using `select * from my_column != null` you will get 0 results, although you have many rows where `my_column` not null.
 
 ###### SQS
 SQS (Simple Queue Service) - managed service that provide asynchronous decoupling and publisher/subscriber (queue) model. There are 2 types
@@ -2276,7 +2302,24 @@ Usually id token = access token + user's personal details
 Live of id/access token is limited, usually to 1 hour, and that's why you should use refresh token to prolong it.
 
 ###### CodePipeline(CodeCommit/CodeBuild/CodeDeploy)
-CodePipeline - aws ci/cd tool, like jenkins.
+CodePipeline - aws ci/cd tool, like jenkins. There are following stages:
+* source stage - select what can be source: CodeCommit/ECR/S3/Bitbucket/Github
+* build stage - what app would build your project: CodeBuild/Jenkins
+* deploy stage - what provider would deploy app: 
+    * CodeDeploy - use this tool to build some complex custom deployment
+    * BeanStalk - use it if you need quick deployment option or you already use beanstalk. 
+    You need to have some infra for deployment, like ec2/elb, if you don't CodeDeploy not the best choice, use beanstalk instead.
+    * OpsWorks
+    * ECS - result run in ecs cluster
+    * S3 - result just copied to s3
+    * CloudFormation - result should be yml/json script that would be launched by cf
+Pipeline execution - can be started in 2 ways:
+* manual - you start it manually from console/cli
+* automatic - start it based on some event:
+    * CloudWatch Events (CodeCommit/S3/ECR) - default when you create pipeline from console with CodeCommit/S3/ECR as source
+    * periodic checks (CodeCommit/S3/GitHub) - default when you create pipeline from cli with CodeCommit/S3/GitHub as source.
+    Not recommended. If you create from cli, remove periodic checks by setting `PollForSourceChanges=false`. Use either CloudWatch events or webhooks.
+    * webhooks (GitHub) - default when you create pipeline from console with github as source
 
 ###### Storage Gateway
 Storage Gateway - hybrid storage that connects on-premises storage with cloud storage. The main idea is that you still use your on-premise storage (so don't lose that investment) and use cloud at the same time.
@@ -2307,7 +2350,7 @@ ECS (Elastic Container Service) - docker container management service to run app
 There are 2 ways to create cluster
 * Networking only - Fargate is managing/orchestrating your cluster
 * EC2 Linux/Windows + Networking - you manage EC2 cluster yourself
-Cluster is just a VPC, subnets (by default 2), group of EC2 instances (in case of Fargate it manages instances by itself)
+Cluster is just a VPC, subnets (by default 2), group of ec2 instances (in case of Fargate it manages instances by itself)
 After you've created cluster you add tasks (task definition) - it just a docker containers that would run on one of your ec2 machines.
 There are several network modes:
 * awsvpc - every task get ENI with private ip address, just like any ec2 instance
@@ -2315,6 +2358,9 @@ There are several network modes:
 * host - container is exposed to host (if you docker has port 80, this port would be accessible from host)
 [ECS Container Agent](https://github.com/aws/amazon-ecs-agent) - special software that included in ecs ami (specially built for ecs) for ec2, that help ec2 to communicate with ecs cluster.
 You can install it into your own ec2, and by doing this to be able to connect your running ec2 to ecs cluster.
+Launch type - type of infra on which your tasks/services hosted:
+* fargate (self-managed) - run containerized applications without the need to provision/manage the backend infra
+* ec2 (managed by you) - run containerized applications on a cluster of ec2 that you manage
 
 ###### EKS
 EKS (Elastic Kubernetes Service, also called ECS (Elastic Container Service) for Kubernetes) - manages service that runs kubernetes cluster (so you don't need to deploy it from scratch).
@@ -2327,8 +2373,9 @@ eks cluster consists of 2 vpc:
 
 ###### Fargate
 Fargate is serverless compute engine for containers running in ECS/EKS, it removes the need to provision and manage servers.
+It's not a separate product, you should use it with either ecs/eks, otherwise there is no point in it.
 You should use it when you don't want to manually provision your EC2 instances. 
-If you need greater control over EC2 (for security or customization), it's better to avoid using it, and istread manually provision EC2 instances.
+If you need greater control over EC2 (for security or customization), it's better to avoid using it, and instead manually provision EC2 instances.
 
 ###### ElastiCache
 ElastiCache - manages service that runs Memcached/Redis server nodes in cloud. 
