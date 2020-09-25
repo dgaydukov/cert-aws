@@ -28,9 +28,7 @@ There are 2 main reasons to get it
 https://www.youtube.com/watch?v=dCucC1SKkvI
 https://www.youtube.com/watch?v=4-JmX6MIDDI
 https://www.youtube.com/watch?v=s-E_V5Xyg6k
------------------------------------------------
-* https://aws.amazon.com/documentdb/faqs
-* create medium folder with articles about java11/spring5/sa how i passed cert
+
 -----------------------------------------------Advanced-----------------------------------------------
 * spring5: spring & hibernate sharding (https://github.com/apache/shardingsphere)
 * spring5: validate cors issue, compare simple vs non-simple requests, check how different headers like `Access-Control-Request-Method/Access-Control-Request-Headers` affect response 

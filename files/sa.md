@@ -114,6 +114,10 @@
 * 3.71 [WorkDocs](#workdocs)
 * 3.71 [WorkSpaces](#workspaces)
 * 3.72 [Batch](#batch)
+* 3.73 [DocumentDB](#documentdb)
+* 3.74 [Keyspaces](#keyspaces)
+
+
 
 
 
@@ -2982,3 +2986,14 @@ When you create your own ami, it should include:
 You can have multiple queues running at the same time. For example:
 * high priority queue with on-demand instances
 * low priority queue with spot instances
+
+###### DocumentDB
+It's fully managed, mongo-compatible document database service. You can store/query json data.
+MongoDB-compatible - means your current apps that using mongo, can be easily migrated to DocumentDB (which implements Apache 2.0 open source MongoDB 3.6 API).
+You can easily migrate your mongo to DocumentDB with DMS. It replicates each chunk of data 6 times across 3 AZ.
+Read - 8KB, write - 4KB. If you write 1 KB it counts as single IO. Yet concurrent write operations with size less than 4kb, are batched to reduce cost.
+min size - 10GB, max - 64TB. It automatically grows by 10GB chunks. Automated backups are enabled by default.
+Cluster can scale up to 1M reads per sec with up to 15 read replicas (read replica use same underlying storage updated by master). It doesn't support cross region replica (all replicas in same region only).
+
+###### Keyspaces
+It's managed Apache Cassandra–compatible (you can run Cassandra workloads using the same Cassandra Query Language (CQL)) database service. 
