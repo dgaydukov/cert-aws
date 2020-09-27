@@ -25,16 +25,26 @@ There are 2 main reasons to get it
 * [Free SAP questions](https://www.examtopics.com/exams/amazon/aws-certified-solutions-architect-professional)
 
 ### TODO
+-- sort out tax issue
+-- sort out bank address issue
+-- sort out account termination
+
 https://www.youtube.com/watch?v=dCucC1SKkvI
 https://www.youtube.com/watch?v=4-JmX6MIDDI
 https://www.youtube.com/watch?v=s-E_V5Xyg6k
 
 -----------------------------------------------Advanced-----------------------------------------------
-* rename repo cert-aws-sa => cert-aws-solutions-architect
-* rename repo how-to-become-a-senior-js-developer => how-to-become-lead-architect
 * spring5: spring & hibernate sharding (https://github.com/apache/shardingsphere)
 * spring5: validate cors issue, compare simple vs non-simple requests, check how different headers like `Access-Control-Request-Method/Access-Control-Request-Headers` affect response 
 * spring5: if SqsMessageDeletionPolicy.NO_REDRIVE remove message on success (without manual message deletion)
+* https://docs.aws.amazon.com/managed-blockchain/latest/managementguide/network-components.html
+* cf use mappings inside template
+* kubelet vs kubectl
+* https://docs.aws.amazon.com/eks/latest/userguide/getting-started.html
+* does eks use the same vpc or create new and add vpc endpoint kuber eni into your vpc
+* add secondary ip ranges to vpc (not directly related to eks, but can be useful => eks would use ip from these new range and won't drain your private ip addresses)
+* rename repo cert-aws-sa => cert-aws-solutions-architect
+* rename repo how-to-become-a-senior-js-developer => how-to-become-lead-architect
 * ec2 instance assume role from another account
 * use AWS::AutoScalingPlans::ScalingPlan to create asg based on predictive scaling (https://docs.aws.amazon.com/autoscaling/plans/userguide/what-is-aws-auto-scaling.html)
 * add elb to 2 vpc (load traffic between 2 vpc)
@@ -52,6 +62,7 @@ SET mykey myvalue
 # store data with ttl of 5 seconds (after expired key would be null)
 SET mykey myvalue EX 5
 ```
+* try glacier select to csv archive
 * add cf template for iam database authentication (then go to public ec2 and try to access db with both regular username/password and iam token)
 * create cf template with dynamodb vpc endpoint and access dynamodb from ec2 in private subnet (add auto scaling to dynamoDb)
 * rewrite template comments to multi-line description https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-description-structure.html

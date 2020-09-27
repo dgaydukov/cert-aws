@@ -1053,23 +1053,24 @@ Versioning - if turn on, when you make any operation update/delete it create new
 You can't add delete marker, only if you use versioning and delete file, s3 add this market itself. 
 You can permanently remove real object by specifying it's versionID in DELETE request. If you DELETE a delete marker, s3 would add another delete marker on top of this (so you have 2 versioned delete markers).
 You can permanently remove delete marker by specifying it's versionID in DELETE request. In this case delete marker would be removed and from now simple GET request would return latest version of object (only object owner can DELETE delete marker).
+Presign url access - determined by access of creator of such url:
+* if creator of such url has read access - you can use this url to read
+* if creator of such url can write - you can put object by this url
 
 ###### Glacier
-Glacier - low-cost tape-drive storage value with  $0.007 per gigabyte per month. Used to store backups that you don't need frequently.
+Glacier - low-cost tape-drive storage value with $0.007 per gigabyte per month. Used to store backups that you don't need frequently.
 Access to data can take from few minutes to a few hours. You store data as archives.
 Vault - same as bucket for s3, actual place where your archives are stored. You control access by using iam identity or vault policy.
 Vault Lock - compliance control policy like WORM (write-once-read-many) where you put object only once and lock applied and you can't overwrite it
-When you should never use glacier
+Anti-pattern:
 * rapidly changing data (use EBS/EFS/RDS/DynamoDB)
 * immediate access (use S3)
-You can also use multipart upload to speed up upload by dividing large files into chunks
-Just like s3 you can use REST API to work with glacier
-You can set up s3 lifecycle, after which objects from s3 would be moved to glacier (but to view them you should use s3 api, if you use glacier api you won't see this objects)
+You can also use multipart upload to speed up upload by dividing large files into chunks. Just like s3 you can use REST API to work with glacier
+You can set up s3 lifecycle, after which objects from s3 would be moved to glacier (but to view/restore them you should use s3 console, cause there is no explicit vault for them in glacier, if you go to glacier console you see nothing)
 You can retrieve up to 5% of your average monthly storage for free each month (rated daily), above this you are charged additional fee
-If you want to move your glacier files to s3 intelligent tier you have to:
-* use glacier console to restore files to original s3 bucket
-* use bucket policy to move these files into intelligent tier
-Glacier Select - ability to run sql query directly in archive without prior retrieving of full archive. So now you can find only what you need instead of restoring full archive. Soon it would be integrated with Athena and Reshift Spectrum.
+Glacier Select - ability to run sql query directly in archive without prior retrieving of full archive. So now you can find only what you need instead of restoring full archive. 
+Soon it would be integrated with Athena and Redshift Spectrum. Archives must be stored as uncompressed csv files. 
+To query data you have to create select job and specify output s3 bucket where results would be delivered once job is completed.
 You [can't upload file into glacier from console](https://docs.aws.amazon.com/amazonglacier/latest/dev/getting-started-upload-archive.html). So if you want to upload you have to use CLI/SDK.
 For many cli commands you hve to pass `--account-id`, this is strange cause your credentials that you use to authenticate your requests already include accountId. Even documentation explicitly states `This value must match the AWS account ID associated with the credentials used to sign the request`.
 So it looks like some relict from previous releases. But good thing we can use `-` instead of passing 12 digit number every time.
@@ -1078,7 +1079,7 @@ So it looks like some relict from previous releases. But good thing we can use `
 aws glacier list-vaults --account-id=- --profile=awssa
 # upload file to vault. You get archiveId in response, which you should store in you db, so you can retreive this archive by it's id
 aws glacier upload-archive --account-id=- --vault-name=test --body=file.txt --profile=awssa
-# to download archive, list files you should run job. This command will initiate a job to get vault inventory - which is updated once per day. Save jobId by which you can retreive results when job is done
+# command to initiate a job to get vault inventory (list of archives in a vault) - which is updated once per day. Save jobId by which you can retreive results when job is done
 aws glacier initiate-job --account-id=- --vault-name=test --job-parameters='{"Type": "inventory-retrieval"}' --profile=awssa
 # you can list all current and recently complted jobs. After job is completed it would stay in this list for some time, but would be eventually removed from the list
 aws glacier list-jobs --account-id=- --vault-name=test --profile=awssa
@@ -1091,39 +1092,47 @@ There is no lifecycle rules for glacier, they only available in s3.
 EFS (Elastic File System) - delivers simple network filesystem for EC2. It supports NFSv4/4.1 (Network file system).
 System size is grow as you add more files to file system. It allows parallel access from multiple EC2 within the same region.
 It accessed by EC2 using mount targets which are created by AZ. If you need temporary storage EFS not the best option, look at EC2 Local Instance Store.
+Mount helper - `amazon-efs-utils` utility that defines a new network file system type, called efs, which you can use with `mount` command
 There are 2 performance model:
 * General (if you need less then 7k file operation per second) 
 * Max I/O
 When you create efs it creates mount target in each az. Instances in each az talk to efs by using this mount targets.
-To mount efs to ec2, NFS Client should be installed and running. You can install it by
+To mount efs to ec2, mount helper should be installed and running. You can install it by
 ```
 sudo yum install -y amazon-efs-utils
 sudo mount -t efs fs-bc0a413f:/ ./mnt
+# mount with tls enabled to secure data in transit
+sudo mount -t efs -o tls fs-bc0a413f:/ ./mnt
 ```
 For some AMI (Amazon Linux/RHEL/Ubuntu) it's already installed, you just need to start it. You can check the status by `sudo service nfs status`
 By default anybody can read, but root (UID 0) user can write. You can also use Access Points to create dirs in your efs for different users to read/write.
 You can also do `sudo chmod 777 /mnt/efs/` to give access to anybody to read/write. To check if directory is mounted to efs run `df /mnt/efs/`.
 EFS has only 2 storage classes: standard & IA.
 Lifecycle policy - move infrequently accessed files into Infrequent Access (IA) storage class after some period (For example file hasn't been access for 7 days, let's move it).
+There are 2 types of encryption:
+* encryption at rest - created by default when you create new efs, use kms to encrypt data before write them on disk
+* encryption in transit - you should enable TLS when you mount folder with mount helper which initialize `stunnel` to use tls
+Stunnel - open source project to use TLS for tunneling (for services that don't provide ssh, like SMTP port 25).
+So you can use `stunnel` but you have to install it manually and configure, but mount helper already provide it under the hood
 
 ###### EBS
 EBS (Elastic Block Storage) - simple block storage for EC2. After EBS is attached to EC2 you can format it with desired file system.
 It automatically replicated within AZ to provide higher durability (yet if AZ failed it would be unaccessible).
 Most AMI (Amazon Machine Images) are backed by Amazon EBS, and use an EBS volume to boot EC2 instances.
-You can attach multiple EBS to single EC2, but single EBS can only be attached to 1 EC2.
+You can attach multiple EBS to single EC2, but single EBS can only be attached to 1 EC2 at the same time.
 EBS allows to create point-in-time snapshots (backup) and store them in s3.
 You can make snapshot available to other aws accounts so they can create ec2 from it.
-Snapshots are store in amazon s3 bucket (not in your bucket, so you don't have full control of it, you can't go to bucket and download snapshot) and amazon provides some services to you regarding snapshot
+Snapshots are store in amazon s3 bucket (not in your bucket, so you don't have full control of it, you can't go to bucket and download snapshot) yet you can:
 * create & delete
 * recover
 * copy to other region
 If you copy snapshot with another CMK - complete new non-incremental copy of snapshot is created.
 When you take snapshot of running ebs, it would be available immediately (there is no delay).
-But when you recover snapshot ebs is read immediately, but data is loaded lazyly.
+But when you recover snapshot ebs is read immediately, but data is loaded lazily.
 IOPS vs Throughput vs Bandwidth
 * IOPS - number of read/write operations per second, good for transactional db where we need to make lot of small writes
-    * General Purpose SSD (gp2) - non-transactional db. 
-    * Provisioned IOPS SSD (io1) - for transactional load, usually db. 
+    * General Purpose SSD (gp2) - boot volumes, low-latency apps
+    * Provisioned IOPS SSD (io1) - transactional & NoSql db
 * Throughput - number of bits read/written per second
     * Throughput Optimized HDD (st1) - log processing, big data, data warehouse, kafka, media transcoding. 
     * Cold HDD (sc1) - file sharing, archive storage. 
@@ -1135,13 +1144,12 @@ sc1     500GB-16TB     250 (1 MiB I/O)         250 MiB/s
 Now you see that IOPS is for many writes of small data, but Throughput for small number of writes but of large amount. But in the end total throughput is approx the same.
 * Bandwidth - pipe, throughput - water running through pipe
 EBS Volume Types
-* HDD (large streaming workloads where throughput (measured in MiB/s) is a better performance measure than IOPS - has a platter and 
-actuator arm that moves around platter and read/write (just like cd player)
-since to read/write arm should have a lots of movement - it's bad for high I/O
+* HDD (large streaming workloads where throughput (measured in MiB/s) is a better performance measure than IOPS.
+It has a platter and actuator arm that moves around platter and read/write (just like cd player) since to read/write arm should have a lots of movement - it's bad for high I/O
 * SSD (frequent read/write operations with small I/O size) - like a flash card, no moving parts
 You can use `iostat/blktrace/btt` to examine volume performance.
 Nitro Card for EBS - provides same speed for both encrypted & unencrypted volumes. So there is no trade-off between speed & security.
-Since you can't encrypt volume after you attached it to ec2, so in order to create encrypted volume for running ec2 you have to
+Since you can't encrypt volume after you attached it to ec2, so in order to create encrypted volume for running ec2 you have to:
 1. take snapshot of unencrypted volume
 2. create copy and tick `encryption option`
 3. create ami from encrypted snapshot
@@ -1164,7 +1172,7 @@ sudo dd if=/mnt/volume/tmpfile of=/dev/null bs=1M count=1024
 ```
 Multi-volume snapshots - point-in-time snapshots for all ebs volumes attached to an ec2. After creation each snapshot treated as separate one.
 It's a best practice to tag multi-volume snapshots so you can manage them as single entity.
-DLM (Data Lifecycle Manager) - manage the lifecycle of snapshot creating for ebs. If you combine it with CloudWatch and CloudTrail you get complete backup solution for ebs.
+DLM (Data Lifecycle Manager) - manage the lifecycle of ebs snapshot. If you combine it with CloudWatch and CloudTrail you get complete backup solution for ebs.
 You can create/manage snapshots manually but using DLM is best practice. DLM execute snapshot management based on policies defined when you create dlm.
 When you create snapshot policy you have to enter:
 * resource type: VOLUME - for single ebs volume, INSTANCE - for all ebs volumes for ec2 (multi-volume snapshot)
@@ -1178,7 +1186,7 @@ Suppose we have 3 snapshots:
 * B - 4GB (4GB was overwritten)
 * C - 2GB (2GB of new data has been added)
 So totally - 16GB.
-If you remove A - only 4GB would be removed, cause 6 is still used by latest snapshot.
+If you remove A - only 4GB would be removed, cause 6 is still used by others.
 If you remove B - nothing would be removed, cause 4GB of B is still used by latest snapshot.
 
 ###### EC2 Instance Store
@@ -1186,8 +1194,7 @@ Similar to EBS, but located on the same machine as EC2 (EBS connected through ne
 So it's not durable, once EC2 instance stop/restart/fail all data would be lost.
 It's not available for all ec2 types, only for [some of them](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/InstanceStorage.html#instance-store-volumes)
 You still have to use at lease 1 EBS + additional instance store. For some types you can select to remove instance store, but ebs should be present always.
-So you can't create ec2 without ebs.
-It's differ from EBS cause it's directly attach to machine (ebs connected via network) and provide lowest latency.
+So you can't create ec2 without ebs. It's differ from EBS cause it's directly attach to machine (ebs connected via network) and provide lowest latency.
 
 ###### CloudFront
 CloudFront is a CDN (content delivery/distribution network) - that speed up the distribution of your data using edge locations.
@@ -2012,6 +2019,11 @@ TLS Listener - used by nlb for secure connection. To use it you must:
 * select security policy (TLS negotiation configuration) - combination of protocols and ciphers. Negotiate TLS connections between a client and nlb. Custom policies not supported.
 Protocol - establish secure connection between nlb and client. Cipher - encryption algorithm. NLB doesn't support TLS renegotiation.
 Security policy doesn't depend on protocol. You can have 10 TLS listeners with different protocols, but 1 security policy with default settings.
+Smart certificate selection - nlb support multiple certificates per tls connection:
+* when you create nlb from console you can specify only default certificate
+* after you can go to `listeners=>View/edit certificates=>add certificate` to add other certificates
+* if hostname match single cert - use this cert, otherwise - use best cert client can support
+NLB doesn't support RSA cert larger than 2048bit
 
 ###### CloudWatch
 CloudWatch - monitoring service for aws resources and apps running in aws cloud. IAM permission for CloudWatch are given to a resource as a whole (so you can't give access for only some of EC2, you give either for all EC2 instances or none).
@@ -2030,6 +2042,17 @@ CMK Rotation - automatic (once per year) change of underlying backing key withou
 Yet previous backing key is stored perpetually until you delete cmk, so all data encrypted with previous key can easily be decrypted. But for all new encryption new key is used.
 Data Key (limited to a region) - generated by CMK and used to encrypt data larger than 4KB (CMK can encrypt only less than 4KB) and be used outside KMS.
 Envelope encryption - you encrypt data with data key, then encrypt data key with master key (stored securely by kms)
+Access to key is a combination of key policy (resource policy) + iam policy. Any explicit deny always overwrite allow.
+Compare to other resources to add access to kms you must add key policy (with or without iam policy).
+As other resource policy, key policy include `Principal` - who is using policy statement, and `Resource` - which is always `*` - which means this CMK.
+When you create CMK from:
+* cli - if you don't provide any custom policy, default is created which gives full access to root user.
+* console - you can choose users/roles from current account or any root user from other aws account which would have full access. Also root user is given full access.
+It's best practice to give root user full access. Cause if you give some user full access, then delete this user, you can't use cmk. You must contact aws support.
+So compare to other services cmk doesn't implicitly allow access to root user, you have to add it explicitly.
+KMS vs CloudHSM:
+* cloudHSM - your personal key encryption hardware in aws cloud
+* kmd - shared hardware tenancy, you have your own partition inside shared with other aws customers
 
 ###### Route53
 Route53 - is amazon DNS service that help to transform domain name into IP address. It's called 53, cause 53 - port of DNS.
@@ -2128,8 +2151,9 @@ if you want to import data you have to
 There are 2 ways to backup
 * automatic backup - snapshots takes by RDS daily, retained for limited period (by default 7 days)
 First snapshot contains full db instance, subsequent - incremental taking only what has been changed
-Storage volume snapshot - take daily during backup window + store transaction logs every 5 min - this allow for point-in-time recovery
-* manual backup - full snapshot taken by user at any time manually
+Volume snapshot - take daily during backup window + store transaction logs every 5 min - this allow for point-in-time recovery
+If you disable automatic backup and then re-enable it, you will be able to recover point-in-time starting from the time when you re-enable automatic backup
+* manual backup - full snapshot taken by user at any time manually (recover to the time when snapshot was taken)
 You can recover snapshot on the moment taken or by  (cause rds keeps db change logs)
 multi-AZ (failover) - HA:
 * primary - you main db that performs read/write
@@ -2257,6 +2281,10 @@ Metric to use in auto scaling group:
 * `ApproximateAgeOfOldestMessage` - age of the oldest message in queue. Useful when you have time bound for each message to handle.
 * `ApproximateNumberOfMessagesVisible` - current queue length. Useful when you want to auto scale based on number of messages in queue
 * `ApproximateNumberOfMessagesNotVisible` - total number of messages including in-flight (those that has been polled by app but not yet deleted)
+Batching - ability to send/receive not single message but a batch of up to 10 messages:
+* use `SendMessageBatch/DeleteMessageBatch/ChangeMessageVisibilityBatch` operations
+* reduce costs - since sqs is charged per request, and you can batch up to 10 messages, you can save on costs
+* you need to change app logic - for sender to batch messages before sending, to receiver wait longer and process a list of messages instead of 1
 
 ###### API Gateway
 API Gateway - managed api service that makes it easy to publish/manage api at any scale. It can
