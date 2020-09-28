@@ -34,6 +34,7 @@ https://www.youtube.com/watch?v=s-E_V5Xyg6k
 * spring5: spring & hibernate sharding (https://github.com/apache/shardingsphere)
 * spring5: validate cors issue, compare simple vs non-simple requests, check how different headers like `Access-Control-Request-Method/Access-Control-Request-Headers` affect response 
 * spring5: if SqsMessageDeletionPolicy.NO_REDRIVE remove message on success (without manual message deletion)
+* add to cert list https://www.openstack.org/coa/
 * https://docs.aws.amazon.com/managed-blockchain/latest/managementguide/network-components.html
 * cf use mappings inside template
 * kubelet vs kubectl
@@ -43,6 +44,7 @@ https://www.youtube.com/watch?v=s-E_V5Xyg6k
 * rename repo cert-aws-sa => cert-aws
 * rename repo how-to-become-a-senior-js-developer => how-to-become-lead-architect
 * ec2 instance assume role from another account
+* add custom health check to elb
 * use AWS::AutoScalingPlans::ScalingPlan to create asg based on predictive scaling (https://docs.aws.amazon.com/autoscaling/plans/userguide/what-is-aws-auto-scaling.html)
 * add elb to 2 vpc (load traffic between 2 vpc)
 * add HealthCheck to elb + default ec2 healthcheck from asg (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-elb-health-check.html)
