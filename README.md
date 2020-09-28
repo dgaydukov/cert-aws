@@ -25,15 +25,12 @@ There are 2 main reasons to get it
 * [Free SAP questions](https://www.examtopics.com/exams/amazon/aws-certified-solutions-architect-professional)
 
 ### TODO
--- sort out tax issue
--- sort out bank address issue
--- sort out account termination
-
+----------------------------------------------------------------------------------------------
+* sort out tax issue / bank address issue / account termination
 https://www.youtube.com/watch?v=dCucC1SKkvI
 https://www.youtube.com/watch?v=4-JmX6MIDDI
 https://www.youtube.com/watch?v=s-E_V5Xyg6k
-
------------------------------------------------Advanced-----------------------------------------------
+----------------------------------------------------------------------------------------------
 * spring5: spring & hibernate sharding (https://github.com/apache/shardingsphere)
 * spring5: validate cors issue, compare simple vs non-simple requests, check how different headers like `Access-Control-Request-Method/Access-Control-Request-Headers` affect response 
 * spring5: if SqsMessageDeletionPolicy.NO_REDRIVE remove message on success (without manual message deletion)
@@ -43,7 +40,7 @@ https://www.youtube.com/watch?v=s-E_V5Xyg6k
 * https://docs.aws.amazon.com/eks/latest/userguide/getting-started.html
 * does eks use the same vpc or create new and add vpc endpoint kuber eni into your vpc
 * add secondary ip ranges to vpc (not directly related to eks, but can be useful => eks would use ip from these new range and won't drain your private ip addresses)
-* rename repo cert-aws-sa => cert-aws-solutions-architect
+* rename repo cert-aws-sa => cert-aws
 * rename repo how-to-become-a-senior-js-developer => how-to-become-lead-architect
 * ec2 instance assume role from another account
 * use AWS::AutoScalingPlans::ScalingPlan to create asg based on predictive scaling (https://docs.aws.amazon.com/autoscaling/plans/userguide/what-is-aws-auto-scaling.html)
@@ -87,6 +84,7 @@ TargetGroup:
 * create custom vpn server in ec2 and try to connect to it (do both use oepnvpn server ami and any ami (OpenVPN Access Server from marketplace which is free tier, in this case you should configure it through browser admin panel) + manually configure openvpn server)
 * vpc endpoint service (add ec2 (with basic httpd service)+NLB and share it to vpc from another region)
 * route 53 resolver
+* ecs + alb with dynamic port mapping
 * create elb with eks with several apps deployed there, and use elb path routing to route to eks nodeport. So we have single elb and multiple microservices in eks and all works (internal pathes not exposed by elb, and can be accessed only inside eks cluster)
 * sas vs sns on calling lambda when new message arrived
 * s3 call lambda(custom api) when file is updated
@@ -122,6 +120,7 @@ TargetGroup:
 * migrate rds into s3 using dms
 * create data lake with lake formation
 * request and run spot fleet
+* use spot instance to handle sqs, when get termination notification, stop requesting new messages from queue, finish processing remaining messages and quit
 * create sqs queue and spot fleet that monitory queue, run spot fleet based on queue load, shut down fleet if queue is empty
 * redshift enhanced vpc routing (send data inside vpc between redhshift & s3 and view vpc flow logs)
 * configure alarm to start instance if it was stopped `cloudformation/ec2-cw-state-change.yml` + use lambda to store it in dynamodb
@@ -144,7 +143,7 @@ TargetGroup:
 * try to create aws sso user with permission set and add 1 free app, and then try to login to both aws console & this app
 * Create vpc with custom DHCP options set and create ec2 instance and see it private/public domain name
 * Deploy java app using opsworks stacks
-* create aws microsoft AD and see how it works
+* create aws microsoft AD and see how it works + add aws sso with this ad
 * create iam identity federation with this AD and with Cognito
 * ClientVPN with security as microsoft AD
 * ClientVPN add nat instance so internet would work without tunnel split (yet check it also with tunnel split, and your IP would be different)

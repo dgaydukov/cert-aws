@@ -381,7 +381,7 @@ aws iam get-user --query "User.Arn" --profile=awssa
 # get arn + userId
 aws sts get-caller-identity --profile=awssa
 ```
-* S3 (create presign url, make file public for 30 sec) `aws s3 presign s3://my-cloudformation-template-example/data.txt --expires-in 30 --profile=awssa`
+* S3 (create presigned url, make file public for 30 sec) `aws s3 presigned s3://my-cloudformation-template-example/data.txt --expires-in 30 --profile=awssa`
 * CloudFormation
 ```
 # create stack
@@ -1053,9 +1053,15 @@ Versioning - if turn on, when you make any operation update/delete it create new
 You can't add delete marker, only if you use versioning and delete file, s3 add this market itself. 
 You can permanently remove real object by specifying it's versionID in DELETE request. If you DELETE a delete marker, s3 would add another delete marker on top of this (so you have 2 versioned delete markers).
 You can permanently remove delete marker by specifying it's versionID in DELETE request. In this case delete marker would be removed and from now simple GET request would return latest version of object (only object owner can DELETE delete marker).
-Presign url access - determined by access of creator of such url:
+presigned url access - determined by access of creator of such url:
 * if creator of such url has read access - you can use this url to read
 * if creator of such url can write - you can put object by this url
+SSE (server side encryption) can be of 3 types:
+* sse-s3 - keys are managed by s3
+* sse-kms - keys are managed by kms (you select single key either managed by aws like aws/s3 or your CMK)
+* sse-c - encrypt/decrypt with customer key - you have to provide key for every request get/put and s3 manage encryption (when you put object s3 encrypt it using provided key, when you get object - s3 decrypt object with your key from request). You have to use https + cli/sdk.
+You provide key in [headers for each request](https://docs.aws.amazon.com/AmazonS3/latest/dev/ServerSideEncryptionCustomerKeysSSEUsingRESTAPI.html), when you use cli/sdk it's automatically done.
+So when you have a requirement that customer want to manage key with sse you have to use this third option. In this case s3 manages encryption/decryption but you manage keys.
 
 ###### Glacier
 Glacier - low-cost tape-drive storage value with $0.007 per gigabyte per month. Used to store backups that you don't need frequently.
@@ -1198,25 +1204,24 @@ So you can't create ec2 without ebs. It's differ from EBS cause it's directly at
 
 ###### CloudFront
 CloudFront is a CDN (content delivery/distribution network) - that speed up the distribution of your data using edge locations.
-When user request content, CF use nearest edge location and deliver cached version, it's faster that transfer data directly from data center.
+When user request content, CF use nearest edge location and deliver cached version, it's faster than transfer data directly from data center.
 If content not in cache, CF retrieve it directly from s3 or HTTP and cache it. CF is not durable storage, it's just an edge cache.
 To work with CF you should create origin server Then you add you origin server to CF, and CF generate link for you.
-Origin server can be
+Origin server can be:
 * static (s3)
 * dynamic (ec2/elb or any other on-premise http server, also called custom origin)
-Later when user request this link CF check the closest edge location for data, and if found in chane - return, if not request it from origin server and cache it.
+Later when user request this link CF check the closest edge location for data, and if found in cache - return, if not request it from origin server and cache it.
 To ensure origin availability you can add backup origin and configure CF in case it get 4xx/5xx response from main origin, to use backup origin.
 Edge cache is smart, it can remove less popular content to make room for other data.
 You can also use Geo Restriction to specify at which countries content should be 403 (Forbidden), you can also add custom error code and message.
 You can control expire date (when CF will check origin server for new version) by setting cache control header (by default 24 hours).
-You can delete item from CF by
+You can delete item from CF by:
 * delete it from origin server, and when expire date come it would be deleted from CF
 * use invalidating api to remove file from CF immediately
-CF doesn't cache following requests: POST, PUT, DELETE, PATCH. By default cache is stored for 24 hours, but you can evict it by calling invalidation API.
+CF doesn't cache following requests: POST/PUT/DELETE/PATCH. By default cache is stored for 24 hours, but you can evict it by calling invalidation API.
 You can also use versioning (`/v1/img/test.png`). In this case once you update your site users will use new versions that not in CF, and edge location will download it from origin server.
-You can serve content from multiple origin servers.
-Field-Level Encryption - encrypt user's upload data and transfer these encrypted data to your origin
-Lambda Edge - lambda functions that allows you to override behavior of request/response to your CloudFront edge locations. You can solve common tasks like only cognito authenticated user can view content or visitor prioritization on a website.
+You can serve content from multiple origin servers. Field-Level Encryption - encrypt user's upload data and transfer these encrypted data to your origin.
+Lambda Edge - lambda functions that allows you to override behavior of request/response to your cf edge locations. You can solve common tasks like only cognito authenticated user can view content or visitor prioritization on a website.
 You create single lambda in 1 region, and associate it with cf distribution. After this all global requests are handled by this lambda. There are 4 types of lambda edge:
 * viewer request - when CF receive request from user
 * origin request - before CF forward request to origin server
@@ -1229,22 +1234,20 @@ When creating signed url/cookie you can set 3 params:
 * end-datetime   (mandatory) - we need to know when access to particular file is over
 * start-datetime (optional)
 * ip-address     (optional) - single IP address or IP range
-In order to create presign url you need to create CF keypair. You can do it only as root account (iam user won't work in this case). Login as root, go to `Account=>Security Credentials`, from there go to `CloudFront key pairs` and create new key pair.
+In order to create presigned url you need to create CF keypair. You can do it only as root account (iam user won't work in this case). Login as root, go to `Account=>Security Credentials`, from there go to `CloudFront key pairs` and create new key pair.
 Don't confuse it with ec2 key pairs and with CF public key. They both for different purpose.
 You can make CF private by setting `Restrict Viewer Access` to yes (in this case you can also set which accounts can create signed urls, so other accounts can also generate urls to access data).
-So if you restricted access and try to access url you got error `Missing Key-Pair-Id query parameter or cookie value`.
+So if you restrict access and try to access url you got error `Missing Key-Pair-Id query parameter or cookie value`.
 You can create presigned url with following command `aws cloudfront sign --url=https://d3l9m9kf4m2kpm.cloudfront.net/info.html --key-pair-id=APKAJDZCS7VF4FG32EWA  --private-key=file://cfkey.pem  --date-less-than=2020-08-19` (this command is local and doesn't call aws api, so we don't need to pass profile)
 This will create signed url by which you can access your data from CF.
 You can also use CF to distribute dynamic content (like ec2/api requests). Although at first it seems unreasonable cause for every dynamic request CF should forward it to underlying ec2.
 But the point is that such a request from user goes to closest edge location and terminates there. From there on it goes not through public internet but through aws cross-region private link.
 That improve speed and give security. As you see this is basically the same as Global Accelerator.
-In order for CF to serve from s3 bucket, objects in s3 should be publicly available, otherwise CF won't serve them
-You have 2 types of distribution
+You have 2 types of distribution: 
 * web - static web content (files/pics)
 * RTMP - streaming media
-If you create distribution to be accessed from dns name you should add all possible urls to cname in CF.
-Sof you are going to access it from example.com, www.example.com, photos.example.com, all these 3 dns names should be added to Cname names when you create distribution.
-OAI (Origin Access Identity) - CF user that can access origin. To access s3 from CF you should policy on a bucket level (but you don't need to allow public access).
+If you create distribution to be accessed from dns name you should add all possible urls to cname in CF. If you are going to access it from example.com/www.example.com/photos.example.com, all 3 dns names should be added to Cname names when you create distribution.
+OAI (Origin Access Identity) - CF user that can access origin. To access s3 from CF you should add bucket policy (but you don't need to allow public access).
 But if you do this user can access your s3 files by s3 url like `https://my-test-s3-bucket-1.s3.amazonaws.com/info.html`. But if you want that your s3 objects to be accessed only by CF url like `https://d1vyzpsqe05sg1.cloudfront.net/info.html`
 You should add bucket policy to your bucket like
 ```
@@ -1264,11 +1267,11 @@ You should add bucket policy to your bucket like
 ```
 You can also achieve the same by updating bucket acl, and it's more granular cause you can add permission to each object separately.
 It's granular cause you can't add read to all objects, only list. So if you want to read the object you should go to that object and add `Read` permission to it explicitly.
-When you set OAI from cf you can set `update bucket policy` and aws will itself add such policy to your s3 bucket. Of course you can do it manually, or edit it after this.
-In this case your s3 bucket is public, but can be accessed only by cf user with OAI=E27OQ9NRS1N0QR.
+When you set OAI from console you can set `update bucket policy` and aws will itself add such policy to your s3 bucket. Of course you can do it manually, or edit it after this.
+In this case your s3 bucket is not public, but can be accessed only by cf user with OAI=E27OQ9NRS1N0QR.
 Accelerated file upload - you can enable POST/PUT/PATCH methods for your cf distribution, and so accelerate file uploads. So now you upload your files to nearest cf edge location and from there it's uploaded to s3/ec2 using aws internal low-latency network.
 There are 3 ways to limit access to cf:
-* using presign url/cookie
+* using presigned url/cookie
 * use geo-restriction (whitelist/blacklist specific countries)
 * use WAF for all other restriction (for example whitelist/blacklist by IP)
 If you run PCI-compliant or HIPAA-compliant workloads you should:
@@ -1289,43 +1292,39 @@ Origin Failover - ability to fail over to second origin in case first origin is 
 
 ###### Kinesis
 It is a platform for streaming data on AWS, making it easy to load and analyze streaming data.
-With Kinesis, you can ingest real-time data such as application logs, website clickstreams, IoT telemetry data, and more into your databases, data lakes, and data warehouses, or build your own real-time applications using this data
-* Kinesis Firehose (near real time) - load massive volumes of streaming data into AWS (you can configure lambda to transform you data before loading). Receives stream data and stores it in s3/RedShift/ElasticSearch
-* Kinesis Streams (real time) - ability to process the data in the stream. Stream for processing data it can't load data directly to s3/redshift - additional processing required, firehose - for storing data directly in s3/redshift.
-Although there is no native auto-scale solution to scale out/in number of shards you can implement your own using CloudWatch (collect metrics and issue alarm if threshold was crossed) + Lambda (add/remove number of shards based on data from CloudWatch).
-Retention period - time between message go into stream and stays there until removed, 24 (default) - 168 hours.
-* Kinesis Analytics - analyze streaming data real time with standard SQL
-AntiPattern
-* Small scale consistent throughput (Kinesis Data Streams is designed  and optimized for large data throughputs)
-* Long-term data storage and analytics (By default Kinesis Data Streams stores data 24 hours, you can extend retention up to 7 days, if you need longer you should considered RDS/DynamoDb/S3/Glacier)
-Queue vs Streaming
+With Kinesis, you can ingest real-time data such as application logs, website clickstreams, IoT telemetry into your databases, data lakes, and data warehouses, or build your own real-time applications using this data
+* kineiss firehose (near real time) - load massive volumes of streaming data into AWS (you can configure lambda to transform you data before loading). Receives stream data and stores it in s3/RedShift/ElasticSearch
+* kineiss streams (real time) - ability to process the data in the stream. Stream for processing data it can't load data directly to s3/redshift - additional processing required, firehose - for storing data directly in s3/redshift
+* kineiss Analytics - analyze streaming data real time with standard SQL
+AntiPattern:
+* Small scale consistent throughput (Kinesis Data Streams is designe and optimized for large data throughput)
+* Long-term data storage and analytics (By default Kinesis Data Streams stores data 24 hours, you can extend retention up to 168 hours (7 days), if you need longer you should considered RDS/DynamoDb/S3/Glacier)
+Auto-scaling:
+* app auto scaling - CloudWatch alarm + App Auto Scaling + api gateway + lambda (that actually change number of shards) - you have to use CloudFormation template to set it up (you can set it up manually for testing)
+* [kinesis auto scaling utility](https://github.com/awslabs/amazon-kinesis-scaling-utils) - you can deploy it as beanstalk (or java server) and it will monitor CloudWatch to dynamically scale out/in your shards
+Queue vs Streaming:
 * queue (not reactive) - you have to poll data, once it polled it removed from queue
 * streaming (reactive) - many consumer notify of changes, events stay for long time (not deleted)
 Write and Read to stream with java:
 * [KPL (Kinesis Producer Library)](https://github.com/awslabs/amazon-kinesis-producer) - allows you to write to kinesis data streams (c++ code, but use java binding)
 It has built-in batching & multithreading logic to collect many small events, batch them and send to kinesis
-If you use KCL to retrieve message from kineiss that consist of multiple KPL records, you can use KPL on client side to retreive these records
-It emits throughput/error/other metrics to cloudWatch
-It uses async architecture - so call to put record returns immediately with `Future` object from KPL
+If you use KCL to retrieve message from kineiss that consist of multiple KPL records, you can use KPL on client side to retrieve these records
+It emits throughput/error/other metrics to cloudWatch, uses async architecture - so call to put record returns immediately with `Future` object from KPL
 * [KCL (Client Library Consumer)](https://github.com/awslabs/amazon-kinesis-client) - allows you to read from kinensis data streams (java library)
-Kinesis vs Kafka vs Apache Storm
-Both are message brokers - middleman between data streaming source and it's consumers
+Kinesis vs Kafka vs Apache Storm (kinesis & kafka are message brokers - middleman between data streaming source and it's consumers):
 * kafka - data stored in Kafka Partition, config store - Apache Zookeeper, replica instances - can be configured
 * kinesis - data stored in Shards, config store - DynamoDB, synchronously replicates across 3 AZ
-* storm - middleman between hadoop (which works with batches only) and streaming source. So storm take incoming stream, organize data into packages and sent it to hadoop for further processing.
-Data sources are called spouts and each processing node is a bolt.
+* storm - middleman between hadoop (which works with batches only) and streaming source. It takes incoming stream, organize data into packages and sends it to hadoop for further processing. Data sources are called spouts and each processing node is a bolt.
 
 ###### Lambda
-Lambda - piece of code that can be executed without any server env (just write code in javascript and it will run).
-Lambda can be directly triggered by AWS services such as Amazon S3, DynamoDB, Amazon Kinesis Data Streams, Amazon Simple Notification Service (Amazon SNS), CloudWatch
+Lambda - piece of code that can be executed without any server env (just write code in python/javascript and it will run).
+Lambda can be directly triggered by AWS services such as s3/DynamoDB/Kinesis Streams/SNS/CloudWatch
 Lambda are billed per request, so it's better for some small simple tasks. If you have highload with 10m hits per day, run simple ec2 is cheaper.
-AntiPattern
-* Long Running Applications (Lambda max time is 900sec. If you need some long running jobs you should consider EC2)
-* Dynamic Websites (although you can use Lambda to create static website, it's better to use some programming language like java/node.js and deploy it to EC2)
+AntiPattern:
+* Long Running Applications (Lambda max time is 900sec (15 min). If you need some long running jobs you should consider EC2)
+* Dynamic Websites (it's better to use some programming language like java/node.js and deploy it to EC2)
 * Stateful Applications (Lambda is stateless, if you need state it's better to create app in java/node.js and deploy it ot EC2 + RDS/DynamoDb)
-Cold Start - when you first run your lambda and aarch for idle server and run your lambda on this sever, delay may happen. 
-When you first run your code aws create new execution context (download code, set up env vars, load code) and it can take from few millisec to a few sec.
-When you run it for second and consecutive time, there is no delay.
+Cold Start - when you first run your code aws create new execution context (download code, set up env vars, load code) and it can take from few millisec to a few sec. When you run it for second and consecutive time, there is no delay.
 By default lambda runs in no VPC (so it has internet access), if you want your lambda to talk with other services you should put it into VPC, if your lambda need internet access you have to configure nat for it.
 Lambda doesn't run `npm install`. So if you add new package you have to build it locally, create `.zip` file with your project (including `node_modules`) and upload it to aws lambda.
 Global state - lambda can run on the same container or on new container (aws shuts down inactive containers after ~20 minutes, so after this new call will run lambda on new container).
@@ -1342,33 +1341,32 @@ There are a few solutions:
 * v8 isolate (VM instance with its own heap) - so every lambda is wrapped into vm instance
 
 ###### Step Functions
-Step Functions - visual tool that allows you to build complex logic based on lambda and EC2 calls.
-They can also help overcome lambda max 900sec execution time, by joining several lambdas into one execution flow.
+Step Functions - visual tool that allows you to build complex logic based on lambda and EC2 calls. They can also help overcome lambda max 900sec execution time, by joining several lambdas into one execution flow.
+If you have several lambdas that need to be called one after another, you can build this directly into lambdas, but it can be difficult to manage, so it's better to use some orchestration tool where you can create a sequence of calls.
 
 ###### EMR
 EMR (Elastic Map Reduce) - highly distributed computing framework for data processing and storing, using Apache Hadoop as its distributed data processing engine.
-It's good if you have some stored data in s3 and want to process it. If you have real-time data stream it's better to use Kinesis.
-Hadoop is open source java framework supports data-intensive distributed apps running on large clusters of commodity hardware. Hive/Pig/HBase are packages that run on top of Hadoop.
+It's good if you have some stored data in s3 and want to process it. If you have real-time data stream it's better to use kinesis.
+It's open source java framework supports data-intensive distributed apps running on large clusters of commodity hardware. Hive/Pig/HBase are packages that run on top of Hadoop.
 It reduces large workload into smaller jobs and distribute it between EC2 instances of Hadoop cluster (good for big data analyses).
-Hadoop is basically 2 things: HDFS + a Computation or Processing framework (MapReduce - hadoop api name)
-There are 2 types of storage
+Hadoop is basically 2 things: HDFS + Computation/Processing framework (MapReduce - hadoop api name)
+There are 2 types of storage:
 * HDFS (Hadoop Distributed File System) - data replicated across several instances. Data can be stored on EBS or instance store
-* EMRFS (EMR File System) - implemetation of HDFS that can store data in s3
-There are 2 types of cluster
-* persistent - runs continiously, should use HDFS
+* EMRFS (EMR File System) - implementation of HDFS that can store data in s3
+There are 2 types of cluster:
+* persistent - runs continuously, should use HDFS
 * transient - do some work and stop, should use EMRFS, so data won't be lost after cluster is stopped or terminated
 Hadoop vs Spark:
 Hadoop - just storage system (HDFS) + api by which you can process this info. 
 But hadoop api is not fast enough to process big data and here come spark which can help to expedite data processing.
 If you want to run spark on cluster (for testing purposes you can run it on local machine) you need cluster manager.
 There are 2 cluster managers - yarn/mesos. Since yarn is built into hadoop you need hadoop to run spark. But you can use mesos and run spark without hadoop.
-Cluster manager - coordinate code execution on different machines. 
-You can use spring+java+spark to have all features of java/spring to write good code for spark
-Data Locality - process data on the machines where they are located instead of transfer all data to single machine and proecess them there.
-AntiPattern
+Cluster manager - coordinate code execution on different machines. You can use spring+java+spark to have all features of java/spring to write good code for spark.
+Data Locality - process data on the machines where they are located instead of transfer all data to single machine and precess them there.
+AntiPattern:
 * Small data sets (EMR for large processing, if your dataset is small enough for one machine/thread it's better to use EC2 or Lambda)
 * ACID transaction requirements (if you need this it's better to use RDS instead of Hadoop)
-There are several engines you can run on top of emr
+There are several engines you can run on top of emr:
 * Hive - data warehouse, you can write SQL-like queries to extract data from Hadoop
 * Hbase - open-source, NoSQL key/value column-oriented database built on top of HDFS
 * Presto - open-source in-memory distributed SQL query engine developed by Facebook. So it's good for ad-hoc sql analytics
@@ -1378,9 +1376,9 @@ Spark supports mid-query fault-tolerance and can recover from such a situation b
 
 ###### Glue
 Glue - fully managed ETL (extract, transform, load) to catalog/clean/enrich/move your data.
-AWS Glue crawlers scan various data stores you own to automatically infer schemas and partition structure and populate the AWS Glue Data Catalog with corresponding table definitions and statistics.
+Glue crawlers scan various data stores you own to automatically infer schemas and partition structure and populate the Glue Data Catalog with corresponding table definitions and statistics.
 You can then directly query your data lake with Athena and Redshift Spectrum.
-AntiPattern
+AntiPattern:
 * Streaming data (Glue is batch oriented, minimum interval is 5 min, so for streaming data Kinesis is better choice)
 * NoSQL Databases (Glue doesn't support NoSQL databases as source)
 Job - glue can run ETL on s3 and load it to any other target.
@@ -1398,8 +1396,14 @@ Many-to-many:
     Single table 1 PK + 1 GSI:
     * partitionKey (authorId) + sortKey (bookId)
     * partitionKey (bookId) + sortKey (authorId)
-Data at NoSql should be denormalized, it's a mistake to use new technology in old way and to store in NoSql db data in normalized view. You will lose on performace.
-Table is not single object like in relational model, but a collection of heterogenous objects, products+users+orders can be store in single NoSql table.
+Partition key should have a large number of distinct values relative to the number of items in the table (customerId for orders table - there are many distinct customers comparing to total number of orders).
+This is because max RCU (read capacity unit) - 3000, WCU (write capacity unit) - 1000 per partition. So if you choose wrong partition key and make a lot of request to single partition you will get `ProvisionedThroughputExceededException`.
+That's why you should have equal distribution across partition key. Best practices to select partition key:
+* use high cardinality attr - email, customerId, orderId, productId
+* use composite attr - combine several attr into single string to be used as key
+* add random key to partition key
+Data at NoSql should be denormalized, it's a mistake to use new technology in old way and to store in NoSql db data in normalized view. You will lose on performance.
+Table is not single object like in relational model, but a collection of heterogeneous objects, products+users+orders can be store in single NoSql table.
 So one-to-many solved by partitionKey as one key, and sortKet as key from second table (many)
 When you build NoSql schema you should:
 * create ERD (entity relations diagram) - same as for relational db, define entities and relations between them
@@ -1499,7 +1503,7 @@ So if you have write problems with db you should:
 * dynamoDB - use auto scale to scale accordingly to load
 If you have read problems:
 * RDS - add elasticache, add sharding (it would actually help in both read and write)
-* dynamoDB - elasticache, auto scale
+* dynamoDB - dax, auto scale
 
 ###### RedShift
 Database vs Data Warehouse
@@ -1577,7 +1581,7 @@ For large copy (billions of records) use `ALTER TABLE APPEND` instead of `INSERT
 
 ###### QuickSight
 QuickSight - BI (business intelligence) tool, for building visualizations, perform ad-hoc analysis (can connect to all aws data sources).
-It's used inside aws infra, so it's for internal users only (not for external).
+It's used inside aws infra, so it's for internal users only (not for external). You can load data form s3/athena/rds/redshift/dynamoDB.
 
 ###### EC2
 EC2 (Elastic Compute Cloud) - web service that provides resizable compute capacity
@@ -1585,16 +1589,23 @@ AntiPattern
 * Managed Service (if you need database, or some other service that is provided by aws, you would better to use it, like RDS)
 * Lack of Expertise or Resources (if your team lack expertise or resource installing and managing some service like database, again if aws provide such service it's better to use aws managed service)
 You connect to ec2 
-* linux - use private key to ssh to ec2
-* windows - use private key to decrypt admin password and connect by RDP using this password
+* linux - use private key to ssh (port 22) to ec2
+* windows - use private key to decrypt admin password and connect by RDP (port 3389) using this password
 Type of EC2
 * On-demand (0% discount) - you got server at any time, and there is no commitment from your (you can terminate it after 10min)
 * Reserved (40-60% discount) - you commit to run a server for 1-3 years
-    * standard - 75% discount, can't change RI(reserved instance) attributes
-    * convertible - 54% discount, you can change RI attribute (for example after month you find out you need more compute capacity)
-    * scheduled - you reserve instance for specific time period (one day for every week)
+    RI scope:
+        * regional - ri belong to some region. You can change az for this instance
+        * zonal - ri tied to specific az. You can't change az for this instance
+    RI type:
+        * standard - 75% discount, can't change RI(reserved instance) attributes
+        * convertible - 54% discount, you can change RI attribute (for example after month you find out you need more compute capacity)
+        * scheduled - you reserve instance for specific time period (one day for every week)
 * Spot (50-90% discount) - not commitment from aws (you bid for a cheaper price, and if any instance is available you got it, but you pay not what you bid, but the second highest bid)
 once spot price exceeds your bill, ec2 would be terminated within 2 min
+There are 2 spot termination policies:
+    * amazon termination - when spot price exceeds bid price, amazon automatically terminate your instances. In this case you don't pay for extra minutes, it all rounded to hours. (so if you used for 1 hour 30 min - you would pay for 1 hour only)
+    * user termination - when you terminate spot instances for some reason - you pay full amount up to minutes (so if you used for 1 hour 30 min - you would pay for 90 minutes usage)
 * Dedicated (can be on-demand or reserved) - your ec2 instance runs on physically separate hardware
 With reserved instances you can modify
 * instance size (within the same instance family)
@@ -1759,9 +1770,17 @@ It will never limit permission to internal user of current account who has permi
 Feature sets (you select it when you create organization) - how your organization manage its accounts:
 * Consolidated billing - provides only shared billing functionality (you can't define SCP/TP with this type)
 * all - all available features including consolidating bulling
+Both types provide discounts:
+* s3 - more you use - less you pay, so in case of single bill aws treats all accounts as signle one, so all s3 usage is calculated and paid by single account
+* ec2 - suppose accountA has 6 RI, accountB - 0. During some hour accountA - used 3 instances, B - also 3. B was using on-demand, but because of single bill and A has 3 RI, it would be calculated as 6 RI. So you won't pay anything for B on-demand instances.
+This would work if B launched same type of ec2 in the same AZ as RI from accountA.
+* rds - same as ec2, but only dbType(oracle/mysql)/instanceType/launchType(multi-AZ) should match.
+RI (Reserved instances) - 2 reports:
+* utilization - how many % of total bought instances are actually used
+* coverage - how much % of overall instance usage covered by RI. So when it drops below 50% you should investigate which of on-demand instances are running 24/7 and possibly replace it with reserved.
 
 ###### Well-Architected Tool
-Well-Architected Tool is a aws service that allows you to validate your current infrastructure against 5 pillars of well-arhitected framework.
+Well-Architected Tool is a aws service that allows you to validate your current infrastructure against 5 pillars of well-architected framework.
 It works by creating a workload (collection of resources and code that make up a cloud application) and then run this workload against 5 pillars.
 The tool will evaluate your workload and provide an improvement plan with a prioritized list of issues.
 It's free of charge, you only pay for underlying aws resources.
@@ -1770,9 +1789,21 @@ It's free of charge, you only pay for underlying aws resources.
 VPC (Virtual private cloud) - a kind of internal network in on-premises. You can have some servers inside and they won't be accessible outside of vpc.
 You have complete control over your virtual networking environment, including selection of your own IP address ranges, creation of subnets, and configuration of route tables and network gateways.
 By default every account has default VPC (and default subnet for each AZ), so if you don't create any other, and create EC2 directly, default VPC would be used.
-Amazon VPC consists of
+Amazon VPC consists of:
 * VPC - private network, logically isolated from other networks in aws cloud. Can span across multiple AZ. Instances in different AZ charged $0.01 per GB for data transfer. Size should be /16 - /28 (so from 16-65535)
 * Subnet - private sub-network inside VPC. Can reside only within single AZ.
+For each subnet - 5 IP are automatically taken. 4 from the start + last.
+    * 0 - network address
+    * 1 - vpc router
+    * 2 - dns server
+    * 3 - reserved for future use
+    * last - broadcast address
+So if you have subnet of diff size - you have to subtract 5 to get total size
+    * /24 => 256-5=251
+    * /28 => 16-5=11
+    * /29 => 8-5=3
+    * /30 => 4-5=-1
+    That's why minimum size should be /28 (cause for /29 you got only 3 size, there is no point in such a network)
 * RT (Route table) - set of rules (routes) to determine where network traffic from your VPC is directed
 Single RT can be associated with multiple subnets, but single subnet can be associated to one RT only.
 When you create vpc, default RT is created and all subnets by default assigned to this RT, yet if you go to this RT you will see that subnets are not explicitly associated with it.
@@ -1873,10 +1904,10 @@ echo "conn Tunnel1
 echo '3.237.1.182 52.6.121.143: PSK "wCfcjn4X6xF895fHM3Tgq6XvSPiEuBcp"' > /etc/ipsec.d/aws.secrets
 service ipsec restart
 ```
-* DX (Direct Connect) - private connection between aws region and you (aws router to your on-premise router) or your ISP (internet service provider).
+* DX (Direct Connect) - private connection between aws region and you (aws router to your on-premise router) or your ISP (internet service provider). For HA use redundant second connection, in case first failed.
     DX vs VPN:
-    * dx - private secure connection between on-premise and aws region. Use it if you need high bandwidth.
-    * vpn - IPSec connection over the public internet between on-premise and aws region. It's slower than dc since it use public internet. But can be setup very quickly. 
+    * dx - private connection between on-premise and aws region. Use it if you need high bandwidth.
+    * vpn - IPSec connection over the Internet between on-premise and vpc. It's slower than dc since it use public internet. But secure & can be setup very quickly. 
 You can use vpn above dc, but it's redundant, cause dx is already secured. Best practice to configure vpn as failover for dx (in case it failed).
 LAG (Link Aggregation Groups) - ability to order multiple direct connect ports and manage them as single larger connection (max number is 4 ports, port types should be the same, all 1GB, or all 10GB). LAG connections operate in Active/Active mode.
 DCG (Direct Connect Gateway) - grouping of VGW (virtual private gateways) and VIF (private virtual interfaces). Multi-account DCG allows to associate up to 10 VPC (from different accounts) or up to 3 Transit Gateway.
@@ -1888,6 +1919,7 @@ DX VIF (you have to create one of the following VIF to start using dx):
 Don't confuse:
 * VPC PrivateLink - expose aws services (except s3/dynamoDb who are using gateway endpoint) or private ec2 to vpc in the same or other aws account, by adding eni inside vpc for exposed service
 If you have 3 vpc and ec2 in each of them, and you want to connect these 3 ec2 you can use either privateLink or vpc peering. PrivateLink is better solution, cause it allows you to connect only these 3 ec2, without exposing all other services from these vpc to each other.
+Yet keep in mind that vpc endpoint can't be cross-region. So your 3 vpc from above example should be in the same region.
 * VPC ClassicLink - connect classic ec2 to vpc
     * before 2013 there were no default VPC and all EC2 where launched in flat network shared with other aws users
     * allows to connect your VPC with EC2 classic, EC2 becomes a member of VPC Security Group
@@ -1941,9 +1973,10 @@ If you want to change vpc dhcp set you can do it only after you've created vpc, 
 Yet if you unlink dhcp from default vpc, and try to create ec2, it will still use default dhcp rules and add public/private dns names.
 
 ###### Elastic Beanstalk
-Imagine you have spring boot app that use mysql and you want to deploy it to aws, what you have to do
+Imagine you have spring boot app that use mysql and you want to deploy it to aws, what you have to do:
 1. create vpc/subnet/IGW/RT
-2. create mysql RDS
+2. create mysql RDS - for test/dev env you should create db inside beanstalk, but for prod it's better to create separate rds instance, so your db not coupled to lifecycle of your beanstalk env
+You should store connection string/password in s3, since anybody with access to eb can view beanstalk env vars. But from s3 you only grant ec2 instance profile access to read file.
 3. create EC2
 4. ssh to ec2, install java, copy your jar file, and run it passing all env vars
 Quite a lot for a start. Imagine if we have a tool where you can just say that you want java app, mysql db, set env vars and upload jar file, and all infra would be built for you.
@@ -1953,7 +1986,7 @@ It keeps the provisioning of building blocks (EC2/RDS/ELB/Auto Scaling/CloudWatc
 You simply upload a `.war/.jar` (in case of java) file, and beanstalk run tomcat server for you and deploy your app. Yet developer has a right to manage all infrastructure provided by beanstalk.
 EB using cloudformation template that build your configuration. After successfull deployment you can see your rds/ec2/elb and configure them separately.
 Keep in mind that for prod deployment it's better to use your own cloudformation script and manage infra with it, eb is good for testing purposes, PoC.
-With EB you shouldn't worry about java installed on ec2, if you select java it would automatically install it into ec2 and use coretton as jdk (same true for other popular env like node.js/tomcat and so on..)
+With EB you shouldn't worry about java installed on ec2, if you select java it would automatically install it into ec2 and use Corretto as jdk (same true for other popular env like node.js/tomcat and so on..)
 You can use EB with Docker, you deploy docker file or built image. Use this when you want one docker per ec2 instance. If docker instance crushed/killed EB would restart it automatically.
 You can use multicontainer Docker platform for EB, in this case eb would manage ecs cluster for you. So you don't need to manually create ecs and decide how many nodes should be running there.
 
@@ -2207,6 +2240,9 @@ If you think that sharding is looks like NoSql you are right, and if you got lim
 Storage autoscaling - when you create db you can enable it. Once enabled it would automatically add more storage capacity when free space would be less than 10%. It would be incremented in chunks of 5GB each, until it reach max auto scale capacity.
 `IS NULL / IS NOT NULL` - use it when you want to check if column null or not null. Comparison operators like `<>` or `!=` won't work when you compare with null, cause null is absence of value.
 In SQL, anything you evaluate/compute with `NULL` results into `UNKNOWN`, that's why if you are using `select * from my_column != null` you will get 0 results, although you have many rows where `my_column` not null.
+Read replica vs elasticache - they both solve same problem but for different purposes:
+* read replica - when your data constantly changing
+* elasticache - since it's a cache if data constantly changing you have to constantly clear the cache - which basically remove advantages of cache
 
 ###### SQS
 SQS (Simple Queue Service) - managed service that provide asynchronous decoupling and publisher/subscriber (queue) model. There are 2 types
@@ -2389,6 +2425,9 @@ You can install it into your own ec2, and by doing this to be able to connect yo
 Launch type - type of infra on which your tasks/services hosted:
 * fargate (self-managed) - run containerized applications without the need to provision/manage the backend infra
 * ec2 (managed by you) - run containerized applications on a cluster of ec2 that you manage
+Auto Scaling:
+* ecs publish CloudWatch metrics with cpu/memory usage
+* use App Auto Scaling to scale out/in your ecs based on CloudWatch events
 
 ###### EKS
 EKS (Elastic Kubernetes Service, also called ECS (Elastic Container Service) for Kubernetes) - manages service that runs kubernetes cluster (so you don't need to deploy it from scratch).
@@ -2469,16 +2508,22 @@ Aurora - mysql/postgres compatible (most app that works with mysql/postgres woul
 Yet some features of mysql/postgres are not supported in aurora (like MyISAM storage engine).
 It runs 5x faster than mysql and 3x faster than postgres. And cost 1/10 of similar solution.
 It replicates 6  copy of itself in at least 3 AZ (2 copies in each az) - so it's highly available.
-Buckups and failover are done automatically. Self-healing storage - blocks are constantly checked and restored.
+Backups and failover are done automatically. Self-healing storage - blocks are constantly checked and restored.
 Aurora serverlsess - cheap version of aurora, pay only for what you use (aurora start up/down, scale up/down automatically base on your load).
 You have 2 options to migrate to aurora
 * use `mysqldump/pg_dump`, export data from mysql/postgres, and import it into aurora
 * use RDS DB Snapshot migration
 Min storage is 10GB, incrementing by 10GB up to 64TB.
-There are 2 types of replica
+There are 2 types of replica:
 * aurora replica - aurora native same-region replica
 * mysql replica - cross-region replica based on mysql binlog
 Parallel Query - ability to distribute computational load across multiple instances.
+You can call lambda from function & stored procedures for MySql Aurora:
+* add iam role to allow db cluster to access lambda
+* configure cluster to allow outbound connections to Lambda. This depends from your network config:
+    * public cluster - it can access lambda through the internet - so no additional config required
+    * private cluster - you have to add NAT gateway or lambda vpc endpoint so your cluster in private subnet can access lambda
+You can also use s3 form MySql Aurora and you have to configure access to s3 same way as for lambda.
 
 ###### CloudTrail
 CT - service that logs activity of your aws account (who made request, what params were passed, when and so on..). It's useful for compliance, when you need to ensure that only certain rules has ever been applied.
@@ -2680,7 +2725,7 @@ In software engineering, a directory is a map between names and values. It allow
 DS - is a standard, AD - implementation of DS by microsoft.
 AD (Active Directory) - microsoft DS that additionally provides SSO/LDAP so user can have roles/authentication to access resources, it stores users/computers/printers in company's network and provides access/roles to users.
 AD provides centralize authorization and authentication to network resources, it also stores network resources and users information like computer, printers, users, users groups, organizational units, passwords information.
-LDAP (Lightweight Directory Access Protocol) is an application protocol for querying and modifying items in directory service providers like AD.
+LDAP (Lightweight Directory Access Protocol, port 389, don't confuse with RDP - 3389) is an application protocol for querying and modifying items in directory service providers like AD.
 Objects in AD grouped into domains. Tree - collection of one or more domains. Forest - collection of trees that share common global catalog.
 Domain Controller - windows server that runs AD.
 AWS DS - managed service replicated across multiple AZ. There are 3 types of aws ds
@@ -2707,15 +2752,23 @@ Outpost - aws rack with compute/memory devices that you install on-premises and 
 
 ###### SSO
 SSO (Single Sing On) - aws service that allows central access to multiple aws accounts. You can use it as identity store or as connector to your existing identity stores (like microsoft AD).
-To work with sso you should create aws organization (sso won't work without organization created). With sso you can access
+To work with sso you should create aws organization (sso won't work without organization created). With sso you can access:
 * multiple aws accounts (using aws organizations)
 * SAML-enabled cloud applications (Salesforce/Office365)
 * custom-built apps
-Cognito is not supported IdP for sso.
-You can enable 2FA for SSO users.
+Cognito is not supported IdP for sso. You can enable 2FA for SSO users:
+* use mobile app with TOTP (time-based one time passcode)
+* send TOTP to email address - don't use this option if users use sso to access their email - you got chicken & egg problem. To access email they first need to access sso for which they should provide code that was sent to email
+2FA auth methods:
+* disabled - 2FA is disabled for all users
+* always-on - 2FA always enabled for all users
+* context-aware - default mode, sso analyze sign-in context (browser, location, and devices) to determine if previously trusted context is used. If yes not 2fa code required, otherwise user must use new 2fa code.
 sso user permission are set by permission set (kind of managed policy for sso), so based on this decided which action user is allowed to do in aws. 
 Just like with iam user your sso user can access both aws management console and aws cli.
 If you need access to third-party apps you can add applications to your sso under `application` menu. Just configure app and your user would be able to sign in into it.
+Permission set - level of access that users/groups has to aws account, stored in sso and provisioned as IAM roles. User can have multiple sets.
+You can configure 2 permission sets:
+* Session Duration - time for which user can be logged in for aws, 1(default) - 12hours. After specified time user automatically logged out
 
 ###### OpsWorks
 OpsWorks - config management service that provides managed instances of Chef/Puppet which help automate servers' configuration/deployment/management.
