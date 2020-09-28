@@ -37,7 +37,7 @@
 * 2.11 [Nmap](#nmap)
 3. [Services](#services)
 * 3.1 [Corretto](#corretto)
-* 3.2 [CloudFormation](#cloudformation)
+* 3.2 [CloudFormation](#CloudFormation)
 * 3.3 [IAM](#iam)
 * 3.4 [S3](#s3)
 * 3.5 [Glacier](#glacier)
@@ -381,15 +381,15 @@ aws iam get-user --query "User.Arn" --profile=awssa
 # get arn + userId
 aws sts get-caller-identity --profile=awssa
 ```
-* S3 (create presigned url, make file public for 30 sec) `aws s3 presigned s3://my-cloudformation-template-example/data.txt --expires-in 30 --profile=awssa`
+* S3 (create presigned url, make file public for 30 sec) `aws s3 presigned s3://my-CloudFormation-template-example/data.txt --expires-in 30 --profile=awssa`
 * CloudFormation
 ```
 # create stack
-aws cloudformation create-stack --stack-name=mystack --template-body=file://cloudformation/condition.yml --profile=awssa --region=us-east-1
+aws CloudFormation create-stack --stack-name=mystack --template-body=file://CloudFormation/condition.yml --profile=awssa --region=us-east-1
 # update stack and pass params
-aws cloudformation update-stack --stack-name=mystack --template-body=file://cloudformation/condition.yml --parameters=ParameterKey=Env,ParameterValue=prod --profile=awssa --region=us-east-1
-# if you are creating a stack that create iam resouce you should explicitly tell to cloudformation that it's ok to create iam resources
-aws cloudformation update-stack --stack-name=logs --template-body=file://cloudformation/ec2-logs.yml --profile=awssa --region=us-east-1 --capabilities=CAPABILITY_IAM
+aws CloudFormation update-stack --stack-name=mystack --template-body=file://CloudFormation/condition.yml --parameters=ParameterKey=Env,ParameterValue=prod --profile=awssa --region=us-east-1
+# if you are creating a stack that create iam resouce you should explicitly tell to CloudFormation that it's ok to create iam resources
+aws CloudFormation update-stack --stack-name=logs --template-body=file://CloudFormation/ec2-logs.yml --profile=awssa --region=us-east-1 --capabilities=CAPABILITY_IAM
 ```
 
 ###### Useful Linux Commands
@@ -1385,26 +1385,25 @@ Job - glue can run ETL on s3 and load it to any other target.
 Job Bookmark - glue use it to keep track of processed data. When you add more data to s3, glue won't run etl for whole bucket again, but only changes that were added.
 
 ###### DynamoDB
+DynamoDB - fully managed, highly available out of the box(there is no such thing as multi-AZ deployment and read replica) NoSQL key-value/document database, kind of mongo, but aws proprietary solution. Stores data across 3 AZ. 
+It's serverless, so if you have to choose between DynamoDB/RDS if you are building serverless app - dynamoDB your best choice. NoSql terminology: row - item, cell - attribute, primary key - partition key + sort key.
 If you come from relational to NoSql you must forget:
-* normalization - this came from time when storige was expensive, right now compute is expensive so it's better to denormalize data to spend less time on computing
+* normalization - this came from time when storage was expensive, right now compute is expensive so it's better to denormalize data to spend less time on computing
 * joins - you can't join table in NoSql
-* single table per entity - you have a collection of entities per table in NoSql
-NoSql tables build on distributed hash tables, so time complexity of most queries is O(1).
+* single table per entity - you have a collection of entities per table in NoSql. Table is not single object like in relational model, but a collection of heterogeneous objects, products+users+orders can be store in single NoSql table.
+NoSql tables build on distributed hash tables, so time complexity of most queries is O(1)
+One-to-many:
+* relational - authors, books (has authorId as foreign key)
+* nosql - partitionKey as one key (authorId), and sortKey (bookId) as key from second table
 Many-to-many:
-* relational: authors, books, author_book - special table to store auhorId+bookId
-* create 1 primary key with partition key + sort key and second primary key where you swap partition and sort key.
-    Single table 1 PK + 1 GSI:
-    * partitionKey (authorId) + sortKey (bookId)
-    * partitionKey (bookId) + sortKey (authorId)
+* relational- authors, books, author_book - special table to store auhorId+bookId
+* nosql - create 1 primary key with partition key + sort key and second primary key where you swap partition and sort key.
 Partition key should have a large number of distinct values relative to the number of items in the table (customerId for orders table - there are many distinct customers comparing to total number of orders).
 This is because max RCU (read capacity unit) - 3000, WCU (write capacity unit) - 1000 per partition. So if you choose wrong partition key and make a lot of request to single partition you will get `ProvisionedThroughputExceededException`.
 That's why you should have equal distribution across partition key. Best practices to select partition key:
-* use high cardinality attr - email, customerId, orderId, productId
+* use high cardinality attr - email/customerId/orderId/productId
 * use composite attr - combine several attr into single string to be used as key
 * add random key to partition key
-Data at NoSql should be denormalized, it's a mistake to use new technology in old way and to store in NoSql db data in normalized view. You will lose on performance.
-Table is not single object like in relational model, but a collection of heterogeneous objects, products+users+orders can be store in single NoSql table.
-So one-to-many solved by partitionKey as one key, and sortKet as key from second table (many)
 When you build NoSql schema you should:
 * create ERD (entity relations diagram) - same as for relational db, define entities and relations between them
 * define access pattern - how data would be accessed
@@ -1412,17 +1411,11 @@ When you build NoSql schema you should:
 You can store many entities in the same table:
 users + profiles(one-to-one) + orders(one-to-many) + order_items (one-to-many)
 * partitionKey - USER#userId, ITEM#itemId
-* sortKet - for profile - PROFILE#profileId, for order - ORDER#orderId - it's a good practice to add prefixes to keys. + ORDER#orderId - for PK with ITEM
+* sortKey - for profile - PROFILE#profileId, for order - ORDER#orderId - it's a good practice to add prefixes to keys. + ORDER#orderId - for PK with ITEM
 So we have 2 SK with same ORDER#orderID, one - for users, another for items. To speed up access create GSI - inverted index
 and now you have partitionKey - ORDER#orderID, sortKey - USER#userID/ITEM#itemID.
 If you have several address for single user, just add them as json attribute - until you have access pattern by address (like found all users by single address)
 So you store both profiles and orders in the same table, yet they have different attributes.
-DynamoDB - fully managed, highly available out of the box(there is no such thing as multi-AZ deployment and read replica) NoSQL key-value/document database, kind of mongo, but aws proprietary solution. Stores data across 3 AZ. 
-It's serverless, so if you have to choose between DynamoDB/RDS if you are building serverless app - dynamoDB - your best choice.
-NoSql terminology
-* Row - item
-* Cell - attribute
-* Primary key - partition key + sort key
 Partition Key (mandatory) - it's used for key-value access pattern, should be unique value.
 Sort key (optional) - range query access pattern. Example: customerId - partitionKey, orderDate - sortKey.
 So if you store only category in table, you have simple primary key = categoryName.
@@ -1436,68 +1429,64 @@ Composite Sort Key - GSI with partitionKey stays the same, but sortKey is new at
 For example status+date - DELIVERED#2020-05-05, and now you can filter by status and date.
 If you want to filter just by attribute without partitionKey. This is problem for dynamoDB, cause it designed in such way that you should narrow all queries to some partitionKey and then filter on sortKey.
 You create sparse key and use scan to search by single attribute without partitionKey.
-Data Partitioning
+Data Partitioning:
 * DynamoDB horizontally shards tables into one or more partitions across multiple servers.
-* Partition - allocation of storage for a table, backed by solid state drives (SSDs) and automatically replicated across multiple AZ.
+* Partition allocation of storage for a table, backed by solid state drives (SSDs) and automatically replicated across multiple AZ.
 * Partition management occurs automatically in the background by DynamoDb.
-* Hot partition - when one partition receive way more traffic than all other (support you write throughput is 4k, and you have 4 partitions. Each get 500 writes, but fourth get 2k. Although totally you have 4k, but because they are evenly distribute you got throttle on fourth partition).
+* Hot partition - when one partition receive way more traffic than all other (if write throughput is 4k, and you have 4 partitions. Each get 500 writes, but fourth get 2k. Although totally you have 4k, but because they are not evenly distribute you got throttle on fourth partition).
 * Adaptive Capacity - in case you got some hot partitions, DynamoDB try to rebalance your data, so it would be evenly stored across all partitions.
 Main reason to use NoSql against relation db is that you can scale horizontally.
-With relational db the scale is vertical (add more compute/memory to single node). If you try to scale horizontally relational db you have to use 2PC to support transaction atomicity.
-2PC (Two-phase commit protocol) - distributed algorithm that support atomic transaction between 2 nodes.
-Simplified 2 phase commit is
+With relational db the scale is vertical (add more compute/memory to single node). If you try to scale horizontally relational db you have to use 2PC (2 phase commit protocol - distributed algorithm that support atomic transaction between 2 nodes) to support transaction atomicity.
+Simplified 2 phase commit is:
 * TC (transaction coordinator) sends commit requests to 2 nodes
 * both nodes decided can they execute commit or not and send results (yes/no) back to TC
 * if both answered yes, TC send request to execute commit
 As you guessed the problem is the more nodes you add the slower is communication to decide should they all run transaction.
 So the good solution is to use db that doesn't adhere to these guidelines (transactionless db or NoSql).
-There are 4 types of NoSql db
+There are 4 types of NoSql db:
 * key-value (DynamoDB)
-* document (DynamoDB)
+* document (DynamoDB/documentDB)
 * columnar (RedShift)
 * graph (Neptune)
 Since DynamoDb is multi-AZ by default there is no automatic backup (like rds have), but you can use on-demand backup/restore logic.
-DynamoDb just like s3 is not in vpc, so you can either
+DynamoDb just like s3 is not in vpc, so you can either:
 * access it from internet using some url
 * access it from private subnet using vpc gateway endpoint
-To work with db (create/query tables) you should use SDK/CLI or management console.
-Although dynamoDb is proprietary solution with closed source code there are 2 options for local development
+Although dynamoDb is proprietary solution with closed source code there are 2 options for local dev (don't use them in production, cause it only for dev purposes, api is the same, but underlying design is different, they not suitable for prod highload):
 * download aws version for developers
 * use it from localstack
-But don't use it in production, cause it only for dev purposes, api is the same, but underlying design is different (not suitable for prod highload).
-DynamoDb Stream - stream that provide all modification (create/update/delete) operations. It's useful for
-* replicating
-* update elasticache (so your cache would be always updated to latest state of db)
-* in case your app need to know about all updates
 GSI (Global Secondary Index) - special read-only table created by dynamoDb to simplify search for indexed fields. Index speed up search but require more memory to store itself. You should configure separate read/write capacity for this.
-LSI (Local Secondary Index) - same partition as primary key, but different sort key. You can have it only one and it must be created when table is created, just like primary key. It uses the same read/write capacity as table.
+LSI (Local Secondary Index) - same partition as primary key, but different sort key. You can have one per table and create when table is created, just like primary key. It uses the same read/write capacity as table.
 Scanning - like `select * from` operation in RDS, just go over all records.
 DynamoDb just like s3 is eventual consistent, so if you update data and read it right away you can get old value (cause items are persisted on multiple machines, and depending from what machine you read you can get stale data).
 You can disable eventual consistency by setting `ConsistentRead: true`. In this case `getItem/query/scan` operations would always return correct value, but reads would take longer time.
-eventually consistent read takes half the capacity of a SCR (strongly consistent read).
-To read data of size
-* less than 4KB - 1 SCR
+To read data of size:
+* less than 4KB - 1 SCR (strongly consistent read)
 * more than 4KB - 2 SCR
-Throughput is of 2 types
+* eventually consistent read takes half the capacity of a SCR 
+Throughput is of 2 types:
 * read (`ReadCapacityUnits: 5`) - 5 SCR per second (if you have more then dynamoDb will throttle them, if you have too much they would be just rejected)
 * write (`WriteCapacityUnits: 5`) - 5 writes per second 
-You can increase throughput as much as you want but decrease up to 9 times per day.
-It's the only db that grow/shrink based on load.
+You can increase throughput as much as you want but decrease up to 9 times per day. It's the only db that grow/shrink based on load.
 DynamoDB Streams - captures a time-ordered sequence of item-level changes in a DynamoDB table and durably stores the information for up to 24 hours.
 AWS maintains separate endpoints for DynamoDB and DynamoDB Streams. Streams can be enabled or disabled for an Amazon DynamoDB table.
 Stream records are organized into groups, also referred to as shards. With streams you can
 * build transactional system (based on insert/update/delete records from one table do some operation in another)
 * log/audit/aggregate data
 * replicate data to another regions for query purpose using DynamoDB Cross-Region Replication Library
+Stream useful for:
+* replicating
+* update elasticache (so your cache would be always updated to latest state of db)
+* in case your app need to know about all updates
 DAX (DynamoDB Accelerator) - in-memory cache for dynamoDb, can expedite up to 10 times. The benefit is that you don't have to modify source code, you just enable cache and it works.
-Global Tables (cross-region replication) - multi-region/master db that automatically replicates across multiple regions. It is multiple replica tables (one per region) that DynamoDB treats as a single unit.
+Global Tables (cross-region replication) - multi-region/master db that automatically replicates across multiple regions. It's multiple replica tables (one per region) that DynamoDB treats as a single unit.
 When app write data to replica table in one region, dynamoDb propagate changes to all regions, so if one region would be unavailable your app continue to work normally.
 Multi-master replication ensures that updates propagate to all regions and that data eventually consistent.
 AutoScaling - ability to change write/read throughput according to current load:
 * you can set write/read throughput, but it's hard to predict exact values in advance, moreover your load maybe changing
 * automatically applied to table/GSI created from console
 * you can create scaling policy with target utilization (percentage of consumed provisioned throughput at a point in time)
-* Application Auto Scaling  uses tracking policy to adjust write/read capacity
+* App Auto Scaling - uses tracking policy to adjust write/read capacity
 So if you have write problems with db you should:
 * RDS - add SQS queue in front of db to throttle write requests
 * dynamoDB - use auto scale to scale accordingly to load
@@ -1506,25 +1495,24 @@ If you have read problems:
 * dynamoDB - dax, auto scale
 
 ###### RedShift
-Database vs Data Warehouse
+Database vs Data Warehouse:
 * relational db (single source) - OLTP (Online Transaction Processing) - store current transactions and quick access to them
 * warehouse (multiple sources)) - OLAP (Online Analytical Processing) - store large quantities of historical data
-JDBC (Jave Database Connectivity) vs ODBC (Open Database Connectivity):
+Redshift support both JDBC (Jave Database Connectivity) and ODBC (Open Database Connectivity):
 * odbc - introduced by Microsoft in 1992, platform dependent - only for windows, procedural as most of the code in C/C++
 * jdbc - introduced by SUN in 1997, platform-independent, purely object-oriented type driver
-RedShift - relational data warehouse, fully-managed, petabyte-scale, massively parallel. Redshift - relational db for OLAP, supports ODBC/JDBC, based on industry-standard PostgreSQL.
+RedShift - relational (based on industry-standard PostgreSQL) data warehouse, fully-managed, petabyte-scale, massively parallel.
 It delivers fast query and I/O performance for virtually any size dataset by using columnar storage technology while parallelizing and distributing queries across multiple nodes.
 It's fully transactional but implements only serializable isolation level. So if you have big workflow that do lot's of modification, wrap it into transaction, cause otherwise redshift will use new transaction for every change.
 Columnar storage more faster for aggregation operations. If you need to do sum/average in row storage you have to scan all pages to get result it's a lot of IO, but with columnar you get single IO to get whole column.
-Column data persisted to 1MB immutable blocks. Data sorting used to optimize zone maps, usually on columns that you use for filtering, usually low cardinality.
-So if you have column with high cardinality (timestamp with millisec) there is no point to add such column to sort key, it won't improve performance.
 Zone maps - in-memory data structures that store column's min/max value, so when you make query it's checked can data possibly be in this block, if not block is not scanned.
+Column data persisted to 1MB immutable blocks. Data sorting used to optimize zone maps, columns that you use for filtering should have low cardinality. 
+So if you have column with high cardinality (timestamp with millisec) there is no point to add such column to sort key, it won't improve performance.
 Redshift only supports Single-AZ deployments. It uses MPP (Massively Parallel Processing) by automatically distribute data/query load across all nodes.
 Single-node can be used to quickly set up cluster and grow later. Multi-node requires leader (who gets client connection and queries) and a few compute nodes, that actually execute load.
 Cluster - consist of leader node (take the query) + 1 or more compute nodes (execute query in parallel).
 Compute node consists of node slices (depending on type of node there can be 2/16/32 slices within single node), they are kind of virtual compute node, and these slices actually do computational work.
-primary goal in selecting a table’s DISTSTYLE is to evenly distribute the data throughout the cluster for parallel processing.
-WLM (Workload Management) - queue to prioritize queries. Each query assigned to queue, and based on queue priority - executed.
+WLM (Workload Management) - queue to prioritize queries. Each query assigned to queue, and based on queue priority - executed (for example fast-running queries would be run before long-running queries)
 SQA (Short query acceleration) - when query in queue, redshift determine that this query will run short time, and put it into beginning of queue, so it would be executed first.
 Concurrency Scaling - if turned on, add transient cluster (take incremental snapshot to s3 and spin new cluster form it in seconds, we can take incremental cause backup automatically enabled so we already have full snapshot) when queues are full.
 For every 24 hours of running cluster you accrue 1 hour of free transient cluster.
@@ -1533,24 +1521,19 @@ Cross-Region Snapshot - automated or manual copy of data into another aws region
 In this case you have to configure snapshot copy grant - redshift would create snapshot, decrypt it, then copy to another region and encrypt it with KMS key from that region.
 For encryption it uses four-tier hierarchy of encryption keys. These keys are: master/cluster/database/data encryption keys
 Redshift Spectrum - allows you to query data in s3, it's serverless just like Athena, so you pay for resources you consume.
-So it basically allows you to separate storage & compute. You can also use it to insert data into redshift from s3.
-It different from Athena, cause it allows you to join current redshift tables with data from s3.
-Under the hood there is a fleet of thousands Redshift Spectrum nodes spread across multiple AZ.
-Query is submitted to leader node of your Redshift cluster => leader node optimizes, compiles, and pushes the query execution to the compute nodes => compute nodes submit requests to redshift spectrum
-spectrum pool thousands of ec2 and query data from s3 and return it back to cluster.
-So with spectrum you can have store frequently access data in redshift and IA data in s3 and create join of these 2 datasets.
-WLM (Redshift workload management) - you can manage priorities within workloads so that short, fast-running queries would be run before long-running queries
-Distribution style (`DISTSTYLE`) - when you load data into table, redshift distributes the rows to each of the compute nodes:
+So it basically allows you to separate storage & compute. You can also use it to insert data into redshift from s3. It different from Athena, cause it allows you to join current redshift tables with data from s3.
+Under the hood there is a fleet of thousands Redshift Spectrum nodes spread across multiple AZ. Query is submitted to leader node of your Redshift cluster (it optimize/compile/push the query to the compute nodes).
+Compute nodes submit requests to redshift spectrum, spectrum create thousands of ec2 and query data from s3 and return it back to cluster. So with spectrum you can store frequently access data in redshift and IA data in s3 and create join of these 2 datasets.
+Distribution style (`DISTSTYLE` - primary goal in selecting it, to evenly distribute the data throughout the cluster for parallel processing) - when you load data into table, redshift distributes the rows to each of the compute nodes:
 * AUTO - start with ALL style, if table grows beyond certain limit, switch to EVEN.
-* EVEN - leader node distributes the rows across the slices in a round-robin fashion. Use it when a table does not participate in joins or when there is not a clear choice between KEY distribution and ALL distribution
-* KEY - rows are distributed according to the values in one column (this column must be defined as a `DISTKEY`), leader node places matching values on the same node slice
-Key is good if you have some foreign key (like departmentId in employee table) and so all employees for particular department would be stored in single slice
-* ALL - copy of the entire table is distributed to every node. While EVEN distribution or KEY distribution place only a portion of a table's rows on each node, ALL distribution ensures that every row is collocated for every join that the table participates in
-All is for small tables, less than 3million records.
-Enhanced VPC routing - forces `COPY/UNLOAD` traffic between your cluster and your data repositories through your Amazon VPC. These allows you
-* use all features of vpc
-* see vpc flow logs for `COPY/UNLOAD` commands
-* use vpc endpoint (route traffic between s3 & redshift)
+* ALL - copy of the entire table is distributed to every node. It is for small tables, less than 3million records.
+* EVEN - leader node distributes the rows across the slices in a round-robin fashion. Use it when a table does not participate in joins or when there is not a clear choice between KEY/ALL distribution
+* KEY - rows are distributed according to the values in one column (this column must be defined as a `DISTKEY`), leader node places matching values on the same node slice. This similar to partitionKey in NoSql.
+Key is good if you have some foreign key (like departmentId in employee table) and so all employees for particular department would be stored in single slice.
+Enhanced VPC routing - forces `COPY/UNLOAD` traffic between your cluster and your data repositories through your VPC. These allows you to use:
+* all features of vpc
+* vpc flow logs for `COPY/UNLOAD` commands
+* vpc endpoint (route traffic between s3 & redshift)
 Migration:
 * lift-and-shift - is a bad practice cause performance depends on distkey/sortkey/dataCompression and when you just move you current warehouse without redesigning tables you won't get query performance.
 * best practice - to denormalize data if you migrate from heavily normalized database.
@@ -1584,16 +1567,16 @@ QuickSight - BI (business intelligence) tool, for building visualizations, perfo
 It's used inside aws infra, so it's for internal users only (not for external). You can load data form s3/athena/rds/redshift/dynamoDB.
 
 ###### EC2
-EC2 (Elastic Compute Cloud) - web service that provides resizable compute capacity
-AntiPattern
+EC2 (Elastic Compute Cloud) - web service that provides resizable (you can stop instance, change its type and start it with new capacity) compute capacity
+AntiPattern:
 * Managed Service (if you need database, or some other service that is provided by aws, you would better to use it, like RDS)
 * Lack of Expertise or Resources (if your team lack expertise or resource installing and managing some service like database, again if aws provide such service it's better to use aws managed service)
-You connect to ec2 
+You connect to ec2:
 * linux - use private key to ssh (port 22) to ec2
 * windows - use private key to decrypt admin password and connect by RDP (port 3389) using this password
-Type of EC2
-* On-demand (0% discount) - you got server at any time, and there is no commitment from your (you can terminate it after 10min)
-* Reserved (40-60% discount) - you commit to run a server for 1-3 years
+Types of EC2:
+* On-demand (0% discount) - you got server at any time, and there is no commitment from your (you can terminate it after any time)
+* Reserved (40-60% discount) - you commit to run a server for 1/3 years
     RI scope:
         * regional - ri belong to some region. You can change az for this instance
         * zonal - ri tied to specific az. You can't change az for this instance
@@ -1601,45 +1584,37 @@ Type of EC2
         * standard - 75% discount, can't change RI(reserved instance) attributes
         * convertible - 54% discount, you can change RI attribute (for example after month you find out you need more compute capacity)
         * scheduled - you reserve instance for specific time period (one day for every week)
-* Spot (50-90% discount) - not commitment from aws (you bid for a cheaper price, and if any instance is available you got it, but you pay not what you bid, but the second highest bid)
-once spot price exceeds your bill, ec2 would be terminated within 2 min
+    With RI you can modify: instance size (within the same instance family) / AZ / merge 2 into 1 (2 * t2.small => t2.large), or split one into 2 smaller. Yet you can't change OS.
+* Spot (50-90% discount) - no commitment from aws (you bid for a cheaper price, and if any instance is available you got it, but you pay not what you bid, but the second highest bid). Once spot price exceeds your bill, ec2 would be terminated within 2 min.
 There are 2 spot termination policies:
     * amazon termination - when spot price exceeds bid price, amazon automatically terminate your instances. In this case you don't pay for extra minutes, it all rounded to hours. (so if you used for 1 hour 30 min - you would pay for 1 hour only)
-    * user termination - when you terminate spot instances for some reason - you pay full amount up to minutes (so if you used for 1 hour 30 min - you would pay for 90 minutes usage)
+    * user termination - when you terminate spot instances for any reason - you pay full amount up to minutes (so if you used for 1 hour 30 min - you would pay for 90 minutes usage)
 * Dedicated (can be on-demand or reserved) - your ec2 instance runs on physically separate hardware
-With reserved instances you can modify
-* instance size (within the same instance family)
-* AZ
-* merge 2 into 1 (2 * t2.small => t2.large), or split one into 2 smaller
-You can't change OS
-There are 3 types of IP address
-* private IP - your instance is not available from outside, only from within your VPC (base on SG)
-* public (dynamic - cause it changes) IP - you instance is available from outside. Given once to concrete instance, if you stop/start instance it may change
-* elastic(static - doesn't change) IP - public IP that you can assign to any instance
-source/destination checks
+There are 3 types of IP address:
+* private - your instance is not available from outside, only from within your VPC
+* public (dynamic - cause it changes when you stop/start instance) - you instance is available from outside
+* elastic(static - doesn't change) - public IP that you can assign to any instance. If you stop/terminate it would persist and you would pay for it.
+Source/destination checks:
 * instance must be a source/destination of any traffic it sends/receive
 * each ec2 performs it by default
 * if your instance is NAT instance - it not a source/destination, it just a proxy to other instances. That's why for Nat instance you should disable it.
-There are several instance types. You can get full view [here](https://www.ec2instances.info)
+There are several instance types. You can get full view [here](https://www.ec2instances.info):
 * C (good for CPU load)
 * R (good for RAM load)
 * M (middle between cpu & ram)
 * I (good for I/O operations)
 * G (good for GPU)
-* T2/T3 (burstable type) - good performance for a short time (burst) - if you overuse this burst your performance will downgrade
-when you cpu not bursting, you earn `burst credit` (you can view it in CloudWatch), once it hits 100% load, burst is turned on and you pay with your credit
-once your credit is 0, performance downgrade
+* T2/T3 (burstable type) - good performance for a short time (burst) - if you overuse this burst your performance will downgrade. When you cpu not bursting, you earn `burst credit` (you can view it in CloudWatch), once it hits 100% load, burst is turned on and you pay with your credit once your credit is 0, performance downgrade.
 * T2/T3 unlimited burst (you pay for extra burst credit)
 It usually takes longer time to stop instance then to reboot. The reason is when you stop it does some clean up by removing dns name, public IPv4, private IPv4, IPv6, ec2 instance store.
-2 types of scaling
-* vertical - enlarge instance capacity, need downtime. Stop instance, go to instance settings => change instance type and select new instance type, then start it.
-Stopping is required cause Amazon has to move the VM to a different piece of hardware with the available resources for the size change.
-If you are using CF template and change `InstanceType` there, CF smart enough to stop/change/start your instance (so it won't create new one with new instance type).
+2 types of scaling:
+* vertical - enlarge instance capacity, need downtime. Stop instance, go to `instance settings => change instance type` and select new instance type, then start it.
+Stopping is required cause Amazon has to move the VM to a different piece of hardware with the available resources for the size change. If you are using CF template and change `InstanceType` there, CF smart enough to stop/change/start your instance (so it won't create new one with new instance type).
 * horizontal - add more instances, no need for downtime
-ASG (auto-scaling group) - allows you scale you system. There are 3 types:
+ASG (auto-scaling group) - allows you to horizontally scale you system. If you delete ASG all instances of it's type would be deleted. There are 4 types:
 * manual scaling - manually change number of mix/max/desired instances in asg, so it would add/remove ec2 accordingly
-* predictive scaling (proactive approach) - dynamically change number of running instances based on ML algo that would predict load on the next 48 hours, based on previous load
-* on demand or dynamic scaling (reactive approach) - dynamically change number of running instances based on some params:
+* predictive scaling (proactive approach) - dynamically change number of running instances based on ML algorithms that would predict load on the next 48 hours, based on previous load
+* dynamic or on-demand scaling (reactive approach) - dynamically change number of running instances based on some params:
     * Simple scaling - scale based on a single scaling adjustment.
     * Step scaling - same as several simple policies joined together by steps.
     Suppose you want to increase number of ec2 based on cpu utilization, and have following rules:
@@ -1647,22 +1622,22 @@ ASG (auto-scaling group) - allows you scale you system. There are 3 types:
     30% < cpu < 60% -- add 2 ec2
     cpu > 60% -- add 3 ec2
     Of course you can create 3 simple policy and 3 CloudWatch alarm for each step. But it too much, so it's better to have 1 alarm and 1 step policy.
-    Be aware that step policy `MetricIntervalLowerBound/MetricIntervalUpperBound` add this value to value from CloudWatch alarm. So if you don't want you should leave lower bound, cause you are not allowed to set negative values  (take a look at `cloudformation/asg-simple-step.yml`)
+    Be aware that step policy `MetricIntervalLowerBound/MetricIntervalUpperBound` add this value to value from CloudWatch alarm. So if you don't want you should leave lower bound, cause you are not allowed to set negative values  (take a look at `CloudFormation/asg-simple-step.yml`)
     * Target tracking scaling - scale based on a target value for a specific metric (ASG create CloudWatch alarms that trigger the scaling policy). So if you don't want to mess with alarms and want smart system that can scale out/in based on some metric you should use it.
-    With this smart policy cloudwatch alarm and step adjustment policy created behind the scene, and manage number of ec2 based on target
-        * ASGAverageCPUUtilization - based on cpu consumption
-        * ALBRequestCountPerTarget - based on number of requests for elb
-        * ASGAverageNetworkIn/ASGAverageNetworkOut - based on average number of bytes
-* Scheduled scaling - specify changing of min/max instances based on some scheduled value (for example you know your peak hours every day). crontab notation is used for this.
+    With this smart policy CloudWatch alarm and step adjustment policy created behind the scene, and manage number of ec2 based on target:
+        * `ASGAverageCPUUtilization` - based on cpu consumption
+        * `ALBRequestCountPerTarget` - based on number of requests for elb
+        * `ASGAverageNetworkIn/ASGAverageNetworkOut` - based on average number of bytes
+* Scheduled scaling - specify changing of min/max instances based on some scheduled value (for example you know your peak hours every day), crontab notation is used for this.
 You can also create your own custom metrics. But it should change based on number of instances (latency is bad and won't work, cause adding/removing instances doesn't directly affect response time)
 If you have single ec2 and you need to deploy java project there, you can just ssh there and put .jar file directly. But if you are managing a fleet of ec2 using ASG you would better to use efs and put your .jar there, so whenever new ec2 is started it would take this .jar and run your app.
 Types of scaling:
 * scale up - remove current instance and create new one with bigger compute/memory capacity
-* scale out - add one or more instances
 * scale down - remove current instance and create new one with lesser compute/memory capacity
+* scale out - add one or more instances
 * scale in - remove one or more instances
 Cooldown period - prevent ASG from adding/removing instances before the effects of previous activities are visible, so it helps to prevent the initiation of an additional scaling activity based on stale metrics.
-Lifecycle hooks - you can execute some logic after AS create new instance (useful when you don't have ready to use AMI and need to tune instance after creation), see `cloudformation/asg-sqs-hook.yml`.
+Lifecycle hooks - you can execute some logic after ASG create new instance (useful when you don't have ready-to-use AMI and need to tune instance after creation), see `CloudFormation/asg-sqs-hook.yml`.
 lifecycle hook puts the instance into a wait state (Pending:Wait or Terminating:Wait). The instance is paused until you continue or the timeout period ends. 
 Yet if you launch instance it will become available immediately and can serve requests. When you launch new instance you can receive sqs message
 ```
@@ -1704,20 +1679,17 @@ Termination policy - customizing how asg would terminate your instances:
 Launch template - similar to launch configuration but with additional props like:
 * allows you to have multiple versions of a template
 * allowed to add multiple instance types instead of one single type (you can launch both Spot and On-Demand ec2)
-* provide more advanced features (dedicated hosts, )
-ASG (Auto Scaling group) - a collection of same ec2 managed by AS. if you delete ASG all instances of it's type would be deleted.
+* provide more advanced features (dedicated hosts)
 You can configure SNS to get notification when your ASG scales out/in or replace unhealthy instance.
 LC (launch configuration) - template that ASG uses to launch new instances. One ASG use one LC. You can't modify LC, if you need to change some params you should create new LC and update your ASG.
-You can use on-demand or spot instances in LC, in case of spot you should set bid price in LC.
-ASG can launch your instances across multiple AZ but only within same region.
+You can use on-demand or spot instances in LC, in case of spot you should set bid price in LC. ASG can launch your instances across multiple AZ but only within same region.
 Unhealthy instance can be determine by 2 healthchecks:
 * ec2 healthcheck (default check for asg, check only status of instance itself) - use it if you don't use elb
 * elb healthchek - more elaborated check (for example to check if instance return status 200)
-ASG troubleshoot
+ASG troubleshoot:
 * more than 1 policy triggered by single event -> in this case asg launch policy with the greater impact (if one policy add 2 ec2 and another 4 -> 4 ec2 would be added)
 * scale-out and scale-in triggered by single event -> in this case scale-out wins
-Hibernation (suspend-to-disk) - like OS sleep command, temporary store RAM in ebs volume, and restore RAM from ebs on wake-up (ebs volume must be large enough to store RAM and be encrypted).
-When wake-up happens:
+Hibernation (suspend-to-disk) - like OS sleep command, temporary store RAM in ebs volume, and restore RAM from ebs on wake-up (ebs volume must be large enough to store RAM and be encrypted). When wake-up happens:
 * ram is restored from ebs
 * all running processes are resumed
 * all attached data volumes are reattached
@@ -1725,156 +1697,144 @@ If instance takes long time to bootstrap you can pre-warm it:
 * launch it with hibernation enabled
 * bring it to desired state
 * hibernate it until you need it
-You are not charged for hibernated instance in stop state, but you are charged for ebs that store ram snapshot.
-If you have custom AMI, you should first enable hibernation for it, by installing `ec2-hibinit-agent`.
+You are not charged for hibernated instance in stop state, but you are charged for ebs/elasticIP. If you have custom AMI, you should first enable hibernation for it, by installing `ec2-hibinit-agent`.
 You can't hibernate instance in ASG/ECS, instance root volume store (only with ebs store, cause instance root volume would be flushed when instances moved to stop state), more that 150GB RAM or for more than 60 days. 
 If you try to hibernate instance in ASG, it will mark it as unhealthy (cause from asg perspective instance is stopped), terminate it and launch new replacement.
-Spot fleet - a list of spot ec2 instances you can request
-EC2 fleet - a list of spot/on-demand/reserved instances you can request
+There are 2 types of fleet:
+* spot - list of spot ec2 instances you can request
+* ec2 - list of spot/on-demand/reserved instances you can request
 
 ###### Athena
-Athena is an interactive query service that makes it easy to analyze data in Amazon S3 using standard SQL. 
-Athena uses presto under the hood. Presto - good solution if you need to connect to multiple data sources.
-You don’t need to load your data into Athena, as it works directly with data stored in S3. Athena integrates with Amazon QuickSight for easy visualization.
-It uses managed data catalog (aws glue - ETL tool) to store tables you create from s3.
-AntiPattern
+Athena is an interactive query service that makes it easy to analyze data in Amazon S3 using standard SQL. It uses presto under the hood. Presto - good solution if you need to connect to multiple data sources.
+You don’t need to load your data into Athena, as it works directly with data stored in S3. It integrates with Amazon QuickSight for easy visualization. It uses managed data catalog (aws glue - ETL tool) to store tables you create from s3.
+AntiPattern:
 * Enterprise Reporting and Business Intelligence (for enterprise level it's better to use RedShift, query engine in Redshift has been optimized to perform especially well on data warehouse workloads)
 * ETL Workloads (for etl you should use EMR/Glue)
 Be careful cause each time you run query athena scan your s3, so each query would cost some money.
-There are 3 types of aws services
+There are 3 types of aws services:
 * ec2 - you manage your server (like install mysql there)
 * managed server - aws manages server for yourself (like rds, you just tell how big server you want, aws provision it)
 * serverless/clusterless - aws hides away server from you (athena - you just write query and don't care how many servers would be needed to execute it)
 Because you pay for each query based on the amount of scanned data, you can reduce costs by:
-* data partition - reduce amount of scanned data for each query. Use hive for partitioning. You can partition by any key, good practice partition based on date/time or location.
-You specify partition in WHERE clause, so athena scan only this single partition instead of whole bucket.
-It can also help avoid errors, cause if data not partitioned and you run query against whole bucket you may get exceptions.
-* use workgroups - you can separate users/apps and set limits on amount of data each query or the entire workgroup can process, and to track costs.
-You use iam policy to control access to workgroups.
+* data partition - reduce amount of scanned data for each query. Athena uses hive for partitioning. You can partition by any key, good practice to partition based on date/location.
+You specify partition in WHERE clause, so athena scan only this single partition instead of whole bucket. It can also help avoid errors, cause if data not partitioned and you run query against whole bucket you may get exceptions.
+* use workgroups - you can separate users/apps and set limits on amount of data each query or the entire workgroup can process, and to track costs. Use iam policy to control access to it.
 
 ###### Organizations
-Organizations - service that allows to tie several accounts to master account and centrally manage them (billing, services, policies)
-Organization is a collection of AWS accounts that you can organize into a hierarchy and manage centrally.
+Organizations - service that allows to tie several accounts to master account and centrally manage them (billing, services, policies), so it basically collection of AWS accounts that you can organize into a hierarchy and manage centrally.
 Master Account - aws account from which you create your organization. From there you can also create/invite/delete other accounts. It's charged to pay all bills by all accounts. Once chosen, you can't change master account.
 As long as you have organization and your account - master account, it can't accept invitation to join other organizations. If you want it to become member account, you have to delete your organization first.
-OU (Organization Unit) - group of accounts under one name, can be used to build hierarchical structure.
-Account can be a member of only 1 organization/OU at a time. OU can be a member of only 1 OU at a time.
-Typical use case is to have 2 accounts (dev + prod) to separate concerns, but to manage them from single one.
-There are 2 types of policies
+OU (Organization Unit) - group of accounts under one name, can be used to build hierarchical structure. Account can be a member of only 1 organization/OU at a time. OU can be a member of only 1 OU at a time.
+Typical use case is to have 2 accounts (dev + prod) to separate concerns, but to manage them from single one. There are 2 types of policies:
 * SCP (Service Control Policy) - policy you can apply to a group of aws accounts, defines service actions (like run EC2 instance), it follows the same rules as IAM policies.
-You can attach a policy to the root/OU/account. SCP overwrites IAM permissions (if you create SCP to block ec2 creation for all accounts, even root user form child account won't be able to launch any ec2 except for t2.micro)
-Order of execution - most restrictive policies take precedence.
-It never grant permission, they work like permission boundary - defining max set of permission accounts in organization can have.
-It will never limit permission to internal user of current account who has permission to access resources (for these purposes you have to use permission boundary) 
-* TP (Tag policy) - set of rules regarding tags (which resource should have which tags)
+You can attach a policy to the root/OU/account. SCP limits IAM permissions (if you create SCP to block ec2 creation for all accounts, even root user form child account won't be able to launch any ec2 except for t2.micro)
+Order of execution - most restrictive policies take precedence. It never grant permission, they work like permission boundary - defining max set of permission accounts in organization can have.
+It will never limit permission to internal user of current account who has permission to access resources (for these purposes you have to use permission boundary).
+* TP (Tag policy) - set of rules regarding tags (which resource should have which tags).
 Feature sets (you select it when you create organization) - how your organization manage its accounts:
 * Consolidated billing - provides only shared billing functionality (you can't define SCP/TP with this type)
-* all - all available features including consolidating bulling
+* all - consolidating bulling + all available features 
 Both types provide discounts:
-* s3 - more you use - less you pay, so in case of single bill aws treats all accounts as signle one, so all s3 usage is calculated and paid by single account
-* ec2 - suppose accountA has 6 RI, accountB - 0. During some hour accountA - used 3 instances, B - also 3. B was using on-demand, but because of single bill and A has 3 RI, it would be calculated as 6 RI. So you won't pay anything for B on-demand instances.
+* s3 - more you use - less you pay, so in case of single bill aws treats all accounts as single, so all s3 usage is calculated and paid by single account
+* ec2 - suppose accountA has 6 RI, accountB - 0. During some hour accountA - used 3 instances, B - also 3. B was using on-demand, but because of single bill and A has 3 not used RI, it would be calculated as 6 RI. So you won't pay anything for B on-demand instances.
 This would work if B launched same type of ec2 in the same AZ as RI from accountA.
 * rds - same as ec2, but only dbType(oracle/mysql)/instanceType/launchType(multi-AZ) should match.
 RI (Reserved instances) - 2 reports:
-* utilization - how many % of total bought instances are actually used
-* coverage - how much % of overall instance usage covered by RI. So when it drops below 50% you should investigate which of on-demand instances are running 24/7 and possibly replace it with reserved.
+* utilization - how many % of total RI are actually used
+* coverage - how much % of overall instance usage covered by RI. So when it drops below 50% you should investigate which of on-demand instances are running 24/7 and possibly replace it with RI.
 
 ###### Well-Architected Tool
 Well-Architected Tool is a aws service that allows you to validate your current infrastructure against 5 pillars of well-architected framework.
 It works by creating a workload (collection of resources and code that make up a cloud application) and then run this workload against 5 pillars.
-The tool will evaluate your workload and provide an improvement plan with a prioritized list of issues.
-It's free of charge, you only pay for underlying aws resources.
+The tool will evaluate your workload and provide an improvement plan with a prioritized list of issues. It's free of charge, you only pay for underlying aws resources.
 
 ###### VPC
 VPC (Virtual private cloud) - a kind of internal network in on-premises. You can have some servers inside and they won't be accessible outside of vpc.
-You have complete control over your virtual networking environment, including selection of your own IP address ranges, creation of subnets, and configuration of route tables and network gateways.
+You have complete control over your virtual networking environment, including selection of your own IP ranges, creation of subnets, and configuration of route tables and network gateways.
 By default every account has default VPC (and default subnet for each AZ), so if you don't create any other, and create EC2 directly, default VPC would be used.
 Amazon VPC consists of:
-* VPC - private network, logically isolated from other networks in aws cloud. Can span across multiple AZ. Instances in different AZ charged $0.01 per GB for data transfer. Size should be /16 - /28 (so from 16-65535)
-* Subnet - private sub-network inside VPC. Can reside only within single AZ.
-For each subnet - 5 IP are automatically taken. 4 from the start + last.
-    * 0 - network address
-    * 1 - vpc router
-    * 2 - dns server
-    * 3 - reserved for future use
+* VPC - private network, logically isolated from other networks in aws cloud. Can span across multiple AZ. Instances in different AZ charged $0.01 per GB for data transfer. Size should be /28 - /16 (so from 16-65535, actual size would be -5 from each subnet)
+* Subnet - private sub-network inside VPC. Can reside only within single AZ. For each subnet 5 IP are automatically taken. 4 from the start + last.
+    * 1 - network address
+    * 2 - vpc router
+    * 3 - dns server
+    * 4 - reserved for future use
     * last - broadcast address
-So if you have subnet of diff size - you have to subtract 5 to get total size
+    So if you have subnet of diff size - you have to subtract 5 to get total size
     * /24 => 256-5=251
     * /28 => 16-5=11
     * /29 => 8-5=3
     * /30 => 4-5=-1
-    That's why minimum size should be /28 (cause for /29 you got only 3 size, there is no point in such a network)
-* RT (Route table) - set of rules (routes) to determine where network traffic from your VPC is directed
-Single RT can be associated with multiple subnets, but single subnet can be associated to one RT only.
+    That's why minimum size should be /28 (cause for /29 you got size 3, there is no point in such a network)
+* RT (Route table) - set of rules (routes) to determine where network traffic from your VPC is directed. Single RT can be associated with multiple subnets, but single subnet can be associated to one RT only.
 When you create vpc, default RT is created and all subnets by default assigned to this RT, yet if you go to this RT you will see that subnets are not explicitly associated with it.
 That is because this RT - is default. If you create new RT and associate subnet with it, or implicitly associate default RT with subnet, you will see that RT has this association.
-Every RT has routes with 2 fields (if you want to get to such destination go to this target)
-* Internet Gateway - entry point between your VPC and Internet. It allows EC2 in VPC directly access Internet. You can use public IP or elastic IP(won't change after stop/start) to both communicate with Internet and receive requests from outside web-servers.
-* NAT Gateway - Network address resolution service in private subnet to access the Internet. Instances without public IP use NAT gateway to access Internet. Nat allows outbound communication, but doesn't allows machines on the Internet to access instances inside VPC.
-Since Nat GateWay created per AZ for HA it's suggested to create it in every AZ where you have instances. In this case single AZ failure will not block internet access from other private networks
-With IG you have both outbound and inbound access, but with Nat gateway - only outbound (your instance can access Internet, but is unaccessable from Internet)
+Every RT has routes with 2 fields (if you want to get to such destination go to this target).
+* IGW (Internet Gateway) - entry point between your VPC and Internet. It allows EC2 in VPC directly access Internet. You can use public IP or elastic IP(won't change after stop/start) to both communicate with Internet and receive requests from outside web-servers.
+* NAT Gateway - Network address resolution service in private subnet to access the Internet. Instances from private subnets use NAT gateway to access Internet. Nat allows outbound communication, but doesn't allows machines on the Internet to access instances inside VPC.
+Since Nat GateWay created per AZ for HA it's suggested to create it in every AZ where you have instances. In this case single AZ failure will not block internet access from other private networks. With IGW you have both outbound and inbound access, but with Nat - only outbound (your instance can access Internet, but is unaccessable from Internet).
 * Virtual private gateway - VPC+VPN
 * Peering Connection - create private secure connection between 2 VPC
 * Egress-only Internet Gateway - egress(going out) only access from VPC to Internet over IPv6
 Old terminology
-* VPC == VRF (virtual routing and forwarding)
-* Subnet == VLAN
-EC2-to-EC2 communication through public IP
+* VPC = VRF (virtual routing and forwarding)
+* Subnet = VLAN
+EC2-to-EC2 communication through public IP:
 * When inside same Region - inside aws network
 * When in different Regions that connected with VPC peering - inside aws network
 * When in different Regions - not guaranteed to communicate inside aws network (probably communicate through Internet)
-SG (Security group) - also called virtual firewall, decide which traffic (both inbound & outbound) on which port to allow to ec2.
+SG (Security group) - also called virtual firewall, decide which traffic (both inbound & outbound) on which port to allow to ec2. By default all inbound traffic blocked, all outbound traffic allowed.
 Some firewalls let you filter on source ports, but SG - only on destination ports. So you can't say allow only tcp requests coming from port 80.
 * inbound - check traffic based on source (source -  IP address or SG)
 * outbound - check traffic based on destination (destination - IP address or SG)
-[Connection tracking](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-security-groups.html#security-group-connection-tracking)
-Working with SG rules you can notice interesting phenomena.
+Working with SG rules and ping you can notice interesting thing:
 * You run ping, it waits cause there is no icmp rule. You add icmp rule and ping starts to work.
 * Ping is running in console. You remove icmp rule from SG, but ping continue. If you stop it and run again it wouldn't work, cause there is no ping rule.
-If you read above link everything becomes clear. Cause connection is stateful, SG doesn't track outbound traffic. So when icmp rule was enabled, ping established connection, and outbound traffic
-started to flow. Once you remove icmp rule, you can't establish new ping connection, but old one established before can continue receive responses (outbound traffic - which is not tracked due to statefulness of SG).
-SG vs ACL
-* SG operate at instance level, specify which traffic is allowed to/from EC2
-You can set source as CIDR or other SG (in this case only instances from this SG can access your instance)
-* NACL operates at subnet level and evaluate traffic that enter/exit subnet. Don't filter traffic inside same subnet.
-Evaluation order: starting from lowest to highest without overwriting each other.
-In example once we hit rule #90 it was applied, and later rule #100 will not overwrite it.
-Or you can also think that rules are evaluated in decreasing order by overwriting each other
-Suppose you want to allow all traffic except http
+If you read [Connection tracking](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-security-groups.html#security-group-connection-tracking) everything becomes clear. Cause connection is stateful, SG doesn't track outbound traffic. 
+So when icmp rule was enabled, ping established connection, and outbound traffic started to flow. Once you remove icmp rule, you can't establish new ping connection, but old one established before can continue receive responses (outbound traffic - which is not tracked due to statefulness of SG).
+SG vs NACL:
+* SG (stateful filtering) operate at instance level, specify which traffic is allowed to/from EC2. You can set source as CIDR or SG (in this case only instances from this SG can access your instance)
+* NACL (stateless filtering) operates at subnet level and evaluate traffic that enter/exit subnet. Don't filter traffic inside same subnet.
+Evaluation order: starting from lowest to highest without overwriting each other. In example once we hit rule #90 it was applied, and later rule #100 will not overwrite it.
+Or you can also think that rules are evaluated in decreasing order by overwriting each other. Suppose you want to allow all traffic except http:
+```
 90  - tcp - 80    - DENY
 100 - all traffic - ALLOW
-stateless filtering, SG - stateful filtering
-You can only assign one NACL to one subnet, yet you can assign many SG to same ec2
-You can't block specific IP with SG, you need to use NACL
+```
+You can only assign one NACL to one subnet, yet you can assign many SG to same ec2. You can't block specific IP with SG, you need to use NACL.
 Stateful - if you send request from your ec2 you will got response even if SG doesn't have any outbound rules
 If you set up NACL (let's say for ssh) you should also add outbound rules (cause nacl are stateless). But for ssh outbound port is not 22, it's ephemeral port - When a client connects to a server, a random port from the ephemeral port range (1024-65535) becomes the client's source port.
 When you create VPC, default SG created automatically. It allows inbound traffic from instances with same SG (source - SG_ID), and all outbound traffic.
 So if you need 2 ec2 to talk with each other you can assign both of them same SG where source is ID of this SG - this means traffic allowed from any instance of the same SG
-To monitor traffic you can use
-* VPC traffic mirroring (it copies traffic and send it to NLB with a UDP listener)
-* VPC flow logs (it includes information about allowed and denied traffic, source and destination IP addresses, ports, protocol number, packet and byte counts, and an action: accept or reject)
+To monitor traffic you can use:
+* VPC flow logs (it includes information about allowed and denied traffic, source and destination IP addresses, ports, protocol number, packet and byte counts, and an action: accept or reject). You can configure it for:
+    * vpc - flow logs would be for all ENI in whole vpc
+    * subnet - flow logs would be written for all ENI in this subnet
+    * network interface - flow logs would be written only for this particular ENI
+    `${version} ${account-id} ${interface-id} ${srcaddr} ${dstaddr} ${srcport} ${dstport} ${protocol} ${packets} ${bytes} ${start} ${end} ${action} ${log-status}`
+    `2 123456789010 eni-1235b8ca123456789 172.31.16.139 172.31.16.21 20641 22 6 20 4249 1418530010 1418530070 ACCEPT OK` (SSH traffic (destination port 22, TCP protocol) to network interface eni-1235b8ca123456789 in account 123456789010 was allowed)
+    As you see there is no actual payload, only fact that somebody try to send some tcp/udp message to someone. If you want actual payload you should use Traffic Mirroring.
+    So use it to troubleshoot connectivity and security issues, make sure that the network access rules are working as expected
+* VPC traffic mirroring (it copies traffic and send it to NLB with a UDP listener, so it includes actual body). Provides deeper insight into the network traffic by analyzing traffic content (payload).
 VPC peering:
 * you can create peering between VPC in 2 regions or in 2 accounts (in this case one account should accept peering request from another)
 * traffic of peering within same region is not encrypted, but isolated, just like traffic between 2 EC2 in the same VPC
-* traffic of peering within different regions is encrypted
-multiple VPC connection (3 ways)
-* vpc peering (2014) - connect 2 vpc to each other (requester -> request access to accepter).
-Peering is non-transitive connection type (basically it's one-to-one). So if A has a peering with B, and B has a peering with C, A has no access to C, in order for them to access each other you have to create peering between them too
+* traffic of peering between different regions is encrypted
+multiple VPC connection (3 ways):
+* vpc peering (2014) - connect 2 vpc to each other (requester -> request access to acceptor). Peering is non-transitive connection type (basically it's one-to-one). 
+So if A has a peering with B, and B has a peering with C, A has no access to C, in order for them to access each other you have to create peering between them too.
 It's good when you need to connect 2 or 3 vpc, but in case you have to connect 10 vpc, that means you would have to create `n*(n-1)/2` peering connection between each and every vpc.
-Good news is that peering can be cross-account and cross-region. Basic cloudformation example here `cloudformation/advanced-networking/vpc-peering.yml`
-If you want just to connect 2 services from 2 vpc without exposing all other services you should use PrivateLink.
-* transit vpc (2016) - a way to connect multiple vpc (form different regions) and your on-premises data center without creating hundreds of peering connections.
-Transit vpc is not aws service, it's just a concept or architecture how you should design such a transit vpc that would connect all other vpc with each other.
+Good news is that peering can be cross-account and cross-region. Basic CloudFormation example here `CloudFormation/advanced-networking/vpc-peering.yml`. If you want just to connect 2 services from 2 vpc without exposing all other services you should use PrivateLink.
+* transit vpc (2016) - a way to connect multiple vpc (form different regions) and your on-premises data center without creating hundreds of peering connections. It's not aws service, it's just a concept or architecture how you should design such a transit vpc that would connect all other vpc with each other.
 The idea is to create one vpc with ec2 and IGW and install there some software from Cisco/Aviatrix (software is commercial, you buy ami with Cisco Cloud Services Router 1000V Series).
 Implicit drawback is cost: since you pay for every traffic exiting (egress) your VPC, if you use transit vpc as single internet gateway, all other vpc would access internet from it. So fo each internet access you would pay twice
 first - egress traffic from vpc (that goes to transit vpc), second - egress traffic from transit vpc itself (from there it goes to public internet).
 underneath it's all these vpc and on-premises centers are connected to each other through vpn and transit vpc basically works as vpn server and routing this vpn traffic.
-* transit gateway (2018) - it's aws managed service that works like transit vpc, but don't have all it's complexity of installing and configuring.
+* transit gateway (2018) - it's aws managed service that works like transit vpc, but don't have all it's complexity of installing and configuring. 
 You create TGW and then just attach VPC/VPN configurations and add route tables. VPN ECMP (Equal Cost Multipath) support - you can enable when you create TGW, vpn connection must use dynamic routing
 Connect vpc to on-premise network (2 ways):
-* site-to-site VPN
-Route propagation allows a virtual private gateway to automatically propagate routes to the route tables - so you don't need to manually update RT (works for both static & dynamic routing)
-After running `cloudformation/advanced-networking/site-to-site-vpn.yml` you will have to manually go to site-to-site vpn and download configuration (select openswan as router).
+* site-to-site VPN. Route propagation allows a virtual private gateway to automatically propagate routes to the route tables - so you don't need to manually update RT (works for both static & dynamic routing)
+After running `CloudFormation/advanced-networking/site-to-site-vpn.yml` you will have to manually go to site-to-site vpn and download configuration (select openswan as router).
 Then update values from here (left, right, and last line for `/etc/ipsec.d/aws.secrets`). After you will be able to ping ec2 in private vpc
 ```
 # left - on-premise, right - aws vpc side
@@ -1907,57 +1867,40 @@ service ipsec restart
 * DX (Direct Connect) - private connection between aws region and you (aws router to your on-premise router) or your ISP (internet service provider). For HA use redundant second connection, in case first failed.
     DX vs VPN:
     * dx - private connection between on-premise and aws region. Use it if you need high bandwidth.
-    * vpn - IPSec connection over the Internet between on-premise and vpc. It's slower than dc since it use public internet. But secure & can be setup very quickly. 
-You can use vpn above dc, but it's redundant, cause dx is already secured. Best practice to configure vpn as failover for dx (in case it failed).
+    * vpn - IPSec connection over the Internet between on-premise and vpc. It's slower than dx since it use public internet. But secure/cheaper & can be setup very quickly. 
+You can use vpn above dx, but it's redundant, cause dx is already secured. Best practice to configure vpn as failover for dx (in case it failed).
 LAG (Link Aggregation Groups) - ability to order multiple direct connect ports and manage them as single larger connection (max number is 4 ports, port types should be the same, all 1GB, or all 10GB). LAG connections operate in Active/Active mode.
-DCG (Direct Connect Gateway) - grouping of VGW (virtual private gateways) and VIF (private virtual interfaces). Multi-account DCG allows to associate up to 10 VPC (from different accounts) or up to 3 Transit Gateway.
-Direct Connect and DCG support both 1500 and 9001 MTU (you can also modify it if you need).
-DX VIF (you have to create one of the following VIF to start using dx):
+DXG (Direct Connect Gateway) - grouping of VGW (virtual private gateways) and VIF (private virtual interfaces). Multi-account DXG allows to associate up to 10 VPC (from different accounts) or up to 3 Transit Gateway.
+Direct Connect and DCG support both 1500 and 9001 MTU (you can also modify it if you need). DX VIF - you have to create one of the following VIF to start using dx:
 * private - access vpc using private IP
 * public - access all aws public services using public IP. If you want to use vpn over dx you have to create this VIF.
 * transit - access vpc Transit Gateway associated with dx
-Don't confuse:
-* VPC PrivateLink - expose aws services (except s3/dynamoDb who are using gateway endpoint) or private ec2 to vpc in the same or other aws account, by adding eni inside vpc for exposed service
-If you have 3 vpc and ec2 in each of them, and you want to connect these 3 ec2 you can use either privateLink or vpc peering. PrivateLink is better solution, cause it allows you to connect only these 3 ec2, without exposing all other services from these vpc to each other.
+Don't confuse 3 links:
+* VPC PrivateLink - expose aws services (except s3/dynamoDb who are using gateway endpoint) or private ec2 to vpc in the same or other aws account, by adding eni inside vpc for exposed service.
+If you have 3 vpc and ec2 in each of them, and you want to connect these 3 ec2 you can use either PrivateLink or vpc peering. PrivateLink is better solution, cause it allows you to connect only these 3 ec2, without exposing all other services from these vpc to each other.
 Yet keep in mind that vpc endpoint can't be cross-region. So your 3 vpc from above example should be in the same region.
-* VPC ClassicLink - connect classic ec2 to vpc
-    * before 2013 there were no default VPC and all EC2 where launched in flat network shared with other aws users
-    * allows to connect your VPC with EC2 classic, EC2 becomes a member of VPC Security Group
-* VPC Link - connect API GateWay to private ec2
-VPC Endpoint - private connection to AWS services without Internet Gateway/NAT/VPN. It make sure all traffic goes inside aws network. There are 2 types:
+* VPC ClassicLink (before 2013 there were no default VPC and all EC2 where launched in flat network shared with other aws users) - allows to connect your VPC with ec2 classic, ec2 becomes a member of VPC SG.
+* VPC Link - connect API GateWay to private ec2.
+VPC Endpoint - private connection to AWS services without IGW/NAT/VPN. It make sure all traffic goes inside aws network. There are 2 types:
 * Gateway endpoint — target for a route in your route table for traffic destined to a supported AWS service (s3/dynamoDB)
-* Interface endpoint — ENI with a private IP address from the IP address range of your subnet that serves as an entry point for traffic destined to a supported service.
-So instead of calling public dns name of some service, aws create ENI inside your subnet, and so you don't need internet access anymore. You can directly call this private IP since it's inside your vpc.
+* Interface endpoint — ENI with a private IP address from the IP range of your subnet that serves as an entry point for traffic destined to a supported service.
+So instead of calling public dns name of some service, aws creates ENI inside your subnet, and so you don't need internet access anymore. You can directly call this private IP since it's inside your vpc.
 Using this enables you to connect to services powered by AWS PrivateLink (so basically all aws services + your custom created via endpoint services, except those in gateway endpoint).
 Endpoint services - you create some service (ec2) and add NLB(not application/classic lb), and other aws accounts can connect to your service via interface endpoint.
-So using this you can create private service provider that would provide some logic to other aws accounts on vpc-to-vpc basis
-Of course you can access your NLB form the internet (you should have at least one RT with internet gateway route to access NLB/ALB by dns name), but using privatelink will ensure that all traffic is within aws , and no traverse the internet (same as this service running inside your vpc),
-and to access your service from privatelink you don't need to have internet gateway (cause all traffic inside aws and doesn't go to outside Internet)
-So you can access service (ec2) of one vpc from another without vpc peering/internet gateway/vpn
-If you share your service with aws marketplace you can get vanity dns name like `us-east-1.vpce.mycoolsite.com`.
+So using this you can create private service provider that would provide some logic to other aws accounts on vpc-to-vpc basis.
+Of course you can access your NLB form the internet (you should have at least one RT with internet gateway route to access NLB/ALB by dns name), but using PrivateLink will ensure that all traffic is within aws, and no traverse the internet (same as this service running inside your vpc),
+and to access your service from PrivateLink you don't need to have internet gateway (cause all traffic inside aws and doesn't go to outside Internet). So you can access service (ec2) of one vpc from another without vpc peering/IGW/VPN.
+If you share your service with aws marketplace you can get vanity dns name like `us-east-1.vpce.mycoolsite.com`. 
 By default ec2 instances dns name is disabled (only ip address is given). You can enable it for vpc by going to `Actions=>Edit DNS Hostname`.
 You can change subnet setting `Actions=>Modify auto-assign IP settings` and in this case when you create ec2, it would by default select subnet settings (enable/disable auto-assign public IP address). Of course you can also change it on ec2 level.
-VPC Tenancy
+VPC Tenancy:
 * multi-tenant (virtual isolation) - you share your instances on the same server as other aws clients, you instance is divided by virtualization
-* single-tenant (dedicated, physical isolation) - you get completely separate hardware for you (can be useful if you have regulatory requirements)
-EC2 Tenancy - you can set it for individual ec2 also.
-* shared (accessible only if vpc tenancy = multi-tenant) - Your instance runs on shared hardware
-* dedicated - Your instance runs on single-tenant hardware
-* host - Your instance runs on a Dedicated Host, which is an isolated server with configurations that you can control
-After launch you can change only from dedicated to host and vice versa.
-Flow Logs - you can configure flow logs for
-* vpc - flow logs would be for all ENI in whole vpc
-* subnet - flow logs would be written for all ENI in this subnet
-* network interface - flow logs would be written only for this particular ENI
-Example & format of flow logs:
-    `${version} ${account-id} ${interface-id} ${srcaddr} ${dstaddr} ${srcport} ${dstport} ${protocol} ${packets} ${bytes} ${start} ${end} ${action} ${log-status}`
-    SSH traffic (destination port 22, TCP protocol) to network interface eni-1235b8ca123456789 in account 123456789010 was allowed
-    `2 123456789010 eni-1235b8ca123456789 172.31.16.139 172.31.16.21 20641 22 6 20 4249 1418530010 1418530070 ACCEPT OK`
-As you see there is no actual payload, only fact that somebody try to send some tcp/udp message to someone. If you want actual payload you should use Traffic Mirroring.
-So use
-* Flow Logs - troubleshoot connectivity and security issues, make sure that the network access rules are working as expected
-* Traffic Mirroring - deeper insight into the network traffic by analyzing traffic content (payload)
-3 layers of security
+* single-tenant (dedicated, physical isolation) - you get completely separate hardware (can be useful if you have regulatory requirements)
+EC2 Tenancy - you can set it for individual ec2:
+* shared (accessible only if vpc tenancy = multi-tenant) - instance runs on shared hardware
+* dedicated - instance runs on single-tenant hardware. After launch you can change only from dedicated to host and vice versa.
+* host - instance runs on a Dedicated Host, which is an isolated server with configurations that you can control
+3 layers of security:
 * vpc layer - route tables define which traffic to allow
 * subnet layer - NACL decide which traffic to allow
 * ec2 layer - SG
@@ -1969,8 +1912,8 @@ Prefix list - set of one or more CIDR blocks (can be used in SG as `SourcePrefix
 If you want your ec2 to be accessed from elb you should put `SourceSecurityGroupId` id of SG for elb (in this way only elb or whoever has same SG can access ec2).
 DHCP options sets - set of rules how to create private domain name. When you create new vpc, default DHCP set would be linked to it. It also add dns server into your vpc to determine dns rules.
 You can crete your custom set and link it to any vpc. You can also remove DHCP set form vpc, in this case no dns name would be created.
-If you want to change vpc dhcp set you can do it only after you've created vpc, go to `Actions=>Edit DHCP options set` and select another set or remove it from vpc.
-Yet if you unlink dhcp from default vpc, and try to create ec2, it will still use default dhcp rules and add public/private dns names.
+If you want to change vpc DHCP set you can do it only after you've created vpc, go to `Actions=>Edit DHCP options set` and select another set or remove it from vpc. 
+Yet if you unlink DHCP from default vpc, and try to create ec2, it will still use default dhcp rules and add public/private dns names.
 
 ###### Elastic Beanstalk
 Imagine you have spring boot app that use mysql and you want to deploy it to aws, what you have to do:
@@ -1980,26 +1923,24 @@ You should store connection string/password in s3, since anybody with access to 
 3. create EC2
 4. ssh to ec2, install java, copy your jar file, and run it passing all env vars
 Quite a lot for a start. Imagine if we have a tool where you can just say that you want java app, mysql db, set env vars and upload jar file, and all infra would be built for you.
-Welcome beanstalk - aws service where you can say what you want and beanstalk will build all infrastructure for you.
+Welcome beanstalk - aws service where you can say what you want and beanstalk will build all infrastructure for you (using CloudFormation under the hood). After successful deployment you can see your rds/ec2/elb and configure them separately.
 Beanstalk - PaaS that mange deployment, provisioning, load-balancing, auto-scaling, health monitoring. Best suited when you need quickly deploy something and don't want to learn about other aws services.
-It keeps the provisioning of building blocks (EC2/RDS/ELB/Auto Scaling/CloudWatch), deployment of applications, and health monitoring abstracted from the user so they can just focus on writing code
+It keeps the provisioning of building blocks (EC2/RDS/ELB/Auto Scaling/CloudWatch), deployment of applications, and health monitoring abstracted from the user so they can just focus on writing code.
 You simply upload a `.war/.jar` (in case of java) file, and beanstalk run tomcat server for you and deploy your app. Yet developer has a right to manage all infrastructure provided by beanstalk.
-EB using cloudformation template that build your configuration. After successfull deployment you can see your rds/ec2/elb and configure them separately.
-Keep in mind that for prod deployment it's better to use your own cloudformation script and manage infra with it, eb is good for testing purposes, PoC.
+Keep in mind that for prod deployment it's better to use your own CloudFormation script and manage infra with it, eb is good for testing purposes, PoC.
 With EB you shouldn't worry about java installed on ec2, if you select java it would automatically install it into ec2 and use Corretto as jdk (same true for other popular env like node.js/tomcat and so on..)
-You can use EB with Docker, you deploy docker file or built image. Use this when you want one docker per ec2 instance. If docker instance crushed/killed EB would restart it automatically.
-You can use multicontainer Docker platform for EB, in this case eb would manage ecs cluster for you. So you don't need to manually create ecs and decide how many nodes should be running there.
+You can use EB with Docker:
+* single - you deploy docker file or built image. Use this when you want one docker per ec2 instance. If docker instance crushed/killed EB would restart it automatically.
+* multicontainer - in this case eb would manage ecs cluster for you. So you don't need to manually create ecs and decide how many nodes should be running there.
 
 ###### DMS
-Database Migration Service - used for easy migration between different db (like from MySql to DynamoDB), and also for data replication.
-You can use dms to migrate any supported db into s3 using `csv/parquet` format.
+Database Migration Service - used for easy migration between different db (like from MySql to DynamoDB), and also for data replication. Use it to migrate any supported db into s3 using `csv/parquet` format.
 There are 2 types of conversion:
 * engine conversion - homogeneous, when source and target - same db (for example both are mysql)
 * SCT (Schema Conversion Tool) - heterogeneous, for converting between existing schemas
 To run migration you need:
-* create replication instance - instance that would run migration (download from source, transform, upload to destination)
-You can use multi-AZ deployment, in this case if during middle of migration your replication instance failed for some reason, migration would continue with failover instance. Otherwise there is a risk that migration would be half-completed.
-You should put replication instance into the same vpc as your source or target, but you can use different vpc and connect them with vpc peering.
+* create replication instance - instance that would run migration (download from source, transform, upload to destination). Use multi-AZ deployment, in this case if during middle of migration your replication instance failed for some reason, migration would continue with failover instance. 
+Otherwise there is a risk that migration would be half-completed. You should put replication instance into the same vpc as your source or target, but you can use different vpc and connect them with vpc peering.
 * specify source and target endpoints
 * create & monitor tasks
 
@@ -2639,13 +2580,13 @@ CloudFront duplicates your data across different edge locations, but GA only rou
 Example of creating 2 ec2 in 2 different regions + GA that have both of them as endpoints
 ```
 # create ec2 in singapore
-aws cloudformation create-stack --stack-name=ga --template-body=file://cloudformation/global-accelerator/ap-southeast-1-ec2.yml --profile=awssa --region=ap-southeast-1
+aws CloudFormation create-stack --stack-name=ga --template-body=file://CloudFormation/global-accelerator/ap-southeast-1-ec2.yml --profile=awssa --region=ap-southeast-1
 
 # get ec2 id
-aws cloudformation describe-stacks --stack-name=ga --query "Stacks[0].Outputs[0].OutputValue" --profile=awssa --region=ap-southeast-1 
+aws CloudFormation describe-stacks --stack-name=ga --query "Stacks[0].Outputs[0].OutputValue" --profile=awssa --region=ap-southeast-1 
 
 # create ec2 and ga in us-east-1 region
-aws cloudformation create-stack --stack-name=ga --template-body=file://cloudformation/global-accelerator/us-east-1-ec2-ga.yml --parameters=ParameterKey=SingaporeEc2Id,ParameterValue={instanceId} --profile=awssa
+aws CloudFormation create-stack --stack-name=ga --template-body=file://CloudFormation/global-accelerator/us-east-1-ec2-ga.yml --parameters=ParameterKey=SingaporeEc2Id,ParameterValue={instanceId} --profile=awssa
 ```
 Now you can access them using GA IP address, by using it you would be routed to the closest region. Now you can also terminate instance in closest region, and by doing this GA IP would be routed to second region.
 Healthchecks are already built into endpoints, so you don't need to explicitly define them.
@@ -2711,7 +2652,7 @@ openssl genrsa -out client.key 1024
 openssl req -key client.key -new -out client.req
 openssl x509 -req -in client.req -CA ca.pem -CAkey privkey.pem -CAserial serial.srl -out client.pem
 ```
-Then upload them and use `cloudformation/advanced-networking/client-vpn.yml` update params as server/client ACM ID.
+Then upload them and use `CloudFormation/advanced-networking/client-vpn.yml` update params as server/client ACM ID.
 Download config and add 
 * `<cert></cert>` - certificate from client.pem file
 * `<key></key>` - private key from client.key file
@@ -2782,7 +2723,7 @@ So it helps you provision/manage your app in aws using Chef solo installed in on
 Difference with other platform:
 * stacks - config management platform (using Chef to automate deployment/management, has less service coverage, just the most basic like vpc/iam/ec2/elb/cloudWatch). Best practice to have separate stack for each env (dev/prod).
 * beanstalk - app management platform (you just upload code and beanstalk configure everything else use it's own CF templates)
-* cloudFormation - infra management platform. If you need to provision a lot of resources use cloudformation, if you have something like LAMP stack use beanstalk
+* cloudFormation - infra management platform. If you need to provision a lot of resources use CloudFormation, if you have something like LAMP stack use beanstalk
 OpsWorks Stacks create lifecycle events and on each of them some recipes could be executed (default events - setup/configure/deploy/undeploy/shutdown).
 OpsWorks for Chef Automate - fully managed Chef server and automation tools for ci/cd. You can migrate to it from Stacks, but you would need to rewrite some recipes, but most recipes would work without any change.
 OpsWorks for Puppet Enterprise - managed Puppet Enterprise server and automation tools for ci/cd (including orchestration/provisioning/deploying services in ec2)
