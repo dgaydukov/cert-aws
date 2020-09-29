@@ -27,14 +27,11 @@ There are 2 main reasons to get it
 ### TODO
 ----------------------------------------------------------------------------------------------
 * sort out tax issue / bank address issue / account termination
-https://www.youtube.com/watch?v=dCucC1SKkvI
-https://www.youtube.com/watch?v=4-JmX6MIDDI
-https://www.youtube.com/watch?v=s-E_V5Xyg6k
 ----------------------------------------------------------------------------------------------
 * spring5: spring & hibernate sharding (https://github.com/apache/shardingsphere)
 * spring5: validate cors issue, compare simple vs non-simple requests, check how different headers like `Access-Control-Request-Method/Access-Control-Request-Headers` affect response 
 * spring5: if SqsMessageDeletionPolicy.NO_REDRIVE remove message on success (without manual message deletion)
-* add to cert list https://www.openstack.org/coa/
+* add to cert list https://www.openstack.org/coa & change mongodb cert for amazon database
 * https://docs.aws.amazon.com/managed-blockchain/latest/managementguide/network-components.html
 * cf use mappings inside template
 * kubelet vs kubectl

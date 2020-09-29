@@ -1295,6 +1295,9 @@ It is a platform for streaming data on AWS, making it easy to load and analyze s
 With Kinesis, you can ingest real-time data such as application logs, website clickstreams, IoT telemetry into your databases, data lakes, and data warehouses, or build your own real-time applications using this data
 * kineiss firehose (near real time) - load massive volumes of streaming data into AWS (you can configure lambda to transform you data before loading). Receives stream data and stores it in s3/RedShift/ElasticSearch
 * kineiss streams (real time) - ability to process the data in the stream. Stream for processing data it can't load data directly to s3/redshift - additional processing required, firehose - for storing data directly in s3/redshift
+Just like fifo/groupId when you send message to kinesis you add partitionKey - determined into which shard to put your record
+Yet there is no deduplicateId, so you can have duplicates inside shards. You can scale throuhgput for shard by dividing single shard into 2 by dividing partitionKey.
+Consumer decide from which shard to read, they query kinesis, get list of shards, pick one, and start reading using iterator.
 * kineiss Analytics - analyze streaming data real time with standard SQL
 AntiPattern:
 * Small scale consistent throughput (Kinesis Data Streams is designe and optimized for large data throughput)
@@ -2147,6 +2150,10 @@ Read replica vs elasticache - they both solve same problem but for different pur
 * elasticache - since it's a cache if data constantly changing you have to constantly clear the cache - which basically remove advantages of cache
 
 ###### SQS
+Payload vs attributes:
+* payload - body usually json, can be encrypted
+* attributes - key/value pair, always unencrypted.
+So when you decide where to put data keep encryption in mind.
 SQS (Simple Queue Service) - managed service that provide asynchronous decoupling and publisher/subscriber (queue) model. There are 2 types:
 * standard - ordering is not guaranteed, no limit to number of messages (you should implement custom protection against duplicates)
 * FIFO (first in, first out) - ordering is guaranteed, limit - 300 messages per second. There a few concept specific to this queue:
@@ -2166,6 +2173,7 @@ If queue is empty:
 * long polling - wait till message got into queue, or polling timeout (by default 20 sec) expires (save SQS cost, cause reduce number of empty receives). It's better to always use this type of polling.
 Retention period - how long message stays in queue until removed by sqs. 60 seconds - 14 days, default - 4 days.
 Visibility Timeout (0 sec - 12 hours, default - 30 sec) - once you app consume a message it becomes invisible to others. But until your app explicitly delete message, it won't be deleted.
+For fifo if message in visibility timeout, no other consumer can get second massage with same groupId. So we need to wait until message processed, after any consumer can process other messages of this group. So you got order but no guarantee who is going to process next message (can be any consumer).
 You can get twice same message if:
 * received message is not deleted during `VisibilityTimeout` (time during which you should handle message and delete it from queue), you can [read more](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-visibility-timeout.html#changing-message-visibility-timeout)
 * `DeleteMessage` operation doesn't delete it on all nodes (since sqs is distributed system it may happen that one node was unavailable for short time and didn't get delete message, then it will deliver message again) - very rare
@@ -2330,6 +2338,7 @@ eks cluster consists of 2 vpc:
 ###### Fargate
 Fargate is serverless compute engine for containers running in ECS/EKS, it removes the need to provision and manage servers. It's not a separate product, you should use it with either ecs/eks, otherwise there is no point in it.
 You should use it when you don't want to manually provision your EC2 instances. If you need greater control over EC2 (for security or customization), it's better to avoid using it, and instead manually provision EC2 instances.
+For eks fargate every pod is single ec2 with SG.
 
 ###### ElastiCache
 ElastiCache - manages service that runs Memcached/Redis server nodes in cloud. It automates common administrative tasks required to operate a distributed in-memory key-value environment, consists of:
@@ -2804,6 +2813,7 @@ Subscription registration - topic must confirm subscription before starting to g
 * email(email-json) - sns send email with link, use should click the link
 * sqs - sns sends challenge message containing a token, you should call `/ConfirmSubscription` api to confirm you have access to sqs queue
 SNS is durable storage, it stores message across several AZ before confirming message receipt.
+Destination retry - if http destination unavailable you can configure retry numbers. For lambda/sqs retry is forever, you can be sure that message would be delivered there.
 Just like sqs, sns may occasionally deliver message trice due to distributed nature, so try to design your subscribers to be idempotent.
 If subscriber unavailable for specified retry number (for example http method was removed from your api), message would be discarded.
 There are 2 types of sms:
@@ -2930,8 +2940,11 @@ Example of using ssml:
 ```
 
 ###### MQ
-MQ (Message queue) - managed Apache ActiveMQ message broker. It stores data in EFS and provides HA.
-It provides both push-based and poll-based messaging model.
+MQ (Message queue) - managed Apache ActiveMQ message broker. It stores data in EFS and provides HA. It provides both push-based and poll-based messaging model.
+Selector (like filter in sns) - can filter messages for different consumers. Exclusive consumer - all messages from queue goes to single consumer.
+Message group - all messages with same JMSXGroupID header goes to same consumer. There are 2 types of delivery mode:
+* persistent - message broker should persist message on disk before deliver it to consumer
+* non-persistent - stored in RAM
 MQ vs SQS:
 * sqs - simple queue with post/poll options only
 * mq - complex solution with message routing, fanouts, distribution lists, that supports AMQP/JMS protocols
