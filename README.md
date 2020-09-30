@@ -28,6 +28,11 @@ There are 2 main reasons to get it
 ----------------------------------------------------------------------------------------------
 * sort out tax / bank address / account termination
 ----------------------------------------------------------------------------------------------
+* print flash documents
+* add to cert list https://www.openstack.org/coa & change mongodb cert for amazon database
+* rename repo cert-aws-sa => cert-aws
+* rename repo how-to-become-a-senior-js-developer => how-to-become-lead-architect
+* redo repo into multiple cert repo with each cert with it's own directory. add main readme => explanation cause all certs relate to each other to some degree
 * spring5: @Data on classes that extends each other (cause fileds from base class not in toString)
 * spring5: spring & hibernate sharding (https://github.com/apache/shardingsphere)
 * spring5: validate cors issue, compare simple vs non-simple requests, check how different headers like `Access-Control-Request-Method/Access-Control-Request-Headers` affect response 
@@ -35,15 +40,12 @@ check how cors on spring , why rerutn cors not found instead of desired cors.
 withCredentials doesn't allow * as allowed_origin
 test in firefox => it shows pre-flight OPTIONS request
 * spring5: if SqsMessageDeletionPolicy.NO_REDRIVE remove message on success (without manual message deletion)
-* add to cert list https://www.openstack.org/coa & change mongodb cert for amazon database
 * https://docs.aws.amazon.com/managed-blockchain/latest/managementguide/network-components.html
 * cf use mappings inside template
 * kubelet vs kubectl
 * https://docs.aws.amazon.com/eks/latest/userguide/getting-started.html
 * does eks use the same vpc or create new and add vpc endpoint kuber eni into your vpc
 * add secondary ip ranges to vpc (not directly related to eks, but can be useful => eks would use ip from these new range and won't drain your private ip addresses)
-* rename repo cert-aws-sa => cert-aws
-* rename repo how-to-become-a-senior-js-developer => how-to-become-lead-architect
 * ec2 instance assume role from another account
 * add custom health check to elb
 * use AWS::AutoScalingPlans::ScalingPlan to create asg based on predictive scaling (https://docs.aws.amazon.com/autoscaling/plans/userguide/what-is-aws-auto-scaling.html)
