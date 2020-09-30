@@ -90,7 +90,7 @@
 * 3.47 [OpsWorks](#opsworks)
 * 3.48 [SWF](#swf)
 * 3.49 [Data Pipeline](#data-pipeline)
-* 3.50 [ElasticSearch & CloudSearch](#elasticsearch--cloudsearch)
+* 3.50 [ElasticSearch & CloudSearch](#ElasticSearch--cloudsearch)
 * 3.51 [SageMaker](#sagemaker)
 * 3.52 [Lake Formation](#lake-formation)
 * 3.53 [Application Discovery Service](#application-discovery-service)
@@ -2241,7 +2241,7 @@ You can add documentation to your api and expose it as swagger file. Api Gateway
 Api Gateway calls are supported by CloudFront, so your api is highly available.
 CORS (Cross-origin resource sharing) - request made to another domain/subdomain of the same domain/port/protocol. There are 2 types:
 * simple - you should add `Access-Control-Allow-Origin` header in response. Request simple if:
-    * it's GET/HEAD/POST, for POST it should include `Origin` header
+    * it's GET/HEAD/POST, for POST it should include `Origin` header in request
     * content type is `text/plain`/`multipart/form-data`/`application/x-www-form-urlencoded`
     * there is no custom headers
 * non-simple. CORS protocol require browser to send pre-flight OPTIONS request (it must have 3 headers: Origin/Access-Control-Request-Method/Access-Control-Request-Headers) for all non-simple cors requests.
@@ -2386,7 +2386,7 @@ For this to work you should assign a role to ec2 with policy `AmazonEC2RoleforSS
 ###### Config
 Config - manages service that provides aws resources inventory, config history, change notification. When you turn it on it create config item for each resource.
 It provides detailed view of the configuration of AWS resources in your AWS account (how the resources are related and how they were configured in the past so that you can see how the configurations and relationships change over time).
-It integrated with cloudTrail, and record CloudTraidID for any resource change. Config Item - point-in-time record of aws resource, that include metadata, attributes, relationships, current configuration, and related events
+It integrated with cloudTrail, and record CloudTrailID for any resource change. Config Item - point-in-time record of aws resource, that include metadata, attributes, relationships, current configuration, and related events
 Config Rule - desired configuration of resource that is evaluated against actual change (and report in case of mismatch). Conformance Pack - collection of config rules.
 CloudTrail - list of all api calls (cli & CF templates in the end are transformed into api calls). It stores point-in-time configuration of your aws resources.
 
@@ -2628,7 +2628,7 @@ it doesn't support trust relationship, schema extension, multi-factor auth.
 ###### Wavelength
 Wavelength combines 5G networks with aws compute/storage services. You should use it when you want your aws services to be accessed from mobile devices with low latency.
 Wavelength Zone - aws infra (compute/storage) deployed directly to telecom provider's datacenter so traffic reach aws infra without leaving provider network.
-Carrier gateway - provides connection between subnet in watelength zone and telecom carrier (provider). So it provides NAT service from subnet IP range to provider's IP range.
+Carrier gateway - provides connection between subnet in Wavelength zone and telecom carrier (provider). So it provides NAT service from subnet IP range to provider's IP range.
 Local Zone - aws solution where aws services are located locally near your end-users providing low latency.
 Outpost - aws rack with compute/memory devices that you install on-premises and run it through aws management console.
 
@@ -2698,8 +2698,8 @@ CS vs ES
 * CS can use s3/DynamoDB, ES - only ebs
 ELK stack consists of 3 parts
 * ElasticSearch - log searching
-* LogStash - log collection from ec2 to elasticsearch cluster
-* Kibana - data visualization tool (visualize data from elasticsearch)
+* LogStash - log collection from ec2 to ElasticSearch cluster
+* Kibana - data visualization tool (visualize data from ElasticSearch)
 Fluentd vs LogStash:
 * has internal in-memory system, so no need for additional tools like redis / internal queue limited to 20 events, so it needs redis to work normally
 * uses standard built-in parsers (JSON, regex, csv) / use external plugins to parse log
@@ -2771,7 +2771,7 @@ During migration DataSync:
 * can use filters to include/exclude specific set of files
 * migrate archive data directory to Glacier
 * can build your data lake, by automating the transfer of valuable on-premises data sets to s3
-* performs integrity checks to ensure transferred data is correspond to source data, by calculating file checksum and sompare it with on-premise file checksum
+* performs integrity checks to ensure transferred data is correspond to source data, by calculating file checksum and compare it with on-premise file checksum
 * you can monitor transfer progress in CloudWatch (how many files and total volume)
 * ensure file transfer even if some interruption (like network problem). In this case DataSync will resume file transfer and complete it after failed attempt
 * use direct connect + vpc endpoint so data transfer happens inside vpc and doesn't go outside aws network
@@ -2797,7 +2797,7 @@ If you want any of these protocols and want to move data to aws you have to host
 After creating TF you get:
 * always-on server endpoint enabled for FTP/SFTP/FTPS. Endpoint can be accessible from within vpc or from public internet.
 FTP endpoint will only be available inside vpc cause it's not secure. If you need internet facing endpoint choose FTPS/SFTP.
-You can also create single endpoint that supports multiple protocols (yet if one of the supported protocol FTP - endpoint would be accessible only within vpc)
+You can also create single endpoint that supports multiple protocols (yet if one of the supported protocol FTP - endpoint would be accessible only within vpc).
 * set up users by integrating with microsoft AD, LDAP, any custom identity provider
 * assign IAM role to provide access to s3 bucket
 
@@ -2836,8 +2836,7 @@ SNS vs SES for email sending - although both can be used to send emails, there a
     
 ###### AppSync
 AppSync- allows developers to manage/synchronize mobile app data across devices, access/modify data when mobile device in offline state, so basically your app can work in offline mode.
-It supports Android/iOS/JavaScript. You can use open source clients to connect to AppSync GraphQL endpoint to fetch/save data.
-You can use dynamoDB/ElasticSearch/Lambda as data sources for AppSync.
+It supports Android/iOS/JavaScript. You can use open source clients to connect to AppSync GraphQL endpoint to fetch/save data. You can use dynamoDB/ElasticSearch/Lambda as data sources for AppSync.
 
 ###### Service Catalog
 SC helps IT administrators & devops create/manage aws resources to end users. So you can control which users have access to which products.
@@ -2851,8 +2850,7 @@ Product has versioning, so end users can choose new version or update their stac
 
 ###### Inspector 
 It's automated security assessment service that test the network accessibility of your ec2 and apps running on them.
-You install agent on your OS, and it collects data and send it to inspector for analyzing. 
-Assessment template - configuration based on which inspector validates your system.
+You install agent on your OS, and it collects data and send it to inspector for analyzing. Assessment template - configuration based on which inspector validates your system.
 
 ###### Neptune
 It's fully-manages graph database (not relational) service optimized for storing billions of relationships and querying the graph with milliseconds latency. 

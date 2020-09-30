@@ -26,10 +26,14 @@ There are 2 main reasons to get it
 
 ### TODO
 ----------------------------------------------------------------------------------------------
-* sort out tax issue / bank address issue / account termination
+* sort out tax / bank address / account termination
 ----------------------------------------------------------------------------------------------
+* spring5: @Data on classes that extends each other (cause fileds from base class not in toString)
 * spring5: spring & hibernate sharding (https://github.com/apache/shardingsphere)
 * spring5: validate cors issue, compare simple vs non-simple requests, check how different headers like `Access-Control-Request-Method/Access-Control-Request-Headers` affect response 
+check how cors on spring , why rerutn cors not found instead of desired cors. 
+withCredentials doesn't allow * as allowed_origin
+test in firefox => it shows pre-flight OPTIONS request
 * spring5: if SqsMessageDeletionPolicy.NO_REDRIVE remove message on success (without manual message deletion)
 * add to cert list https://www.openstack.org/coa & change mongodb cert for amazon database
 * https://docs.aws.amazon.com/managed-blockchain/latest/managementguide/network-components.html
@@ -44,6 +48,7 @@ There are 2 main reasons to get it
 * add custom health check to elb
 * use AWS::AutoScalingPlans::ScalingPlan to create asg based on predictive scaling (https://docs.aws.amazon.com/autoscaling/plans/userguide/what-is-aws-auto-scaling.html)
 * add elb to 2 vpc (load traffic between 2 vpc)
+* api gateway add cors example (both simple & non-simple) + add multiple cors headers
 * add HealthCheck to elb + default ec2 healthcheck from asg (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-elb-health-check.html)
 * add vpc to `cloudformation/ec2-cw-recover-alarm.yml` (in case you run it in region where no default vpc)
 * edit all current cf templates => rewrite efs from default SG to custom (cause it's better to explicitly control SG)
@@ -148,3 +153,4 @@ TargetGroup:
 * ClientVPN add nat instance so internet would work without tunnel split (yet check it also with tunnel split, and your IP would be different)
 * create template with both cloudwatch & aws budget cost alarms (when your usage above 1$ and 5$)
 * create site-to-site vpn with 2 locations so each of this can communicate with each other using VPN CloudHub (each location is imitated by separate vpc)
+* solve final test for saa
