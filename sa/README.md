@@ -1,7 +1,9 @@
 # AWS Solutions Architect certification
 
 ### Description
-Here is my experience for taking [SAA-C02](https://aws.amazon.com/certification/certified-solutions-architect-associate) and [SAP](https://aws.amazon.com/certification/certified-solutions-architect-professional) certification.
+Here is my experience of taking 2 certifications, both associate & professional:
+* [SAA-C02](https://aws.amazon.com/certification/certified-solutions-architect-associate)
+* [SAP](https://aws.amazon.com/certification/certified-solutions-architect-professional).
 
 ### Contents
 * [Solutions Architect Tips](https://github.com/dgaydukov/cert-aws-sa/blob/master/files/sa.md)
@@ -14,19 +16,8 @@ Here is my experience for taking [SAA-C02](https://aws.amazon.com/certification/
 
 ### TODO
 ----------------------------------------------------------------------------------------------
-* sort out tax / bank address / account termination
+* sort out tax/bankAddress/accountTermination
 ----------------------------------------------------------------------------------------------
-* redo repo into multiple cert repo with each cert with it's own directory. add main readme => explanation cause all certs relate to each other to some degree
-* spring5: is it bad if we `http.csrf().disable()` or remove this line (why do we need such a line in the first place => if we don't use it post/put don't work without passing this token)
-* spring5: what does it mean `sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)` (why do we need it)
-* spring5: @Data on classes that extends each other (cause fields from base class not in toString)
-* spring5: spring & hibernate sharding (https://github.com/apache/shardingsphere)
-* spring5: validate cors issue, compare simple vs non-simple requests, check how different headers like `Access-Control-Request-Method/Access-Control-Request-Headers` affect response 
-check how cors on spring , why return cors not found instead of desired cors. 
-withCredentials doesn't allow * as allowed_origin
-test in firefox => it shows pre-flight OPTIONS request
-https://docs.spring.io/spring-security/site/docs/4.2.x/reference/html/cors.html
-* spring5: if SqsMessageDeletionPolicy.NO_REDRIVE remove message on success (without manual message deletion)
 * https://docs.aws.amazon.com/managed-blockchain/latest/managementguide/network-components.html
 * cf use mappings inside template
 * kubelet vs kubectl
