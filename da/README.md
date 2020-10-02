@@ -1,1 +1,1 @@
-# 
+# AWS Certified Data Analytics Specialty
