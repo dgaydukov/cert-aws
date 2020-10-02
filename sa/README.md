@@ -28,19 +28,17 @@ There are 2 main reasons to get it
 ----------------------------------------------------------------------------------------------
 * sort out tax / bank address / account termination
 ----------------------------------------------------------------------------------------------
-* print flash documents
-* add to cert list https://www.openstack.org/coa & change mongodb cert for amazon database
 * rename repo cert-aws-sa => cert-aws
-* rename repo how-to-become-a-senior-js-developer => how-to-become-lead-architect
 * redo repo into multiple cert repo with each cert with it's own directory. add main readme => explanation cause all certs relate to each other to some degree
 * spring5: is it bad if we `http.csrf().disable()` or remove this line (why do we need such a line in the first place => if we don't use it post/put don't work without passing this token)
 * spring5: what does it mean `sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)` (why do we need it)
-* spring5: @Data on classes that extends each other (cause fileds from base class not in toString)
+* spring5: @Data on classes that extends each other (cause fields from base class not in toString)
 * spring5: spring & hibernate sharding (https://github.com/apache/shardingsphere)
 * spring5: validate cors issue, compare simple vs non-simple requests, check how different headers like `Access-Control-Request-Method/Access-Control-Request-Headers` affect response 
 check how cors on spring , why return cors not found instead of desired cors. 
 withCredentials doesn't allow * as allowed_origin
 test in firefox => it shows pre-flight OPTIONS request
+https://docs.spring.io/spring-security/site/docs/4.2.x/reference/html/cors.html
 * spring5: if SqsMessageDeletionPolicy.NO_REDRIVE remove message on success (without manual message deletion)
 * https://docs.aws.amazon.com/managed-blockchain/latest/managementguide/network-components.html
 * cf use mappings inside template
