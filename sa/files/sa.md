@@ -1294,11 +1294,14 @@ Origin Failover - ability to fail over to second origin in case first origin is 
 It is a platform for streaming data on AWS, making it easy to load and analyze streaming data.
 With Kinesis, you can ingest real-time data such as application logs, website clickstreams, IoT telemetry into your databases, data lakes, and data warehouses, or build your own real-time applications using this data
 * kineiss firehose (near real time) - load massive volumes of streaming data into AWS (you can configure lambda to transform you data before loading). Receives stream data and stores it in s3/RedShift/ElasticSearch
-* kineiss streams (real time) - ability to process the data in the stream. Stream for processing data it can't load data directly to s3/redshift - additional processing required, firehose - for storing data directly in s3/redshift
+It's near real time because it takes data from data streams in real time, buffer them and then sends batches of data into storage (s3/dynamoDB).
+* kineiss streams (real time, it's also data storage - data stored there durable for specified period) - ability to process the data in the stream. Stream for processing data it can't load data directly to s3/redshift - additional processing required, firehose - for storing data directly in s3/redshift
 Just like fifo/groupId when you send message to kinesis you add partitionKey - determined into which shard to put your record
 Yet there is no deduplicateId, so you can have duplicates inside shards. You can scale throuhgput for shard by dividing single shard into 2 by dividing partitionKey.
 Consumer decide from which shard to read, they query kinesis, get list of shards, pick one, and start reading using iterator.
-* kineiss Analytics - analyze streaming data real time with standard SQL
+* kineiss Analytics - analyze streaming data real time with:
+    * sql - run sql queries to process data
+    * apache flink - use java/scala to process & analyze data
 AntiPattern:
 * Small scale consistent throughput (Kinesis Data Streams is designe and optimized for large data throughput)
 * Long-term data storage and analytics (By default Kinesis Data Streams stores data 24 hours, you can extend retention up to 168 hours (7 days), if you need longer you should considered RDS/DynamoDb/S3/Glacier)
@@ -2229,14 +2232,19 @@ Batching - ability to send/receive batch of up to 10 messages:
 
 ###### API Gateway
 API Gateway - managed api service that makes it easy to publish/manage api at any scale. It can:
-* meter/throttle traffic to your backend
+* support both HTTP(S) and WebSocket
+* use built-in cache system to minimize load to backend
+* meter/throttle traffic to your backend. You can throttle per client by supplying access key to clients (so vip clients can get more throttling than others)
 * security (allow access only to EC2 with specific IAM role, allow only specific cognito users, allow to those who pass Lambda authorizer)
 * DDoS (distributed denial-of-service) attack prevention
 * caching (you backend won't be called every time, for some request cache would be returned)
 * monitoring (integration with CloudWatch can set up some alarms)
 * all endpoints are HTTPS, you can't create unsecure http
 * send both websocket & http calls
-You can also use API Gateway with openApi to quickly generate api endpoints and underlying models. Stage - like a tag, allows your api have multiple versions, like dev stage - myapi.com/dev/users.
+You can also use API Gateway with openApi to quickly generate api endpoints and underlying models. 
+Stage - like a tag, allows your api have multiple versions, like dev stage - myapi.com/dev/users.
+Don't use stages for differente environments, but instead use different aws accounts for different env.
+Real use case for stages is if you need to support different versions of api for prod at the same time.
 You can add documentation to your api and expose it as swagger file. Api Gateway can generate client-side SSL certificate, and you backend can get public key, so it can verify that requests are coming from Api Gateway.
 Api Gateway calls are supported by CloudFront, so your api is highly available.
 CORS (Cross-origin resource sharing) - request made to another domain/subdomain of the same domain/port/protocol. There are 2 types:
@@ -2250,6 +2258,24 @@ To support cors, api should response to this pre-flight request with 3 headers:
 * `Access-Control-Allow-Headers` - indicate which HTTP headers can be used during the actual request
 * `Access-Control-Allow-Origin` - actual origin that allows to call request
 To enable cors for api gateway you have to add support to OPTIONS request with 3 headers and for simple request just add single `Access-Control-Allow-Origin` header.
+There are 3 types:
+* edge-optimized - use CloudFront edge location to more your api closer to your users
+* regional - run in specific region
+* private - accessible only from within vpc
+There are 5 integration types:
+* lambda - 2 modes:
+    * proxy - api gateway wrap original request with some metadata, but don't modify response
+    * direct integration - api gateway modify request/response based on VTL (velocity template language) written by user.
+    So you can do validation on this step, even before your api reach your lambda
+    So if you validate on lambda you pay for it (even if validation failed and much of lambda not executed)
+* http - connect to any http(s) endpoints
+* mock - response without backend service (mostly used for cors options request)
+* aws service - connect to over 100 aws services
+* Vpc Link - connect api gateway to any resource inside private vpc
+Resource policy - just like iam policy you can specify on the AGW level who can access which api based on:
+* aws account
+* IP range (you can use waf to blacklist by IP, cause to apply these rule you have to deploy agw)
+* vpc or vpc endpoints
 
 ###### Cognito
 Cognito - managed user service that add user sing-in/sign-up/management email/phone verification/2FA logic. There are 2 pools:

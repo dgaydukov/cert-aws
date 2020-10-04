@@ -17,7 +17,10 @@ Here is my experience of taking 2 certifications, both associate & professional:
 ### TODO
 ----------------------------------------------------------------------------------------------
 * sort out tax/bankAddress/accountTermination
+* if we are using api gateway for auth why do we need auth service. We can directly integrate api gateway with cognito and authorize all request with congito authorizers
 ----------------------------------------------------------------------------------------------
+* https://aws.amazon.com/cdk/faqs (vs cloudformation)
+* https://aws.amazon.com/eventbridge/faqs - specifically design to build event-driven architecture
 * https://docs.aws.amazon.com/managed-blockchain/latest/managementguide/network-components.html
 * cf use mappings inside template
 * kubelet vs kubectl
@@ -87,6 +90,9 @@ TargetGroup:
 * Try some other vpn server in on-premise site of site-to-site vpn
 * Install ec2 with openswan and use it as personal vpn server
 * Try Athena & Aws Glue with cloudformation/cloudtrail-s3.yml (combine all json files into one. Find who put object into s3)
+* athena federated query (from multiple sources). ELT using athena federated (read from multiple sources and store in s3)
+* athena udf
+* glue etl job vs athena etl job
 * aws config CF template (check that ec2 is of specific type and alert when type has been changed)
 * Kinesis firehose real example (with cf template)
 * enable connection draining and see how it works when you de-register instance or it failed
@@ -133,4 +139,5 @@ TargetGroup:
 * ClientVPN add nat instance so internet would work without tunnel split (yet check it also with tunnel split, and your IP would be different)
 * create template with both cloudwatch & aws budget cost alarms (when your usage above 1$ and 5$)
 * create site-to-site vpn with 2 locations so each of this can communicate with each other using VPN CloudHub (each location is imitated by separate vpc)
+* use kinesis sdk and try java data streaming. In all example firehose consume data from data streams, but can we directly send dota to it without data streams?
 * solve final test for saa
