@@ -116,6 +116,7 @@
 * 3.72 [Batch](#batch)
 * 3.73 [DocumentDB](#documentdb)
 * 3.74 [Keyspaces](#keyspaces)
+* 3.75 [Cloud Development Kit](#cloud-development-kit)
 
 
 
@@ -2249,7 +2250,8 @@ Don't use stages for differente environments, but instead use different aws acco
 Real use case for stages is if you need to support different versions of api for prod at the same time.
 You can add documentation to your api and expose it as swagger file. Api Gateway can generate client-side SSL certificate, and you backend can get public key, so it can verify that requests are coming from Api Gateway.
 Api Gateway calls are supported by CloudFront, so your api is highly available.
-CORS (Cross-origin resource sharing) - request made to another domain/subdomain of the same domain/port/protocol. There are 2 types:
+CORS (Cross-origin resource sharing) - request made to another domain/subdomain of the same domain/port/protocol. Take a look [here](https://github.com/dgaydukov/cert-spring5/blob/master/files/spring5.md#cors) with java/spring.
+There are 2 types:
 * simple - you should add `Access-Control-Allow-Origin` header in response. Request simple if:
     * it's GET/HEAD/POST, for POST it should include `Origin` header in request
     * content type is `text/plain`/`multipart/form-data`/`application/x-www-form-urlencoded`
@@ -3030,3 +3032,11 @@ Cluster can scale up to 1M reads per sec with up to 15 read replicas (read repli
 
 ###### Keyspaces
 It's managed Apache Cassandra–compatible (you can run Cassandra workloads using the same Cassandra Query Language (CQL)) database service. 
+
+###### Cloud Development Kit
+CDK - open-source software development framework for writing cloud infra as code using c#/java/python/typescript. Under the hood cdk compiles code into CloudFormation template and run it in aws.
+You use cdk cli to interact with cdk. Take a look at [examples](https://github.com/aws-samples/aws-cdk-examples). Construct Library - packages solution (maven/npm) for specific CloudFormation construct.
+CDK vs SAM vs CloudFormation:
+* CDK - write templates using programming language
+* SAM - limited CDK only for serverless
+* CloudFormation - write templates using YAML/JSON

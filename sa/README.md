@@ -15,11 +15,10 @@ Here is my experience of taking 2 certifications, both associate & professional:
 * [Free SAP questions](https://www.examtopics.com/exams/amazon/aws-certified-solutions-architect-professional)
 
 ### TODO
-----------------------------------------------------------------------------------------------
 * sort out tax/bankAddress
 * if we are using api gateway for auth why do we need auth service. We can directly integrate api gateway with cognito and authorize all request with congito authorizers
 ----------------------------------------------------------------------------------------------
-* https://aws.amazon.com/cdk/faqs (vs cloudformation)
+* use cdk to implement nat cf template
 * https://aws.amazon.com/eventbridge/faqs - specifically design to build event-driven architecture
 * https://docs.aws.amazon.com/managed-blockchain/latest/managementguide/network-components.html
 * cf use mappings inside template
