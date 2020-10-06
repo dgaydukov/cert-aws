@@ -16,7 +16,7 @@ Here is my experience of taking 2 certifications, both associate & professional:
 
 ### TODO
 ----------------------------------------------------------------------------------------------
-* sort out tax/bankAddress/accountTermination
+* sort out tax/bankAddress
 * if we are using api gateway for auth why do we need auth service. We can directly integrate api gateway with cognito and authorize all request with congito authorizers
 ----------------------------------------------------------------------------------------------
 * https://aws.amazon.com/cdk/faqs (vs cloudformation)
@@ -36,6 +36,7 @@ Here is my experience of taking 2 certifications, both associate & professional:
 * add vpc to `cloudformation/ec2-cw-recover-alarm.yml` (in case you run it in region where no default vpc)
 * edit all current cf templates => rewrite efs from default SG to custom (cause it's better to explicitly control SG)
 * edit all current cf templates => add SG to RDS with source as SG of webserver
+* api gateway put message into queue (without complex lambda code)
 * cf template that trigger lambda every 5 sec, and lambda check liveliness of ec2 (go to ec2 turn off httpd and see that logs are written to cloudwatch) + create alarm on error (more than 2 times send sns email)
 + add cloudwatch event (rule, source - aws.ec2, detailtype-runinstances) when new ec2 started and add tag owner with lambda inside vpc
 * Create cf template with redis cache and ec2 to connect to this cache (SG with clientSG that attached to desired ec2)

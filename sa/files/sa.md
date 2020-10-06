@@ -2138,6 +2138,7 @@ If you have problems with writes and need more capacity you have 2 options:
 * use sqs queue to offload writes, if you need to continue to use your current db
 * switch to dynamoDB (if you don't need relational model)
 Sharding (horizontal partitioning/scaling) - split data into smaller subsets and distribute them across a number of physically separated db servers (shards).
+You can take a look here [mysql sharding example](https://github.com/dgaydukov/cert-spring5/blob/master/files/spring5.md#mysql-sharding) with java/spring.
 Share-nothing model - each shard has same hardware and db engine configuration, but they don't know about each other. So there is no single point of failure, if one shard is down, no other shards affected.
 Disadvantage - because data now separated between shards, you have to re-design your query approach. Because of this sharding is not best solution for OLAP.
 So each shard represented as separate RDS with multi-AZ failover and/or read replica. To distribute data across different shards you can use list/range/hash partitioning.
@@ -2171,6 +2172,7 @@ When you create a queue you can specify dlq (it should be the same type, for sta
 You can get time-in-queue (time how long message has been in queue) by subtracting SentTimestamp attribute from current time. In anonymous access SenderId - IP address of sender (otherwise accountId).
 When you set dlq for sqs queue, it got attribute `RedrivePolicy: {"deadLetterTargetArn":"arn:aws:sqs:us-east-1:ACCOUNT_ID:my_dlq","maxReceiveCount":"3"}`
 `SqsMessageDeletionPolicy.NO_REDRIVE` - would remove message if no redrive policy (dlq) specified. But if it specified messages won't be deleted automatically, you have to manually remove them from code. If message is not deleted several times (max retry), it would be moved to dlq.
+You can read more about no_redrive policy [here](https://github.com/dgaydukov/cert-spring5/blob/master/files/spring5.md#aws-sqs-and-no_redrive-deletion-policy) with example in java/spring.
 If queue is empty:
 * short polling (default) - returns immediately with no results. Only possible way if single thread poll multiple queues, in this case long polling for one empty queue would block other queues, but it generally bad design.
 * long polling - wait till message got into queue, or polling timeout (by default 20 sec) expires (save SQS cost, cause reduce number of empty receives). It's better to always use this type of polling.
@@ -2418,10 +2420,9 @@ CloudTrail - list of all api calls (cli & CF templates in the end are transforme
 
 ###### Aurora
 Aurora - mysql/postgres compatible (most app that works with mysql/postgres would switch with no problem to aurora) aws database solution. 
-Yet some features of mysql/postgres are not supported in aurora (like MyISAM storage engine).
-It runs 5x faster than mysql and 3x faster than postgres. And cost 1/10 of similar solution.
-It replicates 6  copy of itself in at least 3 AZ (2 copies in each az) - so it's highly available.
-Backups and failover are done automatically. Self-healing storage - blocks are constantly checked and restored.
+It's serverless - cause you can set-up min & max capacity and aurora would scale up/down based on load. You can also set up pause if aurora idle for specified time (like turn off if it's idle for more than 5 min). It's ideal for saving money in dev env, but don't use it in prod, cause wake up can be up to 30 sec.
+Yet some features of mysql/postgres are not supported in aurora (like MyISAM storage engine). It runs 5x faster than mysql and 3x faster than postgres. And cost 1/10 of similar solution.
+It replicates 6  copy of itself in at least 3 AZ (2 copies in each az) - so it's highly available. Backups and failover are done automatically. Self-healing storage - blocks are constantly checked and restored.
 Aurora serverlsess - cheap version of aurora, pay only for what you use (aurora start up/down, scale up/down automatically base on your load).
 You have 2 options to migrate to aurora
 * use `mysqldump/pg_dump`, export data from mysql/postgres, and import it into aurora
