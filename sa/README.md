@@ -3,10 +3,10 @@
 ### Description
 Here is my experience of taking 2 certifications, both associate & professional:
 * [SAA-C02](https://aws.amazon.com/certification/certified-solutions-architect-associate)
-* [SAP](https://aws.amazon.com/certification/certified-solutions-architect-professional).
+* [SAP-C01](https://aws.amazon.com/certification/certified-solutions-architect-professional)
 
 ### Contents
-* [Solutions Architect Tips](https://github.com/dgaydukov/cert-aws-sa/blob/master/files/sa.md)
+* [Solutions Architect Tips](https://github.com/dgaydukov/cert-aws/blob/master/sa/files/sa.md)
 
 ### Useful Links
 * [Mock exam SAA](https://www.whizlabs.com/aws-solutions-architect-associate)
