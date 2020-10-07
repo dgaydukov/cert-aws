@@ -1,0 +1,57 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: >
+  Metadata - special tag for any resource to specify additional info about resource
+  Parameters - special block where you define params that can be passed to cli
+  Conditions - special block that can define dynamic conditions
+  Mappings - map of key/value pairs (use !FindInMap [ MapName, TopLevelKey, SecondLevelKey ])
+
+Parameters:
+  Env:
+    Description: Environment type
+    Default: dev
+    Type: String
+    AllowedValues:
+      - prod
+      - dev
+    ConstraintDescription: env should be dev or prod
+
+Conditions:
+  Prod: !Equals [ !Ref Env, prod ]
+  Dev: !Equals [ !Ref Env, dev ]
+
+Mappings:
+  RegionMap:
+    us-east-1:
+      name: Virginia
+      ami: ami-09d95fab7fff3776c
+
+Resources:
+  DevEC2:
+    Condition: Dev
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", ami]
+      KeyName: mykey
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 8
+      Tags:
+        - Key: Name
+          Value: !Join [ "-", [ !Sub '${AWS::StackName}-${Env}', !FindInMap [RegionMap, !Ref "AWS::Region", name] ] ]
+  ProdC2:
+    Condition: Prod
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", ami]
+      KeyName: mykey
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 8
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-${Env}

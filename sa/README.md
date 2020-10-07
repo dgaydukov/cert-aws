@@ -18,7 +18,6 @@ Here is my experience of taking 2 certifications, both associate & professional:
 * sort out tax/bankAddress
 * if we are using api gateway for auth why do we need auth service. We can directly integrate api gateway with cognito and authorize all request with congito authorizers
 ----------------------------------------------------------------------------------------------
-* cf use mappings inside template
 * kubelet vs kubectl
 * https://docs.aws.amazon.com/eks/latest/userguide/getting-started.html
 * does eks use the same vpc or create new and add vpc endpoint kuber eni into your vpc

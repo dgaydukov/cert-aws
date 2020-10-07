@@ -118,6 +118,7 @@
 * 3.74 [Keyspaces](#keyspaces)
 * 3.75 [Cloud Development Kit](#cloud-development-kit)
 * 3.76 [EventBridge](#eventbridge)
+* 3.76 [Managed Blockchain](#managed-blockchain)
 
 
 
@@ -387,11 +388,11 @@ aws sts get-caller-identity --profile=awssa
 * CloudFormation
 ```
 # create stack
-aws CloudFormation create-stack --stack-name=mystack --template-body=file://CloudFormation/condition.yml --profile=awssa --region=us-east-1
+aws CloudFormation create-stack --stack-name=mystack --template-body=file://sa/cloudformation/condition.yml --profile=awssa --region=us-east-1
 # update stack and pass params
-aws CloudFormation update-stack --stack-name=mystack --template-body=file://CloudFormation/condition.yml --parameters=ParameterKey=Env,ParameterValue=prod --profile=awssa --region=us-east-1
+aws CloudFormation update-stack --stack-name=mystack --template-body=file://sa/cloudformation/condition.yml --parameters=ParameterKey=Env,ParameterValue=prod --profile=awssa --region=us-east-1
 # if you are creating a stack that create iam resouce you should explicitly tell to CloudFormation that it's ok to create iam resources
-aws CloudFormation update-stack --stack-name=logs --template-body=file://CloudFormation/ec2-logs.yml --profile=awssa --region=us-east-1 --capabilities=CAPABILITY_IAM
+aws CloudFormation update-stack --stack-name=logs --template-body=file://sa/cloudformation/ec2-logs.yml --profile=awssa --region=us-east-1 --capabilities=CAPABILITY_IAM
 ```
 
 ###### Useful Linux Commands
@@ -2551,13 +2552,13 @@ CloudFront duplicates your data across different edge locations, but GA only rou
 Example of creating 2 ec2 in 2 different regions + GA that have both of them as endpoints
 ```
 # create ec2 in singapore
-aws CloudFormation create-stack --stack-name=ga --template-body=file://CloudFormation/global-accelerator/ap-southeast-1-ec2.yml --profile=awssa --region=ap-southeast-1
+aws CloudFormation create-stack --stack-name=ga --template-body=file://sa/cloudformation/global-accelerator/ap-southeast-1-ec2.yml --profile=awssa --region=ap-southeast-1
 
 # get ec2 id
 aws CloudFormation describe-stacks --stack-name=ga --query "Stacks[0].Outputs[0].OutputValue" --profile=awssa --region=ap-southeast-1 
 
 # create ec2 and ga in us-east-1 region
-aws CloudFormation create-stack --stack-name=ga --template-body=file://CloudFormation/global-accelerator/us-east-1-ec2-ga.yml --parameters=ParameterKey=SingaporeEc2Id,ParameterValue={instanceId} --profile=awssa
+aws CloudFormation create-stack --stack-name=ga --template-body=file://sa/cloudformation/global-accelerator/us-east-1-ec2-ga.yml --parameters=ParameterKey=SingaporeEc2Id,ParameterValue={instanceId} --profile=awssa
 ```
 Now you can access them using GA IP address, by using it you would be routed to the closest region. Now you can also terminate instance in closest region, and by doing this GA IP would be routed to second region.
 Healthchecks are already built into endpoints, so you don't need to explicitly define them.
@@ -3092,3 +3093,11 @@ Cross-account event - you can configure event that it generated in one account a
 EventBridge vs SNS
 * eventBrdige - body - only json, target - 15 services, native integration with many third-party services (like zendesk)
 * sns - kind of limited version of EventBridge, body - any format, target - 6 services
+
+###### Managed Blockchain
+Blockchain network - peer-to-peer network running a decentralized blockchain framework. When you create blockchain you choose type (hyperledger/etherium) and version and create first member.
+Other members can be added later by voting process. Blockchain active as long as at least 1 member there, as long as this is the case nobody, even creator can delete blockchain.
+Aws account and creator don't own network. For any changes there should be voting process between all network members.
+Peer node - when member join network it should have at least 1 peer node which store copy of distributed ledger with all transactions.
+Each blockchain has unique identifier `ResourceID.MemberID.NetworkID.managedblockchain.AWSRegion.amazonaws.com:PortNumber`. Port depends on blockcahin framework you are using.
+Yet this link is private, so members should have vpc and use vpc privatelink to access blockchain endpoint.
