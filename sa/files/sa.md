@@ -3036,6 +3036,17 @@ It's managed Apache Cassandra–compatible (you can run Cassandra workloads usin
 ###### Cloud Development Kit
 CDK - open-source software development framework for writing cloud infra as code using c#/java/python/typescript. Under the hood cdk compiles code into CloudFormation template and run it in aws.
 You use cdk cli to interact with cdk. Take a look at [examples](https://github.com/aws-samples/aws-cdk-examples). Construct Library - packages solution (maven/npm) for specific CloudFormation construct.
+You should have node.js installed, then run `npm install -g aws-cdk` (if you want specific version per project install it without `-g` option into project dir).
+```
+# get all available commands
+cdk --help
+
+# get help for specific command
+cdk list --help
+
+# create empty java app
+cdk init --language=java
+```
 CDK vs SAM vs CloudFormation:
 * CDK - write templates using programming language
 * SAM - limited CDK only for serverless
