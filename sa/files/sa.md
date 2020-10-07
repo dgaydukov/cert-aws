@@ -117,6 +117,7 @@
 * 3.73 [DocumentDB](#documentdb)
 * 3.74 [Keyspaces](#keyspaces)
 * 3.75 [Cloud Development Kit](#cloud-development-kit)
+* 3.76 [EventBridge](#eventbridge)
 
 
 
@@ -3047,7 +3048,47 @@ cdk list --help
 # create empty java app
 cdk init --language=java
 ```
+When you create project only single core dependency in pom.xml
+```
+<dependency>
+    <groupId>software.amazon.awscdk</groupId>
+    <artifactId>core</artifactId>
+    <version>1.66.0</version>
+</dependency>
+```
+Yet for [each CloudFormation template they have separate dependency](https://mvnrepository.com/artifact/software.amazon.awscdk) so for example if you want to build ec2+elb+asg you have to add these to your pom.xml
+```
+<dependency>
+    <groupId>software.amazon.awscdk</groupId>
+    <artifactId>ec2</artifactId>
+    <version>1.66.0</version>
+</dependency>
+<dependency>
+    <groupId>software.amazon.awscdk</groupId>
+    <artifactId>autoscaling</artifactId>
+    <version>1.66.0</version>
+</dependency>
+<dependency>
+    <groupId>software.amazon.awscdk</groupId>
+    <artifactId>elasticloadbalancingv2</artifactId>
+    <version>1.66.0</version>
+</dependency>
+```
+To build json file from your java code, run `cdk synth > template.yml`. This will create 2 files. in cdk.out - JSON, and template.yml - YAML.
 CDK vs SAM vs CloudFormation:
 * CDK - write templates using programming language
 * SAM - limited CDK only for serverless
 * CloudFormation - write templates using YAML/JSON
+My conclusion it's better to use native CloudFormation YAML template then generated one. Even though it's nice to write java code, you have more control with native template.
+
+###### EventBridge
+It's a service that can deliver aws/custom events to any aws service. There are 2 types of events:
+* event pattern - aws/custom service will send event to eventBridge, which would resend it to target
+* schedule - call target (aws service) on some schedule
+It's built upon CloudWatch events, uses the same api, but extends it into custom events. But you can still build event-driven solution based on CloudWatch events.
+There are over 90 services that act as source, and 15 services that can be a target.
+Schema Registry - collection of schemas. Schema - json structure of event (with all fields and tyeps and possible values, like phone number - 10 digits).
+Cross-account event - you can configure event that it generated in one account and sent into another.
+EventBridge vs SNS
+* eventBrdige - body - only json, target - 15 services, native integration with many third-party services (like zendesk)
+* sns - kind of limited version of EventBridge, body - any format, target - 6 services

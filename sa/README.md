@@ -18,9 +18,6 @@ Here is my experience of taking 2 certifications, both associate & professional:
 * sort out tax/bankAddress
 * if we are using api gateway for auth why do we need auth service. We can directly integrate api gateway with cognito and authorize all request with congito authorizers
 ----------------------------------------------------------------------------------------------
-* use cdk to implement nat cf template
-* https://aws.amazon.com/eventbridge/faqs - specifically design to build event-driven architecture
-* https://docs.aws.amazon.com/managed-blockchain/latest/managementguide/network-components.html
 * cf use mappings inside template
 * kubelet vs kubectl
 * https://docs.aws.amazon.com/eks/latest/userguide/getting-started.html
