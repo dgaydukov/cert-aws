@@ -15,14 +15,13 @@
 * 1.11 [Shared Responsibility](#shared-responsibility)
 * 1.12 [SaaS vs PaaS vs IaaS/IAC](#saas-vs-paas-vs-iaasiac)
 * 1.13 [Virtualization and Containerization](#virtualization-and-containerization)
-* 1.14 [Docker and Kubernetes](#docker-and-kubernetes)
-* 1.15 [Pure Serverless](#pure-serverless)
-* 1.16 [AMI vs Snapshot](#ami-vs-snapshot)
-* 1.17 [AWS CLI](#aws-cli)
-* 1.18 [Useful Linux Commands](#useful-linux-commands)
-* 1.19 [Redirect 301 vs 302](#redirect-301-vs-302)
-* 1.20 [crontab](#crontab)
-* 1.21 [MySql Index Design](#mysql-index-design)
+* 1.14 [Pure Serverless](#pure-serverless)
+* 1.15 [AMI vs Snapshot](#ami-vs-snapshot)
+* 1.16 [AWS CLI](#aws-cli)
+* 1.17 [Useful Linux Commands](#useful-linux-commands)
+* 1.18 [Redirect 301 vs 302](#redirect-301-vs-302)
+* 1.19 [crontab](#crontab)
+* 1.20 [MySql Index Design](#mysql-index-design)
 2. [Networking](#networking)
 * 2.1 [NIC](#nic)
 * 2.2 [Hub, Switch, Router](#hub-switch-router)
@@ -280,13 +279,6 @@ Hyper-V - Windows Server Virtualization, server computer running Hyper-V can be 
 Virtual machine like ec2 is part of physical machine in aws datacenter. It's isolated from other virtual machines by hypervisor or alike software. 
 * Host - physical machine where all virtual machines are located
 * Guest - virtual machine
-
-###### Docker and Kubernetes
-Docker - is a tool to quickly create and manage containers (like create/stop/start/destroy). But if you have many containers and they all should interact with each other you need some system to manage all of this.
-Kubernetes - orchestration tool, helps to manage a group of containers. On container level kuber can use docker or any other container tool.
-Kuber Cluster - deployed kubernetes environment, that consists of 2 parts
-* control plane - components that control cluster + cluster's state & configuration
-* compute machines - nodes where pods are running 
 
 ###### Pure Serverless
 With aws serverless you can build complete backend application without writing code(like java) or using any framework (like spring). 
@@ -2366,6 +2358,23 @@ EKS (Elastic Kubernetes Service, also called ECS (Elastic Container Service) for
 eks cluster consists of 2 vpc:
 * eks-managed vpc - where kuber control plane (control plane nodes that run the kuber software, such as `etcd` and the kuber API server) resides
 * customer-managed vpc - vpc created by you, where nodes resides
+Docker - is a tool to quickly create and manage containers (like create/stop/start/destroy). But if you have many containers and they all should interact with each other you need some system to manage all of this.
+Kubernetes - orchestration tool, helps to manage a group of containers. On container level kuber can use docker or any other container tool. Cluster - working deployment of kuber, consists of 2 parts:
+* control plane - components that control cluster + cluster's state & configuration:
+    * kube-apiserver - REST API webserver to communicate with control plane. You can use kubectl/kubeadm cli tools to send commands to it or send REST requests directly.
+    * kube-scheduler - schedules pod to appropriate compute nodes
+    * kube-controller-manager - there are several controllers that:
+        * monitor pod health
+        * request scheduler to restart pod
+        * create account & api tokens
+    * etcd - key/value database to store configs
+* compute machines - nodes where pods are running:
+    * pod - single container or series of tightly coupled containers
+    * kubelet - tiny app installed on each compute node to take commands from control plane
+    * kube-proxy - handle network communication
+kubectl vs kubelet
+* kubectl - cli tool to talk with control plane (under the hood it generate REST API calls and send them to control plane)
+* kubelet - app running in each compute node, that manages it and take calls from control plane
 
 ###### Fargate
 Fargate is serverless compute engine for containers running in ECS/EKS, it removes the need to provision and manage servers. It's not a separate product, you should use it with either ecs/eks, otherwise there is no point in it.

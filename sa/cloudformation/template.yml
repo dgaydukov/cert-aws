@@ -4,7 +4,7 @@ Description: >
   Metadata - special tag for any resource to specify additional info about resource
   Parameters - special block where you define params that can be passed to cli
   Conditions - special block that can define dynamic conditions
-  Mappings - map of key/value pairs (use !FindInMap [ MapName, TopLevelKey, SecondLevelKey ])
+  Mappings - map of key/value pairs. Top-level key - is kind of category, inside we have key/value pairs. (use !FindInMap [ MapName, TopLevelKey, SecondLevelKey ])
 
 Parameters:
   Env:

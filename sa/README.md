@@ -18,10 +18,7 @@ Here is my experience of taking 2 certifications, both associate & professional:
 * sort out tax/bankAddress
 * if we are using api gateway for auth why do we need auth service. We can directly integrate api gateway with cognito and authorize all request with congito authorizers
 ----------------------------------------------------------------------------------------------
-* kubelet vs kubectl
-* https://docs.aws.amazon.com/eks/latest/userguide/getting-started.html
-* does eks use the same vpc or create new and add vpc endpoint kuber eni into your vpc
-* add secondary ip ranges to vpc (not directly related to eks, but can be useful => eks would use ip from these new range and won't drain your private ip addresses)
+* https://docs.aws.amazon.com/eks/latest/userguide/what-is-eks.html
 * ec2 instance assume role from another account
 * add custom health check to elb
 * use AWS::AutoScalingPlans::ScalingPlan to create asg based on predictive scaling (https://docs.aws.amazon.com/autoscaling/plans/userguide/what-is-aws-auto-scaling.html)
@@ -42,12 +39,6 @@ SET mykey myvalue
 # store data with ttl of 5 seconds (after expired key would be null)
 SET mykey myvalue EX 5
 ```
-* try glacier select to csv archive
-* add cf template for iam database authentication (then go to public ec2 and try to access db with both regular username/password and iam token)
-* create cf template with dynamodb vpc endpoint and access dynamodb from ec2 in private subnet (add auto scaling to dynamoDb)
-* rewrite template comments to multi-line description https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-description-structure.html
-* connect 2 vpc with privatelink (access ec2 from one vpc from another)
-* ELB access logs store to s3 => trigger lambda to process logs and put them into elasticsearch
 * Create AWS::CloudWatch::Alarm and recover instance in case it stopped or port 80 not responding (find some standard cloudwatch metric for this, take template as base `cloudformation/ec2-cw-recover-alarm.yml`)
 + add alarm to send email in case of failure
 + add elb health check with
@@ -64,6 +55,12 @@ TargetGroup:
     Matcher:
         HttpCode: 200-299
 ```
+* try glacier select to csv archive
+* add cf template for iam database authentication (then go to public ec2 and try to access db with both regular username/password and iam token)
+* create cf template with dynamodb vpc endpoint and access dynamodb from ec2 in private subnet (add auto scaling to dynamoDb)
+* rewrite template comments to multi-line description https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-description-structure.html
+* connect 2 vpc with privatelink (access ec2 from one vpc from another)
+* ELB access logs store to s3 => trigger lambda to process logs and put them into elasticsearch
 * create custom vpn server in ec2 and try to connect to it (do both use oepnvpn server ami and any ami (OpenVPN Access Server from marketplace which is free tier, in this case you should configure it through browser admin panel) + manually configure openvpn server)
 * vpc endpoint service (add ec2 (with basic httpd service)+NLB and share it to vpc from another region)
 * route 53 resolver
