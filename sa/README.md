@@ -18,8 +18,6 @@ Here is my experience of taking 2 certifications, both associate & professional:
 * sort out tax/bankAddress
 * if we are using api gateway for auth why do we need auth service. We can directly integrate api gateway with cognito and authorize all request with congito authorizers
 ----------------------------------------------------------------------------------------------
-* https://docs.aws.amazon.com/eks/latest/userguide/what-is-eks.html
-* ec2 instance assume role from another account
 * add custom health check to elb
 * use AWS::AutoScalingPlans::ScalingPlan to create asg based on predictive scaling (https://docs.aws.amazon.com/autoscaling/plans/userguide/what-is-aws-auto-scaling.html)
 * add elb to 2 vpc (load traffic between 2 vpc)

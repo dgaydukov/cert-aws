@@ -25,7 +25,6 @@ Resources:
     Properties:
       VpcId: !Ref VPC
       InternetGatewayId: !Ref InternetGateway
-
   PublicSubnet:
     Type: AWS::EC2::Subnet
     Properties:
@@ -35,7 +34,6 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AWS::StackName}-MyVpc-Public
-
   PublicRT:
     Type: AWS::EC2::RouteTable
     Properties:
@@ -50,13 +48,11 @@ Resources:
       RouteTableId: !Ref PublicRT
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId: !Ref InternetGateway
-
   PublicSubnetRTAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId: !Ref PublicSubnet
       RouteTableId: !Ref PublicRT
-
   SshSG:
     Type: AWS::EC2::SecurityGroup
     Properties:

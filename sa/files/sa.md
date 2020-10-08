@@ -341,6 +341,9 @@ Query command `--query` uses JMESPath (query language for JSON)
 # show imageId of first image
 aws ec2 describe-images --query "Images[0].ImageId" --profile=awssa
 
+# show instanceId and name
+aws ec2 describe-instances  --query="Reservations[*].Instances[*].{Instance:InstanceId,Name:Tags[?Key=='Name']|[0].Value}" --profile=awssa
+
 # show state for all images
 aws ec2 describe-images --query "Images[*].State" --profile=awssa
 ```
@@ -758,7 +761,7 @@ Role for user
     "Statement": {
         "Effect": "Allow",
         "Action": "sts:AssumeRole",
-        "Resource": "arn:aws:iam::ACCOUNT_ID:role/S3Viewer*"
+        "Resource": "arn:aws:iam::ACCOUNT_ID:role/S3Viewer"
     }
 }
 ```
@@ -1644,7 +1647,7 @@ Yet if you launch instance it will become available immediately and can serve re
 ```
 {
   "LifecycleHookName": "asg-ScaleOutHook-VH7PGTZ201TI",
-  "AccountId": "530313143429",
+  "AccountId": "{YOUR_ACCOUNT_ID}",
   "RequestId": "7395d14c-d028-458a-2649-2ac9a3c24aa3",
   "LifecycleTransition": "autoscaling:EC2_INSTANCE_LAUNCHING",
   "AutoScalingGroupName": "asg-VPC-A-ASG",
@@ -1658,7 +1661,7 @@ When you terminate instance it will wait for `HeartbeatTimeout` (default 1 hour)
 ```
 {
   "LifecycleHookName": "asg-ScaleInHook-1X3I4VRP056CX",
-  "AccountId": "530313143429",
+  "AccountId": "{YOUR_ACCOUNT_ID}",
   "RequestId": "ed35d14c-f6de-9dbf-3319-244af435d1a9",
   "LifecycleTransition": "autoscaling:EC2_INSTANCE_TERMINATING",
   "AutoScalingGroupName": "asg-VPC-A-ASG",
@@ -2375,6 +2378,37 @@ Kubernetes - orchestration tool, helps to manage a group of containers. On conta
 kubectl vs kubelet
 * kubectl - cli tool to talk with control plane (under the hood it generate REST API calls and send them to control plane)
 * kubelet - app running in each compute node, that manages it and take calls from control plane
+EKS Control plane:
+* runs a single tenant kuber control plane for each cluster, control plane infrastructure is not shared across clusters or aws accounts. 
+* runs in aws account (not yours) and provide API endpoints to you, yet compute nodes are running in your vpc.
+* uses vpc network policies to restrict traffic between control plane components to within a single cluster (so clusters can't reach other clusters).
+* put eni (called Requester-managed network interfaces) into your vpc, so control plane can communicate with compute nodes
+* consists of at least two API server nodes and three etcd nodes that run across three Availability Zones within a Region.
+There are 4 ways you can create eks cluster:
+* use aws console - good way to learn, not good for prod
+* use CloudFormation template - best case for prod
+* use `aws eks` cli - this can be a bit complex, cause for eks cluster you should:
+    * create iam role for eks cluster
+    * create vpc (with subnets, RT, SG)
+    * create cluster `aws eks create-cluster --name=prod --role-arn={EKS_CLUSTER_ROLE} --resources-vpc-config subnetIds=subnet-6782e71e,subnet-e7e761ac,securityGroupIds=sg-6979fe18`
+    * choose how you would provision compute nodes (using nodegroup or fargate). Suppose you choose nodegroup
+    * create role for nodegroup
+    * create nodegroup `aws eks create-nodegroup --cluster-name=prod --node-role={EC2_ROLE} --nodegroup-name=my --subnets subnetIds=subnet-6782e71e,subnet-e7e761ac`
+* use `eksctl` cli - it hides all the complexity of `eks` command and allows you to create cluster with single command `eksctl create cluster` (it also add a lot of stuff like tagging subnets)
+To auto-scale cluster you can:
+* deploy [Cluster Autoscaler](https://github.com/kubernetes/autoscaler/tree/master/cluster-autoscaler)
+To auto-scale pods:
+* [vertical](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler) - kuber change pod based on cpu usage (so add more cpu or less)
+* [horizontal](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) - kuber change number of pods running based on cpu load
+Cluster endpoint access:
+* public - cluster api accessible from public internet and compute nodes access cluster over public internet
+* private - cluster api accessible from within vpc and compute nodes access cluster vpc-to-vpc (traffic stays within aws network)
+* public and private - cluster api accessible from public internet but compute nodes access cluster vpc-to-vpc
+CNI (Container Network Interface) - allows the pod to have same IP address as ec2. Consists of 2 parts:
+* L-IPAM daemon - create secondaray network interface and attach it to ec2. When number of pods exceeds number of IP for eni, assign another eni.
+Different instance type support different number of secondary private IP (m5.large instance type supports three network interfaces and ten private IP addresses for each network interface - totally 30 private IP addresses).
+* [CNI plug-in](https://github.com/aws/amazon-vpc-cni-k8s/blob/master/docs/cni-proposal.md) - assign same IP to pod
+SNAT (source network address translation) - allows pod to communicate with outside world using ec2 public IP.
 
 ###### Fargate
 Fargate is serverless compute engine for containers running in ECS/EKS, it removes the need to provision and manage servers. It's not a separate product, you should use it with either ecs/eks, otherwise there is no point in it.
