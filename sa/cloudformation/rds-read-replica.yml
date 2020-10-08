@@ -5,6 +5,7 @@ AWSTemplateFormatVersion: 2010-09-09
 # ssh to bastion instance and connect to db `mysql -u admin -p'admin123' -h {yourRdsEndpoint} -D mydb`
 # run `CREATE TABLE users(id INT, name VARCHAR(50)); INSERT INTO users VALUES(1, "Jack"); SELECT * FROM users;` for master
 # connect to replica and see if data replicated. If you try to insert into replica you would get `ERROR 1290 (HY000): The MySQL server is running with the --read-only option so it cannot execute this statement`
+# if you don't specify db security group, default vpc security group would be assigned. You can assign it to ec2 with `!GetAtt VPC.DefaultSecurityGroup`. In this case your ec2 would also be able to access db, cause you share same default SG
 
 Parameters:
   PublicAZ:
@@ -30,7 +31,6 @@ Resources:
       Tags:
         - Key: Name
           Value:  !Sub ${AWS::StackName}-MyVpc
-
   InternetGateway:
     Type: AWS::EC2::InternetGateway
     DependsOn: VPC
@@ -43,7 +43,6 @@ Resources:
     Properties:
       VpcId: !Ref VPC
       InternetGatewayId: !Ref InternetGateway
-
   PublicSubnet:
     Type: AWS::EC2::Subnet
     Properties:
@@ -63,7 +62,6 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AWS::StackName}-MyVpc-Private-1
-
   PrivateSubnet2:
     Type: AWS::EC2::Subnet
     Properties:
@@ -73,7 +71,6 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AWS::StackName}-MyVpc-Private-2
-
   PublicRT:
     Type: AWS::EC2::RouteTable
     Properties:
@@ -88,7 +85,6 @@ Resources:
       RouteTableId: !Ref PublicRT
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId: !Ref InternetGateway
-
   PrivateRT:
     Type: AWS::EC2::RouteTable
     Properties:
@@ -96,8 +92,6 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AWS::StackName}-MyVpc-Private-RT
-
-
   PublicSubnetRTAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
@@ -114,7 +108,7 @@ Resources:
       SubnetId: !Ref PrivateSubnet2
       RouteTableId: !Ref PrivateRT
 
-  SshSG:
+  BastionSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Enable SSH access from anywhere
@@ -126,8 +120,8 @@ Resources:
           CidrIp: 0.0.0.0/0
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-MyVpc-SSH-SG
-  BastionEC2Instance:
+          Value: !Sub ${AWS::StackName}-MyVpc-BastionSG
+  BastionInstance:
     Type: AWS::EC2::Instance
     Properties:
       InstanceType: t2.micro
@@ -143,16 +137,28 @@ Resources:
           DeviceIndex: 0
           SubnetId: !Ref PublicSubnet
           GroupSet:
-            - !GetAtt SshSG.GroupId
-            - !GetAtt VPC.DefaultSecurityGroup
+            - !GetAtt BastionSG.GroupId
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
           Ebs:
             VolumeSize: 8
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-MyVpc-Bastion-EC2
+          Value: !Sub ${AWS::StackName}-MyVpc-BastionInstance
 
+  MySqlSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable mysql access only from bastion SG
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          SourceSecurityGroupId: !GetAtt BastionSG.GroupId
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-MySqlSG
   DbSubnetGroup:
     Type: AWS::RDS::DBSubnetGroup
     Properties:
@@ -174,6 +180,8 @@ Resources:
       DBName: mydb
       MasterUsername: admin
       MasterUserPassword: admin123
+      VPCSecurityGroups:
+        - !GetAtt MySqlSG.GroupId
   ReadReplica:
     Type: AWS::RDS::DBInstance
     Properties:

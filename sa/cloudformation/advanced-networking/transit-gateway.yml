@@ -180,7 +180,7 @@ Resources:
         - !Ref PublicSubnet
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-PublicVpc-Attachment
+          Value: !Sub ${AWS::StackName}-PublicMyVpcttachment
   PrivateVpcAttachment:
     Type: AWS::EC2::TransitGatewayAttachment
     Properties:
@@ -190,7 +190,7 @@ Resources:
         - !Ref PrivateSubnet
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-PrivateVpc-Attachment
+          Value: !Sub ${AWS::StackName}-PrivateMyVpcttachment
   PublicVpcTgwRoute:
     Type: AWS::EC2::Route
     Properties:

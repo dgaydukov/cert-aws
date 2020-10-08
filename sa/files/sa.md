@@ -1808,7 +1808,8 @@ Or you can also think that rules are evaluated in decreasing order by overwritin
 You can only assign one NACL to one subnet, yet you can assign many SG to same ec2. You can't block specific IP with SG, you need to use NACL.
 Stateful - if you send request from your ec2 you will got response even if SG doesn't have any outbound rules
 If you set up NACL (let's say for ssh) you should also add outbound rules (cause nacl are stateless). But for ssh outbound port is not 22, it's ephemeral port - When a client connects to a server, a random port from the ephemeral port range (1024-65535) becomes the client's source port.
-When you create VPC, default SG created automatically. It allows inbound traffic from instances with same SG (source - SG_ID), and all outbound traffic.
+When you create VPC, default SG created automatically. It allows inbound traffic from instances with default SG (source - SG_ID), and all outbound traffic. 
+That's why if you create ec2 and rds and assign to both of them default SG, ec2 can access rds, cause from rds perspective ec2 SG - source of RDS SG.
 So if you need 2 ec2 to talk with each other you can assign both of them same SG where source is ID of this SG - this means traffic allowed from any instance of the same SG
 To monitor traffic you can use:
 * VPC flow logs (it includes information about allowed and denied traffic, source and destination IP addresses, ports, protocol number, packet and byte counts, and an action: accept or reject). You can configure it for:

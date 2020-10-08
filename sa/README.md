@@ -18,17 +18,9 @@ Here is my experience of taking 2 certifications, both associate & professional:
 * sort out tax/bankAddress
 * if we are using api gateway for auth why do we need auth service. We can directly integrate api gateway with cognito and authorize all request with congito authorizers
 ----------------------------------------------------------------------------------------------
-* add custom health check to elb
-* use AWS::AutoScalingPlans::ScalingPlan to create asg based on predictive scaling (https://docs.aws.amazon.com/autoscaling/plans/userguide/what-is-aws-auto-scaling.html)
-* add elb to 2 vpc (load traffic between 2 vpc)
+* edit all current cf templates => Add do sleep while enf not enabled (instead of just sleep for 10 sec) to all cloudformation templates that use efs
 * api gateway add cors example (both simple & non-simple) + add multiple cors headers
-* add HealthCheck to elb + default ec2 healthcheck from asg (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-elb-health-check.html)
-* add vpc to `cloudformation/ec2-cw-recover-alarm.yml` (in case you run it in region where no default vpc)
-* edit all current cf templates => rewrite efs from default SG to custom (cause it's better to explicitly control SG)
-* edit all current cf templates => add SG to RDS with source as SG of webserver
-* api gateway put message into queue (without complex lambda code)
-* cf template that trigger lambda every 5 sec, and lambda check liveliness of ec2 (go to ec2 turn off httpd and see that logs are written to cloudwatch) + create alarm on error (more than 2 times send sns email)
-+ add cloudwatch event (rule, source - aws.ec2, detailtype-runinstances) when new ec2 started and add tag owner with lambda inside vpc
+* api gateway put message into queue (without complex lambda code) + add cloudwatch event (rule, source - aws.ec2, detailtype-runinstances) when new ec2 started and add tag owner with lambda inside vpc
 * Create cf template with redis cache and ec2 to connect to this cache (SG with clientSG that attached to desired ec2)
 ```
 sudo yum -y install --enablerepo=epel redis
@@ -38,8 +30,13 @@ SET mykey myvalue
 SET mykey myvalue EX 5
 ```
 * Create AWS::CloudWatch::Alarm and recover instance in case it stopped or port 80 not responding (find some standard cloudwatch metric for this, take template as base `cloudformation/ec2-cw-recover-alarm.yml`)
++ add cf template that trigger lambda every 5 sec, and lambda check liveliness of ec2 (go to ec2 turn off httpd and see that logs are written to cloudwatch) + create alarm on error (more than 2 times send sns email)
 + add alarm to send email in case of failure
 + add elb health check with
++ add custom health check to elb
++ add elb to 2 vpc (load traffic between 2 vpc)
++ add HealthCheck to elb + default ec2 healthcheck from asg (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-elb-health-check.html)
++ add Simple elb with 2 ec2 from 2 private subnets (use nat gateway to install httpd) https://stackoverflow.com/questions/22541895/amazon-elb-for-ec2-instances-in-private-subnet-in-vpc
 ```
 TargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
@@ -53,6 +50,7 @@ TargetGroup:
     Matcher:
         HttpCode: 200-299
 ```
+* use AWS::AutoScalingPlans::ScalingPlan to create asg based on predictive scaling (https://docs.aws.amazon.com/autoscaling/plans/userguide/what-is-aws-auto-scaling.html)
 * try glacier select to csv archive
 * add cf template for iam database authentication (then go to public ec2 and try to access db with both regular username/password and iam token)
 * create cf template with dynamodb vpc endpoint and access dynamodb from ec2 in private subnet (add auto scaling to dynamoDb)
@@ -114,9 +112,7 @@ TargetGroup:
 * Create custom cloudwatch metric and alarm based on this metric
 * Create lambda and cloudwatch rule to run lambda every minute (scheduled lambda)
 * Create auto-scale group with ec2 httpd (but store data in efs, this would guarantee that if instance launched in another AZ data won't be lost)
-* Add do sleep while enf not enabled (instead of just sleep for 10 sec) to all cloudformation templates that use efs
 * Create auto-scale group with single ec2 and eip and after terminate associate same eip to new ec2 (in launch config userdata add ability to associate eip to current ec2 + you need role for ec2 to be able to associate eip to itself)
-* Simple elb with 2 ec2 from 2 private subnets (use nat gateway to install httpd) https://stackoverflow.com/questions/22541895/amazon-elb-for-ec2-instances-in-private-subnet-in-vpc
 * Rewrite cf templates random httpd to display privateIP
 * Add auto-scaling example for specific time range with `AWS::AutoScaling::ScheduledAction`
 + add based on number of messages in sqs

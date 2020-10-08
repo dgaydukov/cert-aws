@@ -1,9 +1,8 @@
 AWSTemplateFormatVersion: 2010-09-09
 
-# create vpc with 2 public subnets and one ec2 instance in each subnet
-# create efs and mount to both ec2
+# create vpc with 2 public subnets and one ec2 instance in each subnet, efs and mount to both ec2. You can run `df -h` to see all mounted device.
 # create one access point for user ec2-user (userId/groupId - 1000 by default) - so ec2-user can write to it. It also would be as dit /data in our efs
-# !important => we add VPC.DefaultSecurityGroup to our instance and to efs, so they both in save SG and allow inbound traffic (you can mount efs from ec2)
+# if you don't specify efs security group, default vpc security group would be assigned. You can assign it to ec2 with `!GetAtt VPC.DefaultSecurityGroup`. In this case your ec2 would also be able to access efs, cause you share same default SG
 # !important => we add sleep 10, to wait before mounting to be sure, mount targets are available (sometimes it may work without it, at some cases you may like to make it 30 or 60 sec)
 
 Resources:
@@ -15,7 +14,7 @@ Resources:
       EnableDnsHostnames: true
       Tags:
         - Key: Name
-          Value:  !Sub ${AWS::StackName}-VPC-A
+          Value:  !Sub ${AWS::StackName}-MyVpc
 
   InternetGateway:
     Type: AWS::EC2::InternetGateway
@@ -23,7 +22,7 @@ Resources:
     Properties:
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-VPC-A-IGW
+          Value: !Sub ${AWS::StackName}-MyVpc-IGW
   AttachGateway:
     Type: AWS::EC2::VPCGatewayAttachment
     Properties:
@@ -38,7 +37,7 @@ Resources:
       AvailabilityZone: us-east-1a
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-VPC-A-Public1
+          Value: !Sub ${AWS::StackName}-MyVpc-Public1
 
   PublicSubnet2:
     Type: AWS::EC2::Subnet
@@ -48,7 +47,7 @@ Resources:
       AvailabilityZone: us-east-1b
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-VPC-A-Public2
+          Value: !Sub ${AWS::StackName}-MyVpc-Public2
 
   PublicRT1:
     Type: AWS::EC2::RouteTable
@@ -56,7 +55,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-VPC-A-Public-RT1
+          Value: !Sub ${AWS::StackName}-MyVpc-Public-RT1
   PublicRoute1:
     Type: AWS::EC2::Route
     DependsOn: AttachGateway
@@ -71,7 +70,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-VPC-A-Public-RT2
+          Value: !Sub ${AWS::StackName}-MyVpc-Public-RT2
   PublicRoute2:
     Type: AWS::EC2::Route
     DependsOn: AttachGateway
@@ -79,8 +78,6 @@ Resources:
       RouteTableId: !Ref PublicRT2
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId: !Ref InternetGateway
-
-
   PublicSubnetRTAssociation1:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
@@ -92,25 +89,20 @@ Resources:
       SubnetId: !Ref PublicSubnet2
       RouteTableId: !Ref PublicRT2
 
-  PublicEC2InstanceSG:
+  BastionSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Enable SSH/ICMP access from anywhere
+      GroupDescription: Enable SSH access from anywhere
       VpcId: !Ref VPC
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 22
           ToPort: 22
           CidrIp: 0.0.0.0/0
-        - IpProtocol: icmp
-          FromPort: -1
-          ToPort: -1
-          CidrIp: 0.0.0.0/0
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-VPC-A-Public-SG
-
-  PublicEC2Instance1:
+          Value: !Sub ${AWS::StackName}-MyVpc-Public-SG
+  BastionInstance1:
     Type: AWS::EC2::Instance
     DependsOn:
       - EFS
@@ -135,17 +127,16 @@ Resources:
           DeviceIndex: 0
           SubnetId: !Ref PublicSubnet1
           GroupSet:
-            - !GetAtt PublicEC2InstanceSG.GroupId
-            - !GetAtt VPC.DefaultSecurityGroup
+            - !GetAtt BastionSG.GroupId
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
           Ebs:
             VolumeSize: 8
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-VPC-A-Public-EC2_1
+          Value: !Sub ${AWS::StackName}-MyVpc-BastionInstance1
 
-  PublicEC2Instance2:
+  BastionInstance2:
     Type: AWS::EC2::Instance
     DependsOn:
       - EFS
@@ -170,16 +161,28 @@ Resources:
           DeviceIndex: 0
           SubnetId: !Ref PublicSubnet2
           GroupSet:
-            - !GetAtt PublicEC2InstanceSG.GroupId
-            - !GetAtt VPC.DefaultSecurityGroup
+            - !GetAtt BastionSG.GroupId
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
           Ebs:
             VolumeSize: 8
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-VPC-A-Public-EC2_2
+          Value: !Sub ${AWS::StackName}-MyVpc-BastionInstance2
 
+  EfsSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable from ec2 security group
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 2049
+          ToPort: 2049
+          SourceSecurityGroupId: !GetAtt BastionSG.GroupId
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-EfsSG
   EFS:
     Type: AWS::EFS::FileSystem
     Properties:
@@ -187,22 +190,20 @@ Resources:
       FileSystemTags:
         - Key: Name
           Value: !Sub ${AWS::StackName}-Efs
-
   MountTarget1:
     Type: AWS::EFS::MountTarget
     Properties:
       FileSystemId: !Ref EFS
       SubnetId: !Ref PublicSubnet1
       SecurityGroups:
-        - !GetAtt VPC.DefaultSecurityGroup
+        - !GetAtt EfsSG.GroupId
   MountTarget2:
     Type: AWS::EFS::MountTarget
     Properties:
       FileSystemId: !Ref EFS
       SubnetId: !Ref PublicSubnet2
       SecurityGroups:
-        - !GetAtt VPC.DefaultSecurityGroup
-
+        - !GetAtt EfsSG.GroupId
   AccessPoint:
     Type: AWS::EFS::AccessPoint
     Properties:

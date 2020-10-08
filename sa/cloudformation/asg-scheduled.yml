@@ -14,14 +14,14 @@ Resources:
       EnableDnsHostnames: true
       Tags:
         - Key: Name
-          Value:  !Sub ${AWS::StackName}-VPC-A
+          Value:  !Sub ${AWS::StackName}-MyVpc
   InternetGateway:
     Type: AWS::EC2::InternetGateway
     DependsOn: VPC
     Properties:
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-VPC-A-IGW
+          Value: !Sub ${AWS::StackName}-MyVpc-IGW
   AttachGateway:
     Type: AWS::EC2::VPCGatewayAttachment
     Properties:
@@ -35,14 +35,14 @@ Resources:
       AvailabilityZone: us-east-1a
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-VPC-A-Public
+          Value: !Sub ${AWS::StackName}-MyVpc-Public
   PublicRT:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-VPC-A-Public-RT
+          Value: !Sub ${AWS::StackName}-MyVpc-Public-RT
   PublicRoute:
     Type: AWS::EC2::Route
     DependsOn: AttachGateway
@@ -72,7 +72,7 @@ Resources:
           CidrIp: 0.0.0.0/0
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-VPC-A-WebServer-SG
+          Value: !Sub ${AWS::StackName}-MyVpc-WebServer-SG
 
   LaunchConfig:
     Type: AWS::AutoScaling::LaunchConfiguration
@@ -99,7 +99,7 @@ Resources:
   ASG:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
-      AutoScalingGroupName: !Sub ${AWS::StackName}-VPC-A-ASG
+      AutoScalingGroupName: !Sub ${AWS::StackName}-MyVpc-ASG
       LaunchConfigurationName: !Ref LaunchConfig
       MinSize: 1
       MaxSize: 3

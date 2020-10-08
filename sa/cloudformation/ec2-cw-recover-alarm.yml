@@ -5,9 +5,60 @@ AWSTemplateFormatVersion: 2010-09-09
 # look here for more details https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/UsingAlarmActions.html#AddingRecoverActions
 
 Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.100.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value:  !Sub ${AWS::StackName}-MyVpc
+    InternetGateway:
+      Type: AWS::EC2::InternetGateway
+      DependsOn: VPC
+      Properties:
+        Tags:
+          - Key: Name
+            Value: !Sub ${AWS::StackName}-MyVpc-IGW
+    AttachGateway:
+      Type: AWS::EC2::VPCGatewayAttachment
+      Properties:
+        VpcId: !Ref VPC
+        InternetGatewayId: !Ref InternetGateway
+    PublicSubnet:
+      Type: AWS::EC2::Subnet
+      Properties:
+        VpcId: !Ref VPC
+        CidrBlock: 10.100.2.0/24
+        AvailabilityZone: us-east-1a
+        Tags:
+          - Key: Name
+            Value: !Sub ${AWS::StackName}-MyVpc-Public
+    PublicRT:
+      Type: AWS::EC2::RouteTable
+      Properties:
+        VpcId: !Ref VPC
+        Tags:
+          - Key: Name
+            Value: !Sub ${AWS::StackName}-MyVpc-Public-RT
+    PublicRoute:
+      Type: AWS::EC2::Route
+      DependsOn: AttachGateway
+      Properties:
+        RouteTableId: !Ref PublicRT
+        DestinationCidrBlock: 0.0.0.0/0
+        GatewayId: !Ref InternetGateway
+    PublicSubnetRTAssociation:
+      Type: AWS::EC2::SubnetRouteTableAssociation
+      Properties:
+        SubnetId: !Ref PublicSubnet
+        RouteTableId: !Ref PublicRT
+
   WebServerSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
+      VpcId: !Ref VPC
       GroupDescription: Enable SSH/HTTP access from anywhere
       SecurityGroupIngress:
         - IpProtocol: tcp
@@ -39,8 +90,12 @@ Resources:
           RND1=$(shuf -i 1-100 -n 1)
           RND2=$(shuf -i 1-100 -n 1)
           sudo echo "<h1>WebServer ${AWS::Region} #$RND1-$RND2</h1>" > /var/www/html/index.html
-      SecurityGroupIds:
-        - !GetAtt WebServerSG.GroupId
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: 0
+          SubnetId: !Ref PublicSubnet
+          GroupSet:
+            - !GetAtt WebServerSG.GroupId
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
           Ebs:
