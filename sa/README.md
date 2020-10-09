@@ -18,8 +18,11 @@ Here is my experience of taking 2 certifications, both associate & professional:
 * sort out tax/bankAddress
 * if we are using api gateway for auth why do we need auth service. We can directly integrate api gateway with cognito and authorize all request with congito authorizers
 ----------------------------------------------------------------------------------------------
-* api gateway add cors example (both simple & non-simple) + add multiple cors headers
+* api gateway add cors example (both simple & non-simple) + add multiple cors headers for rest api
+* add mock response for rest api
 * api gateway put message into queue (without complex lambda code) + add cloudwatch event (rule, source - aws.ec2, detailtype-runinstances) when new ec2 started and add tag owner with lambda inside vpc
+* add vpc link to both rest/http api
+* add to `sa/cloudformation/agw-http-cognito.yml` => check how authorizer works, how to obtain valid jwt cognito token 
 * Create cf template with redis cache and ec2 to connect to this cache (SG with clientSG that attached to desired ec2)
 ```
 sudo yum -y install --enablerepo=epel redis

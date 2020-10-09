@@ -2,7 +2,6 @@ AWSTemplateFormatVersion: 2010-09-09
 
 
 # Create api gateway + routes + authorizer + cognito pool (user + identity)
-# TODO: check how authorizer works, how to obtain valid jwt cognito token
 
 Resources:
   LambdaRole:
@@ -81,7 +80,6 @@ Resources:
       Description: Only for dev env
       ApiId: !Ref HttpApi
       AutoDeploy: true
-
   InfoIntegration:
     Type: AWS::ApiGatewayV2::Integration
     Properties:
@@ -101,7 +99,6 @@ Resources:
       ApiId: !Ref HttpApi
       RouteKey: GET /info
       Target: !Join ["", ["integrations/", !Ref InfoIntegration]]
-
   AuthRoute:
     DependsOn:
       - InfoIntegration
@@ -112,7 +109,6 @@ Resources:
       Target: !Join ["", ["integrations/", !Ref InfoIntegration]]
       AuthorizerId: !Ref Authorizer
       AuthorizationType: JWT
-
 
   Authorizer:
     Type: AWS::ApiGatewayV2::Authorizer
@@ -126,8 +122,6 @@ Resources:
           - mysecret
         Issuer: !Join [ "", ["https://cognito-idp.", !Ref "AWS::Region", ".amazonaws.com/", !Ref UserPool]]
       ApiId: !Ref HttpApi
-
-
 
   UserPool:
     Type: AWS::Cognito::UserPool
@@ -146,15 +140,12 @@ Resources:
           AttributeDataType: String
           Mutable: false
           Required: true
-
-
   WebClient:
     Type: AWS::Cognito::UserPoolClient
     Properties:
       ClientName: !Sub ${AWS::StackName}-Web
       GenerateSecret: false
       UserPoolId: !Ref UserPool
-
   IdentityPool:
     Type: AWS::Cognito::IdentityPool
     Properties:
@@ -163,7 +154,6 @@ Resources:
       CognitoIdentityProviders:
         - ClientId: !Ref WebClient
           ProviderName: !GetAtt UserPool.ProviderName
-
   AuthorizedRole:
     Type: AWS::IAM::Role
     Properties:
@@ -209,7 +199,6 @@ Resources:
                 "cognito-identity.amazonaws.com:aud": !Ref IdentityPool
               "ForAnyValue:StringLike":
                 "cognito-identity.amazonaws.com:amr": unauthenticated
-
   IdentityPoolRoleMapping:
     Type: AWS::Cognito::IdentityPoolRoleAttachment
     Properties:

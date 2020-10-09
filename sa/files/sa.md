@@ -2273,7 +2273,7 @@ Batching - ability to send/receive batch of up to 10 messages:
 * you need to change app logic - for sender to batch messages before sending, to receiver wait longer and process a list of messages instead of 1
 
 ###### API Gateway
-API Gateway - managed api service that makes it easy to publish/manage api at any scale. It can:
+AGW - managed api service that makes it easy to publish/manage api at any scale. It can:
 * support both HTTP(S) and WebSocket
 * use built-in cache system to minimize load to backend
 * meter/throttle traffic to your backend. You can throttle per client by supplying access key to clients (so vip clients can get more throttling than others)
@@ -2283,12 +2283,12 @@ API Gateway - managed api service that makes it easy to publish/manage api at an
 * monitoring (integration with CloudWatch can set up some alarms)
 * all endpoints are HTTPS, you can't create unsecure http
 * send both websocket & http calls
-You can also use API Gateway with openApi to quickly generate api endpoints and underlying models. 
+You can also use AGW with openApi to quickly generate api endpoints and underlying models. 
 Stage - like a tag, allows your api have multiple versions, like dev stage - myapi.com/dev/users.
 Don't use stages for differente environments, but instead use different aws accounts for different env.
 Real use case for stages is if you need to support different versions of api for prod at the same time.
-You can add documentation to your api and expose it as swagger file. Api Gateway can generate client-side SSL certificate, and you backend can get public key, so it can verify that requests are coming from Api Gateway.
-Api Gateway calls are supported by CloudFront, so your api is highly available.
+You can add documentation to your api and expose it as swagger file. AGW can generate client-side SSL certificate, and you backend can get public key, so it can verify that requests are coming from AGW.
+AGW calls are supported by CloudFront, so your api is highly available.
 CORS (Cross-origin resource sharing) - request made to another domain/subdomain of the same domain/port/protocol. Take a look [here](https://github.com/dgaydukov/cert-spring5/blob/master/files/spring5.md#cors) with java/spring.
 There are 2 types:
 * simple - you should add `Access-Control-Allow-Origin` header in response. Request simple if:
@@ -2300,25 +2300,28 @@ To support cors, api should response to this pre-flight request with 3 headers:
 * `Access-Control-Allow-Methods` - methods which are allow to be executed
 * `Access-Control-Allow-Headers` - indicate which HTTP headers can be used during the actual request
 * `Access-Control-Allow-Origin` - actual origin that allows to call request
-To enable cors for api gateway you have to add support to OPTIONS request with 3 headers and for simple request just add single `Access-Control-Allow-Origin` header.
-There are 3 types:
+To enable cors for AGW you have to add support to OPTIONS request with 3 headers and for simple request just add single `Access-Control-Allow-Origin` header.
+There are 3 types of AGW:
 * edge-optimized - use CloudFront edge location to more your api closer to your users
 * regional - run in specific region
 * private - accessible only from within vpc
 There are 5 integration types:
 * lambda - 2 modes:
-    * proxy - api gateway wrap original request with some metadata, but don't modify response
-    * direct integration - api gateway modify request/response based on VTL (velocity template language) written by user.
+    * proxy - AGW wrap original request with some metadata, but don't modify response
+    * direct integration - AGW modify request/response based on VTL (velocity template language) written by user.
     So you can do validation on this step, even before your api reach your lambda
     So if you validate on lambda you pay for it (even if validation failed and much of lambda not executed)
 * http - connect to any http(s) endpoints
 * mock - response without backend service (mostly used for cors options request)
 * aws service - connect to over 100 aws services
-* Vpc Link - connect api gateway to any resource inside private vpc
+* Vpc Link - connect AGW to any resource inside private vpc
 Resource policy - just like iam policy you can specify on the AGW level who can access which api based on:
 * aws account
 * IP range (you can use waf to blacklist by IP, cause to apply these rule you have to deploy agw)
 * vpc or vpc endpoints
+Http vs Rest api:
+* rest api (AWS::ApiGateway)- old version, currently offers more features and full control over API requests and responses
+* http api (AWS::ApiGatewayV2) - new version, cheaper. There is no mock integration, only lambda
 
 ###### Cognito
 Cognito - managed user service that add user sing-in/sign-up/management email/phone verification/2FA logic. There are 2 pools:

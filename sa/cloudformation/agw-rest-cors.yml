@@ -1,0 +1,136 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+
+# Create api gateway + lambda (response to routes) + cors
+# You can call either / or /info that would invoke lambda
+# you can check cors by `curl -v -X OPTIONS -H 'Origin: http://site.io' -H 'Access-Control-Request-Method: PUT' {API_URL}`. You can change site to my.com, it would also work, yet other sites wouldn't (request would return 200, but no cors headers)
+
+Resources:
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-LambdaRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+  LogPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub ${AWS::StackName}-LogPolicy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - "logs:CreateLogGroup"
+              - "logs:CreateLogStream"
+              - "logs:PutLogEvents"
+              - "logs:DescribeLogStreams"
+            Resource: "*"
+      Roles:
+        - !Ref LambdaRole
+  InfoLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Show basic information about app
+      Role: !GetAtt LambdaRole.Arn
+      Runtime: nodejs12.x
+      Handler: index.handler
+      Code:
+        ZipFile: |
+          exports.handler = (params, context, cb) => {
+              console.log("params => ", params);
+              var body = "Welcome to REST API";
+              if (params.resource == "/version") {
+                  body = JSON.stringify({"name": "HTTP REST CORS", "version": "2.0"});
+              }
+              cb(null, {
+                statusCode: 200,
+                body,
+                headers: {"Content-Type": "application/json"}
+              });
+          }
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-Info
+  ApiGatewayLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt InfoLambda.Arn
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Join [ "", ["arn:aws:execute-api:", !Ref "AWS::Region", ":", !Ref "AWS::AccountId", ":", !Ref RestApi, "/*/*/*"]]
+
+  RestApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Description: Cors example using REST API
+      Name: REST API CORS
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+  InfoResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref RestApi
+      ParentId: !GetAtt RestApi.RootResourceId
+      PathPart: info
+  InfoMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref RestApi
+      ResourceId: !Ref InfoResource
+      HttpMethod: ANY
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${InfoLambda.Arn}/invocations
+  InfoCorsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref RestApi
+      ResourceId: !Ref InfoResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      MethodResponses:
+        - StatusCode: 200
+          ResponseModels:
+            application/json: 'Empty'
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: false
+            method.response.header.Access-Control-Allow-Methods: false
+            method.response.header.Access-Control-Allow-Origin: false
+      Integration:
+        Type: MOCK
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Methods: "'GET, POST, PUT, DELETE, OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            ResponseTemplates:
+              application/json: ''
+        PassthroughBehavior: WHEN_NO_MATCH
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+  Deployment:
+    DependsOn:
+      - InfoMethod
+      - InfoCorsMethod
+    Type: AWS::ApiGateway::Deployment
+    Properties:
+      RestApiId: !Ref RestApi
+      Description: My deployment
+  DevStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      StageName: dev
+      Description: Dev Stage
+      RestApiId: !Ref RestApi
+      DeploymentId: !Ref Deployment
