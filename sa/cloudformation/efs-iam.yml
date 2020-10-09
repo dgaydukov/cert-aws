@@ -1,6 +1,7 @@
 AWSTemplateFormatVersion: 2010-09-09
 
-# by default anybody can access efs. But you can deny all, and add special role. In this case ec2 would need to assume role in order to access efs
+# by default anybody can access efs. But you can limit access only to root user. In this case you would need to add role to ec2 with access to to efs
+# Now you have to provide both tls,iam. You can't mount efs without these 2 anymore.
 
 Resources:
   VPC:
@@ -24,7 +25,7 @@ Resources:
     Properties:
       VpcId: !Ref VPC
       InternetGatewayId: !Ref InternetGateway
-  PublicSubnet1:
+  PublicSubnet:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
@@ -32,54 +33,26 @@ Resources:
       AvailabilityZone: us-east-1a
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-MyVpc-Public1
-  PublicSubnet2:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId: !Ref VPC
-      CidrBlock: 10.100.2.0/24
-      AvailabilityZone: us-east-1b
-      Tags:
-        - Key: Name
-          Value: !Sub ${AWS::StackName}-MyVpc-Public2
-  PublicRT1:
+          Value: !Sub ${AWS::StackName}-MyVpc-Public
+  PublicRT:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-MyVpc-Public-RT1
-  PublicRoute1:
+          Value: !Sub ${AWS::StackName}-MyVpc-Public-RT
+  PublicRoute:
     Type: AWS::EC2::Route
     DependsOn: AttachGateway
     Properties:
-      RouteTableId: !Ref PublicRT1
+      RouteTableId: !Ref PublicRT
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId: !Ref InternetGateway
-  PublicRT2:
-    Type: AWS::EC2::RouteTable
-    Properties:
-      VpcId: !Ref VPC
-      Tags:
-        - Key: Name
-          Value: !Sub ${AWS::StackName}-MyVpc-Public-RT2
-  PublicRoute2:
-    Type: AWS::EC2::Route
-    DependsOn: AttachGateway
-    Properties:
-      RouteTableId: !Ref PublicRT2
-      DestinationCidrBlock: 0.0.0.0/0
-      GatewayId: !Ref InternetGateway
-  PublicSubnetRTAssociation1:
+  PublicSubnetRTAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      SubnetId: !Ref PublicSubnet1
-      RouteTableId: !Ref PublicRT1
-  PublicSubnetRTAssociation2:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      SubnetId: !Ref PublicSubnet2
-      RouteTableId: !Ref PublicRT2
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref PublicRT
 
   BastionSG:
     Type: AWS::EC2::SecurityGroup
@@ -94,11 +67,42 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AWS::StackName}-MyVpc-Public-SG
-  BastionInstance1:
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref EfsRole
+  EfsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-EfsRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
+  EfsAccessPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub ${AWS::StackName}-MyVpc-EfsAccessPolicy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - "elasticfilesystem:*"
+            Resource: "*"
+      Roles:
+        - !Ref EfsRole
+  BastionInstance:
     Type: AWS::EC2::Instance
     DependsOn:
       - EFS
-      - MountTarget1
+      - MountTarget
     Properties:
       InstanceType: t2.micro
       ImageId: ami-09d95fab7fff3776c
@@ -110,11 +114,11 @@ Resources:
           #!/usr/bin/env bash
           sudo yum install -y amazon-efs-utils
           sudo mkdir /mnt/efs
-          while ! sudo mount -t efs ${EFS}:/ /mnt/efs; do sleep 1; done
+          while ! sudo mount -t efs -o tls,iam ${EFS}:/ /mnt/efs; do sleep 1; done
       NetworkInterfaces:
         - AssociatePublicIpAddress: true
           DeviceIndex: 0
-          SubnetId: !Ref PublicSubnet1
+          SubnetId: !Ref PublicSubnet
           GroupSet:
             - !GetAtt BastionSG.GroupId
       BlockDeviceMappings:
@@ -123,42 +127,7 @@ Resources:
             VolumeSize: 8
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-MyVpc-BastionInstance1
-
-  InstanceProfile:
-    Type: AWS::IAM::InstanceProfile
-    Properties:
-      Roles:
-        - !Ref EfsRole
-  EfsRole:
-    Type: AWS::IAM::Role
-    Properties:
-      RoleName: !Sub ${AWS::StackName}-S3Role
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - ec2.amazonaws.com
-            Action:
-              - sts:AssumeRole
-      Path: "/"
-  LogPolicy:
-    Type: AWS::IAM::Policy
-    Properties:
-      PolicyName: !Sub ${AWS::StackName}-MyVpc-LogPolicy
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Action:
-              - "elasticfilesystem:ClientRootAccess"
-              - "elasticfilesystem:ClientMount"
-              - "elasticfilesystem:ClientWrite"
-            Resource: "*"
-      Roles:
-        - !Ref EfsRole
+          Value: !Sub ${AWS::StackName}-MyVpc-BastionInstance
 
   EfsSG:
     Type: AWS::EC2::SecurityGroup
@@ -177,13 +146,21 @@ Resources:
     Type: AWS::EFS::FileSystem
     Properties:
       PerformanceMode: maxIO
+      FileSystemPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - "elasticfilesystem:*"
+            Principal:
+              AWS: !Sub ${AWS::AccountId}
       FileSystemTags:
         - Key: Name
           Value: !Sub ${AWS::StackName}-Efs
-  MountTarget1:
+  MountTarget:
     Type: AWS::EFS::MountTarget
     Properties:
       FileSystemId: !Ref EFS
-      SubnetId: !Ref PublicSubnet1
+      SubnetId: !Ref PublicSubnet
       SecurityGroups:
         - !GetAtt EfsSG.GroupId

@@ -895,7 +895,10 @@ Resource policy - policy for single resource:
 Main difference between identity and resource policy is that identity policy doesn't have `Principal` attribute, cause you link it to some iam identity which would be it's principal.
 Contrary to this resource policy have `Principal` attribute where you define to which user this policy is applied. Generally you should use identity policies cause you can define access to multiple resources there, where for resource policy access is limited to this resource only.
 One example where resource policy is useful is when you need to add simple way to grant cross-account access to your S3 environment without creating iam role.
-There are 6 policy types
+Evaluating of identity-based & resource-based policies:
+* if at lease 1 explicit allow in either one or in both => allow
+* explicit deny always overwrites all allows (so if you have deny in one and allow in another, deny will always overwrite)
+There are 6 policy types:
 * Identity-based policies - for iam identity
 * Resource-based policies - define policies separately for aws resources like s3 bucket policy (not all resources support this)
 * Permissions boundaries - same policy as for identity, but added not as permission policy to iam identity but as permission boundary. Specify what permission user can potentially have.
@@ -1144,6 +1147,18 @@ IAM access:
 * by default efs open to anybody
 * you can set efs resource policy to deny all access and create iam role to allow (role would overwrite resource policy) and then assign this role to specific ec2
 * You must use tls when access with iam: `sudo mount -t efs -o tls,iam file-system-id efs-mount-point/`
+You can set up resource policy so you can mount only with tls enabled
+```
+Statement:
+  - Effect: Allow
+    Action:
+      - "elasticfilesystem:Client*"
+    Principal: '*'
+    Condition:
+      Bool:
+        "aws:SecureTransport": true
+```
+So if you run without tls you would get `mount.nfs4: Operation not permitted`
 
 ###### EBS
 EBS (Elastic Block Storage) - simple block storage for EC2. After EBS is attached to EC2 you can format it with desired file system.

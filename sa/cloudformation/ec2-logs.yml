@@ -113,6 +113,7 @@ Resources:
   LogRole:
     Type: AWS::IAM::Role
     Properties:
+      RoleName: !Sub ${AWS::StackName}-LogRole
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -122,7 +123,6 @@ Resources:
                 - ec2.amazonaws.com
             Action:
               - sts:AssumeRole
-      Path: "/"
   LogPolicy:
     Type: AWS::IAM::Policy
     Properties:

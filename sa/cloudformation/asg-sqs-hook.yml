@@ -116,6 +116,7 @@ Resources:
   AsgRole:
     Type: AWS::IAM::Role
     Properties:
+      RoleName: !Sub ${AWS::StackName}-AsgRole
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -125,7 +126,6 @@ Resources:
                 - autoscaling.amazonaws.com
             Action:
               - sts:AssumeRole
-      Path: /
   SqsAccessPolicy:
     Type: AWS::IAM::Policy
     Properties:

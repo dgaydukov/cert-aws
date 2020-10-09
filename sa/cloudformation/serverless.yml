@@ -8,6 +8,7 @@ Resources:
   LambdaRole:
     Type: AWS::IAM::Role
     Properties:
+      RoleName: !Sub ${AWS::StackName}-LambdaRole
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -17,7 +18,6 @@ Resources:
                 - lambda.amazonaws.com
             Action:
               - sts:AssumeRole
-      Path: /
   LogPolicy:
     Type: AWS::IAM::Policy
     Properties:
@@ -167,6 +167,7 @@ Resources:
   AuthorizedRole:
     Type: AWS::IAM::Role
     Properties:
+      RoleName: !Sub ${AWS::StackName}-AuthorizedRole
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -193,6 +194,7 @@ Resources:
   UnAuthorizedRole:
     Type: AWS::IAM::Role
     Properties:
+      RoleName: !Sub ${AWS::StackName}-UnAuthorizedRole
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -207,7 +209,6 @@ Resources:
                 "cognito-identity.amazonaws.com:aud": !Ref IdentityPool
               "ForAnyValue:StringLike":
                 "cognito-identity.amazonaws.com:amr": unauthenticated
-
 
   IdentityPoolRoleMapping:
     Type: AWS::Cognito::IdentityPoolRoleAttachment
