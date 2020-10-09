@@ -1101,23 +1101,49 @@ There are 2 performance model:
 * General (if you need less then 7k file operation per second) 
 * Max I/O
 When you create efs it creates mount target in each az. Instances in each az talk to efs by using this mount targets.
-To mount efs to ec2, mount helper should be installed and running. You can install it by
-```
-sudo yum install -y amazon-efs-utils
-sudo mount -t efs fs-bc0a413f:/ ./mnt
-# mount with tls enabled to secure data in transit
-sudo mount -t efs -o tls fs-bc0a413f:/ ./mnt
-```
+To mount efs to ec2, mount helper should be installed and running `sudo yum install -y amazon-efs-utils`. You can mount it by `sudo mount -t efs fs-bc0a413f:/ ./mnt`.
 For some AMI (Amazon Linux/RHEL/Ubuntu) it's already installed, you just need to start it. You can check the status by `sudo service nfs status`
 By default anybody can read, but root (UID 0) user can write. You can also use Access Points to create dirs in your efs for different users to read/write.
 You can also do `sudo chmod 777 /mnt/efs/` to give access to anybody to read/write. To check if directory is mounted to efs run `df /mnt/efs/`.
 EFS has only 2 storage classes: standard & IA.
 Lifecycle policy - move infrequently accessed files into Infrequent Access (IA) storage class after some period (For example file hasn't been access for 7 days, let's move it).
 There are 2 types of encryption:
-* encryption at rest - created by default when you create new efs, use kms to encrypt data before write them on disk
-* encryption in transit - you should enable TLS when you mount folder with mount helper which initialize `stunnel` to use tls
-Stunnel - open source project to use TLS for tunneling (for services that don't provide ssh, like SMTP port 25).
-So you can use `stunnel` but you have to install it manually and configure, but mount helper already provide it under the hood
+* encryption at rest - created by default when you create new efs, use kms to encrypt data before write them on disk. Be default `aws/elasticfilesystem` key is used. You can also choose your own CMK.
+You can force iam user to create efs only with encryption enabled. You should assign following iam policy to this user with special condition
+```
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": "elasticfilesystem:CreateFileSystem",
+            "Condition": {
+                "Bool": {
+                    "elasticfilesystem:Encrypted": "true"
+                }
+            },
+            "Resource": "*"
+        }
+    ]
+}
+```
+* encryption in transit - you should enable TLS when you mount folder with mount helper which initialize `stunnel` to use tls. You should add tls option when you mount system `sudo mount -t efs -o tls fs-bc0a413f:/ ./mnt`.
+When you mount using tls, it would be mounted to localhost using stunnel. If you run `df -hT` you will see
+```
+fs-a1bee823.efs.us-east-1.amazonaws.com:/ nfs4      8.0E     0  8.0E   0% /mnt/efs
+127.0.0.1:/                               nfs4      8.0E     0  8.0E   0% /mnt/pnt
+```
+If you run `mount | column -t | grep nfs4`
+```
+fs-a1bee823.efs.us-east-1.amazonaws.com:/  on  /mnt/efs                         type  nfs4        (rw,relatime,vers=4.1,rsize=1048576,wsize=1048576,namlen=255,hard,noresvport,proto=tcp,timeo=600,retrans=2,sec=sys,clientaddr=10.100.1.148,local_lock=none,addr=10.100.1.9)
+127.0.0.1:/                                on  /mnt/pnt                         type  nfs4        (rw,relatime,vers=4.1,rsize=1048576,wsize=1048576,namlen=255,hard,noresvport,proto=tcp,port=20391,timeo=600,retrans=2,sec=sys,clientaddr=127.0.0.1,local_lock=none,addr=127.0.0.1)
+```
+As you see it mounted on port `port=20391`, which is port of stunnel.
+Stunnel - open source project to use TLS for tunneling (for services that don't provide ssh, like SMTP port 25). So you can use `stunnel` but you have to install it manually and configure, but mount helper already provide it under the hood.
+IAM access:
+* by default efs open to anybody
+* you can set efs resource policy to deny all access and create iam role to allow (role would overwrite resource policy) and then assign this role to specific ec2
+* You must use tls when access with iam: `sudo mount -t efs -o tls,iam file-system-id efs-mount-point/`
 
 ###### EBS
 EBS (Elastic Block Storage) - simple block storage for EC2. After EBS is attached to EC2 you can format it with desired file system.

@@ -13,5 +13,8 @@ Here is my experience of taking data analytics specialty exam
 
 ### TODO
 * https://javarevisited.blogspot.com/2019/04/top-10-hadoop-tutorials-for-big-data-developers.html
-* read book
 * https://www.youtube.com/watch?v=7Er4oGWpmWs
+* read hadoop architecture book
+* read hadoop book
+* read spark book
+* read hbase book

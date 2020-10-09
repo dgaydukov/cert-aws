@@ -1,9 +1,6 @@
 AWSTemplateFormatVersion: 2010-09-09
 
-# create vpc with 2 public subnets and one ec2 instance in each subnet, efs and mount to both ec2. You can run `df -hT` to see all mounted device.
-# create one access point for user ec2-user (userId/groupId - 1000 by default) - so ec2-user can write to it. It also would be as dit /data in our efs
-# if you don't specify efs security group, default vpc security group would be assigned. You can assign it to ec2 with `!GetAtt VPC.DefaultSecurityGroup`. In this case your ec2 would also be able to access efs, cause you share same default SG
-# !important => we use while loop to mount efs until it's available. The reason is that it may take some time for it to become available. We can just use sleep 30 - to be sure, but while is nicer approach
+# by default anybody can access efs. But you can deny all, and add special role. In this case ec2 would need to assume role in order to access efs
 
 Resources:
   VPC:
@@ -102,20 +99,18 @@ Resources:
     DependsOn:
       - EFS
       - MountTarget1
-      - AccessPoint
     Properties:
       InstanceType: t2.micro
       ImageId: ami-09d95fab7fff3776c
       KeyName: mykey
+      IamInstanceProfile: !Ref InstanceProfile
       UserData:
         Fn::Base64:
           !Sub |
           #!/usr/bin/env bash
           sudo yum install -y amazon-efs-utils
           sudo mkdir /mnt/efs
-          sudo mkdir /mnt/pnt
           while ! sudo mount -t efs ${EFS}:/ /mnt/efs; do sleep 1; done
-          sudo mount -t efs -o tls,accesspoint=${AccessPoint} ${EFS}: /mnt/pnt
       NetworkInterfaces:
         - AssociatePublicIpAddress: true
           DeviceIndex: 0
@@ -129,38 +124,41 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AWS::StackName}-MyVpc-BastionInstance1
-  BastionInstance2:
-    Type: AWS::EC2::Instance
-    DependsOn:
-      - EFS
-      - MountTarget2
-      - AccessPoint
+
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
     Properties:
-      InstanceType: t2.micro
-      ImageId: ami-09d95fab7fff3776c
-      KeyName: mykey
-      UserData:
-        Fn::Base64:
-          !Sub |
-          #!/usr/bin/env bash
-          sudo yum install -y amazon-efs-utils
-          sudo mkdir /mnt/efs
-          sudo mkdir /mnt/pnt
-          while ! sudo mount -t efs ${EFS}:/ /mnt/efs; do sleep 1; done
-          sudo mount -t efs -o tls,accesspoint=${AccessPoint} ${EFS}: /mnt/pnt
-      NetworkInterfaces:
-        - AssociatePublicIpAddress: true
-          DeviceIndex: 0
-          SubnetId: !Ref PublicSubnet2
-          GroupSet:
-            - !GetAtt BastionSG.GroupId
-      BlockDeviceMappings:
-        - DeviceName: /dev/xvda
-          Ebs:
-            VolumeSize: 8
-      Tags:
-        - Key: Name
-          Value: !Sub ${AWS::StackName}-MyVpc-BastionInstance2
+      Roles:
+        - !Ref EfsRole
+  EfsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-S3Role
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: "/"
+  LogPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub ${AWS::StackName}-MyVpc-LogPolicy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - "elasticfilesystem:ClientRootAccess"
+              - "elasticfilesystem:ClientMount"
+              - "elasticfilesystem:ClientWrite"
+            Resource: "*"
+      Roles:
+        - !Ref EfsRole
 
   EfsSG:
     Type: AWS::EC2::SecurityGroup
@@ -189,25 +187,3 @@ Resources:
       SubnetId: !Ref PublicSubnet1
       SecurityGroups:
         - !GetAtt EfsSG.GroupId
-  MountTarget2:
-    Type: AWS::EFS::MountTarget
-    Properties:
-      FileSystemId: !Ref EFS
-      SubnetId: !Ref PublicSubnet2
-      SecurityGroups:
-        - !GetAtt EfsSG.GroupId
-  AccessPoint:
-    Type: AWS::EFS::AccessPoint
-    Properties:
-      FileSystemId: !Ref EFS
-      PosixUser:
-        Uid: 1000
-        Gid: 1000
-        SecondaryGids:
-          - 4
-      RootDirectory:
-        CreationInfo:
-          OwnerGid: 1000
-          OwnerUid: 1000
-          Permissions: 755
-        Path: /data

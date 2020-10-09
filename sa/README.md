@@ -18,7 +18,6 @@ Here is my experience of taking 2 certifications, both associate & professional:
 * sort out tax/bankAddress
 * if we are using api gateway for auth why do we need auth service. We can directly integrate api gateway with cognito and authorize all request with congito authorizers
 ----------------------------------------------------------------------------------------------
-* edit all current cf templates => Add do sleep while enf not enabled (instead of just sleep for 10 sec) to all cloudformation templates that use efs
 * api gateway add cors example (both simple & non-simple) + add multiple cors headers
 * api gateway put message into queue (without complex lambda code) + add cloudwatch event (rule, source - aws.ec2, detailtype-runinstances) when new ec2 started and add tag owner with lambda inside vpc
 * Create cf template with redis cache and ec2 to connect to this cache (SG with clientSG that attached to desired ec2)
