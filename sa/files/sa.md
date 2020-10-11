@@ -34,6 +34,7 @@
 * 2.9 [Routing](#routing)
 * 2.10 [MTU & Jumbo frame](#mtu--jumbo-frame)
 * 2.11 [Nmap](#nmap)
+* 2.12 [Stunnel](#stunnel)
 3. [Services](#services)
 * 3.1 [Corretto](#corretto)
 * 3.2 [CloudFormation](#CloudFormation)
@@ -118,7 +119,6 @@
 * 3.75 [Cloud Development Kit](#cloud-development-kit)
 * 3.76 [EventBridge](#eventbridge)
 * 3.76 [Managed Blockchain](#managed-blockchain)
-
 
 
 
@@ -676,6 +676,14 @@ Nmap done: 1 IP address (1 host up) scanned in 20.69 seconds
 Nmap check for which port app exist. So even if you open all traffic in SG, namp would show only those ports that have underlying app.
 So in SG you just open ports, if no app exists for this port in ec2, nmap won't see it, cause there is nobody to talk with.
 
+###### Stunnel
+Stunnel - open source project to use TLS for tunneling (for services that don't provide ssh, like SMTP port 25). 
+So you can use `stunnel` but you have to install it manually and configure, but mount helper already provide it under the hood.
+You can invoke it from inetd or directly in daemon mode (edit `/etc/services`)
+Super-server - daemon that runs on linux, listen specific ports and when socket opened (connection established) starts server. Examples: sshd/inetd/httpd
+inetd (internet service daemon) - linux super-server that listens incoming connection and starting servers. You write setting in `/etc/inetd.conf` on which port which program to run, like
+`telnet  stream  tcp6    nowait  root    /usr/sbin/telnetd      telnetd -a` - open telnet.
+
 ### Services
 ###### Corretto 
 It's free amazon implementation of Java SE specification.
@@ -915,6 +923,8 @@ Condition operator - use it to set condition to policy:
 Condition key - a key that can be used in condition block:
 * global keys - those started with `aws:` prefix. [List of global condition keys](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_condition-keys.html)
 * service-specific key - started with prefix based on service like `iam:` or `sts:`. [Full list of service-specific condition keys](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_actions-resources-contextkeys.html#context_keys_table)
+ABAC (attribute-based access control) - policy conditions basically allows you to create access control based on attributes.
+Policy version - required if you are using variables (like `${aws:username}`. If you leave version, variables are treated like literal values.
 
 ###### S3
 S3 (Simple Storage Service) used for:
@@ -1142,7 +1152,6 @@ fs-a1bee823.efs.us-east-1.amazonaws.com:/  on  /mnt/efs                         
 127.0.0.1:/                                on  /mnt/pnt                         type  nfs4        (rw,relatime,vers=4.1,rsize=1048576,wsize=1048576,namlen=255,hard,noresvport,proto=tcp,port=20391,timeo=600,retrans=2,sec=sys,clientaddr=127.0.0.1,local_lock=none,addr=127.0.0.1)
 ```
 As you see it mounted on port `port=20391`, which is port of stunnel.
-Stunnel - open source project to use TLS for tunneling (for services that don't provide ssh, like SMTP port 25). So you can use `stunnel` but you have to install it manually and configure, but mount helper already provide it under the hood.
 IAM access:
 * by default efs open to anybody
 * you can set efs resource policy to deny all access and create iam role to allow (role would overwrite resource policy) and then assign this role to specific ec2
@@ -2055,6 +2064,7 @@ So compare to other services cmk doesn't implicitly allow access to root user, y
 KMS vs CloudHSM:
 * cloudHSM - your personal key encryption hardware in aws cloud
 * kmd - shared hardware tenancy, you have your own partition inside shared with other aws customers
+When you use kms for every policy (for example read policy for s3) you have to add `kms:Decrypt`, so s3 would have access to kms in order to decrypt data. So if you provide only s3 read without kms, s3 won't decrypt your data and you can't read it.
 
 ###### Route53
 Route53 - is amazon DNS service that help to transform domain name into IP address. It's called 53, cause 53 - port of DNS.

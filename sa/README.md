@@ -17,12 +17,18 @@ Here is my experience of taking 2 certifications, both associate & professional:
 ### TODO
 * sort out tax/bankAddress
 * if we are using api gateway for auth why do we need auth service. We can directly integrate api gateway with cognito and authorize all request with congito authorizers
+* fix email task & fix sonarqube all vulnerability && create task to include sonarqube into pipeline
 ----------------------------------------------------------------------------------------------
 * api gateway add cors example (both simple & non-simple) + add multiple cors headers for rest api
 * add mock response for rest api
 * api gateway put message into queue (without complex lambda code) + add cloudwatch event (rule, source - aws.ec2, detailtype-runinstances) when new ec2 started and add tag owner with lambda inside vpc
+
+* Notaction vs deny in iam policy (notaction acts as deny only if there is no explicit allow)
+* https://aws.amazon.com/guardduty/faqs/
+* https://docs.aws.amazon.com/vpc/latest/userguide/vpc-endpoints-access.html / https://docs.aws.amazon.com/vpc/latest/userguide/vpc-endpoints-iam.html
 * add vpc link to both rest/http api
 * add to `sa/cloudformation/agw-http-cognito.yml` => check how authorizer works, how to obtain valid jwt cognito token 
+* iam federated identity (web & saml identity when you create role)
 * Create cf template with redis cache and ec2 to connect to this cache (SG with clientSG that attached to desired ec2)
 ```
 sudo yum -y install --enablerepo=epel redis
