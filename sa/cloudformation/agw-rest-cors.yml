@@ -88,10 +88,18 @@ Resources:
       ResourceId: !Ref InfoResource
       HttpMethod: ANY
       AuthorizationType: NONE
+      RequestValidatorId: !Ref BodyRequestValidator
       Integration:
         Type: AWS_PROXY
         IntegrationHttpMethod: POST
         Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${InfoLambda.Arn}/invocations
+  BodyRequestValidator:
+    Type: AWS::ApiGateway::RequestValidator
+    Properties:
+      Name: BodyRequestValidator
+      RestApiId: !Ref RestApi
+      ValidateRequestBody: true
+      ValidateRequestParameters: true
   InfoCorsMethod:
     Type: AWS::ApiGateway::Method
     Properties:
@@ -102,7 +110,7 @@ Resources:
       MethodResponses:
         - StatusCode: 200
           ResponseModels:
-            application/json: 'Empty'
+            application/json: Empty
           ResponseParameters:
             method.response.header.Access-Control-Allow-Headers: false
             method.response.header.Access-Control-Allow-Methods: false
@@ -113,10 +121,11 @@ Resources:
           - StatusCode: 200
             ResponseParameters:
               method.response.header.Access-Control-Allow-Methods: "'GET, POST, PUT, DELETE, OPTIONS'"
-              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Origin: "'http://site.io'"
+              method.response.header.Access-Control-Allow-Headers: "'*'"
             ResponseTemplates:
               application/json: ''
-        PassthroughBehavior: WHEN_NO_MATCH
+        PassthroughBehavior: NEVER
         RequestTemplates:
           application/json: '{"statusCode": 200}'
   Deployment:

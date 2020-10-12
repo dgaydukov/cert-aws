@@ -2319,8 +2319,6 @@ There are 5 integration types:
 * lambda - 2 modes:
     * proxy - AGW wrap original request with some metadata, but don't modify response
     * direct integration - AGW modify request/response based on VTL (velocity template language) written by user.
-    So you can do validation on this step, even before your api reach your lambda
-    So if you validate on lambda you pay for it (even if validation failed and much of lambda not executed)
 * http - connect to any http(s) endpoints
 * mock - response without backend service (mostly used for cors options request)
 * aws service - connect to over 100 aws services
@@ -2330,7 +2328,43 @@ Resource policy - just like iam policy you can specify on the AGW level who can 
 * IP range (you can use waf to blacklist by IP, cause to apply these rule you have to deploy agw)
 * vpc or vpc endpoints
 Http vs Rest api:
-* rest api (AWS::ApiGateway)- old version, currently offers more features and full control over API requests and responses
+* rest api (AWS::ApiGateway)- old version, currently offers more features and full control over API requests and responses. Consists of 3 parts:
+    * integration - lambda, http backend or any aws service
+    * request flow - logic before request reach integration. There are 3 parts:
+        * auth - optional step:
+            * authorization check - 3 ways:
+                * iam (`authorizationType=AWS_IAM`) - add iam access key for each request. Then iam policy evaluate does user has access to this api
+                Below an example of allowing call GET /pets endpoint.
+                 ```
+                {
+                  "Version": "2012-10-17",
+                  "Statement": [
+                    {
+                      "Effect": "Allow",
+                      "Action": "execute-api:Invoke",
+                      "Resource": "arn:aws:execute-api:us-east-1:account-id:api-id/*/GET/pets"
+                    }
+                  ]
+                } 
+                ```
+                * cognito authorizer (`authorizationType=COGNITO_USER_POOLS`) - authroize using conginto user pool access token
+                * lambda/custom authorizer (`authorizationType=CUSTOM`) - write you own lambda where you set auth rules
+            * api key check - pass api key (that you can generate from api gateway) as http header `x-api-key`.
+            Usage plan - set throttling/limits based on api key (so you can have different users with different keys with different usage plans).
+            Auth check runs before api key check. You can use both of them or only 1.
+        * method request - use it to validate request. You should do validation on this step, even before your api reach your lambda, if you validate on lambda you pay for it (even if validation failed and much of lambda not executed).
+        AWS::ApiGateway::RequestValidator (set what you want to validate requestparam/body or both), Method.RequestParameters(validate headers/querystrings) + Method.RequestModels (validate body)
+        * integration request - here you can transform request before sending it to integration.
+        There are 3 types of proxy for rest api:
+        * proxy resource - url path as proxy, 2 types:
+            * /user/{userId} - this is just capture single variable
+            * /api/{proxy+} - capture all possible pathes after /api and redirect all of them to lambda or http backend
+        * proxy integration - pass intact request to lambda/http without using VTL
+        * aws service proxy - pass intact request to aws service
+    * response flow - logic after integration responds:
+        * integration response - 
+        * method response - 
+
 * http api (AWS::ApiGatewayV2) - new version, cheaper. There is no mock integration, only lambda
 
 ###### Cognito

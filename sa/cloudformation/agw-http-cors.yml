@@ -1,9 +1,9 @@
 AWSTemplateFormatVersion: 2010-09-09
 
-
 # Create api gateway + lambda (response to routes) + cors
 # You can call either / or /info that would invoke lambda
-# you can check cors by `curl -v -X OPTIONS -H 'Origin: http://site.io' -H 'Access-Control-Request-Method: PUT' {API_URL}`. You can change site to my.com, it would also work, yet other sites wouldn't (request would return 200, but no cors headers)
+# you can check cors by `curl -v -X OPTIONS -H 'Origin: http://site.io' -H 'Access-Control-Request-Method: PUT' {API_URL}`, you can add -X GET to test simple cors request directly (options is called by browser in case of non-simple request)
+# You can change site to my.com, it would also work, yet other sites wouldn't (request would return 200, but no cors headers)
 
 Resources:
   LambdaRole:
