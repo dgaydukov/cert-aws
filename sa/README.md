@@ -17,7 +17,6 @@ Here is my experience of taking 2 certifications, both associate & professional:
 ### TODO
 * sort out tax/bankAddress
 * if we are using api gateway for auth why do we need auth service. We can directly integrate api gateway with cognito and authorize all request with congito authorizers
-* fix email task & fix sonarqube all vulnerability && create task to include sonarqube into pipeline
 ----------------------------------------------------------------------------------------------
 * api gateway add cors example (both simple & non-simple) + add multiple cors headers for rest api
 * add mock response for rest api
@@ -61,7 +60,7 @@ TargetGroup:
 * try glacier select to csv archive
 * add cf template for iam database authentication (then go to public ec2 and try to access db with both regular username/password and iam token)
 * create cf template with dynamodb vpc endpoint and access dynamodb from ec2 in private subnet (add auto scaling to dynamoDb)
-* rewrite template comments to multi-line description https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-description-structure.html
+* rewrite template comments to multi-line description https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-description-structure.html -- Be careful of limit: `An error occurred (ValidationError) when calling the UpdateStack operation: Template format error: 'Description' length is greater than 1024.`
 * connect 2 vpc with privatelink (access ec2 from one vpc from another)
 * ELB access logs store to s3 => trigger lambda to process logs and put them into elasticsearch
 * create custom vpn server in ec2 and try to connect to it (do both use oepnvpn server ami and any ami (OpenVPN Access Server from marketplace which is free tier, in this case you should configure it through browser admin panel) + manually configure openvpn server)

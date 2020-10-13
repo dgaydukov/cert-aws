@@ -2354,13 +2354,12 @@ Http vs Rest api:
             Auth check runs before api key check. You can use both of them or only 1.
         * method request - use it to validate request. You should do validation on this step, even before your api reach your lambda, if you validate on lambda you pay for it (even if validation failed and much of lambda not executed).
         AWS::ApiGateway::RequestValidator (set what you want to validate requestparam/body or both), Method.RequestParameters(validate headers/querystrings) + Method.RequestModels (validate body)
-        * integration request - here you can transform request before sending it to integration.
-        There are 3 types of proxy for rest api:
+        * integration request - here you can transform request using VTL before sending it to integration.
+        There are 2 types of proxy for rest api:
         * proxy resource - url path as proxy, 2 types:
             * /user/{userId} - this is just capture single variable
             * /api/{proxy+} - capture all possible pathes after /api and redirect all of them to lambda or http backend
-        * proxy integration - pass intact request to lambda/http without using VTL
-        * aws service proxy - pass intact request to aws service
+        * proxy integration - pass intact request to awsService/lambda/httpBackend without using VTL, so you skip integration request altogether and pass your request to integration as it is
     * response flow - logic after integration responds:
         * integration response - 
         * method response - 

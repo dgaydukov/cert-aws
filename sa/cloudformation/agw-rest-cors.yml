@@ -1,9 +1,12 @@
 AWSTemplateFormatVersion: 2010-09-09
 
-
-# Create api gateway + lambda (response to routes) + cors
-# You can call either / or /info that would invoke lambda
-# you can check cors by `curl -v -X OPTIONS -H 'Origin: http://site.io' -H 'Access-Control-Request-Method: PUT' {API_URL}`. You can change site to my.com, it would also work, yet other sites wouldn't (request would return 200, but no cors headers)
+#  For REST API after each change of template you have to redeploy it manually from console. Create rest api + body/header/querystring validation + cors + lambda integration.
+#  Static values should be enclosed in both double & single quotes: "'static_value'"
+#  VALIDATION: curl -H 'Content-type: application/json' -H 'user-id: 1' --data '{"name":"jack","age":30}' {API_URL}/?status=1
+#  If you omit header/querystring you got exception: {"message": "Missing required request parameters: [user-id, status]"}. You can also require path variable to be present like `"method.request.path.profile_id": true`, but this is redundant cause if this is your path you can't call method without it
+#  If body validation failed, you got exception: {"message": "Invalid request body"}. Yet body validation depends on `Content-type` header. So if you pass not `application/json`, you don't get this error.
+#  TRANSFORMATION:  {"message": "Unsupported Media Type"}
+#  CORS: `curl -v -X OPTIONS -H 'Origin: http://site.io' -H 'Access-Control-Request-Method: PUT' {API_URL}`. You can change site to my.com, it would also work, yet other sites wouldn't (request would return 200, but no cors headers)
 
 Resources:
   LambdaRole:
@@ -45,14 +48,9 @@ Resources:
       Code:
         ZipFile: |
           exports.handler = (params, context, cb) => {
-              console.log("params => ", params);
-              var body = "Welcome to REST API";
-              if (params.resource == "/version") {
-                  body = JSON.stringify({"name": "HTTP REST CORS", "version": "2.0"});
-              }
               cb(null, {
                 statusCode: 200,
-                body,
+                body: JSON.stringify({"msg": "Welcome to REST API", params}),
                 headers: {"Content-Type": "application/json"}
               });
           }
@@ -75,36 +73,67 @@ Resources:
       EndpointConfiguration:
         Types:
           - REGIONAL
-  InfoResource:
+  BaseMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref RestApi
+      ResourceId: !GetAtt RestApi.RootResourceId
+      HttpMethod: ANY
+      AuthorizationType: NONE
+      RequestValidatorId: !Ref PersonRequestValidator
+      RequestParameters:
+        "method.request.header.user-id": true
+        "method.request.querystring.status": true
+      RequestModels:
+        application/json: PersonModel
+      Integration:
+        Type: AWS
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${InfoLambda.Arn}/invocations
+        PassthroughBehavior: NEVER
+        RequestTemplates:
+          application/json: "#set ($root=$input.path('$')) { \"stage\": \"$root.name\", \"user-id\": \"$root.age\" }"
+        RequestParameters:
+          "integration.request.header.profile-id": "'123'"
+          "integration.request.querystring.state": "'done'"
+  PersonRequestValidator:
+    Type: AWS::ApiGateway::RequestValidator
+    Properties:
+      Name: PersonRequestValidator
+      RestApiId: !Ref RestApi
+      ValidateRequestBody: true
+      ValidateRequestParameters: true
+  PersonModel:
+    Type: AWS::ApiGateway::Model
+    Properties:
+      RestApiId: !Ref RestApi
+      ContentType: application/json
+      Description: Model of Person
+      Name: PersonModel
+      Schema:
+        "$schema": "http://json-schema.org/draft-04/schema#"
+        title: UserModel
+        type: object
+        required:
+          - name
+          - age
+        properties:
+          name:
+            type: string
+          age:
+            type: integer
+
+  CorsResource:
     Type: AWS::ApiGateway::Resource
     Properties:
       RestApiId: !Ref RestApi
       ParentId: !GetAtt RestApi.RootResourceId
-      PathPart: info
-  InfoMethod:
+      PathPart: cors
+  CorsMethod:
     Type: AWS::ApiGateway::Method
     Properties:
       RestApiId: !Ref RestApi
-      ResourceId: !Ref InfoResource
-      HttpMethod: ANY
-      AuthorizationType: NONE
-      RequestValidatorId: !Ref BodyRequestValidator
-      Integration:
-        Type: AWS_PROXY
-        IntegrationHttpMethod: POST
-        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${InfoLambda.Arn}/invocations
-  BodyRequestValidator:
-    Type: AWS::ApiGateway::RequestValidator
-    Properties:
-      Name: BodyRequestValidator
-      RestApiId: !Ref RestApi
-      ValidateRequestBody: true
-      ValidateRequestParameters: true
-  InfoCorsMethod:
-    Type: AWS::ApiGateway::Method
-    Properties:
-      RestApiId: !Ref RestApi
-      ResourceId: !Ref InfoResource
+      ResourceId: !Ref CorsResource
       HttpMethod: OPTIONS
       AuthorizationType: NONE
       MethodResponses:
@@ -130,8 +159,8 @@ Resources:
           application/json: '{"statusCode": 200}'
   Deployment:
     DependsOn:
-      - InfoMethod
-      - InfoCorsMethod
+      - BaseMethod
+      - CorsMethod
     Type: AWS::ApiGateway::Deployment
     Properties:
       RestApiId: !Ref RestApi
