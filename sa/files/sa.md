@@ -2366,9 +2366,12 @@ Http vs Rest api:
             * /api/{proxy+} - capture all possible paths after /api and redirect all of them to lambda or http backend
         * proxy integration - pass intact request to awsService/lambda/httpBackend without using VTL, so you skip integration request altogether and pass your request to integration as it is
     * response flow - logic after integration responds:
-        * integration response - 
-        * method response - 
-
+        * integration response - reverse of integration request. Here you take message from integration and modify it.
+        If you are using proxy integration, both integration request/response are not used.
+        If you are using mock integration, here you should define body, response status and headers you want to return.
+        You can use VTL, add `IntegrationResponses.ResponseTemplates` to define `Content-type` for which you can write VTL template, that would transform response from integration
+        * method response - here you can modify response from integration response. You must set `MethodResponses` with at least 1 `StatusCode`.
+        If you set headers in `IntegrationResponses.ResponseParameters`, you have to add headers with any value (usually false - idea is to put something) to `MethodResponses.ResponseParameters`
 * http api (AWS::ApiGatewayV2) - new version, cheaper. There is no mock integration, only lambda
 
 ###### Cognito
