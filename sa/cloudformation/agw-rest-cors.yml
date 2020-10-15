@@ -2,11 +2,16 @@ AWSTemplateFormatVersion: 2010-09-09
 
 #  For REST API after each change of template you have to redeploy it manually from console. Create rest api + body/header/querystring validation + cors + lambda integration.
 #  Static values should be enclosed in both double & single quotes: "'static_value'"
-#  VALIDATION: curl -H 'Content-type: application/json' -H 'user-id: 1' --data '{"name":"jack","age":30}' {API_URL}/?status=1
+#  VALIDATION
+#  curl -H 'Content-type: application/json' -H 'user-id: 1' --data '{"name":"jack","age":30}' {API_URL}/custom?status=1
 #  If you omit header/querystring you got exception: {"message": "Missing required request parameters: [user-id, status]"}. You can also require path variable to be present like `"method.request.path.profile_id": true`, but this is redundant cause if this is your path you can't call method without it
 #  If body validation failed, you got exception: {"message": "Invalid request body"}. Yet body validation depends on `Content-type` header. So if you pass not `application/json`, you don't get this error.
-#  TRANSFORMATION:  {"message": "Unsupported Media Type"}
-#  CORS: `curl -v -X OPTIONS -H 'Origin: http://site.io' -H 'Access-Control-Request-Method: PUT' {API_URL}`. You can change site to my.com, it would also work, yet other sites wouldn't (request would return 200, but no cors headers)
+#  TRANSFORMATION
+#  RequestParameters for custom lambda integration: these event passed to invocation. For example in case of lambda it would be https://lambda.us-east-1.amazonaws.com/2015-03-31/functions/{LAMBDA_ARN}/invocations?state=456 and headers are passed as headers to these call, that's why inside lambda execution you won't see them
+#  If you want to pass headers (or other data) to lambda and be able to get them from lambda you should add thm into RequestTemplates
+
+#  CORS: curl -v -X OPTIONS -H 'Origin: http://site.io' -H 'Access-Control-Request-Method: PUT' {API_URL}/cors. Rest api out of the box support only 1 cors origin. If you want to test multiple origins you have to create custom lambda
+# multiple origin with lambda: curl -v -X OPTIONS -H 'Origin: http://site.io' -H 'Access-Control-Request-Method: PATCH' {API_URL}/multicors
 
 Resources:
   LambdaRole:
@@ -47,12 +52,19 @@ Resources:
       Handler: index.handler
       Code:
         ZipFile: |
-          exports.handler = (params, context, cb) => {
-              cb(null, {
-                statusCode: 200,
-                body: JSON.stringify({"msg": "Welcome to REST API", params}),
-                headers: {"Content-Type": "application/json"}
-              });
+          exports.handler = (event, context, cb) => {
+              //proxy integration
+              if (event.resource == "/proxy") {
+                cb(null, {
+                  statusCode: 200,
+                  headers: {"Content-Type": "application/json"},
+                  body: JSON.stringify({"msg": "ProxyIntegration", event})
+                });
+              } else if (event.resource == "/custom") {
+                  cb(null, {"msg": "CustomIntegration", event});
+              } else {
+                cb(null, {"msg": "default", event, context});
+              }
           }
       Tags:
         - Key: Name
@@ -63,7 +75,50 @@ Resources:
       FunctionName: !GetAtt InfoLambda.Arn
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
-      SourceArn: !Join [ "", ["arn:aws:execute-api:", !Ref "AWS::Region", ":", !Ref "AWS::AccountId", ":", !Ref RestApi, "/*/*/*"]]
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${RestApi}/*/*/*
+
+
+  MultiCorsLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Return multiple cors
+      Role: !GetAtt LambdaRole.Arn
+      Runtime: nodejs12.x
+      Handler: index.handler
+      Code:
+        ZipFile: |
+          // you should also validate Access-Control-Request-Method header. Here we omit it for simplicity
+          const ALLOWED_ORIGIN = {"http://site.io": 1, "http://my.com": 1};
+          exports.handler = (event, context, cb) => {
+              var origin = event.headers == null ? null : event.headers.origin;
+              if(ALLOWED_ORIGIN[origin] === 1){
+                cb(null, {
+                  statusCode: 200,
+                  headers: {
+                    "Access-Control-Allow-Origin" : origin,
+                    "Access-Control-Allow-Headers" : "*",
+                    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH"
+                  },
+                  body: ""
+                });
+              } else {
+                cb(null, {
+                  statusCode: 403,
+                  headers: {"Content-Type": "application/json"},
+                  body: `Unsupported cors origin: ${origin}`
+                });
+              }
+          }
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MultiCorsLambda
+  ApiGatewayMultiCorsLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt MultiCorsLambda.Arn
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${RestApi}/*/*/*
 
   RestApi:
     Type: AWS::ApiGateway::RestApi
@@ -73,11 +128,36 @@ Resources:
       EndpointConfiguration:
         Types:
           - REGIONAL
-  BaseMethod:
+
+  ProxyIntegrationResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref RestApi
+      ParentId: !GetAtt RestApi.RootResourceId
+      PathPart: proxy
+  ProxyIntegrationMethod:
     Type: AWS::ApiGateway::Method
     Properties:
       RestApiId: !Ref RestApi
-      ResourceId: !GetAtt RestApi.RootResourceId
+      ResourceId: !Ref ProxyIntegrationResource
+      HttpMethod: ANY
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${InfoLambda.Arn}/invocations
+
+  CustomIntegrationResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref RestApi
+      ParentId: !GetAtt RestApi.RootResourceId
+      PathPart: custom
+  CustomIntegrationMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref RestApi
+      ResourceId: !Ref CustomIntegrationResource
       HttpMethod: ANY
       AuthorizationType: NONE
       RequestValidatorId: !Ref PersonRequestValidator
@@ -86,16 +166,20 @@ Resources:
         "method.request.querystring.status": true
       RequestModels:
         application/json: PersonModel
+      MethodResponses:
+        - StatusCode: 200
       Integration:
         Type: AWS
         IntegrationHttpMethod: POST
         Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${InfoLambda.Arn}/invocations
         PassthroughBehavior: NEVER
         RequestTemplates:
-          application/json: "#set ($root=$input.path('$')) { \"stage\": \"$root.name\", \"user-id\": \"$root.age\" }"
+          application/json: '#set ($root=$input.path("$")) { "name":"$root.name", "age":"$root.age", "resource":"/custom"}'
         RequestParameters:
           "integration.request.header.profile-id": "'123'"
-          "integration.request.querystring.state": "'done'"
+          "integration.request.querystring.state": "'456'"
+        IntegrationResponses:
+          - StatusCode: 200
   PersonRequestValidator:
     Type: AWS::ApiGateway::RequestValidator
     Properties:
@@ -123,6 +207,24 @@ Resources:
           age:
             type: integer
 
+  MockIntegrationMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref RestApi
+      ResourceId: !GetAtt RestApi.RootResourceId
+      HttpMethod: ANY
+      AuthorizationType: NONE
+      MethodResponses:
+        - StatusCode: 200
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseTemplates:
+              application/json: '{"msg":"mock integration"}'
+
   CorsResource:
     Type: AWS::ApiGateway::Resource
     Properties:
@@ -134,33 +236,74 @@ Resources:
     Properties:
       RestApiId: !Ref RestApi
       ResourceId: !Ref CorsResource
+      HttpMethod: ANY
+      AuthorizationType: NONE
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: false
+            method.response.header.Access-Control-Allow-Methods: false
+            method.response.header.Access-Control-Allow-Headers: false
+      Integration:
+        Type: AWS
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${InfoLambda.Arn}/invocations
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'http://site.io'"
+              method.response.header.Access-Control-Allow-Methods: "'GET, POST, PUT, DELETE, PATCH'"
+              method.response.header.Access-Control-Allow-Headers: "'*'"
+  CorsOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref RestApi
+      ResourceId: !Ref CorsResource
       HttpMethod: OPTIONS
       AuthorizationType: NONE
       MethodResponses:
         - StatusCode: 200
-          ResponseModels:
-            application/json: Empty
           ResponseParameters:
-            method.response.header.Access-Control-Allow-Headers: false
-            method.response.header.Access-Control-Allow-Methods: false
             method.response.header.Access-Control-Allow-Origin: false
+            method.response.header.Access-Control-Allow-Methods: false
+            method.response.header.Access-Control-Allow-Headers: false
       Integration:
         Type: MOCK
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
         IntegrationResponses:
           - StatusCode: 200
             ResponseParameters:
-              method.response.header.Access-Control-Allow-Methods: "'GET, POST, PUT, DELETE, OPTIONS'"
               method.response.header.Access-Control-Allow-Origin: "'http://site.io'"
+              method.response.header.Access-Control-Allow-Methods: "'GET, POST, PUT, DELETE, PATCH'"
               method.response.header.Access-Control-Allow-Headers: "'*'"
-            ResponseTemplates:
-              application/json: ''
-        PassthroughBehavior: NEVER
-        RequestTemplates:
-          application/json: '{"statusCode": 200}'
+
+  MultiCorsResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref RestApi
+      ParentId: !GetAtt RestApi.RootResourceId
+      PathPart: multicors
+  MultiCorsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref RestApi
+      ResourceId: !Ref MultiCorsResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MultiCorsLambda.Arn}/invocations
+
   Deployment:
     DependsOn:
-      - BaseMethod
+      - ProxyIntegrationMethod
+      - CustomIntegrationMethod
+      - MockIntegrationMethod
       - CorsMethod
+      - CorsOptionsMethod
+      - MultiCorsMethod
     Type: AWS::ApiGateway::Deployment
     Properties:
       RestApiId: !Ref RestApi
