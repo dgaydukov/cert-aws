@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: 2010-09-09
 
-
+# Lambda authorizer response - principalId & context - passed down to integration
 
 Resources:
   LambdaRole:
@@ -32,6 +32,64 @@ Resources:
             Resource: "*"
       Roles:
         - !Ref LambdaRole
+
+  ApiGatewayRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-ApiGatewayRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - apigateway.amazonaws.com
+            Action:
+              - sts:AssumeRole
+  LambdaExecutionPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub ${AWS::StackName}-ApiGatewayPolicy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - "lambda:InvokeFunction"
+            Resource: "*"
+      Roles:
+        - !Ref ApiGatewayRole
+
+
+  AuthLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Authenticate user by custom header
+      Role: !GetAtt LambdaRole.Arn
+      Runtime: nodejs12.x
+      Handler: index.handler
+      Code:
+        ZipFile: |
+          exports.handler = (event, context, cb) => {
+            if(event.authorizationToken === "user"){
+              cb(null, {
+                    "principalId": "123",
+                    "policyDocument": {
+                      "Version": "2012-10-17",
+                      "Statement": [{
+                        "Action": "execute-api:Invoke",
+                        "Effect": "Allow",
+                        "Resource": "*"
+                      }]
+                    },
+                    "context": {"user_id": "456"}
+              });
+            }
+            callback("Unauthorized");
+          }
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-AuthLambda
   InfoLambda:
     Type: AWS::Lambda::Function
     Properties:
@@ -45,12 +103,12 @@ Resources:
               cb(null, {
                 statusCode: 200,
                 headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({"msg": "ProxyIntegration", event})
+                body: JSON.stringify({event})
               });
           }
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-Info
+          Value: !Sub ${AWS::StackName}-InfoLambda
   ApiGatewayLambdaPermission:
     Type: AWS::Lambda::Permission
     Properties:
@@ -59,43 +117,103 @@ Resources:
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${RestApi}/*/*/*
 
-
   RestApi:
     Type: AWS::ApiGateway::RestApi
     Properties:
-      Description: Cors example using REST API
-      Name: REST API CORS
+      Description: Auth (lambda & cognito) example using REST API
+      Name: REST API Auth
       EndpointConfiguration:
         Types:
           - REGIONAL
 
-
-  MockIntegrationMethod:
+  LambdaAuthorizer:
+    Type: AWS::ApiGateway::Authorizer
+    Properties:
+      AuthorizerCredentials: !GetAtt ApiGatewayRole.Arn
+      AuthorizerResultTtlInSeconds: 30
+      AuthorizerUri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AuthLambda.Arn}/invocations
+      Type: TOKEN
+      IdentitySource: method.request.header.auth
+      Name: LambdaAuthorizer
+      RestApiId: !Ref RestApi
+  CustomAuthResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref RestApi
+      ParentId: !GetAtt RestApi.RootResourceId
+      PathPart: custom
+  CustomAuthMethod:
     Type: AWS::ApiGateway::Method
     Properties:
       RestApiId: !Ref RestApi
-      ResourceId: !GetAtt RestApi.RootResourceId
+      ResourceId: !Ref CustomAuthResource
       HttpMethod: ANY
-      AuthorizationType: NONE
-      MethodResponses:
-        - StatusCode: 200
+      AuthorizationType: CUSTOM
+      AuthorizerId: !Ref LambdaAuthorizer
       Integration:
-        Type: MOCK
-        RequestTemplates:
-          application/json: '{"statusCode": 200}'
-        IntegrationResponses:
-          - StatusCode: 200
-            ResponseTemplates:
-              application/json: '{"msg":"mock integration"}'
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${InfoLambda.Arn}/invocations
+
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub ${AWS::StackName}-UserPool
+      AutoVerifiedAttributes:
+        - email
+      UsernameConfiguration:
+        CaseSensitive: true
+      Schema:
+        - Name: name
+          AttributeDataType: String
+          Mutable: true
+          Required: true
+        - Name: email
+          AttributeDataType: String
+          Mutable: false
+          Required: true
+  WebClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: !Sub ${AWS::StackName}-WebClient
+      GenerateSecret: false
+      UserPoolId: !Ref UserPool
+      ExplicitAuthFlows:
+        - ALLOW_REFRESH_TOKEN_AUTH
+        - ALLOW_USER_PASSWORD_AUTH
+
+  CognitoAuthorizer:
+    Type: AWS::ApiGateway::Authorizer
+    Properties:
+      ProviderARNs:
+        - !GetAtt UserPool.Arn
+      IdentitySource: method.request.header.auth
+      Type: COGNITO_USER_POOLS
+      Name: CognitoAuthorizer
+      RestApiId: !Ref RestApi
+  CognitoAuthResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref RestApi
+      ParentId: !GetAtt RestApi.RootResourceId
+      PathPart: cognito
+  CognitoAuthMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref RestApi
+      ResourceId: !Ref CognitoAuthResource
+      HttpMethod: ANY
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref CognitoAuthorizer
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${InfoLambda.Arn}/invocations
 
   Deployment:
     DependsOn:
-      - ProxyIntegrationMethod
-      - CustomIntegrationMethod
-      - MockIntegrationMethod
-      - CorsMethod
-      - CorsOptionsMethod
-      - MultiCorsMethod
+      - CustomAuthMethod
+      - CognitoAuthMethod
     Type: AWS::ApiGateway::Deployment
     Properties:
       RestApiId: !Ref RestApi
