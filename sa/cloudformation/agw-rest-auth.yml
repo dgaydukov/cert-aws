@@ -1,6 +1,17 @@
 AWSTemplateFormatVersion: 2010-09-09
 
+# Create custom(lambda) authorizer & cognito authorizer + lambda for proxy integration + 2 routes (/custom & /cognito)
 # Lambda authorizer response - principalId & context - passed down to integration
+# Lambda auth: curl -H 'auth: user' {API_URL}/custom
+# Lambda auth (type REQUEST): curl -H 'auth: user' {API_URL}/request
+# REQUEST almost same as TOKEN, only difference in case of REQUEST - auth lambda receive full fledged event and header inside event.headers. For TOKEN auth header is event.authorizationToken
+# For cognito:
+# create user:  aws cognito-idp sign-up --client-id={USER_POOL_CLIENT_ID} --username=john.doe@gmail.com --password=P@1ssword --user-attributes Name="email",Value="john.doe@gmail.com" Name="name",Value="John Doe"
+# confirm user: aws cognito-idp admin-confirm-sign-up --user-pool-id={USER_POOL_ID} --username=john.doe@gmail.com
+# get idToken:  aws cognito-idp initiate-auth --client-id={USER_POOL_CLIENT_ID} --auth-flow=USER_PASSWORD_AUTH --auth-parameters USERNAME=john.doe@gmail.com,PASSWORD=P@1ssword
+# after you can call: curl -H 'auth: {COGNITO_ID_TOKEN}' {API_URL}/cognito
+# AuthorizerResultTtlInSeconds - set caching time (max - 1 hour, default - 300sec). During this time second hit with same header (in case of TOKEN type) will not call auth lambda, but will proceed.
+# Be careful with allow Resource. If multiple request use same key, they can get stale cache.
 
 Resources:
   LambdaRole:
@@ -59,8 +70,6 @@ Resources:
             Resource: "*"
       Roles:
         - !Ref ApiGatewayRole
-
-
   AuthLambda:
     Type: AWS::Lambda::Function
     Properties:
@@ -71,7 +80,8 @@ Resources:
       Code:
         ZipFile: |
           exports.handler = (event, context, cb) => {
-            if(event.authorizationToken === "user"){
+            // in case of TOKEN we got authorizationToken, REQUEST - event would be standard lambda event with all fields
+            if(event.authorizationToken === "user" || event.headers.auth === "user"){
               cb(null, {
                     "principalId": "123",
                     "policyDocument": {
@@ -85,11 +95,12 @@ Resources:
                     "context": {"user_id": "456"}
               });
             }
-            callback("Unauthorized");
+            cb("Unauthorized");
           }
       Tags:
         - Key: Name
           Value: !Sub ${AWS::StackName}-AuthLambda
+
   InfoLambda:
     Type: AWS::Lambda::Function
     Properties:
@@ -125,6 +136,36 @@ Resources:
       EndpointConfiguration:
         Types:
           - REGIONAL
+
+  RequestLambdaAuthorizer:
+    Type: AWS::ApiGateway::Authorizer
+    Properties:
+      AuthorizerCredentials: !GetAtt ApiGatewayRole.Arn
+      AuthorizerResultTtlInSeconds: 300
+      AuthorizerUri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AuthLambda.Arn}/invocations
+      Type: REQUEST
+      IdentitySource: method.request.header.auth
+      Name: RequestLambdaAuthorizer
+      RestApiId: !Ref RestApi
+  RequestAuthResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref RestApi
+      ParentId: !GetAtt RestApi.RootResourceId
+      PathPart: request
+  RequestAuthMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref RestApi
+      ResourceId: !Ref RequestAuthResource
+      HttpMethod: ANY
+      AuthorizationType: CUSTOM
+      AuthorizerId: !Ref RequestLambdaAuthorizer
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${InfoLambda.Arn}/invocations
+
 
   LambdaAuthorizer:
     Type: AWS::ApiGateway::Authorizer
@@ -214,6 +255,7 @@ Resources:
     DependsOn:
       - CustomAuthMethod
       - CognitoAuthMethod
+      - RequestAuthMethod
     Type: AWS::ApiGateway::Deployment
     Properties:
       RestApiId: !Ref RestApi

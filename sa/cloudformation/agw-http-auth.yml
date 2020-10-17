@@ -1,0 +1,220 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+# Create api gateway + routes + custom(lambda) & cognito authorizer
+# Lambda authorizer should have version, and lambda response depends upon version https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-lambda-authorizer.html
+# Take steps to create cognito user & get jwt from ./agw-rest-auth.yml
+# JwtConfiguration.Audience - require aud attribute from JWT, aud is nothing but POOL_CLIENT_ID, if you don't specify it you will always get {"message":"Unauthorized"}
+
+Resources:
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-LambdaRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+  LogPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub ${AWS::StackName}-Logging
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - "logs:CreateLogGroup"
+              - "logs:CreateLogStream"
+              - "logs:PutLogEvents"
+              - "logs:DescribeLogStreams"
+            Resource: "*"
+      Roles:
+        - !Ref LambdaRole
+  InfoLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Show basic information about app
+      Role: !GetAtt LambdaRole.Arn
+      Runtime: nodejs12.x
+      Handler: index.handler
+      Code:
+        ZipFile: |
+          exports.handler = (event, context, cb) => {
+              cb(null, {
+                statusCode: 200,
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({event})
+              });
+          }
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-Info
+  ApiGatewayLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt InfoLambda.Arn
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*/*/*
+
+  ApiGatewayRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-ApiGatewayRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - apigateway.amazonaws.com
+            Action:
+              - sts:AssumeRole
+  LambdaExecutionPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub ${AWS::StackName}-ApiGatewayPolicy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - "lambda:InvokeFunction"
+            Resource: "*"
+      Roles:
+        - !Ref ApiGatewayRole
+  AuthLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Authenticate user by custom header
+      Role: !GetAtt LambdaRole.Arn
+      Runtime: nodejs12.x
+      Handler: index.handler
+      Code:
+        ZipFile: |
+          exports.handler = (event, context, cb) => {
+            console.log(event);
+            if(event.headers.auth === "user"){
+              cb(null, {
+                    "principalId": "123",
+                    "policyDocument": {
+                      "Version": "2012-10-17",
+                      "Statement": [{
+                        "Action": "execute-api:Invoke",
+                        "Effect": "Allow",
+                        "Resource": "*"
+                      }]
+                    },
+                    "context": {"user_id": "456"}
+              });
+            }
+            // compare to rest api, where throwing error return 401, with http you will get {"message":"Internal Server Error"}
+            cb("Unauthorized");
+          }
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-AuthLambda
+
+  HttpApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: HTTP API Auth
+      Description: Auth (lambda & cognito) for HTTP API
+      ProtocolType: HTTP
+      Tags:
+        Name: !Sub ${AWS::StackName}-Http-Api
+  DevStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      StageName: dev
+      Description: Only for dev env
+      ApiId: !Ref HttpApi
+      AutoDeploy: true
+  LambdaIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref HttpApi
+      Description: Lambda Integration
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/${InfoLambda.Arn}/invocations
+      IntegrationMethod: POST
+      ConnectionType: INTERNET
+      PayloadFormatVersion: 1.0
+      TimeoutInMillis: 5000
+
+  CustomRoute:
+    DependsOn:
+      - LambdaIntegration
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: GET /custom
+      Target: !Sub integrations/${LambdaIntegration}
+      AuthorizationType: CUSTOM
+      AuthorizerId: !Ref LambdaAuthorizer
+  LambdaAuthorizer:
+    Type: AWS::ApiGatewayV2::Authorizer
+    Properties:
+      Name: LambdaAuthorizer
+      ApiId: !Ref HttpApi
+      AuthorizerType: REQUEST
+      AuthorizerPayloadFormatVersion: 1.0
+      AuthorizerCredentialsArn: !GetAtt ApiGatewayRole.Arn
+      AuthorizerUri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AuthLambda.Arn}/invocations
+      AuthorizerResultTtlInSeconds: 300
+      IdentitySource:
+        - $request.header.auth
+
+  CognitoRoute:
+    DependsOn:
+      - LambdaIntegration
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: GET /cognito
+      Target: !Sub integrations/${LambdaIntegration}
+      AuthorizerId: !Ref CognitoAuthorizer
+      AuthorizationType: JWT
+  CognitoAuthorizer:
+    Type: AWS::ApiGatewayV2::Authorizer
+    Properties:
+      Name: CognitoAuthorizer
+      AuthorizerType: JWT
+      IdentitySource:
+        - $request.header.auth
+      JwtConfiguration:
+        Audience:
+          - !Ref WebClient
+        Issuer: !Sub https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPool}
+      ApiId: !Ref HttpApi
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub ${AWS::StackName}-UserPool
+      AutoVerifiedAttributes:
+        - email
+      UsernameConfiguration:
+        CaseSensitive: true
+      Schema:
+        - Name: name
+          AttributeDataType: String
+          Mutable: true
+          Required: true
+        - Name: email
+          AttributeDataType: String
+          Mutable: false
+          Required: true
+  WebClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: !Sub ${AWS::StackName}-WebClient
+      GenerateSecret: false
+      UserPoolId: !Ref UserPool
+      ExplicitAuthFlows:
+        - ALLOW_REFRESH_TOKEN_AUTH
+        - ALLOW_USER_PASSWORD_AUTH

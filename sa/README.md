@@ -16,11 +16,11 @@ Here is my experience of taking 2 certifications, both associate & professional:
 
 ### TODO
 * sort out tax/bankAddress
-* if we are using api gateway for auth why do we need auth service. We can directly integrate api gateway with cognito and authorize all request with congito authorizers
 * run .war project in intellij
 ----------------------------------------------------------------------------------------------
-* add to `sa/cloudformation/agw-http-cognito.yml` => check how authorizer works, how to obtain valid jwt cognito token  
 * api gateway put message into queue (without complex lambda code) + add cloudwatch event (rule, source - aws.ec2, detailtype-runinstances) when new ec2 started and add tag owner with lambda inside vpc
+* https://www.alexdebrie.com/posts/cloudformation-macros/
++ latest 4 articles on dynamoDB
 * https://blog.rowanudell.com/iam-passrole-explained/
 * Notaction vs deny in iam policy (notaction acts as deny only if there is no explicit allow)
 * https://aws.amazon.com/guardduty/faqs/
