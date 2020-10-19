@@ -17,8 +17,10 @@ Here is my experience of taking 2 certifications, both associate & professional:
 ### TODO
 * sort out tax/bankAddress
 * run .war project in intellij
+* https://mechanical-sympathy.blogspot.com/
 ----------------------------------------------------------------------------------------------
-* api gateway put message into queue (without complex lambda code) + add cloudwatch event (rule, source - aws.ec2, detailtype-runinstances) when new ec2 started and add tag owner with lambda inside vpc
+* check transform of custom header into x-api-key header
+* api gateway put message into queue (without complex lambda code)
 * https://www.alexdebrie.com/posts/cloudformation-macros/
 + latest 4 articles on dynamoDB
 * https://blog.rowanudell.com/iam-passrole-explained/
@@ -41,6 +43,7 @@ SET mykey myvalue EX 5
 + add elb health check with
 + add custom health check to elb
 + add elb to 2 vpc (load traffic between 2 vpc)
++add cloudwatch event (rule, source - aws.ec2, detailtype-runinstances) when new ec2 started and add tag owner with lambda inside vpc
 + add HealthCheck to elb + default ec2 healthcheck from asg (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-elb-health-check.html)
 + add Simple elb with 2 ec2 from 2 private subnets (use nat gateway to install httpd) https://stackoverflow.com/questions/22541895/amazon-elb-for-ec2-instances-in-private-subnet-in-vpc
 ```

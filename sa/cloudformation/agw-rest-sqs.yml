@@ -1,0 +1,96 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+# Create http api + sqs sendmessage. If you call `curl -H 'Content-Type:application/json' --data '{"user":"123"}' ${API_URL}/send` body would be placed into sqs queue
+
+Resources:
+  EventQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub ${AWS::StackName}-EventQueue
+  ApiGatewayRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-ApiGatewayRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - apigateway.amazonaws.com
+            Action:
+              - sts:AssumeRole
+  SqsAccessPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub ${AWS::StackName}-sqs
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - "sqs:SendMessage"
+            Resource: !GetAtt EventQueue.Arn
+      Roles:
+        - !Ref ApiGatewayRole
+
+  RestApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Description: SQS example using REST API
+      Name: REST API SQS
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+  SqsResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref RestApi
+      ParentId: !GetAtt RestApi.RootResourceId
+      PathPart: send
+  SqsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref RestApi
+      ResourceId: !Ref SqsResource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      ApiKeyRequired: true
+      MethodResponses:
+        - StatusCode: 200
+      Integration:
+        Credentials: !GetAtt ApiGatewayRole.Arn
+        IntegrationHttpMethod: POST
+        IntegrationResponses:
+          - StatusCode: 200
+        Type: AWS
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:sqs:action/SendMessage
+        RequestParameters:
+          integration.request.querystring.QueueUrl: !Sub "'${EventQueue}'"
+          integration.request.querystring.MessageBody: method.request.body
+  Deployment:
+    DependsOn:
+      - SqsMethod
+    Type: AWS::ApiGateway::Deployment
+    Properties:
+      RestApiId: !Ref RestApi
+      Description: My deployment
+  DevStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      StageName: dev
+      Description: Dev Stage
+      RestApiId: !Ref RestApi
+      DeploymentId: !Ref Deployment
+
+  ApiKey:
+    DependsOn:
+      - DevStage
+    Type: AWS::ApiGateway::ApiKey
+    Properties:
+      Name: SqsApiKey
+      Description: Protect api by key
+      Enabled: true
+      StageKeys:
+        - RestApiId: !Ref RestApi
+          StageName: !Ref DevStage

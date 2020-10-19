@@ -1,0 +1,74 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+# Create http api + sqs sendmessage. If you call `curl --data '{"user":"123"}' ${API_URL}/send` body would be placed into sqs queue.
+# As you notice you get xml response from sqs that proxied to api gateway. According to https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-api-responses.html, there is no way to get json response
+
+Resources:
+  EventQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub ${AWS::StackName}-EventQueue
+  ApiGatewayRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-ApiGatewayRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - apigateway.amazonaws.com
+            Action:
+              - sts:AssumeRole
+  SqsAccessPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub ${AWS::StackName}-sqs
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - "sqs:SendMessage"
+            Resource: !GetAtt EventQueue.Arn
+      Roles:
+        - !Ref ApiGatewayRole
+
+  HttpApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: HTTP API SQS
+      Description: Put message into SQS using HTTP API
+      ProtocolType: HTTP
+      Tags:
+        Name: !Sub ${AWS::StackName}-HttpApi
+  DevStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      StageName: dev
+      Description: Only for dev env
+      ApiId: !Ref HttpApi
+      AutoDeploy: true
+  SqsIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref HttpApi
+      Description: SqsIntegration
+      CredentialsArn: !GetAtt ApiGatewayRole.Arn
+      IntegrationType: AWS_PROXY
+      IntegrationSubtype: SQS-SendMessage
+      RequestParameters:
+        QueueUrl: !Ref EventQueue
+        MessageBody: $request.body
+      ConnectionType: INTERNET
+      PayloadFormatVersion: 1.0
+      TimeoutInMillis: 5000
+  SqsRoute:
+    DependsOn:
+      - SqsIntegration
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: POST /send
+      Target: !Sub integrations/${SqsIntegration}
