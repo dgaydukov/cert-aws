@@ -17,7 +17,13 @@ Here is my experience of taking 2 certifications, both associate & professional:
 ### TODO
 * sort out tax/bankAddress
 * run .war project in intellij
-* https://mechanical-sympathy.blogspot.com/
+* https://mechanical-sympathy.blogspot.com
+https://www.slideshare.net/trishagee/introduction-to-the-disruptor
+https://martinfowler.com/articles/lmax.html
+https://www.infoq.com/presentations/mechanical-sympathy
+https://www.infoq.com/presentations/java-jit-optimization
+https://www.infoq.com/presentations/low-latency-concurrrent-java-8
+https://www.infoq.com/search.action?queryString=Martin+Thompson&page=1&searchOrder=
 ----------------------------------------------------------------------------------------------
 * https://www.alexdebrie.com/posts/cloudformation-macros/
 + latest 4 articles on dynamoDB
@@ -58,6 +64,8 @@ TargetGroup:
         HttpCode: 200-299
 ```
 * use AWS::AutoScalingPlans::ScalingPlan to create asg based on predictive scaling (https://docs.aws.amazon.com/autoscaling/plans/userguide/what-is-aws-auto-scaling.html)
+* Add auto-scaling example for specific time range with `AWS::AutoScaling::ScheduledAction`
++ add based on number of messages in sqs
 * try glacier select to csv archive
 * add cf template for iam database authentication (then go to public ec2 and try to access db with both regular username/password and iam token)
 * create cf template with dynamodb vpc endpoint and access dynamodb from ec2 in private subnet (add auto scaling to dynamoDb)
@@ -121,8 +129,6 @@ TargetGroup:
 * Create auto-scale group with ec2 httpd (but store data in efs, this would guarantee that if instance launched in another AZ data won't be lost)
 * Create auto-scale group with single ec2 and eip and after terminate associate same eip to new ec2 (in launch config userdata add ability to associate eip to current ec2 + you need role for ec2 to be able to associate eip to itself)
 * Rewrite cf templates random httpd to display privateIP
-* Add auto-scaling example for specific time range with `AWS::AutoScaling::ScheduledAction`
-+ add based on number of messages in sqs
 * cloudformation template iam create identity provider with both saml & openId connect, and with cognito/aws AD (by the way learn how AD works internally)
 * try to create aws sso user with permission set and add 1 free app, and then try to login to both aws console & this app
 * Create vpc with custom DHCP options set and create ec2 instance and see it private/public domain name
