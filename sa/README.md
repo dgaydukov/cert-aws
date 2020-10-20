@@ -19,8 +19,6 @@ Here is my experience of taking 2 certifications, both associate & professional:
 * run .war project in intellij
 * https://mechanical-sympathy.blogspot.com/
 ----------------------------------------------------------------------------------------------
-* check transform of custom header into x-api-key header
-* api gateway put message into queue (without complex lambda code)
 * https://www.alexdebrie.com/posts/cloudformation-macros/
 + latest 4 articles on dynamoDB
 * https://blog.rowanudell.com/iam-passrole-explained/

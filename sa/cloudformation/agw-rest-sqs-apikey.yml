@@ -1,6 +1,7 @@
 AWSTemplateFormatVersion: 2010-09-09
 
-# Create http api + sqs sendmessage. If you call `curl -H 'Content-Type:application/json' --data '{"user":"123"}' ${API_URL}/send` body would be placed into sqs queue
+# Create http api + sqs sendmessage + apikey (which needs usageplan, otherwise you always get forbidden)
+# You can call: `curl -H 'Content-Type:application/json' -H 'x-api-key: ${API_KEY}' --data '{"user":"asdf"}' ${API_URL}/send`
 
 Resources:
   EventQueue:
@@ -91,6 +92,17 @@ Resources:
       Name: SqsApiKey
       Description: Protect api by key
       Enabled: true
-      StageKeys:
-        - RestApiId: !Ref RestApi
-          StageName: !Ref DevStage
+  UsagePlan:
+    Type: AWS::ApiGateway::UsagePlan
+    Properties:
+      UsagePlanName: basic
+      ApiStages:
+        - ApiId: !Ref RestApi
+          Stage: !Ref DevStage
+      Description: UsagePlan for ApiKey
+  UsagePlanApiKeyLink:
+    Type: AWS::ApiGateway::UsagePlanKey
+    Properties:
+      KeyType: API_KEY
+      KeyId: !Ref ApiKey
+      UsagePlanId: !Ref UsagePlan
