@@ -25,8 +25,6 @@ https://www.infoq.com/presentations/java-jit-optimization
 https://www.infoq.com/presentations/low-latency-concurrrent-java-8
 https://www.infoq.com/search.action?queryString=Martin+Thompson&page=1&searchOrder=
 ----------------------------------------------------------------------------------------------
-* https://www.alexdebrie.com/posts/cloudformation-macros/
-+ latest 4 articles on dynamoDB
 * https://blog.rowanudell.com/iam-passrole-explained/
 * Notaction vs deny in iam policy (notaction acts as deny only if there is no explicit allow)
 * https://aws.amazon.com/guardduty/faqs/

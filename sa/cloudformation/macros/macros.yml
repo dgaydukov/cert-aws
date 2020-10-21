@@ -1,0 +1,90 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+# CloudFormation Macros to substitute names using javascript syntax
+# In the event object you get templateParameterValues - object with all params, fragment - your yml template (so you can modify this object, and substitute strings whenever you want)
+# In case of snippet macros - only single resource would be inside fragment
+
+Resources:
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-LambdaRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+  LogPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub ${AWS::StackName}-LogPolicy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - "logs:CreateLogGroup"
+              - "logs:CreateLogStream"
+              - "logs:PutLogEvents"
+              - "logs:DescribeLogStreams"
+            Resource: "*"
+      Roles:
+        - !Ref LambdaRole
+  TemplateLevelLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Substitute custom strings
+      Role: !GetAtt LambdaRole.Arn
+      Runtime: nodejs12.x
+      Handler: index.handler
+      Code:
+        ZipFile: |
+          //TODO: create function walk() that would recursivly walk around fragment object and substitute all variables
+          exports.handler = (event, context, cb) => {
+            console.log("TemplateLevelLambda", JSON.stringify(event, null, 5));
+            cb(null, {
+               "requestId": event["requestId"],
+               "status": "success",
+               "fragment": event["fragment"]
+             });
+          }
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-TemplateLevelLambda
+
+  SnippetLevelLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Substitute custom strings
+      Role: !GetAtt LambdaRole.Arn
+      Runtime: nodejs12.x
+      Handler: index.handler
+      Code:
+        ZipFile: |
+          //TODO: add logic to add custom field to vpc template with tag name
+          exports.handler = (event, context, cb) => {
+            console.log("SnippetLevelLambda", JSON.stringify(event, null, 5));
+            cb(null, {
+               "requestId": event["requestId"],
+               "status": "success",
+               "fragment": event["fragment"]
+             });
+          }
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-SnippetLevelLambda
+
+  TemplateLevelMacro:
+    Type: AWS::CloudFormation::Macro
+    Properties:
+      Name: StringSubstitution
+      FunctionName: !GetAtt TemplateLevelLambda.Arn
+  SnippetLevelMacro:
+    Type: AWS::CloudFormation::Macro
+    Properties:
+      Name: PropertyAdder
+      FunctionName: !GetAtt SnippetLevelLambda.Arn

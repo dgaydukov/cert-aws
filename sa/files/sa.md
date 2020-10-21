@@ -738,6 +738,9 @@ CF uses declarative approach, cause you declare how your stack should look like,
 DD (Drift Detection) - find difference between template values and actual property values in aws (can happen if someone change resource directly from console/cli). 
 DD only checks values explicitly set in template, it doesn't check default values (so if you change some default property directly from console/cli, DD won't find it).
 If you want include default props into DD result you should add all these default properties into CF template.
+Macros - allows you to customize templates. You write lambda that execute before template run and modify it (substitute variables, add new fields to objects). There are 2 types:
+* template level - applied to whole template (all parameters/resources)
+* snippet level - applied to single resource
 
 ###### IAM
 There are 3 types of permission:
