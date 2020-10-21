@@ -1,0 +1,25 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+# Here we have custom resource that called lambda
+# !important => handler.yml should be created before
+
+Resources:
+  VPC1:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.100.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value:  abc
+
+
+  GithubWebhook:
+    Type: Custom::GithubWebhook
+    Properties:
+      ServiceToken: !ImportValue CustomResourceLambda
+      Name: GithubWebhook
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-GithubWebhook

@@ -1,0 +1,56 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+# Create custom handler
+
+Resources:
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-LambdaRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+  LogPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub ${AWS::StackName}-LogPolicy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - "logs:CreateLogGroup"
+              - "logs:CreateLogStream"
+              - "logs:PutLogEvents"
+              - "logs:DescribeLogStreams"
+            Resource: "*"
+      Roles:
+        - !Ref LambdaRole
+  CustomResourceLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Create github webhook
+      Role: !GetAtt LambdaRole.Arn
+      Runtime: nodejs12.x
+      Handler: index.handler
+      Code:
+        ZipFile: |
+          exports.handler = (event, context, cb) => {
+            console.log(JSON.stringify(event, null, 5));
+          }
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-CustomResourceLambda
+
+Outputs:
+  CustomResourceLambda:
+    Description: ARN for CustomResourceLambda
+    Value: !GetAtt CustomResourceLambda.Arn
+    Export:
+      Name: CustomResourceLambda

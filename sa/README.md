@@ -139,3 +139,4 @@ TargetGroup:
 * create site-to-site vpn with 2 locations so each of this can communicate with each other using VPN CloudHub (each location is imitated by separate vpc)
 * use kinesis sdk and try java data streaming. In all example firehose consume data from data streams, but can we directly send dota to it without data streams?
 * solve final test for saa
+* add logic to `sa/cloudformation/custom-resource/handler.yml` to update `ResponseURL` (pre-sign s3 url)

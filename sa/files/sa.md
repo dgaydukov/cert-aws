@@ -741,6 +741,36 @@ If you want include default props into DD result you should add all these defaul
 Macros - allows you to customize templates. You write lambda that execute before template run and modify it (substitute variables, add new fields to objects). There are 2 types:
 * template level - applied to whole template (all parameters/resources)
 * snippet level - applied to single resource
+Custom resource - ability to create resource not supported by cf. When cf execute templates, and meet custom resource it call your lambda with your custom logic run. You can use it:
+* provision aws resource not supported by cf, like dynamodb global table, [full list](https://github.com/cfntools/cloudformation-gaps/projects/1)
+* provision non-aws resource with cf, like github webhook (in case you want to use github for your ci/ci instead of codeCommit)
+* provision something not related to infra, like run migrations
+Custom resource handler - executed in async callback model, that means cf run it but doesn't wait for response, instead you are given pre-sign s3 url, where you have to upload json result once you are done.
+As with all resources you have to implement logic for these 3 steps: create/update/delete. You can use [this node.js library](https://github.com/andrew-templeton/cfn-lambda) to simplify writing custom resource handler.
+You create custom resource with `Type: Custom::YouCustomResourceName` with at least one property `ServiceToken: {LAMBDA_ARN}`. When cf execute your lambda you are given event with `ResponseURL` - s3 pre-sign url where you have to put json after execution.
+Example of event for lambda
+```
+{
+    "RequestType": "Create",
+    "ServiceToken": "arn:aws:lambda:us-east-1:{ACCOUNT_ID}:function:example-CustomResourceLambda-4RWJOUFLIPGA",
+    "ResponseURL": "https://cloudformation-custom-resource-response-useast1.s3.amazonaws.com/...",
+    "StackId": "arn:aws:cloudformation:us-east-1:{ACCOUNT_ID}:stack/example/85e457b0-1383-11eb-a18a-0e09773e6f3f",
+    "RequestId": "5d022657-3843-4f4e-8b6b-a04ed99f49a7",
+    "LogicalResourceId": "GithubWebhook",
+    "ResourceType": "Custom::GithubWebhook",
+    "ResourceProperties": {
+        "ServiceToken": "arn:aws:lambda:us-east-1:{ACCOUNT_ID}:function:example-CustomResourceLambda-4RWJOUFLIPGA",
+        "Tags": [
+            {
+                "Value": "example-GithubWebhook",
+                "Key": "Name"
+            }
+        ],
+        "Name": "GithubWebhook"
+    }
+}
+```
+Make sure you have logic to update `ResponseURL`, otherwise stack that use your lambda would be stuck in `UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS` state. 
 
 ###### IAM
 There are 3 types of permission:
