@@ -1543,6 +1543,7 @@ Although dynamoDb is proprietary solution with closed source code there are 2 op
 * download aws version for developers
 * use it from localstack
 GSI (Global Secondary Index) - special read-only table created by dynamoDb to simplify search for indexed fields. Index speed up search but require more memory to store itself. You should configure separate read/write capacity for this.
+It's a way to have DynamoDB replicate the data in your table into a new structure using a different primary key schema. This makes it easy to support additional access patterns
 LSI (Local Secondary Index) - same partition as primary key, but different sort key. You can have one per table and create when table is created, just like primary key. It uses the same read/write capacity as table.
 Scanning - like `select * from` operation in RDS, just go over all records.
 DynamoDb just like s3 is eventual consistent, so if you update data and read it right away you can get old value (cause items are persisted on multiple machines, and depending from what machine you read you can get stale data).
@@ -1580,6 +1581,26 @@ So if you have write problems with db you should:
 If you have read problems:
 * RDS - add elasticache, add sharding (it would actually help in both read and write)
 * dynamoDB - dax, auto scale
+Transaction - you can use `TransactWriteItems/TransactGetItems` to run up to 25 PutItem/UpdateItem/DeleteItem/GetItem operations. During transaction items not blocked, dynamoDB supports only serializable isolation level.
+There are batch operations like `BatchGetItem` (read up to 100 items at once) and `BatchWriteItem` (write up to 25 items at once). There are 2 difference between transact and batch api:
+* for transact you pay twice
+* for transact either all success or all rollbacked, for batch some may succeed, some may fail. So for batch is up to you to handle errors.
+Transaction Idempotency - you can supply `ClientRequestToken` with `TransactWriteItem`, so dynamoDB would handle this request as idempotent.
+If item modified outside of running tx, tx is cancelled & exception is thrown. Tx avaialble only within region, and not supported for global tables.
+In tx you are priced twice for each read/write, cause dynamoDB call 2 times read/write, first - to prepare tx, second - to commit tx.
+Limitations - dynamoDB won’t let you write a query that won’t scale, that's why it has some limitations, but they all make sense:
+* max result in single Query/Scan operation shouldn't exceed 1MB. So if your query has more than 1MB output, dynamoDB returns `LastEvaluatedKey`
+* it doesn't support aggregation query (min/max/avg). If you need this you should manage it on app level, when you write queries
+`FilterExpression` - allows you to further filter query response. But keep in mind, since dynamoDB max return 1MB, you can't just issue filter on whole table and expect result, just like with sql.
+If you have 1GB of data, and only 20 rows out of whole table can be filtered with such query, you have to run 1000 queries, and accumulate all rows into list.
+So first query may return 0 rows, cause it just fetch first 1MB of data, then apply your filter, and nothing was returned, cause there were no items within this 1MB that falls under filter expression.
+So you have to plan in advance you db usage pattern, in case you need filter on price, add it as sort key, or local index, or GSI.
+Single-table design - NoSql design pattern where you put all your database into single table. The main reason for using a single table in dynamoDB is to retrieve multiple, heterogenous item types using a single request
+For example you can store users/profile/orders in single table. UserId - would be primary key, profile/orders - would be sort key. There are 2 downsides of such design:
+* there is no way to add new access pattern (for example if you want to get all orders above 100$, you will need to redesign your table)
+* no easy way to export data fro analytics (dynamoDB is OLTP, designed to handle unlimited number of small transactions)
+Anti-pattern:
+* using GraphQL + dynamoDB. Reason is that graphQL using resolver, and make many queries to dynamoDB instead of single query
 
 ###### RedShift
 Database vs Data Warehouse:
@@ -2406,6 +2427,8 @@ Http vs Rest api:
         * method response - here you can modify response from integration response. You must set `MethodResponses` with at least 1 `StatusCode`.
         If you set headers in `IntegrationResponses.ResponseParameters`, you have to add headers with any value (usually false - idea is to put something) to `MethodResponses.ResponseParameters`
 * http api (AWS::ApiGatewayV2) - new version, cheaper. There is no mock integration, only lambda
+[AWS::ApiGateway::GatewayResponse](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-apigateway-gatewayresponse.html) - useful if you need to return cors (or other) headers when http error happened.
+For example you can return cors headers, in case of some error, so browser won't be confused, [list of errors](https://docs.aws.amazon.com/apigateway/latest/developerguide/supported-gateway-response-types.html)
 
 ###### Cognito
 Cognito - managed user service that add user sing-in/sign-up/management email/phone verification/2FA logic. There are 2 pools:

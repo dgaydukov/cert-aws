@@ -17,7 +17,9 @@ Here is my experience of taking 2 certifications, both associate & professional:
 ### TODO
 * sort out tax/bankAddress
 * run .war project in intellij
-* https://mechanical-sympathy.blogspot.com
+https://en.wikipedia.org/wiki/Black_Swan_(film)
+https://www.youtube.com/watch?v=fU9hR3kiOK0 (dynamoDB streams)
+https://mechanical-sympathy.blogspot.com
 https://www.slideshare.net/trishagee/introduction-to-the-disruptor
 https://martinfowler.com/articles/lmax.html
 https://www.infoq.com/presentations/mechanical-sympathy
@@ -25,6 +27,7 @@ https://www.infoq.com/presentations/java-jit-optimization
 https://www.infoq.com/presentations/low-latency-concurrrent-java-8
 https://www.infoq.com/search.action?queryString=Martin+Thompson&page=1&searchOrder=
 ----------------------------------------------------------------------------------------------
+* elb lambda authentication
 * https://blog.rowanudell.com/iam-passrole-explained/
 * Notaction vs deny in iam policy (notaction acts as deny only if there is no explicit allow)
 * https://aws.amazon.com/guardduty/faqs/
@@ -140,3 +143,4 @@ TargetGroup:
 * use kinesis sdk and try java data streaming. In all example firehose consume data from data streams, but can we directly send dota to it without data streams?
 * solve final test for saa
 * add logic to `sa/cloudformation/custom-resource/handler.yml` to update `ResponseURL` (pre-sign s3 url)
+* add resource handler to validate ACM Certificate, so you can automate `sa/cloudformation/elb-asg-route53-acm.yml` template, no more need to manually update route53 record
