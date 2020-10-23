@@ -3,6 +3,8 @@ AWSTemplateFormatVersion: 2010-09-09
 # Create elb + ec2 in private subnet + cognito listener api rule (only authoriezed user can access page)
 # Auth available only for https (443). For https listener you have to provide CertificateArn (import some cert and use it in template)
 
+# call: curl -k --http1.1 {ELB_URL}/public.html
+
 Resources:
   VPC:
     Type: AWS::EC2::VPC
@@ -195,15 +197,7 @@ Resources:
     Properties:
       UserPoolId: !Ref UserPool
       Domain: my-elb-auth-userpool-domain
-  WebClient:
-    Type: AWS::Cognito::UserPoolClient
-    Properties:
-      ClientName: !Sub ${AWS::StackName}-WebClient
-      GenerateSecret: false
-      UserPoolId: !Ref UserPool
-      ExplicitAuthFlows:
-        - ALLOW_REFRESH_TOKEN_AUTH
-        - ALLOW_USER_PASSWORD_AUTH
+
 
   ElbSG:
     Type: AWS::EC2::SecurityGroup
@@ -247,37 +241,39 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AWS::StackName}-MyVpc-TG
-  HttpListener:
+
+#  HttpListener:
+#    Type: AWS::ElasticLoadBalancingV2::Listener
+#    Properties:
+#      DefaultActions:
+#        - Type: fixed-response
+#          FixedResponseConfig:
+#            StatusCode: 403
+#      LoadBalancerArn: !Ref ELB
+#      Port: 80
+#      Protocol: HTTP
+#  HttpRule:
+#    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+#    Properties:
+#      ListenerArn: !Ref HttpListener
+#      Priority: 10
+#      Actions:
+#        - Type: forward
+#          TargetGroupArn: !Ref TG
+#      Conditions:
+#        - Field: path-pattern
+#          PathPatternConfig:
+#            Values:
+#              - "/"
+#              - "/index.html"
+
+  HttpsListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       DefaultActions:
         - Type: fixed-response
           FixedResponseConfig:
             StatusCode: 403
-      LoadBalancerArn: !Ref ELB
-      Port: 80
-      Protocol: HTTP
-  HttpRule:
-    Type: AWS::ElasticLoadBalancingV2::ListenerRule
-    Properties:
-      ListenerArn: !Ref HttpListener
-      Priority: 10
-      Actions:
-        - Type: forward
-          TargetGroupArn: !Ref TG
-      Conditions:
-        - Field: path-pattern
-          PathPatternConfig:
-            Values:
-              - "/"
-              - "/index.html"
-
-  HttpsListener:
-    Type: AWS::ElasticLoadBalancingV2::Listener
-    Properties:
-      DefaultActions:
-        - Type: forward
-          TargetGroupArn: !Ref TG
       LoadBalancerArn: !Ref ELB
       Port: 443
       Protocol: HTTPS
@@ -295,23 +291,48 @@ Resources:
         - Field: path-pattern
           PathPatternConfig:
             Values:
-              - "/"
               - "/public.html"
-#  PrivateHttpsRule:
-#    Type: AWS::ElasticLoadBalancingV2::ListenerRule
-#    Properties:
-#      ListenerArn: !Ref HttpsListener
-#      Priority: 20
-#      Actions:
-#        - Type: authenticate-cognito
-#          TargetGroupArn: !Ref TG
-#          AuthenticateCognitoConfig:
-#            UserPoolArn: !Ref UserPool
-#            UserPoolClientId: !Ref WebClient
-#            UserPoolDomain: !Ref UserPoolDomain
-#      Conditions:
-#        - Field: path-pattern
-#          PathPatternConfig:
-#            Values:
-#              - "/"
-#              - "/private.html"
+
+
+  PrivateHttpsRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      ListenerArn: !Ref HttpsListener
+      Priority: 20
+      Actions:
+        - Order: 10
+          Type: authenticate-cognito
+          AuthenticateCognitoConfig:
+            OnUnauthenticatedRequest: deny
+            UserPoolArn: !GetAtt UserPool.Arn
+            UserPoolClientId: !Ref WebClient
+            UserPoolDomain: !Ref UserPoolDomain
+        - Order: 20
+          Type: forward
+          TargetGroupArn: !Ref TG
+      Conditions:
+        - Field: path-pattern
+          PathPatternConfig:
+            Values:
+              - "/private.html"
+
+
+
+  WebClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: !Sub ${AWS::StackName}-WebClient
+      GenerateSecret: true
+      UserPoolId: !Ref UserPool
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthFlows:
+        - code
+        - implicit
+      AllowedOAuthScopes:
+        - email
+        - openid
+      CallbackURLs:
+        - http://localhost
+      ExplicitAuthFlows:
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
