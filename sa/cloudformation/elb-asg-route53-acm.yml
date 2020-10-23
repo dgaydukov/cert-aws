@@ -25,7 +25,6 @@ Resources:
       Tags:
         - Key: Name
           Value:  !Sub ${AWS::StackName}-MyVpc
-
   InternetGateway:
     Type: AWS::EC2::InternetGateway
     DependsOn: VPC
@@ -38,7 +37,6 @@ Resources:
     Properties:
       VpcId: !Ref VPC
       InternetGatewayId: !Ref InternetGateway
-
   PublicSubnet1:
     Type: AWS::EC2::Subnet
     Properties:
@@ -48,7 +46,6 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AWS::StackName}-MyVpc-Public1
-
   PublicSubnet2:
     Type: AWS::EC2::Subnet
     Properties:
@@ -58,48 +55,30 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AWS::StackName}-MyVpc-Public2
-
-  PublicRT1:
+  PublicRT:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
           Value: !Sub ${AWS::StackName}-MyVpc-Public-RT1
-  PublicRoute1:
+  PublicRoute:
     Type: AWS::EC2::Route
     DependsOn: AttachGateway
     Properties:
-      RouteTableId: !Ref PublicRT1
+      RouteTableId: !Ref PublicRT
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId: !Ref InternetGateway
-
-  PublicRT2:
-    Type: AWS::EC2::RouteTable
-    Properties:
-      VpcId: !Ref VPC
-      Tags:
-        - Key: Name
-          Value: !Sub ${AWS::StackName}-MyVpc-Public-RT2
-  PublicRoute2:
-    Type: AWS::EC2::Route
-    DependsOn: AttachGateway
-    Properties:
-      RouteTableId: !Ref PublicRT2
-      DestinationCidrBlock: 0.0.0.0/0
-      GatewayId: !Ref InternetGateway
-
-
-  PublicSubnetRTAssociation1:
+  PublicSubnet1RTAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId: !Ref PublicSubnet1
-      RouteTableId: !Ref PublicRT1
-  PublicSubnetRTAssociation2:
+      RouteTableId: !Ref PublicRT
+  PublicSubnet2RTAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId: !Ref PublicSubnet2
-      RouteTableId: !Ref PublicRT2
+      RouteTableId: !Ref PublicRT
 
 
   HttpSG:

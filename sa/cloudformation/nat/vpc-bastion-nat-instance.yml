@@ -13,7 +13,6 @@ Resources:
       Tags:
         - Key: Name
           Value:  !Sub ${AWS::StackName}-MyVpc
-
   InternetGateway:
     Type: AWS::EC2::InternetGateway
     DependsOn: VPC
@@ -26,7 +25,6 @@ Resources:
     Properties:
       VpcId: !Ref VPC
       InternetGatewayId: !Ref InternetGateway
-
   PublicSubnet:
     Type: AWS::EC2::Subnet
     Properties:
@@ -35,16 +33,6 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AWS::StackName}-MyVpc-Public
-
-  PrivateSubnet:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId: !Ref VPC
-      CidrBlock: 10.100.2.0/24
-      Tags:
-        - Key: Name
-          Value: !Sub ${AWS::StackName}-MyVpc-Private
-
   PublicRT:
     Type: AWS::EC2::RouteTable
     Properties:
@@ -59,7 +47,19 @@ Resources:
       RouteTableId: !Ref PublicRT
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId: !Ref InternetGateway
-
+  PublicSubnetRTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref PublicRT
+  PrivateSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.100.2.0/24
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-Private
   PrivateRT:
     Type: AWS::EC2::RouteTable
     Properties:
@@ -72,14 +72,7 @@ Resources:
     Properties:
       RouteTableId: !Ref PrivateRT
       DestinationCidrBlock: 0.0.0.0/0
-      InstanceId: !Ref NatEc2Instance
-
-
-  PublicSubnetRTAssociation:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      SubnetId: !Ref PublicSubnet
-      RouteTableId: !Ref PublicRT
+      InstanceId: !Ref NatInstance
   PrivateSubnetRTAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
@@ -116,6 +109,7 @@ Resources:
           SubnetId: !Ref PublicSubnet
           GroupSet:
             - !GetAtt BastionEC2InstanceSG.GroupId
+            - !GetAtt VPC.DefaultSecurityGroup
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
           Ebs:
@@ -124,7 +118,7 @@ Resources:
         - Key: Name
           Value: !Sub ${AWS::StackName}-MyVpc-Bastion-EC2
 
-  PrivateEC2InstanceSG:
+  PrivateInstanceSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Enable SSH/ICMP access from within vpc
@@ -133,15 +127,15 @@ Resources:
         - IpProtocol: tcp
           FromPort: 22
           ToPort: 22
-          CidrIp: 10.100.0.0/16
+          SourceSecurityGroupId: !GetAtt VPC.DefaultSecurityGroup
         - IpProtocol: icmp
           FromPort: -1
           ToPort: -1
-          CidrIp: 10.100.0.0/16
+          SourceSecurityGroupId: !GetAtt VPC.DefaultSecurityGroup
       Tags:
         - Key: Name
           Value: !Sub ${AWS::StackName}-MyVpc-Private-SG
-  PrivateEC2Instance:
+  PrivateInstance:
     Type: AWS::EC2::Instance
     Properties:
       InstanceType: t2.micro
@@ -149,7 +143,8 @@ Resources:
       KeyName: mykey
       SubnetId: !Ref PrivateSubnet
       SecurityGroupIds:
-        - !GetAtt PrivateEC2InstanceSG.GroupId
+        - !GetAtt PrivateInstanceSG.GroupId
+        - !GetAtt VPC.DefaultSecurityGroup
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
           Ebs:
@@ -158,7 +153,7 @@ Resources:
         - Key: Name
           Value: !Sub ${AWS::StackName}-MyVpc-Private-EC2
 
-  NatEc2InstanceSG:
+  NatSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Enable HTTP(S)/ICMP access from within vpc
@@ -167,11 +162,11 @@ Resources:
         - IpProtocol: tcp
           FromPort: 80
           ToPort: 80
-          CidrIp: 10.100.0.0/16
+          SourceSecurityGroupId: !GetAtt VPC.DefaultSecurityGroup
         - IpProtocol: tcp
           FromPort: 443
           ToPort: 443
-          CidrIp: 10.100.0.0/16
+          SourceSecurityGroupId: !GetAtt VPC.DefaultSecurityGroup
         - IpProtocol: tcp
           FromPort: 22
           ToPort: 22
@@ -179,11 +174,11 @@ Resources:
         - IpProtocol: icmp
           FromPort: -1
           ToPort: -1
-          CidrIp: 10.100.0.0/16
+          SourceSecurityGroupId: !GetAtt VPC.DefaultSecurityGroup
       Tags:
         - Key: Name
           Value: !Sub ${AWS::StackName}-MyVpc-Nat-SG
-  NatEc2Instance:
+  NatInstance:
     Type: AWS::EC2::Instance
     Properties:
       InstanceType: t2.micro
@@ -201,7 +196,7 @@ Resources:
           DeviceIndex: 0
           SubnetId: !Ref PublicSubnet
           GroupSet:
-            - !GetAtt NatEc2InstanceSG.GroupId
+            - !GetAtt NatSG.GroupId
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
           Ebs:

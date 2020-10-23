@@ -192,6 +192,7 @@ Resources:
           - !Ref WebClient
         Issuer: !Sub https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPool}
       ApiId: !Ref HttpApi
+
   UserPool:
     Type: AWS::Cognito::UserPool
     Properties:

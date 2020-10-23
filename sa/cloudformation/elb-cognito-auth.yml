@@ -1,6 +1,7 @@
 AWSTemplateFormatVersion: 2010-09-09
 
-#
+# Create elb + ec2 in private subnet + cognito listener api rule (only authoriezed user can access page)
+# Auth available only for https (443). For https listener you have to provide CertificateArn (import some cert and use it in template)
 
 Resources:
   VPC:
@@ -82,25 +83,69 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AWS::StackName}-MyVpc-PrivateRT
+  NatRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRT
+      DestinationCidrBlock: 0.0.0.0/0
+      InstanceId: !Ref NatInstance
   PrivateSubnetRTAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId: !Ref PrivateSubnet
       RouteTableId: !Ref PrivateRT
 
-  HttpSG:
+  NatSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Enable HTTP access from anywhere
+      GroupDescription: Enable HTTP(S) access from within vpc
       VpcId: !Ref VPC
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 80
           ToPort: 80
-          CidrIp: 0.0.0.0/0
+          SourceSecurityGroupId: !GetAtt VPC.DefaultSecurityGroup
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          SourceSecurityGroupId: !GetAtt VPC.DefaultSecurityGroup
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-MyVpc-Http-SG
+          Value: !Sub ${AWS::StackName}-MyVpc-NatSG
+  NatInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-00a9d4a05375b2763
+      SourceDestCheck: false
+      KeyName: mykey
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: 0
+          SubnetId: !Ref PublicSubnet1
+          GroupSet:
+            - !GetAtt NatSG.GroupId
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 8
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-NatInstance
+
+  PrivateInstanceSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable HTTP access from ELB
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          SourceSecurityGroupId: !GetAtt ElbSG.GroupId
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-PrivateInstanceSg
   PrivateInstance:
     Type: AWS::EC2::Instance
     Properties:
@@ -114,12 +159,12 @@ Resources:
           sudo yum install httpd -y
           sudo service httpd start
           sudo echo "<h1>My App</h1>" > /var/www/html/index.html
-      NetworkInterfaces:
-        - AssociatePublicIpAddress: true
-          DeviceIndex: 0
-          SubnetId: !Ref PrivateSubnet
-          GroupSet:
-            - !GetAtt HttpSG.GroupId
+          sudo echo "<h1>private page</h1>" > /var/www/html/private.html
+          sudo echo "<h1>public page</h1>" > /var/www/html/public.html
+      SubnetId: !Ref PrivateSubnet
+      SecurityGroupIds:
+        - !GetAtt PrivateInstanceSG.GroupId
+        - !GetAtt VPC.DefaultSecurityGroup
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
           Ebs:
@@ -128,13 +173,62 @@ Resources:
         - Key: Name
           Value: !Sub ${AWS::StackName}-MyVpc-PrivateInstance
 
-  ALB:
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub ${AWS::StackName}-UserPool
+      AutoVerifiedAttributes:
+        - email
+      UsernameConfiguration:
+        CaseSensitive: true
+      Schema:
+        - Name: name
+          AttributeDataType: String
+          Mutable: true
+          Required: true
+        - Name: email
+          AttributeDataType: String
+          Mutable: false
+          Required: true
+  UserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      UserPoolId: !Ref UserPool
+      Domain: my-elb-auth-userpool-domain
+  WebClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: !Sub ${AWS::StackName}-WebClient
+      GenerateSecret: false
+      UserPoolId: !Ref UserPool
+      ExplicitAuthFlows:
+        - ALLOW_REFRESH_TOKEN_AUTH
+        - ALLOW_USER_PASSWORD_AUTH
+
+  ElbSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable HTTP(S) access from anywhere
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-ElbSG
+  ELB:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
       Scheme: internet-facing
       Type: application
       SecurityGroups:
-        - !GetAtt HttpSG.GroupId
+        - !GetAtt ElbSG.GroupId
       Subnets:
         - !Ref PublicSubnet1
         - !Ref PublicSubnet2
@@ -153,19 +247,20 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AWS::StackName}-MyVpc-TG
-  HttpAlbListener:
+  HttpListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       DefaultActions:
         - Type: fixed-response
           FixedResponseConfig:
             StatusCode: 403
-      LoadBalancerArn: !Ref ALB
+      LoadBalancerArn: !Ref ELB
       Port: 80
       Protocol: HTTP
-  ApiRule:
+  HttpRule:
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Properties:
+      ListenerArn: !Ref HttpListener
       Priority: 10
       Actions:
         - Type: forward
@@ -175,4 +270,48 @@ Resources:
           PathPatternConfig:
             Values:
               - "/"
-      ListenerArn: !Ref HttpAlbListener
+              - "/index.html"
+
+  HttpsListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TG
+      LoadBalancerArn: !Ref ELB
+      Port: 443
+      Protocol: HTTPS
+      Certificates:
+        - CertificateArn: !Sub arn:aws:acm:${AWS::Region}:${AWS::AccountId}:certificate/238b577f-16d6-4da4-b92d-1e2ec1dd057b
+  PublicHttpsRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      ListenerArn: !Ref HttpsListener
+      Priority: 10
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref TG
+      Conditions:
+        - Field: path-pattern
+          PathPatternConfig:
+            Values:
+              - "/"
+              - "/public.html"
+#  PrivateHttpsRule:
+#    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+#    Properties:
+#      ListenerArn: !Ref HttpsListener
+#      Priority: 20
+#      Actions:
+#        - Type: authenticate-cognito
+#          TargetGroupArn: !Ref TG
+#          AuthenticateCognitoConfig:
+#            UserPoolArn: !Ref UserPool
+#            UserPoolClientId: !Ref WebClient
+#            UserPoolDomain: !Ref UserPoolDomain
+#      Conditions:
+#        - Field: path-pattern
+#          PathPatternConfig:
+#            Values:
+#              - "/"
+#              - "/private.html"
