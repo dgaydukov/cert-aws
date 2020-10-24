@@ -1,9 +1,10 @@
 AWSTemplateFormatVersion: 2010-09-09
 
-# Create elb + ec2 in private subnet + cognito listener api rule (only authoriezed user can access page)
-# Auth available only for https (443). For https listener you have to provide CertificateArn (import some cert and use it in template)
+# Create elb + ec2 in private subnet + cognito listener api rule (only authorized users can access page)
+# Auth available only for https (port 443), that's why we don't use http listener. For https listener you have to provide CertificateArn (import some cert and use it in template)
 
 # call: curl -k --http1.1 {ELB_URL}/public.html
+# call with auth: curl -k --http1.1 --cookie 'auth=COGNITO_ID_TOKEN' {ELB_URL}/private.html
 
 Resources:
   VPC:
@@ -175,30 +176,6 @@ Resources:
         - Key: Name
           Value: !Sub ${AWS::StackName}-MyVpc-PrivateInstance
 
-  UserPool:
-    Type: AWS::Cognito::UserPool
-    Properties:
-      UserPoolName: !Sub ${AWS::StackName}-UserPool
-      AutoVerifiedAttributes:
-        - email
-      UsernameConfiguration:
-        CaseSensitive: true
-      Schema:
-        - Name: name
-          AttributeDataType: String
-          Mutable: true
-          Required: true
-        - Name: email
-          AttributeDataType: String
-          Mutable: false
-          Required: true
-  UserPoolDomain:
-    Type: AWS::Cognito::UserPoolDomain
-    Properties:
-      UserPoolId: !Ref UserPool
-      Domain: my-elb-auth-userpool-domain
-
-
   ElbSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -242,31 +219,6 @@ Resources:
         - Key: Name
           Value: !Sub ${AWS::StackName}-MyVpc-TG
 
-#  HttpListener:
-#    Type: AWS::ElasticLoadBalancingV2::Listener
-#    Properties:
-#      DefaultActions:
-#        - Type: fixed-response
-#          FixedResponseConfig:
-#            StatusCode: 403
-#      LoadBalancerArn: !Ref ELB
-#      Port: 80
-#      Protocol: HTTP
-#  HttpRule:
-#    Type: AWS::ElasticLoadBalancingV2::ListenerRule
-#    Properties:
-#      ListenerArn: !Ref HttpListener
-#      Priority: 10
-#      Actions:
-#        - Type: forward
-#          TargetGroupArn: !Ref TG
-#      Conditions:
-#        - Field: path-pattern
-#          PathPatternConfig:
-#            Values:
-#              - "/"
-#              - "/index.html"
-
   HttpsListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
@@ -292,8 +244,6 @@ Resources:
           PathPatternConfig:
             Values:
               - "/public.html"
-
-
   PrivateHttpsRule:
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Properties:
@@ -304,6 +254,7 @@ Resources:
           Type: authenticate-cognito
           AuthenticateCognitoConfig:
             OnUnauthenticatedRequest: deny
+            SessionCookieName: auth
             UserPoolArn: !GetAtt UserPool.Arn
             UserPoolClientId: !Ref WebClient
             UserPoolDomain: !Ref UserPoolDomain
@@ -316,20 +267,38 @@ Resources:
             Values:
               - "/private.html"
 
-
-
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub ${AWS::StackName}-UserPool
+      AutoVerifiedAttributes:
+        - email
+      UsernameConfiguration:
+        CaseSensitive: true
+      Schema:
+        - Name: name
+          AttributeDataType: String
+          Mutable: true
+          Required: true
+        - Name: email
+          AttributeDataType: String
+          Mutable: false
+          Required: true
+  UserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      UserPoolId: !Ref UserPool
+      Domain: my-elb-auth-userpool-domain
   WebClient:
     Type: AWS::Cognito::UserPoolClient
     Properties:
+      UserPoolId: !Ref UserPool
       ClientName: !Sub ${AWS::StackName}-WebClient
       GenerateSecret: true
-      UserPoolId: !Ref UserPool
       AllowedOAuthFlowsUserPoolClient: true
       AllowedOAuthFlows:
         - code
-        - implicit
       AllowedOAuthScopes:
-        - email
         - openid
       CallbackURLs:
         - http://localhost
