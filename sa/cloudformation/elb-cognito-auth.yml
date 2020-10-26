@@ -250,16 +250,17 @@ Resources:
       ListenerArn: !Ref HttpsListener
       Priority: 20
       Actions:
-        - Order: 10
-          Type: authenticate-cognito
+        - Type: authenticate-cognito
+          Order: 1
           AuthenticateCognitoConfig:
-            OnUnauthenticatedRequest: deny
-            SessionCookieName: auth
+            OnUnauthenticatedRequest: authenticate
+            SessionTimeout: 3600
+            Scope: openid
             UserPoolArn: !GetAtt UserPool.Arn
             UserPoolClientId: !Ref WebClient
             UserPoolDomain: !Ref UserPoolDomain
-        - Order: 20
-          Type: forward
+        - Type: forward
+          Order: 2
           TargetGroupArn: !Ref TG
       Conditions:
         - Field: path-pattern
@@ -301,7 +302,10 @@ Resources:
       AllowedOAuthScopes:
         - openid
       CallbackURLs:
-        - http://localhost
+        - !Sub https://${ELB.DNSName}/oauth2/idpresponse
+      SupportedIdentityProviders:
+        - COGNITO
       ExplicitAuthFlows:
+        - ALLOW_CUSTOM_AUTH
         - ALLOW_USER_PASSWORD_AUTH
         - ALLOW_REFRESH_TOKEN_AUTH

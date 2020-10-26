@@ -26,6 +26,7 @@ https://www.infoq.com/presentations/mechanical-sympathy
 https://www.infoq.com/presentations/java-jit-optimization
 https://www.infoq.com/presentations/low-latency-concurrrent-java-8
 https://www.infoq.com/search.action?queryString=Martin+Thompson&page=1&searchOrder=
+https://www.thorntech.com/2018/09/user-authentication-alb-cognito/
 ----------------------------------------------------------------------------------------------
 * https://blog.rowanudell.com/iam-passrole-explained/
 * Notaction vs deny in iam policy (notaction acts as deny only if there is no explicit allow)
