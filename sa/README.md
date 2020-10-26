@@ -18,15 +18,17 @@ Here is my experience of taking 2 certifications, both associate & professional:
 * sort out tax/bankAddress
 * run .war project in intellij
 https://en.wikipedia.org/wiki/Black_Swan_(film)
+https://www.youtube.com/watch?v=CnRtbtis79U (Алексей Шипилёв — Shenandoah: сборщик мусора, который смог)
+https://www.youtube.com/watch?v=iGRfyhE02lA (Владимир Иванов — G1 Garbage Collector)
+https://www.youtube.com/watch?v=c1jVn5Sm8Uw (Алексей Шипилёв – Shenandoah GC 2.0)
+https://www.youtube.com/watch?v=iB2N8aqwtxc (Алексей Шипилёв — Прагматика Java Memory Model)
 https://www.youtube.com/watch?v=fU9hR3kiOK0 (dynamoDB streams)
 https://mechanical-sympathy.blogspot.com
 https://www.slideshare.net/trishagee/introduction-to-the-disruptor
 https://martinfowler.com/articles/lmax.html
 https://www.infoq.com/presentations/mechanical-sympathy
-https://www.infoq.com/presentations/java-jit-optimization
-https://www.infoq.com/presentations/low-latency-concurrrent-java-8
-https://www.infoq.com/search.action?queryString=Martin+Thompson&page=1&searchOrder=
-https://www.thorntech.com/2018/09/user-authentication-alb-cognito/
+https://real-logic.co.uk/about.html (videos by Martin Thompson)
+https://www.thorntech.com/2018/09/user-authentication-alb-cognito
 ----------------------------------------------------------------------------------------------
 * https://blog.rowanudell.com/iam-passrole-explained/
 * Notaction vs deny in iam policy (notaction acts as deny only if there is no explicit allow)
