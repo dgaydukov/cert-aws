@@ -17,6 +17,8 @@ Here is my experience of taking 2 certifications, both associate & professional:
 ### TODO
 * sort out tax/bankAddress
 * run .war project in intellij
+Вторжение. Краткая история русских хакеров
+Kingpin: How One Hacker Took Over the Billion-Dollar Cybercrime Underground
 https://en.wikipedia.org/wiki/Black_Swan_(film)
 https://www.youtube.com/watch?v=CnRtbtis79U (Алексей Шипилёв — Shenandoah: сборщик мусора, который смог)
 https://www.youtube.com/watch?v=iGRfyhE02lA (Владимир Иванов — G1 Garbage Collector)
@@ -71,20 +73,18 @@ TargetGroup:
 * ELB access logs store to s3 => trigger lambda to process logs and put them into elasticsearch
 * create custom vpn server in ec2 and try to connect to it (do both use oepnvpn server ami and any ami (OpenVPN Access Server from marketplace which is free tier, in this case you should configure it through browser admin panel) + manually configure openvpn server)
 * vpc endpoint service (add ec2 (with basic httpd service)+NLB and share it to vpc from another region)
-* route 53 resolver
+* route53 resolver
 * ecs + alb with dynamic port mapping
 * create elb with eks with several apps deployed there, and use elb path routing to route to eks nodeport. So we have single elb and multiple microservices in eks and all works (internal pathes not exposed by elb, and can be accessed only inside eks cluster)
-* sas vs sns on calling lambda when new message arrived
+* ses vs sns on calling lambda when new message arrived
 * s3 call lambda(custom api) when file is updated
 * elb logs to s3
 * asg with both on-demand and spot instances (when no spot avaialbe run on-demand)
-* authenticate user on elb level using cognito
 * elb to ec2 using https (https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/configuring-https-endtoend.html). By default elb terminate https traffic and forward to ec2 just http, since it's inside aws and can't be listened by anybody.
 * add cross-account access to s3
 * create codepipeline with cf template and use codedeploy/beanstalk as deploy stage (compare them)
-* what is stronger bucket policy or acl
+* what is stronger bucket policy or acl (it should be that explicit deny always overwrites allow)
 * iam policy with mfa condition to delete objects from s3
-* add extensive comments to all cf templates
 * transit gateway - add on-premise network imitated by third vpc (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-transitgateway.html - guide to add on-premise, https://theithollow.com/2018/12/12/setup-aws-transit-gateway)
 * put spring app into ECS and EKS and compare the difference (try fargate too). Try auto scaling in eks/ecs
 * Try maximum automate site-to-site vpn cloudformation template (try to extract somehow all IP addresses and PSK secret string and put it into ec2 userdata for VpnServer)
@@ -94,8 +94,8 @@ TargetGroup:
 * athena federated query (from multiple sources). ELT using athena federated (read from multiple sources and store in s3)
 * athena udf
 * glue etl job vs athena etl job
-* aws config CF template (check that ec2 is of specific type and alert when type has been changed)
-* Kinesis firehose real example (with cf template)
+* aws config cf template (check that ec2 is of specific type and alert when type has been changed)
+* Kkinesis firehose real example (with cf template)
 * enable connection draining and see how it works when you de-register instance or it failed
 * create private hosted zone, see how it all works
 * create both memcached/redis elasticache endgine and check how do they work (add snapshot to redis and recover from snapshot to new cluster, add redis replication group)
@@ -121,16 +121,16 @@ TargetGroup:
 * create cognito identity with cognito user pool and other social providers (use basic java app to test it). Looks like cognito identity doesn't have it's own credentials but use credentials from IdP (https://docs.aws.amazon.com/cognito/latest/developerguide/authentication-flow.html)
 * create vpc link and connect http api to ec2 in private subnet
 * trigger lambda when dynamodb change happend with dynamodb streams
-* Create custom cloudwatch metric and alarm based on this metric
-* Create lambda and cloudwatch rule to run lambda every minute (scheduled lambda)
-* Create auto-scale group with ec2 httpd (but store data in efs, this would guarantee that if instance launched in another AZ data won't be lost)
-* Create auto-scale group with single ec2 and eip and after terminate associate same eip to new ec2 (in launch config userdata add ability to associate eip to current ec2 + you need role for ec2 to be able to associate eip to itself)
-* Rewrite cf templates random httpd to display privateIP
-* cloudformation template iam create identity provider with both saml & openId connect, and with cognito/aws AD (by the way learn how AD works internally)
+* create custom cloudwatch metric and alarm based on this metric
+* create lambda and cloudwatch rule to run lambda every minute (scheduled lambda)
+* create auto-scale group with ec2 httpd (but store data in efs, this would guarantee that if instance launched in another AZ data won't be lost)
+* create auto-scale group with single ec2 and eip and after terminate associate same eip to new ec2 (in launch config userdata add ability to associate eip to current ec2 + you need role for ec2 to be able to associate eip to itself)
+* rewrite cf templates random httpd to display privateIP
 * try to create aws sso user with permission set and add 1 free app, and then try to login to both aws console & this app
-* Create vpc with custom DHCP options set and create ec2 instance and see it private/public domain name
+* create vpc with custom DHCP options set and create ec2 instance and see it private/public domain name
 * Deploy java app using opsworks stacks
-* create aws microsoft AD and see how it works + add aws sso with this ad
+* create aws microsoft AD and see how it works + add aws sso with this ad + use ADFS to add AD to iam as identity provider and assume role (so you can access aws without iam user)
++cf template iam create identity provider with both saml & openId connect, and with cognito/aws AD (by the way learn how AD works internally)
 * create iam identity federation with this AD and with Cognito
 * ClientVPN with security as microsoft AD
 * ClientVPN add nat instance so internet would work without tunnel split (yet check it also with tunnel split, and your IP would be different)

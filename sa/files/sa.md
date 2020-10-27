@@ -947,10 +947,10 @@ Permission evaluation:
 * if any explicit deny found evaluation is stopped and deny applied
 * if any explicit allow found evaluation continue until it's find deny - then deny applied, or not found deny - allow applied
 * if neither deny/allow find than default deny applied
-Identity federation - grant to external identities ability to secure access aws (both management console & API) without creating iam users. External identities can be of 3 types:
-* corporate IdP (microsoft AD, aws AD)
-* web IdP (cognito, facebook, google or any other openId connect)
-* cognito IdP - use cogntio identity to get temporary aws credentials (you don't need to identity provider through iam console)
+Identity federation - grant to external identities ability to secure access aws (both management console & API) without creating iam users. External identities can be of 3 types (2 created from iam console by adding identity provider, 1 from cognito):
+* SAML - corporate IdP (microsoft AD, aws AD). ADFS (Active Directory Federation Services) - used to connect AD to iam using SAML protocol. When you create role choose SAML type.
+* OpenId Connect - web IdP (cognito, facebook, google or any other openId connect). When you create role choose web identity type.
+* cognito IdP - use cogntio identity to get temporary aws credentials (you don't need to identity provider through iam console). When create role choose web identity type and select cognito as IdP~~~~~~~~
 FU (Federated user) - user of such external identity who can access aws services but don't have corresponding iam user (so it managed outside aws iam)
 FU can access aws management console in 2 ways
 * programmatically request security credentials and put them into sign-in request to the AWS
