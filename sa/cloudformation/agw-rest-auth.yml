@@ -5,11 +5,7 @@ AWSTemplateFormatVersion: 2010-09-09
 # Lambda auth: curl -H 'auth: user' {API_URL}/custom
 # Lambda auth (type REQUEST): curl -H 'auth: user' {API_URL}/request
 # REQUEST almost same as TOKEN, only difference in case of REQUEST - auth lambda receive full fledged event and header inside event.headers. For TOKEN auth header is event.authorizationToken
-# For cognito:
-# create user:  aws cognito-idp sign-up --client-id={USER_POOL_CLIENT_ID} --username=john.doe@gmail.com --password=P@1ssword --user-attributes Name="email",Value="john.doe@gmail.com" Name="name",Value="John Doe"
-# confirm user: aws cognito-idp admin-confirm-sign-up --user-pool-id={USER_POOL_ID} --username=john.doe@gmail.com
-# get idToken:  aws cognito-idp initiate-auth --client-id={USER_POOL_CLIENT_ID} --auth-flow=USER_PASSWORD_AUTH --auth-parameters USERNAME=john.doe@gmail.com,PASSWORD=P@1ssword
-# after you can call: curl -H 'auth: {COGNITO_ID_TOKEN}' {API_URL}/cognito
+# Create cognito user from sa/files/sa.md, then: curl -H 'auth: {COGNITO_ID_TOKEN}' {API_URL}/cognito
 # AuthorizerResultTtlInSeconds - set caching time (max - 1 hour, default - 300sec). During this time second hit with same header (in case of TOKEN type) will not call auth lambda, but will proceed.
 # Be careful with allow Resource. If multiple request use same key, they can get stale cache.
 

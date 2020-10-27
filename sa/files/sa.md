@@ -119,6 +119,7 @@
 * 3.75 [Cloud Development Kit](#cloud-development-kit)
 * 3.76 [EventBridge](#eventbridge)
 * 3.76 [Managed Blockchain](#managed-blockchain)
+* 3.77 [GuardDuty](#guardduty)
 
 
 
@@ -331,21 +332,21 @@ So for kms you have 2 endpoints:
 Basic commands
 ```
 # get available regions
-aws ec2 describe-regions --profile=awssa
+aws ec2 describe-regions
 
 # get available AZ
-aws ec2 describe-availability-zones --region=us-east-1 --profile=awssa
+aws ec2 describe-availability-zones --region=us-east-1
 ```
 Query command `--query` uses JMESPath (query language for JSON)
 ```
 # show imageId of first image
-aws ec2 describe-images --query "Images[0].ImageId" --profile=awssa
+aws ec2 describe-images --query "Images[0].ImageId"
 
 # show instanceId and name
-aws ec2 describe-instances  --query="Reservations[*].Instances[*].{Instance:InstanceId,Name:Tags[?Key=='Name']|[0].Value}" --profile=awssa
+aws ec2 describe-instances  --query="Reservations[*].Instances[*].{Instance:InstanceId,Name:Tags[?Key=='Name']|[0].Value}"
 
 # show state for all images
-aws ec2 describe-images --query "Images[*].State" --profile=awssa
+aws ec2 describe-images --query "Images[*].State"
 ```
 Create new profile to access aws services from console `aws configure --profile awssa`.
 There are 3 env variables that overwrites `~/.aws/config` settings
@@ -354,7 +355,7 @@ export AWS_ACCESS_KEY_ID=123
 export AWS_SECRET_ACCESS_KEY=123
 export AWS_DEFAULT_REGION=us-west-2
 ```
-Although default region for `awssa` profile is `us-east-1` (you can check it by `aws configure get region --profile=awssa`), if you set region as env var `AWS_DEFAULT_REGION=us-west-1`, and then run `aws configure list --profile=awssa`
+Although default region for `awssa` profile is `us-east-1` (you can check it by `aws configure get region`), if you set region as env var `AWS_DEFAULT_REGION=us-west-1`, and then run `aws configure list`
 ```
 Name                    Value             Type    Location
 ----                    -----             ----    --------
@@ -362,7 +363,7 @@ profile               awssa               manual    --profile
 region                us-west-1              env    AWS_DEFAULT_REGION
 ```
 So whenever you run any command with this profile and don't specify region (by setting `--region=us-east-1`), region from env var is used (not from your config setting).
-To remove it just unset the variable `unset AWS_DEFAULT_REGION`, and now if you run `aws configure list --profile=awssa` you will see that region is taken from config
+To remove it just unset the variable `unset AWS_DEFAULT_REGION`, and now if you run `aws configure list` you will see that region is taken from config
 ```
 Name                    Value             Type    Location
 ----                    -----             ----    --------
@@ -374,20 +375,20 @@ You can set or unset aws env vars in `~/.bashrc` file.
 * Get account Id
 ```
 # get arn
-aws iam get-user --query "User.Arn" --profile=awssa
+aws iam get-user --query "User.Arn"
 
 # get arn + userId
-aws sts get-caller-identity --profile=awssa
+aws sts get-caller-identity
 ```
-* S3 (create presigned url, make file public for 30 sec) `aws s3 presigned s3://my-CloudFormation-template-example/data.txt --expires-in 30 --profile=awssa`
+* S3 (create presigned url, make file public for 30 sec) `aws s3 presigned s3://my-CloudFormation-template-example/data.txt --expires-in 30`
 * CloudFormation
 ```
 # create stack
-aws CloudFormation create-stack --stack-name=mystack --template-body=file://sa/cloudformation/condition.yml --profile=awssa --region=us-east-1
+aws CloudFormation create-stack --stack-name=mystack --template-body=file://sa/cloudformation/condition.yml --region=us-east-1
 # update stack and pass params
-aws CloudFormation update-stack --stack-name=mystack --template-body=file://sa/cloudformation/condition.yml --parameters=ParameterKey=Env,ParameterValue=prod --profile=awssa --region=us-east-1
+aws CloudFormation update-stack --stack-name=mystack --template-body=file://sa/cloudformation/condition.yml --parameters=ParameterKey=Env,ParameterValue=prod --region=us-east-1
 # if you are creating a stack that create iam resouce you should explicitly tell to CloudFormation that it's ok to create iam resources
-aws CloudFormation update-stack --stack-name=logs --template-body=file://sa/cloudformation/ec2-logs.yml --profile=awssa --region=us-east-1 --capabilities=CAPABILITY_IAM
+aws CloudFormation update-stack --stack-name=logs --template-body=file://sa/cloudformation/ec2-logs.yml --region=us-east-1 --capabilities=CAPABILITY_IAM
 ```
 
 ###### Useful Linux Commands
@@ -793,7 +794,39 @@ Amazon S3 Bucket        arn:aws:s3:us-east-1:ACCOUNT_ID:my_aws_bucket/*
 IAM User                arn:aws:iam:us-east-1:ACCOUNT_ID:user/Jack
 Amazon DynamoDB Table   arn:aws:dynamodb:us-east-1:ACCOUNT_ID:table/myTable
 ```
-Role for user
+Don't confuse:
+* AssumeRole - ability of principal to assume other role for himself
+* PassRole - ability of principal create resource (lambda/ec2) and pass role to this resource
+If principal doesn't have passrole permission, and try to create ec2 with role, he will get `is not authorized to perform: iam:PassRole on resource`. 
+Below example of policy to allow principal to create only ec2 with only specific role
+```
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": "iam:PassRole",
+            "Resource": "arn:aws:::{ACCOUNT_ID}:role/MyInstanceRole",
+            "Condition": {
+                "StringEquals": {"iam:PassedToService": "ec2.amazonaws.com"}
+            }
+        }
+    ]
+}
+```
+Don't confuse:
+* Notaction - opposite of Action, can be used with Allow/Deny
+Notaction+Allow - add access to all actions except those under Notaction
+Good example to allow all actions on s3 except delete bucket:
+```
+"Effect": "Allow",
+"NotAction": "s3:DeleteBucket",
+"Resource": "arn:aws:s3:::*",
+```
+NotAction+Deny - deny access to all actions except those under Notaction. Notice that this action doesn't give any rights on actions inside Notaction. You still should add explicit allow. 
+It only explicitly deny to all other actions except those under Notaction.
+* Deny - type of Effect
+Role for user:
 * create role `S3Viewer` of type: Another AWS Account (enter desired accountID or your own) and assign policy  `AmazonS3ReadOnlyAccess`
 * create new policy `AssumeS3ViewerRole`
 ```
@@ -914,10 +947,10 @@ Permission evaluation:
 * if any explicit deny found evaluation is stopped and deny applied
 * if any explicit allow found evaluation continue until it's find deny - then deny applied, or not found deny - allow applied
 * if neither deny/allow find than default deny applied
-Identity federation - grant to external identities ability to secure access aws (both management console & API) without creating iam users
-External identities can be of 2 types
+Identity federation - grant to external identities ability to secure access aws (both management console & API) without creating iam users. External identities can be of 3 types:
 * corporate IdP (microsoft AD, aws AD)
 * web IdP (cognito, facebook, google or any other openId connect)
+* cognito IdP - use cogntio identity to get temporary aws credentials (you don't need to identity provider through iam console)
 FU (Federated user) - user of such external identity who can access aws services but don't have corresponding iam user (so it managed outside aws iam)
 FU can access aws management console in 2 ways
 * programmatically request security credentials and put them into sign-in request to the AWS
@@ -1126,15 +1159,15 @@ For many cli commands you hve to pass `--account-id`, this is strange cause your
 So it looks like some relict from previous releases. But good thing we can use `-` instead of passing 12 digit number every time.
 ```
 # list all vaults
-aws glacier list-vaults --account-id=- --profile=awssa
+aws glacier list-vaults --account-id=-
 # upload file to vault. You get archiveId in response, which you should store in you db, so you can retreive this archive by it's id
-aws glacier upload-archive --account-id=- --vault-name=test --body=file.txt --profile=awssa
+aws glacier upload-archive --account-id=- --vault-name=test --body=file.txt
 # command to initiate a job to get vault inventory (list of archives in a vault) - which is updated once per day. Save jobId by which you can retreive results when job is done
-aws glacier initiate-job --account-id=- --vault-name=test --job-parameters='{"Type": "inventory-retrieval"}' --profile=awssa
+aws glacier initiate-job --account-id=- --vault-name=test --job-parameters='{"Type": "inventory-retrieval"}'
 # you can list all current and recently complted jobs. After job is completed it would stay in this list for some time, but would be eventually removed from the list
-aws glacier list-jobs --account-id=- --vault-name=test --profile=awssa
+aws glacier list-jobs --account-id=- --vault-name=test
 # get job result. Depending on job type result can be downloaded file or inventory list. Job should be completed, otherwise you get error: The job is not currently available for download
-aws glacier get-job-output --account-id=- --vault-name=test --job-id={JOB_ID} --profile=awssa result.json
+aws glacier get-job-output --account-id=- --vault-name=test --job-id={JOB_ID} result.json
 ```
 There is no lifecycle rules for glacier, they only available in s3.
 
@@ -1775,7 +1808,7 @@ When you terminate instance it will wait for `HeartbeatTimeout` (default 1 hour)
   "LifecycleActionToken": "1bc18789-bbe5-41ad-8c2e-14ef6bf9ef62"
 }
 ```
-To complete you should call `aws autoscaling complete-lifecycle-action --lifecycle-action-result=CONTINUE --instance-id=i-01b8eb322fb0e88e7 --lifecycle-hook-name=asg-ScaleInHook-1X3I4VRP056CX --auto-scaling-group-name=asg-VPC-A-ASG --profile=awssa`
+To complete you should call `aws autoscaling complete-lifecycle-action --lifecycle-action-result=CONTINUE --instance-id=i-01b8eb322fb0e88e7 --lifecycle-hook-name=asg-ScaleInHook-1X3I4VRP056CX --auto-scaling-group-name=asg-VPC-A-ASG`
 Termination policy - customizing how asg would terminate your instances:
 * Default
 * OldestInstance - remove oldest instances first, useful when you're upgrading the instances
@@ -2444,6 +2477,20 @@ There are 3 types of cognito tokens (with accord to OpenID):
 * id token - jwt token that has personal user info (name, email, phone). So you shouldn't use it outside your backend, cause it includes sensitive info. Usually id token = access token + user's personal details.
 * access token - jwt token that includes user's access rights. You can use it outside your backend to get access to other services. Live of id/access token is limited, usually to 1 hour, and that's why you should use refresh token to prolong it.
 * refresh token - use it to retrieve new ID and access tokens
+Example creating users from cli:
+```
+# create user
+aws cognito-idp sign-up --client-id={USER_POOL_CLIENT_ID} --username=john.doe@gmail.com --password=P@1ssword --user-attributes Name="email",Value="john.doe@gmail.com" Name="name",Value="John Doe"
+# confirm user as admin (without confirmation password sent to eamil)
+aws cognito-idp admin-confirm-sign-up --user-pool-id={USER_POOL_ID} --username=john.doe@gmail.com
+# login & get idToken
+aws cognito-idp initiate-auth --client-id={USER_POOL_CLIENT_ID} --auth-flow=USER_PASSWORD_AUTH --auth-parameters USERNAME=john.doe@gmail.com,PASSWORD=P@1ssword
+
+# create cognito identity id
+aws cognito-identity get-id --identity-pool-id=us-east-1:0c42576d-50be-448f-82d7-9fbc0047fede --logins cognito-idp.us-east-1.amazonaws.com/{USER_POOL_ID}={GOGNITO_ID_TOKEN}
+# get temporary aws credentials
+aws cognito-identity get-credentials-for-identity --identity-id={IDENTITY_ID} --logins cognito-idp.us-east-1.amazonaws.com/{USER_POOL_ID}={GOGNITO_ID_TOKEN}
+```
 
 ###### CodePipeline(CodeCommit/CodeBuild/CodeDeploy)
 CodePipeline - aws ci/cd tool, like jenkins. There are following stages:
@@ -2658,7 +2705,7 @@ Each digest file is signed with private key that generated by ct. You can downlo
 Private key is unique for each region within aws account. When you retrieve public keys you specify time range - 1 or more public keys may be returned. Mare sure your s3 bucket has correct write policy, otherwise CT won't be able to store logs there.
 Organization trail - created by master account to log all events in all aws accounts for this organization (can be one/all region). You can deliver CT logs to CloudWatch, in this case CT would deliver logs to s3 & CloudWatch logs.
 GSE (Global Service Events) - services like IAM/STS/CloudFront add logs to all trails that support GSE. It's turn on by default. You can turn it off only from cli/sdk.
-* create trail `aws cloudtrail create-trail --name=multiRegionTrail --s3-bucket-name=my-test-s3-bucket-1 --is-multi-region-trail --profile=awssa`
+* create trail `aws cloudtrail create-trail --name=multiRegionTrail --s3-bucket-name=my-test-s3-bucket-1 --is-multi-region-trail`
 S3 bucket should have both `s3:GetBucketAcl/s3:PutObject` enabled in bucket policy, otherwise you got `Incorrect S3 bucket policy is detected for bucket`.
 ```
 {
@@ -2671,7 +2718,7 @@ S3 bucket should have both `s3:GetBucketAcl/s3:PutObject` enabled in bucket poli
     "IsOrganizationTrail": false
 }
 ```
-* change trail to single region `aws cloudtrail update-trail --name=multiRegionTrail --no-is-multi-region-trail --profile=awssa`.
+* change trail to single region `aws cloudtrail update-trail --name=multiRegionTrail --no-is-multi-region-trail`.
 In this case trail would remain in the region in which it was created, and all it's shadow trails in other regions would be removed.
 ```
 {
@@ -2684,9 +2731,9 @@ In this case trail would remain in the region in which it was created, and all i
     "IsOrganizationTrail": false
 }
 ```
-* Remove GSE `aws cloudtrail update-trail --name=multiRegionTrail --no-include-global-service-events --profile=awssa`
-* Change back to multi-region `aws cloudtrail update-trail --name=multiRegionTrail --is-multi-region-trail --profile=awssa`
-You get `Multi-Region trail must include global service events.`. So you should do both `aws cloudtrail update-trail --name=multiRegionTrail --is-multi-region-trail --include-global-service-events --profile=awssa`. So You can't remove GSE from multi-region trail.
+* Remove GSE `aws cloudtrail update-trail --name=multiRegionTrail --no-include-global-service-events`
+* Change back to multi-region `aws cloudtrail update-trail --name=multiRegionTrail --is-multi-region-trail`
+You get `Multi-Region trail must include global service events.`. So you should do both `aws cloudtrail update-trail --name=multiRegionTrail --is-multi-region-trail --include-global-service-events`. So You can't remove GSE from multi-region trail.
 
 ###### Certificate Manager
 ACM (Amazon Certificate Manager) - service that allows you to create/deploy public/private SSL/TLS certificates.
@@ -2747,13 +2794,13 @@ CloudFront duplicates your data across different edge locations, but GA only rou
 Example of creating 2 ec2 in 2 different regions + GA that have both of them as endpoints
 ```
 # create ec2 in singapore
-aws CloudFormation create-stack --stack-name=ga --template-body=file://sa/cloudformation/global-accelerator/ap-southeast-1-ec2.yml --profile=awssa --region=ap-southeast-1
+aws CloudFormation create-stack --stack-name=ga --template-body=file://sa/cloudformation/global-accelerator/ap-southeast-1-ec2.yml --region=ap-southeast-1
 
 # get ec2 id
-aws CloudFormation describe-stacks --stack-name=ga --query "Stacks[0].Outputs[0].OutputValue" --profile=awssa --region=ap-southeast-1 
+aws CloudFormation describe-stacks --stack-name=ga --query "Stacks[0].Outputs[0].OutputValue" --region=ap-southeast-1 
 
 # create ec2 and ga in us-east-1 region
-aws CloudFormation create-stack --stack-name=ga --template-body=file://sa/cloudformation/global-accelerator/us-east-1-ec2-ga.yml --parameters=ParameterKey=SingaporeEc2Id,ParameterValue={instanceId} --profile=awssa
+aws CloudFormation create-stack --stack-name=ga --template-body=file://sa/cloudformation/global-accelerator/us-east-1-ec2-ga.yml --parameters=ParameterKey=SingaporeEc2Id,ParameterValue={instanceId}
 ```
 Now you can access them using GA IP address, by using it you would be routed to the closest region. Now you can also terminate instance in closest region, and by doing this GA IP would be routed to second region.
 Healthchecks are already built into endpoints, so you don't need to explicitly define them.
@@ -3296,3 +3343,8 @@ Aws account and creator don't own network. For any changes there should be votin
 Peer node - when member join network it should have at least 1 peer node which store copy of distributed ledger with all transactions.
 Each blockchain has unique identifier `ResourceID.MemberID.NetworkID.managedblockchain.AWSRegion.amazonaws.com:PortNumber`. Port depends on blockcahin framework you are using.
 Yet this link is private, so members should have vpc and use vpc privatelink to access blockchain endpoint.
+
+###### GuardDuty
+It's thread management tools that helps to protect aws accounts/workloads/data by analazying data from cloudTrail/vpc flowLogs/dns logs using ML.
+It's regional service, so all collected data is aggregated/analyzied within region. It doesn't store any data, once data is analyzied it discarded.
+threat intelligence - list of malicious IP addresses maintained by aws and third-party partners.

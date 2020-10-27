@@ -30,12 +30,6 @@ https://www.infoq.com/presentations/mechanical-sympathy
 https://real-logic.co.uk/about.html (videos by Martin Thompson)
 https://www.thorntech.com/2018/09/user-authentication-alb-cognito
 ----------------------------------------------------------------------------------------------
-* https://blog.rowanudell.com/iam-passrole-explained/
-* Notaction vs deny in iam policy (notaction acts as deny only if there is no explicit allow)
-* https://aws.amazon.com/guardduty/faqs/
-* https://docs.aws.amazon.com/vpc/latest/userguide/vpc-endpoints-access.html / https://docs.aws.amazon.com/vpc/latest/userguide/vpc-endpoints-iam.html
-* add vpc link to both rest/http api
-* iam federated identity (web & saml identity when you create role)
 * Create cf template with redis cache and ec2 to connect to this cache (SG with clientSG that attached to desired ec2)
 ```
 sudo yum -y install --enablerepo=epel redis
