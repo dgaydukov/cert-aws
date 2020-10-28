@@ -1,0 +1,147 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+# Create public ec2 + redis cluster (with only 1 node)
+# !important => for redis NumCacheNodes=1, or we get: NumCacheNodes should be 1 if engine is redis
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.100.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value:  !Sub ${AWS::StackName}-MyVpc
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    DependsOn: VPC
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-IGW
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.100.1.0/24
+      AvailabilityZone: us-east-1a
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-PublicSubnet
+  PublicRT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-PublicRT
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: !Ref PublicRT
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+  PublicSubnetRTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref PublicRT
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.100.2.0/24
+      AvailabilityZone: us-east-1b
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-PrivateSubnet1
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.100.3.0/24
+      AvailabilityZone: us-east-1c
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-PrivateSubnet2
+  PrivateRT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-PrivateRT
+  PrivateSubnet1RTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet1
+      RouteTableId: !Ref PrivateRT
+  PrivateSubnet2RTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet2
+      RouteTableId: !Ref PrivateRT
+
+  SshSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow SSH from anywhere
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-SshSG
+  PublicInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-09d95fab7fff3776c
+      KeyName: mykey
+      UserData:
+        Fn::Base64:
+          !Sub |
+          #!/usr/bin/env bash
+          sudo amazon-linux-extras install redis4.0 -y
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: 0
+          SubnetId: !Ref PublicSubnet
+          GroupSet:
+            - !GetAtt SshSG.GroupId
+            - !GetAtt VPC.DefaultSecurityGroup
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 8
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-PublicInstance
+
+  RedisCluster:
+    Type: AWS::ElastiCache::CacheCluster
+    Properties:
+      ClusterName: !Sub ${AWS::StackName}-MyVpc-RedisCluster
+      CacheNodeType: cache.t2.micro
+      Engine: redis
+      NumCacheNodes: 1
+      CacheSubnetGroupName: !Ref PrivateSubnetGroup
+      VpcSecurityGroupIds:
+        - !GetAtt VPC.DefaultSecurityGroup
+  PrivateSubnetGroup:
+    Type: AWS::ElastiCache::SubnetGroup
+    Properties:
+      Description: 2 Private subnets for redis cluster
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2

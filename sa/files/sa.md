@@ -2640,6 +2640,22 @@ For this to work you should set TTL (time to live) to ensure that you always hav
 Downside if cache is not big enough, when new data arrived, LRU (least recently used) data is evicted from cache
 Cache is implemented as key-value pair. So if you want to store leaderboard in cache you have to store sha256 of query as key and result of query as string value.
 With cluster you distribute load across nodes/shards(in case of redis), it also protection against failure. If you have one node and it failed, your cache is failed, but if you have cluster of 10 nodes, and one node is failed, only 10% of cache is failed.
+Redis cli examples (to get url open cluster and get primary node endpoint, don't use cluster endpoint):
+```
+# send ping to verify connection
+redis-cli -h {REDIS_URL} ping
+# connect to redis
+redis-cli -h {REDIS_URL}
+SET mykey myvalue
+# store data with ttl of 5 seconds (after expired key would be null)
+SET mykey myvalue EX 5
+# get all available keys
+KEYS *
+```
+There are 3 types of redis cluster in cf:
+* AWS::ElastiCache::CacheCluster - create redis cluster with 1 node
+* AWS::ElastiCache::ReplicationGroup - create redis cluster with replication (you can still have only 1 primary node, but usually 1 primary and many replicas)
+* AWS::ElastiCache::GlobalReplicationGroup - global replication cluster (not supported, `An error occurred (ValidationError) when calling the UpdateStack operation: Template format error: Unrecognized resource types: [AWS::ElastiCache::GlobalReplicationGroup]`)
 
 ###### Systems Manager
 SM (Systems Manager) - tool that helps you to manage your aws resources and automate some tasks on them.

@@ -17,8 +17,10 @@ Here is my experience of taking 2 certifications, both associate & professional:
 ### TODO
 * sort out tax/bankAddress
 * run .war project in intellij
+Bit by Bit: An Illustrated History of Computers
 Вторжение. Краткая история русских хакеров
 Kingpin: How One Hacker Took Over the Billion-Dollar Cybercrime Underground
+The Art of Multiprocessor Programming
 https://en.wikipedia.org/wiki/Black_Swan_(film)
 https://www.youtube.com/watch?v=CnRtbtis79U (Алексей Шипилёв — Shenandoah: сборщик мусора, который смог)
 https://www.youtube.com/watch?v=iGRfyhE02lA (Владимир Иванов — G1 Garbage Collector)
@@ -26,20 +28,13 @@ https://www.youtube.com/watch?v=c1jVn5Sm8Uw (Алексей Шипилёв – S
 https://www.youtube.com/watch?v=iB2N8aqwtxc (Алексей Шипилёв — Прагматика Java Memory Model)
 https://www.youtube.com/watch?v=fU9hR3kiOK0 (dynamoDB streams)
 https://mechanical-sympathy.blogspot.com
+http://concurrencyfreaks.blogspot.com/
 https://www.slideshare.net/trishagee/introduction-to-the-disruptor
 https://martinfowler.com/articles/lmax.html
 https://www.infoq.com/presentations/mechanical-sympathy
 https://real-logic.co.uk/about.html (videos by Martin Thompson)
 https://www.thorntech.com/2018/09/user-authentication-alb-cognito
 ----------------------------------------------------------------------------------------------
-* Create cf template with redis cache and ec2 to connect to this cache (SG with clientSG that attached to desired ec2)
-```
-sudo yum -y install --enablerepo=epel redis
-redis-cli -h redis_ip_address
-SET mykey myvalue
-# store data with ttl of 5 seconds (after expired key would be null)
-SET mykey myvalue EX 5
-```
 * Create AWS::CloudWatch::Alarm and recover instance in case it stopped or port 80 not responding (find some standard cloudwatch metric for this, take template as base `cloudformation/ec2-cw-recover-alarm.yml`)
 + add cf template that trigger lambda every 5 sec, and lambda check liveliness of ec2 (go to ec2 turn off httpd and see that logs are written to cloudwatch) + create alarm on error (more than 2 times send sns email)
 + add alarm to send email in case of failure
@@ -95,10 +90,9 @@ TargetGroup:
 * athena udf
 * glue etl job vs athena etl job
 * aws config cf template (check that ec2 is of specific type and alert when type has been changed)
-* Kkinesis firehose real example (with cf template)
+* kinesis firehose real example (with cf template)
 * enable connection draining and see how it works when you de-register instance or it failed
 * create private hosted zone, see how it all works
-* create both memcached/redis elasticache endgine and check how do they work (add snapshot to redis and recover from snapshot to new cluster, add redis replication group)
 * cloudfront vs global accelerator for speed up of requests
 * create data pipeline to ELT from rds to s3
 * create cf template with aws config and see how you can manage config change (add config rule)
