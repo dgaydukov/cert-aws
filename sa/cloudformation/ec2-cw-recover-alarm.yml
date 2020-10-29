@@ -14,46 +14,46 @@ Resources:
       Tags:
         - Key: Name
           Value:  !Sub ${AWS::StackName}-MyVpc
-    InternetGateway:
-      Type: AWS::EC2::InternetGateway
-      DependsOn: VPC
-      Properties:
-        Tags:
-          - Key: Name
-            Value: !Sub ${AWS::StackName}-MyVpc-IGW
-    AttachGateway:
-      Type: AWS::EC2::VPCGatewayAttachment
-      Properties:
-        VpcId: !Ref VPC
-        InternetGatewayId: !Ref InternetGateway
-    PublicSubnet:
-      Type: AWS::EC2::Subnet
-      Properties:
-        VpcId: !Ref VPC
-        CidrBlock: 10.100.2.0/24
-        AvailabilityZone: us-east-1a
-        Tags:
-          - Key: Name
-            Value: !Sub ${AWS::StackName}-MyVpc-Public
-    PublicRT:
-      Type: AWS::EC2::RouteTable
-      Properties:
-        VpcId: !Ref VPC
-        Tags:
-          - Key: Name
-            Value: !Sub ${AWS::StackName}-MyVpc-Public-RT
-    PublicRoute:
-      Type: AWS::EC2::Route
-      DependsOn: AttachGateway
-      Properties:
-        RouteTableId: !Ref PublicRT
-        DestinationCidrBlock: 0.0.0.0/0
-        GatewayId: !Ref InternetGateway
-    PublicSubnetRTAssociation:
-      Type: AWS::EC2::SubnetRouteTableAssociation
-      Properties:
-        SubnetId: !Ref PublicSubnet
-        RouteTableId: !Ref PublicRT
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    DependsOn: VPC
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-IGW
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.100.2.0/24
+      AvailabilityZone: us-east-1a
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-Public
+  PublicRT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-Public-RT
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: !Ref PublicRT
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+  PublicSubnetRTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref PublicRT
 
   WebServerSG:
     Type: AWS::EC2::SecurityGroup
@@ -72,24 +72,20 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AWS::StackName}-WebServer-SG
-
   WebServer:
     Type: AWS::EC2::Instance
     Properties:
       InstanceType: t2.micro
       ImageId: ami-09d95fab7fff3776c
       KeyName: mykey
-# enable detailed monitoring for every minute (by default ec2 sends data every 5 min)
-      Monitoring: true
+      Monitoring: true  # enable detailed monitoring for every minute (by default ec2 sends data every 5 min)
       UserData:
         Fn::Base64:
           !Sub |
           #!/usr/bin/env bash
           sudo yum install httpd -y
           sudo service httpd start
-          RND1=$(shuf -i 1-100 -n 1)
-          RND2=$(shuf -i 1-100 -n 1)
-          sudo echo "<h1>WebServer ${AWS::Region} #$RND1-$RND2</h1>" > /var/www/html/index.html
+          sudo echo "<h1>WebServer ${AWS::Region} #$(shuf -i 100-1000 -n 1)</h1>" > /var/www/html/index.html
       NetworkInterfaces:
         - AssociatePublicIpAddress: true
           DeviceIndex: 0
@@ -103,14 +99,13 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AWS::StackName}-WebServer
-
-  MyEIP:
+  ElasticIP:
     Type: AWS::EC2::EIP
     Properties:
       InstanceId: !Ref WebServer
       Tags:
           - Key: Name
-            Value: !Sub ${AWS::StackName}-WebServer-StaicIP
+            Value: !Sub ${AWS::StackName}-WebServer-ElasticIP
 
   RecoveryAlarm:
     Type: AWS::CloudWatch::Alarm

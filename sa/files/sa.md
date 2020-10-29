@@ -2106,7 +2106,7 @@ ELB (except NLB) has sticky session - you can bind user's session to specific ec
 XFF (X-Forward-For) - header of original IP address of user (cause your ec2 would see IP of LB).
 Health Check - you can monitor health of ec2 and always redirect user to healthy ec2 (ELB doesn't kill unhealthy ec2). There are 3 types of health checks:
 * EC2 health check - watches for instance availability from hypervisor/networking point of view. For example, in case of a hardware problem, the check will fail. Also, if an instance was misconfigured and doesn't respond to network requests, it will be marked as faulty.
-* ELB health check - verifies that a specified TCP port on an instance is accepting connections OR a specified web page returns 2xx code. Thus ELB health checks are a little bit smarter and verify that actual app works instead of verifying that just an instance works.
+* ELB health check (1 heath check inside that check port status `AWS::ElasticLoadBalancingV2::TargetGroup`) - verifies that a specified TCP port on an instance is accepting connections OR a specified web page returns 2xx code. Thus ELB health checks are a little bit smarter and verify that actual app works instead of verifying that just an instance works.
 * Custom health check - If your application can't be checked by simple HTTP request and requires advanced test logic, you can implement a custom check in your code and set instance health though API
 ALB Request Routing - you can redirect user to different ec2 based on request attributes (subdomains, headers, url params..)
 Listener Rule - can forward request but not change. So if you have a rule `/api => EC2_1, /internal => EC2_2`. That means EC2_1 should have url `/api` and EC2_2 should have url `/internal`.

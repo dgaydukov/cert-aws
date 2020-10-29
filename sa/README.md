@@ -41,25 +41,15 @@ https://www.thorntech.com/2018/09/user-authentication-alb-cognito
 + add elb health check with
 + add custom health check to elb
 + add elb to 2 vpc (load traffic between 2 vpc)
-+add cloudwatch event (rule, source - aws.ec2, detailtype-runinstances) when new ec2 started and add tag owner with lambda inside vpc
++ add cloudwatch event (rule, source - aws.ec2, detailtype-runinstances) when new ec2 started and add tag owner with lambda inside vpc
 + add HealthCheck to elb + default ec2 healthcheck from asg (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-elb-health-check.html)
 + add Simple elb with 2 ec2 from 2 private subnets (use nat gateway to install httpd) https://stackoverflow.com/questions/22541895/amazon-elb-for-ec2-instances-in-private-subnet-in-vpc
-```
-TargetGroup:
-    Type: AWS::ElasticLoadBalancingV2::TargetGroup
-    Properties:
-    HealthCheckIntervalSeconds: 10
-    HealthCheckProtocol: HTTP
-    HealthCheckPath: /index.html
-    HealthCheckTimeoutSeconds: 5
-    HealthyThresholdCount: 3
-    UnhealthyThresholdCount: 2
-    Matcher:
-        HttpCode: 200-299
-```
 * use AWS::AutoScalingPlans::ScalingPlan to create asg based on predictive scaling (https://docs.aws.amazon.com/autoscaling/plans/userguide/what-is-aws-auto-scaling.html)
 * Add auto-scaling example for specific time range with `AWS::AutoScaling::ScheduledAction`
 + add based on number of messages in sqs
++ create custom cloudwatch metric and alarm based on this metric
++ create lambda and cloudwatch rule to run lambda every minute (scheduled lambda)
++ create template with both cloudwatch & aws budget cost alarms (when your usage above 1$ and 5$)
 * try glacier select to csv archive
 * add cf template for iam database authentication (then go to public ec2 and try to access db with both regular username/password and iam token)
 * create cf template with dynamodb vpc endpoint and access dynamodb from ec2 in private subnet (add auto scaling to dynamoDb)
@@ -115,8 +105,6 @@ TargetGroup:
 * create cognito identity with cognito user pool and other social providers (use basic java app to test it). Looks like cognito identity doesn't have it's own credentials but use credentials from IdP (https://docs.aws.amazon.com/cognito/latest/developerguide/authentication-flow.html)
 * create vpc link and connect http api to ec2 in private subnet
 * trigger lambda when dynamodb change happend with dynamodb streams
-* create custom cloudwatch metric and alarm based on this metric
-* create lambda and cloudwatch rule to run lambda every minute (scheduled lambda)
 * create auto-scale group with ec2 httpd (but store data in efs, this would guarantee that if instance launched in another AZ data won't be lost)
 * create auto-scale group with single ec2 and eip and after terminate associate same eip to new ec2 (in launch config userdata add ability to associate eip to current ec2 + you need role for ec2 to be able to associate eip to itself)
 * rewrite cf templates random httpd to display privateIP
@@ -128,7 +116,6 @@ TargetGroup:
 * create iam identity federation with this AD and with Cognito
 * ClientVPN with security as microsoft AD
 * ClientVPN add nat instance so internet would work without tunnel split (yet check it also with tunnel split, and your IP would be different)
-* create template with both cloudwatch & aws budget cost alarms (when your usage above 1$ and 5$)
 * create site-to-site vpn with 2 locations so each of this can communicate with each other using VPN CloudHub (each location is imitated by separate vpc)
 * use kinesis sdk and try java data streaming. In all example firehose consume data from data streams, but can we directly send dota to it without data streams?
 * solve final test for saa
