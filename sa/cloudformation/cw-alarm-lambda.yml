@@ -1,0 +1,219 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+# Create alarm and call lambda in case cpu low for 3 minutes + create scheduled lambda to be called every minute
+# !important => we cannot call lambda directly from alarm (only sns & ec2 actions like stop/terminate). That's why we call lambda from alarm through sns.
+# !important => Rule.ScheduleExpression cron is different from linux cron, https://docs.aws.amazon.com/eventbridge/latest/userguide/scheduled-events.html
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.100.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value:  !Sub ${AWS::StackName}-MyVpc
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    DependsOn: VPC
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-IGW
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.100.2.0/24
+      AvailabilityZone: us-east-1a
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-Public
+  PublicRT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-Public-RT
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: !Ref PublicRT
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+  PublicSubnetRTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref PublicRT
+
+  WebServerSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref VPC
+      GroupDescription: Enable SSH/HTTP access from anywhere
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-WebServer-SG
+  WebServer:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-09d95fab7fff3776c
+      KeyName: mykey
+      Monitoring: true  # enable detailed monitoring for every minute (by default ec2 sends data every 5 min)
+      UserData:
+        Fn::Base64:
+          !Sub |
+          #!/usr/bin/env bash
+          sudo yum install httpd -y
+          sudo service httpd start
+          sudo echo "<h1>WebServer ${AWS::Region} #$(shuf -i 100-1000 -n 1)</h1>" > /var/www/html/index.html
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: 0
+          SubnetId: !Ref PublicSubnet
+          GroupSet:
+            - !GetAtt WebServerSG.GroupId
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 8
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-WebServer
+  ElasticIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      InstanceId: !Ref WebServer
+      Tags:
+          - Key: Name
+            Value: !Sub ${AWS::StackName}-WebServer-ElasticIP
+
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-LambdaRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+  LogPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub ${AWS::StackName}-Logging
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - "logs:CreateLogGroup"
+              - "logs:CreateLogStream"
+              - "logs:PutLogEvents"
+              - "logs:DescribeLogStreams"
+            Resource: "*"
+      Roles:
+        - !Ref LambdaRole
+
+  AlarmLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Do some actions on alarm
+      Role: !GetAtt LambdaRole.Arn
+      Runtime: nodejs12.x
+      Handler: index.handler
+      Code:
+        ZipFile: |
+          exports.handler = (event, context, cb) => {
+            console.log(JSON.stringify(event, null, 2), JSON.stringify(context, null, 2));
+          }
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-AlarmLambda
+  AlarmSnsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: AlarmSnsTopic
+      TopicName: AlarmSnsTopic
+      Subscription:
+        - Endpoint: !GetAtt AlarmLambda.Arn
+          Protocol: lambda
+  AlarmLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      Principal: sns.amazonaws.com
+      SourceArn:  !Ref AlarmSnsTopic
+      FunctionName: !Ref AlarmLambda
+  LowCpuAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Call lambda through sns in case of 3 consecutive check for cpu below 10%
+      Namespace: AWS/EC2
+      MetricName: CPUUtilization
+      Statistic: Maximum
+      Period: 60
+      EvaluationPeriods: 3
+      ComparisonOperator: LessThanThreshold
+      Threshold: 10
+      AlarmActions:
+        - !Ref AlarmSnsTopic
+      Dimensions:
+        - Name: InstanceId
+          Value: !Ref WebServer
+
+  SheduledLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Run some checks on schedule
+      Role: !GetAtt LambdaRole.Arn
+      Runtime: nodejs12.x
+      Handler: index.handler
+      Code:
+        ZipFile: |
+          exports.handler = (event, context, cb) => {
+            console.log(JSON.stringify(event, null, 2), JSON.stringify(context, null, 2));
+          }
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-AlarmLambda
+  ScheduledEvent:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub ${AWS::StackName}-ScheduledEvent
+      Description: Run lambda every minute
+      ScheduleExpression: cron(0/1 * * * ? *)
+      Targets:
+        - Arn: !GetAtt SheduledLambda.Arn
+          Id: SheduledLambda
+  SheduledLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      FunctionName: !Ref SheduledLambda
+      SourceArn: !GetAtt ScheduledEvent.Arn
+
+

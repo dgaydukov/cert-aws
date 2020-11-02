@@ -1,5 +1,6 @@
 AWSTemplateFormatVersion: 2010-09-09
 
+# first alarm would terminate instance if cpu consumption less than 10% for 3 minutes
 # recover can only be used with metric StatusCheckFailed_System - this alarm fire when data center failure, so you can't test it manually
 # recovered instance would use same ebs (so that's why we use 2 random numbers, cause they should be preserved), EIP (so you can reach site with same public IP)
 # look here for more details https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/UsingAlarmActions.html#AddingRecoverActions
@@ -107,6 +108,22 @@ Resources:
           - Key: Name
             Value: !Sub ${AWS::StackName}-WebServer-ElasticIP
 
+  LowCpuTerminateAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Terminate EC2 in case of 3 consecutive check for cpu below 10%
+      Namespace: AWS/EC2
+      MetricName: CPUUtilization
+      Statistic: Maximum
+      Period: 60
+      EvaluationPeriods: 3
+      ComparisonOperator: LessThanThreshold
+      Threshold: 10
+      AlarmActions:
+        - !Sub arn:aws:automate:${AWS::Region}:ec2:terminate
+      Dimensions:
+        - Name: InstanceId
+          Value: !Ref WebServer
   RecoveryAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:

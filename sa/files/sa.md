@@ -1459,6 +1459,10 @@ So if different users call it with some personal info, other can see it. Yet if 
 There are a few solutions:
 * don't use global variables (if you need some global state - store in in DynamoDB)
 * v8 isolate (VM instance with its own heap) - so every lambda is wrapped into vm instance
+There are few ways to store state:
+* dynamoDB/s3
+* lambda tags - since you can have up to 50 tags per resource, you can store some state in tags
+* global variable (not recommended) - if you run your lambda every minute, technically it should be executed in same container, so your global variable should persist
 
 ###### Step Functions
 Step Functions - visual tool that allows you to build complex logic based on lambda and EC2 calls. They can also help overcome lambda max 900sec execution time, by joining several lambdas into one execution flow.
@@ -2132,6 +2136,10 @@ You can also use CloudWatch to create alarms (for example you get 5 errors, and 
 Many aws resources (EC2, RDS, and so on) automatically send metrics to CloudWatch. You can also send your custom metrics. Metrics can't be deleted, but expire automatically.
 By default ec2 monitoring interval is 5min, but you can enable detailed monitoring (second step when you create ec2) and data would be flow every 1 min.
 In ec2 you can create alarm too (when cpu goes above 80% - stop instance). If you want to track ec2 memory/cpu usage you have to install CloudWatch agent into ec2.
+By default alarm call only ec2 actions (stop/start/terminate/recover). There are 2 ways you can add your logic (see details `sa/cloudformation/cw-alarm-lambda.yml`):
+* create alarm and call lambda through sns (cause you can't call lambda directly from alarm) - execute logic in lambda
+In this case in your lambda you should have only business logic (like add new ec2). Validation logic would be inside alarm (for example when cpu more than 80%), but you are limited for alarms (there is no alarm to validate that port return 200)
+* create scheduled rule and call lambda every minute - in this case you should have business & validation logic inside lambda. Yet you are not limited and can create any type of validation (for example check that port returns 200)
 
 ###### KMS
 Key Management Service - a service for generating/storing/auditing keys. If you have a lot of encryption it's better to use central key management service.
