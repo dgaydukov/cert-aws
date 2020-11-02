@@ -772,6 +772,7 @@ Example of event for lambda
 }
 ```
 Make sure you have logic to update `ResponseURL`, otherwise stack that use your lambda would be stuck in `UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS` state. 
+Description - first level tag, where you can put template description, max size 1024 symbols (if you try to exceed limit you will got exception `An error occurred (ValidationError) when calling the UpdateStack operation: Template format error: 'Description' length is greater than 1024.`)
 
 ###### IAM
 There are 3 types of permission:
@@ -2481,6 +2482,7 @@ Cognito also support SAML or OpenID Connect, social identity providers (such as 
 You can use users from User Pool or Federated Pool (Facebook, Google) as users to whom give temporary credentials.
 You pay for MAU (monthly active users) - user who within a month made some identity operation signIn/singUp/tokenRefresh/passwordChange.
 Free tier - 50k MAU per month. You can call `AssumeRoleWithWebIdentity` to get temporary credentials.
+So you can singin to user_pool but you can use user_pool id token to get aws credentials from identity_pool
 There are 3 types of cognito tokens (with accord to OpenID):
 * id token - jwt token that has personal user info (name, email, phone). So you shouldn't use it outside your backend, cause it includes sensitive info. Usually id token = access token + user's personal details.
 * access token - jwt token that includes user's access rights. You can use it outside your backend to get access to other services. Live of id/access token is limited, usually to 1 hour, and that's why you should use refresh token to prolong it.
@@ -2491,13 +2493,13 @@ Example creating users from cli:
 aws cognito-idp sign-up --client-id={USER_POOL_CLIENT_ID} --username=john.doe@gmail.com --password=P@1ssword --user-attributes Name="email",Value="john.doe@gmail.com" Name="name",Value="John Doe"
 # confirm user as admin (without confirmation password sent to eamil)
 aws cognito-idp admin-confirm-sign-up --user-pool-id={USER_POOL_ID} --username=john.doe@gmail.com
+
 # login & get idToken
 aws cognito-idp initiate-auth --client-id={USER_POOL_CLIENT_ID} --auth-flow=USER_PASSWORD_AUTH --auth-parameters USERNAME=john.doe@gmail.com,PASSWORD=P@1ssword
-
 # create cognito identity id
-aws cognito-identity get-id --identity-pool-id=us-east-1:0c42576d-50be-448f-82d7-9fbc0047fede --logins cognito-idp.us-east-1.amazonaws.com/{USER_POOL_ID}={GOGNITO_ID_TOKEN}
+aws cognito-identity get-id --identity-pool-id={IDENTITY_POOL_ID} --logins cognito-idp.us-east-1.amazonaws.com/{USER_POOL_ID}={ID_TOKEN}
 # get temporary aws credentials
-aws cognito-identity get-credentials-for-identity --identity-id={IDENTITY_ID} --logins cognito-idp.us-east-1.amazonaws.com/{USER_POOL_ID}={GOGNITO_ID_TOKEN}
+aws cognito-identity get-credentials-for-identity --identity-id={IDENTITY_ID} --logins cognito-idp.us-east-1.amazonaws.com/{USER_POOL_ID}={ID_TOKEN}
 ```
 
 ###### CodePipeline(CodeCommit/CodeBuild/CodeDeploy)
