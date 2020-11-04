@@ -1832,6 +1832,13 @@ You can use on-demand or spot instances in LC, in case of spot you should set bi
 Unhealthy instance can be determine by 2 healthchecks:
 * ec2 healthcheck (default check for asg, check only status of instance itself) - use it if you don't use elb
 * elb healthchek - more elaborated check (for example to check if instance return status 200)
+There are 2 ways to create asg in cf:
+* ScalingPolicy - create scaling policy (only suitable for ec2 scaling policy)
+* ScalingPlan - create scaling policy for asg, but can also be used to create scaling policy for:
+    * spot fleet
+    * ecs
+    * dynamoDB (table & GSI)
+    * aurora replicas
 ASG troubleshoot:
 * more than 1 policy triggered by single event -> in this case asg launch policy with the greater impact (if one policy add 2 ec2 and another 4 -> 4 ec2 would be added)
 * scale-out and scale-in triggered by single event -> in this case scale-out wins

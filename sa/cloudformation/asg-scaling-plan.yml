@@ -1,9 +1,9 @@
 AWSTemplateFormatVersion: 2010-09-09
 
-# Create vpc with single public subnet and asg
-# Use stress utility to imitate cpu load `stress --cpu 1 --timeout 180`
-
-# EstimatedInstanceWarmup (TargetTrackingScaling, StepScaling) - how long until a newly launched instance can contribute to the CloudWatch metrics
+# Create auto-scaling group + target scaling policy (represented by scaling plan). Notice that MinCapacity/MaxCapacity from scaling plan would overwrite MinSize/MaxSize from ASG.
+# By default AutoScalingGroup, will recover any failed ec2 (so if you terminate one, it would be restored)
+# !important => although we use TagFilters, but ec2 doesn't have any tags, tracking policy would still be executed. So we don't need them, but you should use them, cause you can't create scaling plan without it
+# !important => ScalingPlan adds predictive scaling out-of-the-box
 
 Resources:
   VPC:
@@ -73,7 +73,6 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AWS::StackName}-MyVpc-WebServer-SG
-
   LaunchConfig:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
@@ -88,7 +87,7 @@ Resources:
           #!/usr/bin/env bash
           sudo yum install httpd -y
           sudo service httpd start
-          sudo echo "<h1>App #$(shuf -i 99-999 -n 1)</h1>" > /var/www/html/index.html
+          sudo echo "<h1>App #$(shuf -i 100-1000 -n 1)</h1>" > /var/www/html/index.html
           sudo amazon-linux-extras install epel -y
           sudo yum install stress -y
       SecurityGroups:
@@ -107,69 +106,29 @@ Resources:
       HealthCheckGracePeriod: 10
       VPCZoneIdentifier:
         - !Ref PublicSubnet
+      Tags:
+        - Key: Name
+          PropagateAtLaunch: true
+          Value: !Sub ${AWS::StackName}-MyVpc-PublicInstance
+        - Key: RequireAutoScaling
+          PropagateAtLaunch: true
+          Value: Yes
 
-  StepScaleOut:
-    Type: AWS::AutoScaling::ScalingPolicy
+  ScalingPlan:
+    Type: AWS::AutoScalingPlans::ScalingPlan
     Properties:
-      AutoScalingGroupName: !Ref ASG
-      AdjustmentType: ChangeInCapacity
-      PolicyType: StepScaling
-      MetricAggregationType: Average
-      EstimatedInstanceWarmup: 60
-      StepAdjustments:
-        - ScalingAdjustment: 1
-          MetricIntervalUpperBound: 0
-        - ScalingAdjustment: 2
-          MetricIntervalLowerBound: 0
-          MetricIntervalUpperBound: 40
-        - ScalingAdjustment: 3
-          MetricIntervalLowerBound: 40
-  HighCpuAlarm:
-    Type: AWS::CloudWatch::Alarm
-    Properties:
-      EvaluationPeriods: 2
-      Statistic: Average
-      Threshold: 30
-      AlarmDescription: Alarm in case of high CPU utilization
-      Period: 60
-      AlarmActions:
-        - !Ref StepScaleOut
-      Namespace: AWS/EC2
-      Dimensions:
-        - Name: AutoScalingGroupName
-          Value: !Ref ASG
-      ComparisonOperator: GreaterThanThreshold
-      MetricName: CPUUtilization
-
-  StepScaleIn:
-    Type: AWS::AutoScaling::ScalingPolicy
-    Properties:
-      AutoScalingGroupName: !Ref ASG
-      AdjustmentType: ChangeInCapacity
-      PolicyType: StepScaling
-      MetricAggregationType: Average
-      EstimatedInstanceWarmup: 60
-      StepAdjustments:
-        - ScalingAdjustment: -3
-          MetricIntervalUpperBound: 0
-        - ScalingAdjustment: -2
-          MetricIntervalLowerBound: 0
-          MetricIntervalUpperBound: 40
-        - ScalingAdjustment: -1
-          MetricIntervalLowerBound: 40
-  LowCpuAlarm:
-    Type: AWS::CloudWatch::Alarm
-    Properties:
-      EvaluationPeriods: 5
-      Statistic: Average
-      Threshold: 30
-      AlarmDescription: Alarm in case of low CPU utilization
-      Period: 60
-      AlarmActions:
-        - !Ref StepScaleIn
-      Namespace: AWS/EC2
-      Dimensions:
-        - Name: AutoScalingGroupName
-          Value: !Ref ASG
-      ComparisonOperator: LessThanThreshold
-      MetricName: CPUUtilization
+      ApplicationSource:
+        TagFilters:
+          - Key: RequireAutoScaling
+            Values:
+              - Yes
+      ScalingInstructions:
+        - MinCapacity: 1
+          MaxCapacity: 6
+          ServiceNamespace: autoscaling
+          ScalableDimension: autoscaling:autoScalingGroup:DesiredCapacity
+          ResourceId: !Sub autoScalingGroup/${ASG}
+          TargetTrackingConfigurations:
+            - PredefinedScalingMetricSpecification:
+                PredefinedScalingMetricType: ASGAverageCPUUtilization
+              TargetValue: 80

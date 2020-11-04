@@ -34,11 +34,12 @@ https://www.infoq.com/presentations/mechanical-sympathy
 https://real-logic.co.uk/about.html (videos by Martin Thompson)
 https://www.thorntech.com/2018/09/user-authentication-alb-cognito
 ----------------------------------------------------------------------------------------------
-+ use AWS::AutoScalingPlans::ScalingPlan to create asg based on predictive scaling (https://docs.aws.amazon.com/autoscaling/plans/userguide/what-is-aws-auto-scaling.html)
-+ Add auto-scaling example for specific time range with `AWS::AutoScaling::ScheduledAction`
-+ add based on number of messages in sqs
+* asg with both on-demand and spot instances (when no spot avaialbe run on-demand)
+* request and run spot fleet
+* use spot instance to handle sqs, when get termination notification, stop requesting new messages from queue, finish processing remaining messages and quit
+* create sqs queue and spot fleet that monitory queue, run spot fleet based on queue load, shut down fleet if queue is empty
++ add asg ec2 based on number of messages in sqs
 + create custom cloudwatch metric and alarm based on this metric
-+ create lambda and cloudwatch rule to run lambda every minute (scheduled lambda)
 + create template with both cloudwatch & aws budget cost alarms (when your usage above 1$ and 5$)
 + s3 call lambda(custom api) when file is updated
 + ses vs sns on calling lambda when new message arrived
@@ -65,7 +66,6 @@ https://www.thorntech.com/2018/09/user-authentication-alb-cognito
 * vpc endpoint service (add ec2 (with basic httpd service)+NLB and share it to vpc from another region)
 * route53 resolver
 * create cognito identity with cognito user pool and other social providers (use basic java app to test it). Looks like cognito identity doesn't have it's own credentials but use credentials from IdP (https://docs.aws.amazon.com/cognito/latest/developerguide/authentication-flow.html)
-* asg with both on-demand and spot instances (when no spot avaialbe run on-demand)
 * add cross-account access to s3
 * create codepipeline with cf template and use codedeploy/beanstalk as deploy stage (compare them)
 * what is stronger bucket policy or acl (it should be that explicit deny always overwrites allow)
@@ -87,9 +87,6 @@ https://www.thorntech.com/2018/09/user-authentication-alb-cognito
 * create dynamodb lsi & gsi and compare them
 * try emr on t2 (with different engines hive/hbase/presto/spark)
 * create data lake with lake formation
-* request and run spot fleet
-* use spot instance to handle sqs, when get termination notification, stop requesting new messages from queue, finish processing remaining messages and quit
-* create sqs queue and spot fleet that monitory queue, run spot fleet based on queue load, shut down fleet if queue is empty
 * redshift enhanced vpc routing (send data inside vpc between redhshift & s3 and view vpc flow logs)
 * configure alarm to start instance if it was stopped `cloudformation/ec2-cw-state-change.yml` + use lambda to store it in dynamodb
 * deploy datasync agent on ec2 and imitate data transfer to s3

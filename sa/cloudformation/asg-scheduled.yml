@@ -77,6 +77,7 @@ Resources:
   LaunchConfig:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
+      LaunchConfigurationName: !Sub ${AWS::StackName}-LaunchConfig
       InstanceType: t2.micro
       ImageId: ami-09d95fab7fff3776c
       KeyName: mykey
