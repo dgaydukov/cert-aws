@@ -15,7 +15,6 @@ Here is my experience of taking 2 certifications, both associate & professional:
 * [Free SAP questions](https://www.examtopics.com/exams/amazon/aws-certified-solutions-architect-professional)
 
 ### TODO
-* sort out tax/bankAddress
 * run .war project in intellij
 Bit by Bit: An Illustrated History of Computers
 Вторжение. Краткая история русских хакеров
@@ -35,7 +34,6 @@ https://www.infoq.com/presentations/mechanical-sympathy
 https://real-logic.co.uk/about.html (videos by Martin Thompson)
 https://www.thorntech.com/2018/09/user-authentication-alb-cognito
 ----------------------------------------------------------------------------------------------
-+ add cloudwatch event (rule, source - aws.ec2, detailtype-runinstances) when new ec2 started and add tag owner with lambda inside vpc
 + use AWS::AutoScalingPlans::ScalingPlan to create asg based on predictive scaling (https://docs.aws.amazon.com/autoscaling/plans/userguide/what-is-aws-auto-scaling.html)
 + Add auto-scaling example for specific time range with `AWS::AutoScaling::ScheduledAction`
 + add based on number of messages in sqs

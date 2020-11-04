@@ -1,7 +1,8 @@
 AWSTemplateFormatVersion: 2010-09-09
 
-# Store logs when ec2 state (stop/start/terminate) changes
-# Log group name should start with `/aws/events/`
+# Store logs when ec2 state (stop/start/terminate) changes. Log group name should start with `/aws/events/`
+# Lambda that catches state change event and add tag owner to newly created ec2
+# detail-type must be some predefined value, you can't put there any random text. You may omit detail-type, in this case all events for particular group (for example ec2) would be caught by the rule
 
 Resources:
   VPC:
@@ -90,18 +91,77 @@ Resources:
   LogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub /aws/events/${AWS::StackName}-MyVpc-LogGroup
+      LogGroupName: !Sub /aws/events/${AWS::StackName}-LogGroup
       RetentionInDays: 7
-  StateChangeEventRule:
+  StateChangeEvent:
     Type: AWS::Events::Rule
     Properties:
-      Description: Rule to log state change events
+      Name: !Sub ${AWS::StackName}-StateChangeEvent
+      Description: Rule to log ec2 state change events (stopping/stopped/pending/running/shutting-down/terminated)
       EventPattern:
         source:
           - aws.ec2
         detail-type:
           - EC2 Instance State-change Notification
-      State: ENABLED
       Targets:
         - Arn: !GetAtt LogGroup.Arn
           Id: StateChangeLogGroup
+        - Arn: !GetAtt EventLambda.Arn
+          Id: EventLambda
+
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-LambdaRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+  LogPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub ${AWS::StackName}-Logging
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - "logs:CreateLogGroup"
+              - "logs:CreateLogStream"
+              - "logs:PutLogEvents"
+              - "logs:DescribeLogStreams"
+            Resource: "*"
+      Roles:
+        - !Ref LambdaRole
+  EventLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Add owner tag to ec2
+      Role: !GetAtt LambdaRole.Arn
+      Runtime: nodejs12.x
+      Handler: index.handler
+      Code:
+        ZipFile: |
+          exports.handler = (event, context, cb) => {
+            console.log(JSON.stringify(event, null, 2), JSON.stringify(context, null, 2));
+            if (event && event.detail && event.detail.state === "running"){
+              var instanceId = event.detail["instance-id"];
+              console.log(`Instance ${instanceId} started. Adding owner tag...`);
+              //TODO: check if instance doesn' have owner tag and add it using javascript sdk
+            }
+          }
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-EventLambda
+  EventLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      FunctionName: !Ref EventLambda
+      SourceArn: !GetAtt StateChangeEvent.Arn
