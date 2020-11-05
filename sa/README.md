@@ -15,6 +15,10 @@ Here is my experience of taking 2 certifications, both associate & professional:
 * [Free SAP questions](https://www.examtopics.com/exams/amazon/aws-certified-solutions-architect-professional)
 
 ### TODO
+* manually resend invitation email to my mail box
+* auth on elb level (netflix approach) - one big advantage that we could add this auth to any suite of products (access and so on)
+* devops question: how to open docker exposed port only to specific IP
+
 * run .war project in intellij
 Bit by Bit: An Illustrated History of Computers
 Вторжение. Краткая история русских хакеров

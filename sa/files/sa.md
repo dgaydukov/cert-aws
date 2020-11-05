@@ -1045,6 +1045,7 @@ Permission evaluation:
 * if any explicit deny found evaluation is stopped and deny applied
 * if any explicit allow found evaluation continue until it's find deny - then deny applied, or not found deny - allow applied
 * if neither deny/allow find than default deny applied
+Federation - process to move authentication/authorization into third party to handle, so you get token from user which you verify against third party provider.
 Identity federation - grant to external identities ability to secure access aws (both management console & API) without creating iam users. External identities can be of 3 types (2 created from iam console by adding identity provider, 1 from cognito):
 * SAML - corporate IdP (microsoft AD, aws AD). ADFS (Active Directory Federation Services) - used to connect AD to iam using SAML protocol. When you create role choose SAML type.
 * OpenId Connect - web IdP (cognito, facebook, google or any other openId connect). When you create role choose web identity type.
@@ -2207,6 +2208,7 @@ Listener - is a protocol + port for which you got incoming requests. There are 3
 * Network (ose level 4) - if you need to balance TCP/UDP
 * Classic - if you need to balance classic (without VPC) EC2 instance
 ALB+NLB - you register target in targets group and route traffic to target groups. CLB - you register instances within LB.
+Target group can be of 3 types: ec2/container/list of IP (IP can be seated inside vpc or anywhere).
 If you enable AZ for ELB, it creates lb node in AZ, after this traffic goes to this node. The best practice to have 1 node in each AZ.
 If you have not equal number of EC2 in different AZ (let's say 2 in az1, and 8 in az2) then you should enable cross-zone balancing.
 In this case each elb will route all traffic into 10 instances, so each instances will get 10% of traffic. But if you disable cross-zone balancing, then 50% in first zone would be divided between 2 instances (so each got 25%) and 50% from az2 would be divided in 8 instances (so each got 8.25% traffic). With ALB cross-zone balancing enabled by default.
@@ -2234,6 +2236,7 @@ Smart certificate selection - nlb support multiple certificates per tls connecti
 * when you create nlb from console you can specify only default certificate
 * after you can go to `listeners=>View/edit certificates=>add certificate` to add other certificates
 * if hostname match single cert - use this cert, otherwise - use best cert client can support
+SNI (Server Name Indication) - host multiple tls application, each with it's own (or multiple) ssl certificate behind single ELB, which would choose optimal certificate for each client.
 
 ###### CloudWatch
 CloudWatch - monitoring service for aws resources and apps running in aws cloud. IAM permission for CloudWatch are given to a resource as a whole (so you can't give access for only some of EC2, you give either for all EC2 instances or none).
