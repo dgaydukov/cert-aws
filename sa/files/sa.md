@@ -35,6 +35,7 @@
 * 2.10 [MTU & Jumbo frame](#mtu--jumbo-frame)
 * 2.11 [Nmap](#nmap)
 * 2.12 [Stunnel](#stunnel)
+* 2.13 [Docker networking & iptables](#docker-networking--iptables)
 3. [Services](#services)
 * 3.1 [Corretto](#corretto)
 * 3.2 [CloudFormation](#CloudFormation)
@@ -684,6 +685,102 @@ You can invoke it from inetd or directly in daemon mode (edit `/etc/services`)
 Super-server - daemon that runs on linux, listen specific ports and when socket opened (connection established) starts server. Examples: sshd/inetd/httpd
 inetd (internet service daemon) - linux super-server that listens incoming connection and starting servers. You write setting in `/etc/inetd.conf` on which port which program to run, like
 `telnet  stream  tcp6    nowait  root    /usr/sbin/telnetd      telnetd -a` - open telnet.
+
+###### Docker networking & iptables
+iptables - linux firewall, this utility pre-installed on most linux distributions, yet you can also install it manually `sudo apt-get install iptables`.
+You can check it by `sudo iptables -L -n` - list using numeric notation (IP addresses instead of dns names). Since firewall required root permission to manage, you have to use `sudo` when modifying firewall (of course you can call `iptables --help` without `sudo`). 
+There are 3 types of chain:
+* input - control incoming connections (if you want ssh to machine, input chain should have proper record to allow port 22)
+* forward (router/NAT) - control incoming connections not destined for localhost
+* output - control outcoming connections
+Policy can be of 2 types `sudo iptables -L|grep policy`:
+* ACCEPT - accept all connections. You can configure to accept all incoming connections `iptables --policy INPUT ACCEPT`. Then you can deny based on IP or port.
+* DROP - deny all connections
+There are 3 types of responses:
+* Accept - allow connection
+* Drop - drop connection (best if you want pretend like server doesn't exists)
+* Reject - explicitly send reject message to client
+Below an example how to work:
+```
+# block all connections from particular IP range (if you want single IP just set /32, or don't set IP mask at all)
+iptables -A INPUT -s 10.10.0.0/24 -j DROP
+# block connection for specific port for single IP
+iptables -A INPUT -p tcp --dport ssh -s 10.10.0.0 -j DROP
+# block specific port for all IP
+iptables -A INPUT -p tcp --dport ssh -j DROP
+# remove rule to block port 80
+iptables -D INPUT -p tcp --dport 80 -j DROP
+```
+There are 2 ways to add rule:
+* `-I` - add into line number (by default 1) - so add in the beginning
+* `-A` - append rule to the end
+Rules are stateless (like NACL), so if you want to allow ssh connection, you have to modify both input/output. Same way if you want to access internet on port 80 from machine you should allow both output/input traffic.
+But you can imitate state by creating 2 rules, input and output, and allow only established connections to output.
+Below example allows to create new connection to input, but for output only traffic for already established connection may flow. You are not allowed to ssh from machine.
+```
+iptables -A INPUT -p tcp --dport ssh -s 10.10.0.0 -m state --state NEW,ESTABLISHED -j ACCEPT
+iptables -A OUTPUT -p tcp --sport 22 -d 10.10.0.0 -m state --state ESTABLISHED -j ACCEPT
+```
+Once you add changes they apply immediately, but when you reboot your pc, they would be scrapped. If you want to add them permanently you should save them explicitly `sudo /sbin/iptables-save`.
+SG vs iptables:
+* SG - infra level of security. Be default all closed. Stateful. Takes effect prior to iptables.
+* iptables - os level of security. By default all open. Stateless.
+Custom chains - you can create your own custom chains
+```
+# create new custom chain
+sudo iptables -N MYCHAIN
+# create reference from input chain (your custom chain rules would be called just after INPUT chain)
+sudo iptables -A INPUT -j MYCHAIN
+# see which custom chain follows after which 
+iptables -L  -n --line-numbers
+```
+There are 4 types if iptables:
+* filter - 3 chains:
+    * input
+    * forward
+    * output
+* NAT
+    * prerouting (destination NAT) - alter packet when packet was received
+    * postrouting (source NAT) - alter packet before it leaves
+    * output 
+* mange
+    * prerouting
+    * output
+    * forward
+    * input
+    * postrouting
+* raw
+    * prerouting
+    * output
+To view specific route table you can `iptabls -t filter/nat/mangle/raw -L`. If you don't specify table option, `filter` table is used by default.
+Masquerade - special target in nat table, hiding address translation (so private hosts can connect to internet through NAT server).
+Note that docker modifies iptables. When you run docker `docker run -d -p 8080:80 nginx`. If you run `iptables -L -n` you will see, that docker add entry into iptables.
+```
+Chain DOCKER (1 references)
+target     prot opt source               destination         
+ACCEPT     tcp  --  0.0.0.0/0            172.17.0.3           tcp dpt:80
+```
+Note that by default you open this port to everybody. If you want it to be open only for localhost you should run it `docker run -d -p 127.0.0.1:8080:80 nginx`.
+Note that if you open port for anybody, you can't close it just by modifying iptables. If you add `iptables -A INPUT -p tcp --dport 8080 -j DROP` you can still access port 8080 from outside.
+The reason is that docker modify 2 tables filters and nat. If you run `iptables -t nat -L -n`, you will see
+```
+Chain DOCKER (2 references)
+target     prot opt source               destination          
+DNAT       tcp  --  0.0.0.0/0            0.0.0.0/0            tcp dpt:8080 to:172.17.0.3:80
+```
+You can resolve it by adding `iptables -I FORWARD -p tcp --dport 80 -j DROP`.
+So to summirize - there are 2 ways to block outside access to your exposed docker port:
+* expose it only to localhost `docker run -d -p 127.0.0.1:8080:80 nginx`
+* expose to everybody but block access from iptables `iptables -I FORWARD -p tcp --dport 80 -j DROP` or add it to docker chain `iptables -I DOCKER-USER -p tcp --dport 80 -j DROP`
+Docker add 2 custom chains `DOCKER-USER & DOCKER` and ensures that all incoming requests are validated by this chain first.
+If you want your rules to be evaluated before docker rules add them to `DOCKER-USER` chain.
+You can run docker with `--iptables=false`, this would prevent docker from modifying iptables. But this will break docker networking.
+
+There are several networking drivers that you can specify in `network_mode` prop:
+* bridge - default driver, use when your containers need to communicate with one another.
+Containers connected to same bridge can communicate with each other, while to be isolated from all other containers.
+* host - use host machine networking. You don't need to use port binding in this case, cause your docker port would be available as host port.
+* overlay - create network between instances run from different docker daemons (or between swarm and standalone docker)
 
 ### Services
 ###### Corretto 
