@@ -1924,9 +1924,27 @@ LT (launch template) vs LC (launch configuration):
 * LC (old version) - immutable (you can create one LC and if you want to add change you have to add second LC). Only basic ec2 settings are supported.
 * LT (new version) - you can have multiple versions in single template. You can have advanced features like subnetID, multiple instance types, dedicated hosts and so on.
 ASG support both LC & LT (see `sa/cloudformation/asg-launch-template.yml`). Yet spot fleet supports only LT.
-Spot fleet - a fleet (group of 1 or more ec2 instances) of spot instances. You can create requests of 2 types:
+Spot fleet (AWS::EC2::SpotFleet) - a fleet (group of 1 or more ec2 instances) of spot instances. You can create requests of 2 types:
 * request - create single request. If it failed, or if you remove instances, nothing would happen.
 * maintain - maintain request perpetually. If it failed or if you remove instances, request would automatically add new (in case it can fetch spot instances from the pool)
+You can use `AWS::Events::Rule` to catch termination event 2 minutes before aws would terminate your instance. Below is event example
+```
+{
+    "version": "0",
+    "id": "12345678-1234-1234-1234-123456789012",
+    "detail-type": "EC2 Spot Instance Interruption Warning",
+    "source": "aws.ec2",
+    "account": "123456789012",
+    "time": "yyyy-mm-ddThh:mm:ssZ",
+    "region": "us-east-2",
+    "resources": ["arn:aws:ec2:us-east-1:{ACCOUNT_ID}:instance/i-1234567890abcdef0"],
+    "detail": {
+        "instance-id": "i-1234567890abcdef0",
+        "instance-action": "hibernate/stop/terminate" # one of three
+    }
+}
+```
+Ec2 Fleet (AWS::EC2::EC2Fleet) - allows you to create fleet for on-demand, reserved, spot instances. You specify max number of instances and aws create and maintain (in case you terminate on-demand it would be recreated, in case aws terminate spot it would try to fetch other spot) these instances for you.
 You can configure SNS to get notification when your ASG scales out/in or replace unhealthy instance.
 LC (launch configuration) - template that ASG uses to launch new instances. One ASG use one LC. You can't modify LC, if you need to change some params you should create new LC and update your ASG.
 You can use on-demand or spot instances in LC, in case of spot you should set bid price in LC. ASG can launch your instances across multiple AZ but only within same region.

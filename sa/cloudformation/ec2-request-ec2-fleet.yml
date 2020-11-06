@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: 2010-09-09
 
-# Create spot request of maintain type (if we terminate ec2 instance, request will notice this and fetch new spot instance for us, in case they are available in the pool)
-# !important => use PassRole if you want to run ec2 instance with some role
+# Create ec2 fleet of on-demand & spot instances
+# !important => notice that we don't need to create spot request explicitly, neither role for it. Ec2Fleet does it under the hood for us.
 
 Resources:
   VPC:
@@ -93,48 +93,16 @@ Resources:
             Groups:
               - !GetAtt SshHttpSG.GroupId
 
-  SpotFleetManagerRole:
-    Type: AWS::IAM::Role
+  Ec2Fleet:
+    Type: AWS::EC2::EC2Fleet
     Properties:
-      RoleName: !Sub ${AWS::StackName}-SpotFleetManagerRole
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - spotfleet.amazonaws.com
-            Action:
-              - sts:AssumeRole
-      Policies:
-        - PolicyName: SpotFleetManagerPolicy
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Effect: Allow
-                Action:
-                  - "ec2:DescribeImages"
-                  - "ec2:DescribeSubnets"
-                  - "ec2:RequestSpotInstances"
-                  - "ec2:TerminateInstances"
-                  - "ec2:DescribeInstanceStatus"
-                  - "ec2:CreateTags"
-                  - "ec2:RunInstances"
-                Resource: "*"
-              - Effect: Allow
-                Action:
-                  - "iam:PassRole"
-                Resource: "*"
-
-  SpotFleet:
-    Type: AWS::EC2::SpotFleet
-    Properties:
-      SpotFleetRequestConfigData:
-        Type: maintain
-        IamFleetRole: !GetAtt SpotFleetManagerRole.Arn
-        SpotPrice: 0.004
-        TargetCapacity: 1
-        LaunchTemplateConfigs:
-          - LaunchTemplateSpecification:
-              LaunchTemplateId: !Ref LaunchTemplate
-              Version: !GetAtt LaunchTemplate.LatestVersionNumber
+      Type: maintain
+      TargetCapacitySpecification:
+        DefaultTargetCapacityType: on-demand
+        OnDemandTargetCapacity: 1
+        SpotTargetCapacity: 1
+        TotalTargetCapacity: 2
+      LaunchTemplateConfigs:
+        - LaunchTemplateSpecification:
+            LaunchTemplateId: !Ref LaunchTemplate
+            Version: !GetAtt LaunchTemplate.LatestVersionNumber
