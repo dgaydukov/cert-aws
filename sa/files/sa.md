@@ -895,7 +895,7 @@ Amazon DynamoDB Table   arn:aws:dynamodb:us-east-1:ACCOUNT_ID:table/myTable
 Don't confuse:
 * AssumeRole - ability of principal to assume other role for himself
 * PassRole - ability of principal create resource (lambda/ec2) and pass role to this resource
-If principal doesn't have passrole permission, and try to create ec2 with role, he will get `is not authorized to perform: iam:PassRole on resource`. 
+If principal doesn't have `PassRole` permission, and try to create ec2 with role, he will get `is not authorized to perform: iam:PassRole on resource`. 
 Below example of policy to allow principal to create only ec2 with only specific role
 ```
 {
@@ -1918,12 +1918,12 @@ Termination policy - customizing how asg would terminate your instances:
 * OldestLaunchConfiguration - remove instances that have the oldest launch configuration, useful when you're updating a group and phasing out the instances from a previous configuration
 * NewestInstance - remove newest instance first, useful when you're testing a new launch configuration but don't want to keep it
 * ClosestToNextInstanceHour - remove instances that are closest to the next billing hour
-* OldestLaunchTemplate - remove instances that have the oldest launch template
+* OldestLaunchTemplate - remove instances that have the oldest LT
 * AllocationStrategy - remove instances to align the remaining instances to the allocation strategy for the type of instance that is terminating (either a Spot Instance or an On-Demand Instance)
-Launch template - similar to launch configuration but with additional props like:
-* allows you to have multiple versions of a template
-* allowed to add multiple instance types instead of one single type (you can launch both Spot and On-Demand ec2)
-* provide more advanced features (dedicated hosts)
+LT (launch template) vs LC (launch configuration):
+* LC (old version) - immutable (you can create one LC and if you want to add change you have to add second LC). Only basic ec2 settings are supported.
+* LT (new version) - you can have multiple versions in single template. You can have advanced features like subnetID, multiple instance types, dedicated hosts and so on.
+ASG support both LC & LT (see `sa/cloudformation/asg-launch-template.yml`). Yet spot fleet supports only LT.
 You can configure SNS to get notification when your ASG scales out/in or replace unhealthy instance.
 LC (launch configuration) - template that ASG uses to launch new instances. One ASG use one LC. You can't modify LC, if you need to change some params you should create new LC and update your ASG.
 You can use on-demand or spot instances in LC, in case of spot you should set bid price in LC. ASG can launch your instances across multiple AZ but only within same region.
@@ -1933,6 +1933,7 @@ Unhealthy instance can be determine by 2 healthchecks:
 There are 2 ways to create asg in cf:
 * ScalingPolicy - create scaling policy (only suitable for ec2 scaling policy)
 * ScalingPlan - create scaling policy for asg, but can also be used to create scaling policy for:
+    * ASG
     * spot fleet
     * ecs
     * dynamoDB (table & GSI)
