@@ -1924,6 +1924,9 @@ LT (launch template) vs LC (launch configuration):
 * LC (old version) - immutable (you can create one LC and if you want to add change you have to add second LC). Only basic ec2 settings are supported.
 * LT (new version) - you can have multiple versions in single template. You can have advanced features like subnetID, multiple instance types, dedicated hosts and so on.
 ASG support both LC & LT (see `sa/cloudformation/asg-launch-template.yml`). Yet spot fleet supports only LT.
+Spot fleet - a fleet (group of 1 or more ec2 instances) of spot instances. You can create requests of 2 types:
+* request - create single request. If it failed, or if you remove instances, nothing would happen.
+* maintain - maintain request perpetually. If it failed or if you remove instances, request would automatically add new (in case it can fetch spot instances from the pool)
 You can configure SNS to get notification when your ASG scales out/in or replace unhealthy instance.
 LC (launch configuration) - template that ASG uses to launch new instances. One ASG use one LC. You can't modify LC, if you need to change some params you should create new LC and update your ASG.
 You can use on-demand or spot instances in LC, in case of spot you should set bid price in LC. ASG can launch your instances across multiple AZ but only within same region.

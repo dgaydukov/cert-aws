@@ -1,6 +1,7 @@
 AWSTemplateFormatVersion: 2010-09-09
 
-#
+# Create spot request of maintain type (if we terminate ec2 instance, request will notice this and fetch new spot instance for us, in case they are available in the pool)
+# !important => use PassRole if you want to run ec2 instance with some role
 
 Resources:
   VPC:
@@ -53,6 +54,45 @@ Resources:
       SubnetId: !Ref PublicSubnet
       RouteTableId: !Ref PublicRT
 
+  SshHttpSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH/HTTP access from anywhere
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-SshHttpSG
+  LaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub ${AWS::StackName}-LaunchTemplate
+      LaunchTemplateData:
+        InstanceType: t2.micro
+        KeyName: mykey
+        ImageId: ami-09d95fab7fff3776c
+        UserData:
+          Fn::Base64:
+            !Sub |
+            #!/usr/bin/env bash
+            sudo yum install httpd -y
+            sudo service httpd start
+            sudo echo "<h1>App #$(shuf -i 100-1000 -n 1)</h1>" > /var/www/html/index.html
+        NetworkInterfaces:
+          - DeviceIndex: 0
+            AssociatePublicIpAddress: true
+            SubnetId: !Ref PublicSubnet
+            Groups:
+              - !GetAtt SshHttpSG.GroupId
+
   SpotFleetManagerRole:
     Type: AWS::IAM::Role
     Properties:
@@ -86,75 +126,15 @@ Resources:
                   - "iam:PassRole"
                 Resource: "*"
 
-
-#  SpotFleet:
-#    Type: AWS::EC2::SpotFleet
-#    Properties:
-#      SpotFleetRequestConfigData:
-#        IamFleetRole: !GetAtt SpotFleetManagerRole.Arn
-#        SpotPrice: 0.003
-#        TargetCapacity: 1
-#        LaunchTemplateConfigs:
-#          - LaunchTemplateSpecification:
-#              LaunchTemplateId: !Ref LaunchConfig
-#              Version: 1
-
-  SshHttpSG:
-    Type: AWS::EC2::SecurityGroup
+  SpotFleet:
+    Type: AWS::EC2::SpotFleet
     Properties:
-      GroupDescription: Enable SSH/HTTP access from anywhere
-      VpcId: !Ref VPC
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 22
-          ToPort: 22
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          FromPort: 80
-          ToPort: 80
-          CidrIp: 0.0.0.0/0
-      Tags:
-        - Key: Name
-          Value: !Sub ${AWS::StackName}-MyVpc-SshHttpSG
-  LaunchTemplate:
-    Type: AWS::EC2::LaunchTemplate
-    Properties:
-      LaunchTemplateName: !Sub ${AWS::StackName}-LaunchTemplate
-      LaunchTemplateData:
-        InstanceType: t2.micro
-        KeyName: mykey
-        ImageId: ami-09d95fab7fff3776c
-        UserData:
-          Fn::Base64:
-            !Sub |
-            #!/usr/bin/env bash
-            sudo yum install httpd -y
-            sudo service httpd start
-            sudo echo "<h1>App #$(shuf -i 1-100 -n 1)</h1>" > /var/www/html/index.html
-        NetworkInterfaces:
-          - AssociatePublicIpAddress: true
-            SubnetId: !Ref PublicSubnet
-        SecurityGroupIds:
-          - !GetAtt SshHttpSG.GroupId
-
-  LaunchConfig:
-    Type: AWS::AutoScaling::LaunchConfiguration
-    Properties:
-      LaunchConfigurationName: !Sub ${AWS::StackName}-LaunchConfig
-      InstanceType: t2.micro
-      ImageId: ami-09d95fab7fff3776c
-      KeyName: mykey
-      AssociatePublicIpAddress: true
-      UserData:
-        Fn::Base64:
-          !Sub |
-          #!/usr/bin/env bash
-          sudo yum install httpd -y
-          sudo service httpd start
-          sudo echo "<h1>App #$(shuf -i 1-100 -n 1)</h1>" > /var/www/html/index.html
-      SecurityGroups:
-        - !GetAtt SshHttpSG.GroupId
-      BlockDeviceMappings:
-        - DeviceName: /dev/xvda
-          Ebs:
-            VolumeSize: 8
+      SpotFleetRequestConfigData:
+        Type: maintain
+        IamFleetRole: !GetAtt SpotFleetManagerRole.Arn
+        SpotPrice: 0.004
+        TargetCapacity: 1
+        LaunchTemplateConfigs:
+          - LaunchTemplateSpecification:
+              LaunchTemplateId: !Ref LaunchTemplate
+              Version: !GetAtt LaunchTemplate.LatestVersionNumber
