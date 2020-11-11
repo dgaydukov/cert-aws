@@ -55,7 +55,7 @@ Resources:
       SubnetId: !Ref PublicSubnet
       RouteTableId: !Ref PublicRT
 
-  SshHttpSG:
+  WebServerSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Enable SSH/HTTP access from anywhere
@@ -71,7 +71,7 @@ Resources:
           CidrIp: 0.0.0.0/0
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-MyVpc-SshHttpSG
+          Value: !Sub ${AWS::StackName}-MyVpc-WebServerSG
   LaunchTemplate:
     Type: AWS::EC2::LaunchTemplate
     Properties:
@@ -86,13 +86,13 @@ Resources:
             #!/usr/bin/env bash
             sudo yum install httpd -y
             sudo service httpd start
-            sudo echo "<h1>App #$(shuf -i 100-1000 -n 1)</h1>" > /var/www/html/index.html
+            sudo echo "<h1>App #$(shuf -i 99-999 -n 1)</h1>" > /var/www/html/index.html
         NetworkInterfaces:
           - DeviceIndex: 0
             AssociatePublicIpAddress: true
             SubnetId: !Ref PublicSubnet
             Groups:
-              - !GetAtt SshHttpSG.GroupId
+              - !GetAtt WebServerSG.GroupId
 
   SpotFleetManagerRole:
     Type: AWS::IAM::Role

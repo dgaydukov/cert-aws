@@ -1941,10 +1941,10 @@ In this case your launch template would be only for spot instances. And if you t
 Use `MixedInstancesPolicy` of ASG. But remove spot from launch template. If you try to use both you would get error: 
 `Incompatible launch template: You cannot use a launch template that is set to request Spot Instances (InstanceMarketOptions) when you configure an Auto Scaling group with a mixed instances policy. Add a different launch template to the group and try again.`
 Take a look at `sa/cloudformation/asg-on-demand-spot.yml` for exact template how to use asg + launch template to have both on-demand & spot instances.
-Spot fleet (AWS::EC2::SpotFleet) - a fleet (group of 1 or more ec2 instances) of spot instances. You can create requests of 2 types:
+Spot fleet `AWS::EC2::SpotFleet` - a fleet (group of 1 or more ec2 instances) of spot instances. You can create requests of 2 types:
 * request - create single request. If it failed, or if you remove instances, nothing would happen.
 * maintain - maintain request perpetually. If it failed or if you remove instances, request would automatically add new (in case it can fetch spot instances from the pool)
-You can use `AWS::Events::Rule` to catch termination event 2 minutes before aws would terminate your instance. Below is event example
+You can use `AWS::Events::Rule` to catch termination event 2 minutes before aws would terminate your instance. Below is event example:
 ```
 {
     "version": "0",
@@ -1961,7 +1961,7 @@ You can use `AWS::Events::Rule` to catch termination event 2 minutes before aws 
     }
 }
 ```
-Ec2 Fleet (AWS::EC2::EC2Fleet) - allows you to create fleet for on-demand, reserved, spot instances. You specify max number of instances and aws create and maintain (in case you terminate on-demand it would be recreated, in case aws terminate spot it would try to fetch other spot) these instances for you.
+Ec2 Fleet `AWS::EC2::EC2Fleet` - allows you to create fleet for on-demand, reserved, spot instances. You specify max number of instances and aws create and maintain (in case you terminate on-demand it would be recreated, in case aws terminate spot it would try to fetch other spot) these instances for you.
 You can configure SNS to get notification when your ASG scales out/in or replace unhealthy instance.
 LC (launch configuration) - template that ASG uses to launch new instances. One ASG use one LC. You can't modify LC, if you need to change some params you should create new LC and update your ASG.
 You can use on-demand or spot instances in LC, in case of spot you should set bid price in LC. ASG can launch your instances across multiple AZ but only within same region.
@@ -2519,6 +2519,7 @@ Metric to use in auto scaling group:
 * `ApproximateAgeOfOldestMessage` - age of the oldest message in queue. Useful when you have time bound for each message to handle.
 * `ApproximateNumberOfMessagesVisible` - current queue length. Useful when you want to auto scale based on number of messages in queue
 * `ApproximateNumberOfMessagesNotVisible` - total number of messages including in-flight (those that has been polled by app but not yet deleted)
+Take a look at `sa/cloudformation/asg-target-sqs-size-based.yml` how to use asg + sqs queue
 Batching - ability to send/receive batch of up to 10 messages:
 * use `SendMessageBatch/DeleteMessageBatch/ChangeMessageVisibilityBatch` operations. `ReceiveMessage` - receive both single/batch.
 * reduce costs - since sqs is charged per request, and you can batch up to 10 messages, you can save on costs

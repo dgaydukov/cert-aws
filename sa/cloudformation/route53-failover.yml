@@ -83,7 +83,7 @@ Resources:
       SubnetId: !Ref PublicSubnet2
       RouteTableId: !Ref PublicRT
 
-  PublicSG:
+  WebServerSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Enable SSH/HTTP access from anywhere
@@ -119,7 +119,7 @@ Resources:
           DeviceIndex: 0
           SubnetId: !Ref PublicSubnet1
           GroupSet:
-            - !GetAtt PublicSG.GroupId
+            - !GetAtt WebServerSG.GroupId
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
           Ebs:
@@ -146,7 +146,7 @@ Resources:
           DeviceIndex: 0
           SubnetId: !Ref PublicSubnet2
           GroupSet:
-            - !GetAtt PublicSG.GroupId
+            - !GetAtt WebServerSG.GroupId
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
           Ebs:

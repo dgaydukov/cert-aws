@@ -1,8 +1,7 @@
 AWSTemplateFormatVersion: 2010-09-09
 
-# create vpc with 2 public subnets, and one asg
-# you can either terminate instance and asg will create new one, or run: stress --cpu 1 --timeout 180. after some time it will delete old
-# !important => we define a list of subnet (or single - not desired cause whole point of auto-scaling is to be able to recover in another AZ) in AutoScalingGroup, not in launch config
+# create asg + sqs-queue-size-based policy
+# Go to sqs add a few messages (more than 2), wait for some time. ASG would add 2 more instances. If number stays for some time, asg would add last 4th instance. Then clear the queue, after some time, asg will down the instances to 1
 
 Resources:
   VPC:
@@ -26,7 +25,7 @@ Resources:
     Properties:
       VpcId: !Ref VPC
       InternetGatewayId: !Ref InternetGateway
-  PublicSubnetA:
+  PublicSubnet:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
@@ -34,23 +33,14 @@ Resources:
       AvailabilityZone: us-east-1a
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-MyVpc-PublicSubnetA
-  PublicSubnetB:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId: !Ref VPC
-      CidrBlock: 10.100.2.0/24
-      AvailabilityZone: us-east-1b
-      Tags:
-        - Key: Name
-          Value: !Sub ${AWS::StackName}-MyVpc-PublicSubnetB
+          Value: !Sub ${AWS::StackName}-MyVpc-PublicSubnet
   PublicRT:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-MyVpc-PublicRT
+          Value: !Sub ${AWS::StackName}-MyVpc-Public-RT
   PublicRoute:
     Type: AWS::EC2::Route
     DependsOn: AttachGateway
@@ -58,15 +48,10 @@ Resources:
       RouteTableId: !Ref PublicRT
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId: !Ref InternetGateway
-  PublicSubnetARTAssociation:
+  PublicSubnetRTAssociation1:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      SubnetId: !Ref PublicSubnetA
-      RouteTableId: !Ref PublicRT
-  PublicSubnetBRTAssociation:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      SubnetId: !Ref PublicSubnetB
+      SubnetId: !Ref PublicSubnet
       RouteTableId: !Ref PublicRT
 
   WebServerSG:
@@ -101,8 +86,6 @@ Resources:
           sudo yum install httpd -y
           sudo service httpd start
           sudo echo "<h1>App #$(shuf -i 99-999 -n 1)</h1>" > /var/www/html/index.html
-          sudo amazon-linux-extras install epel -y
-          sudo yum install stress -y
       SecurityGroups:
         - !GetAtt WebServerSG.GroupId
       BlockDeviceMappings:
@@ -118,15 +101,24 @@ Resources:
       MaxSize: 4
       HealthCheckGracePeriod: 10
       VPCZoneIdentifier:
-        - !Ref PublicSubnetA
-        - !Ref PublicSubnetB
-  CpuAbove80ScalingPolicy:
+        - !Ref PublicSubnet
+  SqsSizeBasedScalingPolicy:
     Type: AWS::AutoScaling::ScalingPolicy
     Properties:
       AdjustmentType: ChangeInCapacity
       AutoScalingGroupName: !Ref ASG
       PolicyType: TargetTrackingScaling
       TargetTrackingConfiguration:
-        PredefinedMetricSpecification:
-          PredefinedMetricType: ASGAverageCPUUtilization
-        TargetValue: 80
+        CustomizedMetricSpecification:
+          Dimensions:
+            - Name: QueueName
+              Value: !GetAtt SqsQueue.QueueName
+          MetricName: ApproximateNumberOfMessagesVisible
+          Namespace: AWS/SQS
+          Statistic: Sum
+        TargetValue: 2
+
+  SqsQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub ${AWS::StackName}-SqsQueue

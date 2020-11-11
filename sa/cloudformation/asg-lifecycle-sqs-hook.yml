@@ -113,7 +113,7 @@ Resources:
   AsgEventQueue:
     Type: AWS::SQS::Queue
     Properties:
-      QueueName: AsgEventQueue
+      QueueName: !Sub ${AWS::StackName}-AsgEventQueue
   AsgRole:
     Type: AWS::IAM::Role
     Properties:

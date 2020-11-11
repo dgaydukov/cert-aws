@@ -34,9 +34,7 @@ https://www.infoq.com/presentations/mechanical-sympathy
 https://real-logic.co.uk/about.html (videos by Martin Thompson)
 https://www.thorntech.com/2018/09/user-authentication-alb-cognito
 ----------------------------------------------------------------------------------------------
-* use spot instance to handle sqs, when get termination notification, stop requesting new messages from queue, finish processing remaining messages and quit
-* create sqs queue and spot fleet that monitory queue, run spot fleet based on queue load, shut down fleet if queue is empty
-+ add asg ec2 based on number of messages in sqs
++ create sqs queue and spot fleet that monitory queue, run spot fleet based on queue load, shut down fleet if queue is empty (https://aws.amazon.com/blogs/compute/dynamic-scaling-with-ec2-spot-fleet/)
 + create custom cloudwatch metric and alarm based on this metric
 + create template with both cloudwatch & aws budget cost alarms (when your usage above 1$ and 5$)
 + s3 call lambda(custom api) when file is updated
@@ -54,7 +52,7 @@ https://www.thorntech.com/2018/09/user-authentication-alb-cognito
 + add Simple elb with 2 ec2 from 2 private subnets (use nat gateway to install httpd) https://stackoverflow.com/questions/22541895/amazon-elb-for-ec2-instances-in-private-subnet-in-vpc
 + add elb to 2 vpc (load traffic between 2 vpc)
 + elb to ec2 using https (https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/configuring-https-endtoend.html). By default elb terminate https traffic and forward to ec2 just http, since it's inside aws and can't be listened by anybody.
-+ create elb with eks with several apps deployed there, and use elb path routing to route to eks nodeport. So we have single elb and multiple microservices in eks and all works (internal pathes not exposed by elb, and can be accessed only inside eks cluster)
++ create elb with eks with several apps deployed there, and use elb path routing to route to eks nodeport. So we have single elb and multiple microservices in eks and all works (internal paths not exposed by elb, and can be accessed only inside eks cluster)
 + ecs + elb with dynamic port mapping
 * try glacier select to csv archive
 * add cf template for iam database authentication (then go to public ec2 and try to access db with both regular username/password and iam token)
@@ -104,5 +102,6 @@ https://www.thorntech.com/2018/09/user-authentication-alb-cognito
 * create site-to-site vpn with 2 locations so each of this can communicate with each other using VPN CloudHub (each location is imitated by separate vpc)
 * use kinesis sdk and try java data streaming. In all example firehose consume data from data streams, but can we directly send dota to it without data streams?
 * solve final test for saa
-* add logic to `sa/cloudformation/custom-resource/handler.yml` to update `ResponseURL` (pre-sign s3 url)
-* add resource handler to validate ACM Certificate, so you can automate `sa/cloudformation/elb-asg-route53-acm.yml` template, no more need to manually update route53 record
+* Github Project: add logic to `sa/cloudformation/custom-resource/handler.yml` to update `ResponseURL` (pre-sign s3 url)
+* Github Project: add resource handler to validate ACM Certificate, so you can automate `sa/cloudformation/elb-asg-route53-acm.yml` template, no more need to manually update route53 record
+* Github Project: use spot instance to handle sqs, use `AWS::Events::Rule` to catch termination notice and put message into second queue. Monitor second queue, when instance would be stopped - stop requesting new messages from queue, finish processing remaining messages and quit
