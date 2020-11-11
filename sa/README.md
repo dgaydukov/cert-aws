@@ -34,7 +34,6 @@ https://www.infoq.com/presentations/mechanical-sympathy
 https://real-logic.co.uk/about.html (videos by Martin Thompson)
 https://www.thorntech.com/2018/09/user-authentication-alb-cognito
 ----------------------------------------------------------------------------------------------
-* asg with both on-demand and spot instances (when no spot avaialbe run on-demand)
 * use spot instance to handle sqs, when get termination notification, stop requesting new messages from queue, finish processing remaining messages and quit
 * create sqs queue and spot fleet that monitory queue, run spot fleet based on queue load, shut down fleet if queue is empty
 + add asg ec2 based on number of messages in sqs

@@ -1924,6 +1924,23 @@ LT (launch template) vs LC (launch configuration):
 * LC (old version) - immutable (you can create one LC and if you want to add change you have to add second LC). Only basic ec2 settings are supported.
 * LT (new version) - you can have multiple versions in single template. You can have advanced features like subnetID, multiple instance types, dedicated hosts and so on.
 ASG support both LC & LT (see `sa/cloudformation/asg-launch-template.yml`). Yet spot fleet supports only LT.
+ASG with both on-demand & spot instances:
+* You can't use launch config, cause it only support on-demand (by default) or spot (add `SpotPrice: 0.002` to `AWS::AutoScaling::LaunchConfiguration`).
+If you try to asg + launch config with spot, and no spot instances can be fetch you will get exception: `Launching a new EC2 instance. Status Reason: Your Spot request price of 0.002 is lower than the minimum required Spot request fulfillment price of 0.0038. Launching EC2 instance failed.`.
+If you can't fetch spot instances, your asg would be without instances, yet it will continue try to create instance. So far it looked like it would try to fetch every time increase number of two, so fetch 1,2,4,8,16,32 minutes. See screenshot from my pc `sa/files/images/asg-activity-history.png`.
+Administrative suspension - aws would terminate launch attempts if asg failed to launch instance for 24 hours.
+You can also set suspension to (launch/terminate). In this case asg won't try to attempt to launch/terminate instances. Pay attention if you suspend termination, spot instances would be terminated anyway
+* You have to use launch template. But don't hardcode spot into launch template with:
+```
+InstanceMarketOptions:
+  MarketType: spot
+  SpotOptions:
+    MaxPrice: 0.002
+```
+In this case your launch template would be only for spot instances. And if you try to use this template with ASG, it would have same effect like launch config. ASG would try in vain to launch spot instances.
+Use `MixedInstancesPolicy` of ASG. But remove spot from launch template. If you try to use both you would get error: 
+`Incompatible launch template: You cannot use a launch template that is set to request Spot Instances (InstanceMarketOptions) when you configure an Auto Scaling group with a mixed instances policy. Add a different launch template to the group and try again.`
+Take a look at `sa/cloudformation/asg-on-demand-spot.yml` for exact template how to use asg + launch template to have both on-demand & spot instances.
 Spot fleet (AWS::EC2::SpotFleet) - a fleet (group of 1 or more ec2 instances) of spot instances. You can create requests of 2 types:
 * request - create single request. If it failed, or if you remove instances, nothing would happen.
 * maintain - maintain request perpetually. If it failed or if you remove instances, request would automatically add new (in case it can fetch spot instances from the pool)
@@ -1934,9 +1951,9 @@ You can use `AWS::Events::Rule` to catch termination event 2 minutes before aws 
     "id": "12345678-1234-1234-1234-123456789012",
     "detail-type": "EC2 Spot Instance Interruption Warning",
     "source": "aws.ec2",
-    "account": "123456789012",
+    "account": "{ACCOUNT_ID}",
     "time": "yyyy-mm-ddThh:mm:ssZ",
-    "region": "us-east-2",
+    "region": "us-east-1",
     "resources": ["arn:aws:ec2:us-east-1:{ACCOUNT_ID}:instance/i-1234567890abcdef0"],
     "detail": {
         "instance-id": "i-1234567890abcdef0",
@@ -1950,7 +1967,7 @@ LC (launch configuration) - template that ASG uses to launch new instances. One 
 You can use on-demand or spot instances in LC, in case of spot you should set bid price in LC. ASG can launch your instances across multiple AZ but only within same region.
 Unhealthy instance can be determine by 2 healthchecks:
 * ec2 healthcheck (default check for asg, check only status of instance itself) - use it if you don't use elb
-* elb healthchek - more elaborated check (for example to check if instance return status 200)
+* elb healthcheck - more elaborated check (for example to check if instance return status 200)
 There are 2 ways to create asg in cf:
 * ScalingPolicy - create scaling policy (only suitable for ec2 scaling policy)
 * ScalingPlan - create scaling policy for asg, but can also be used to create scaling policy for:
