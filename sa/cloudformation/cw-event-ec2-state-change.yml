@@ -141,6 +141,7 @@ Resources:
   EventLambda:
     Type: AWS::Lambda::Function
     Properties:
+      FunctionName: !Sub ${AWS::StackName}-EventLambda
       Description: Add owner tag to ec2
       Role: !GetAtt LambdaRole.Arn
       Runtime: nodejs12.x

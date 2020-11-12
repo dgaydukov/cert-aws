@@ -35,6 +35,7 @@ Resources:
   CustomResourceLambda:
     Type: AWS::Lambda::Function
     Properties:
+      FunctionName: !Sub ${AWS::StackName}-CustomResourceLambda
       Description: Create github webhook
       Role: !GetAtt LambdaRole.Arn
       Runtime: nodejs12.x

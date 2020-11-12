@@ -140,6 +140,7 @@ Resources:
   AlarmLambda:
     Type: AWS::Lambda::Function
     Properties:
+      FunctionName: !Sub ${AWS::StackName}-AlarmLambda
       Description: Do some actions on alarm
       Role: !GetAtt LambdaRole.Arn
       Runtime: nodejs12.x
@@ -187,6 +188,7 @@ Resources:
   SheduledLambda:
     Type: AWS::Lambda::Function
     Properties:
+      FunctionName: !Sub ${AWS::StackName}-SheduledLambda
       Description: Run some checks on schedule
       Role: !GetAtt LambdaRole.Arn
       Runtime: nodejs12.x

@@ -15,7 +15,6 @@ Here is my experience of taking 2 certifications, both associate & professional:
 * [Free SAP questions](https://www.examtopics.com/exams/amazon/aws-certified-solutions-architect-professional)
 
 ### TODO
-* run .war project in intellij
 Bit by Bit: An Illustrated History of Computers
 Вторжение. Краткая история русских хакеров
 Kingpin: How One Hacker Took Over the Billion-Dollar Cybercrime Underground
@@ -34,8 +33,12 @@ https://www.infoq.com/presentations/mechanical-sympathy
 https://real-logic.co.uk/about.html (videos by Martin Thompson)
 https://www.thorntech.com/2018/09/user-authentication-alb-cognito
 ----------------------------------------------------------------------------------------------
-+ create sqs queue and spot fleet that monitory queue, run spot fleet based on queue load, shut down fleet if queue is empty (https://aws.amazon.com/blogs/compute/dynamic-scaling-with-ec2-spot-fleet/)
-+ create custom cloudwatch metric and alarm based on this metric
+* add spring websocket broadcast
+* try work spring boot with javax.websocket (SpringBootApplication with ServerEndpoint)
+* run .war project in intellij
+* kafka poll wait for specified timeout (don't return even if there are already messages)
+* kafka cluster docker example
+----------------------------------------------------------------------------------------------
 + create template with both cloudwatch & aws budget cost alarms (when your usage above 1$ and 5$)
 + s3 call lambda(custom api) when file is updated
 + ses vs sns on calling lambda when new message arrived
@@ -94,8 +97,7 @@ https://www.thorntech.com/2018/09/user-authentication-alb-cognito
 * try to create aws sso user with permission set and add 1 free app, and then try to login to both aws console & this app
 * create vpc with custom DHCP options set and create ec2 instance and see it private/public domain name
 * Deploy java app using opsworks stacks
-* create aws microsoft AD and see how it works + add aws sso with this ad + use ADFS to add AD to iam as identity provider and assume role (so you can access aws without iam user)
-+cf template iam create identity provider with both saml & openId connect, and with cognito/aws AD (by the way learn how AD works internally)
+* create aws microsoft AD and see how it works + add aws sso with this ad + use ADFS to add AD to iam as identity provider and assume role (so you can access aws without iam user). cf template iam create identity provider with both saml & openId connect, and with cognito/aws AD (by the way learn how AD works internally)
 * create iam identity federation with this AD and with Cognito
 * ClientVPN with security as microsoft AD
 * ClientVPN add nat instance so internet would work without tunnel split (yet check it also with tunnel split, and your IP would be different)
@@ -105,3 +107,4 @@ https://www.thorntech.com/2018/09/user-authentication-alb-cognito
 * Github Project: add logic to `sa/cloudformation/custom-resource/handler.yml` to update `ResponseURL` (pre-sign s3 url)
 * Github Project: add resource handler to validate ACM Certificate, so you can automate `sa/cloudformation/elb-asg-route53-acm.yml` template, no more need to manually update route53 record
 * Github Project: use spot instance to handle sqs, use `AWS::Events::Rule` to catch termination notice and put message into second queue. Monitor second queue, when instance would be stopped - stop requesting new messages from queue, finish processing remaining messages and quit
+* Github Project: create asg based on sqs queue size using custom metric backlogPerInstance (https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-using-sqs-queue.html). Create same but using spot fleet instead of asg (https://aws.amazon.com/blogs/compute/dynamic-scaling-with-ec2-spot-fleet)

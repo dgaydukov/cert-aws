@@ -38,6 +38,7 @@ Resources:
   InfoLambda:
     Type: AWS::Lambda::Function
     Properties:
+      FunctionName: !Sub ${AWS::StackName}-InfoLambda
       Description: Show basic information about app
       Role: !GetAtt LambdaRole.Arn
       Runtime: nodejs12.x
@@ -75,10 +76,10 @@ Resources:
                 - apigateway.amazonaws.com
             Action:
               - sts:AssumeRole
-  LambdaExecutionPolicy:
+  LambdaAccessPolicy:
     Type: AWS::IAM::Policy
     Properties:
-      PolicyName: !Sub ${AWS::StackName}-ApiGatewayPolicy
+      PolicyName: !Sub ${AWS::StackName}-LambdaAccessPolicy
       PolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -91,6 +92,7 @@ Resources:
   AuthLambda:
     Type: AWS::Lambda::Function
     Properties:
+      FunctionName: !Sub ${AWS::StackName}-AuthLambda
       Description: Authenticate user by custom header
       Role: !GetAtt LambdaRole.Arn
       Runtime: nodejs12.x

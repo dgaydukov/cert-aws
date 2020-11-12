@@ -46,6 +46,7 @@ Resources:
   InfoLambda:
     Type: AWS::Lambda::Function
     Properties:
+      FunctionName: !Sub ${AWS::StackName}-InfoLambda
       Description: Show basic information about app
       Role: !GetAtt LambdaRole.Arn
       Runtime: nodejs12.x
@@ -81,6 +82,7 @@ Resources:
   MultiCorsLambda:
     Type: AWS::Lambda::Function
     Properties:
+      FunctionName: !Sub ${AWS::StackName}-MultiCorsLambda
       Description: Return multiple cors
       Role: !GetAtt LambdaRole.Arn
       Runtime: nodejs12.x

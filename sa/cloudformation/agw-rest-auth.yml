@@ -69,6 +69,7 @@ Resources:
   AuthLambda:
     Type: AWS::Lambda::Function
     Properties:
+      FunctionName: !Sub ${AWS::StackName}-AuthLambda
       Description: Authenticate user by custom header
       Role: !GetAtt LambdaRole.Arn
       Runtime: nodejs12.x
@@ -100,6 +101,7 @@ Resources:
   InfoLambda:
     Type: AWS::Lambda::Function
     Properties:
+      FunctionName: !Sub ${AWS::StackName}-InfoLambda
       Description: Show basic information about app
       Role: !GetAtt LambdaRole.Arn
       Runtime: nodejs12.x

@@ -1,0 +1,120 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+# create scheduled lambda to produce logs every minute + metric filter to update metric in case ERROR appeared in logs + subscription filter to call lambda in case of ERROR appeared in logs
+# !important => if you specify SubscriptionFilter.RoleArn for lambda you would get error: destinationArn for vendor lambda cannot be used with roleArn
+# !important => if you don't create ErrorLogLambdaPermission you will get error: Could not execute the lambda function. Make sure you have given CloudWatch Logs permission to execute your function
+# !important => use http://www.txtwizard.net/compression to decompress event.awslogs.data inside ErrorLogLambda (it's gzip base64 compressed)
+# !important => you can configure alarm using custom metric ErrorLogEntry
+
+Resources:
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-LambdaRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+  LogPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub ${AWS::StackName}-Logging
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - "logs:CreateLogGroup"
+              - "logs:CreateLogStream"
+              - "logs:PutLogEvents"
+              - "logs:DescribeLogStreams"
+            Resource: "*"
+      Roles:
+        - !Ref LambdaRole
+  LoggingLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-LoggingLambda
+      Description: Do some actions on alarm
+      Role: !GetAtt LambdaRole.Arn
+      Runtime: nodejs12.x
+      Handler: index.handler
+      Code:
+        ZipFile: |
+          var i = 1;
+          // emit error every 3 minutes
+          exports.handler = (event, context, cb) => {
+            console.log(`${i%3==0 ? "ERROR" : "NORMAL"} message: ${i}`);
+            i++;
+          }
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-LoggingLambda
+  LoggingLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      FunctionName: !Ref LoggingLambda
+      SourceArn: !GetAtt ScheduledEvent.Arn
+  ScheduledEvent:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub ${AWS::StackName}-ScheduledEvent
+      Description: Run lambda every minute
+      ScheduleExpression: cron(0/1 * * * ? *)
+      Targets:
+        - Arn: !GetAtt LoggingLambda.Arn
+          Id: LoggingLambdaLambda
+
+
+  ErrorLogLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-ErrorLogLambda
+      Description: Do some actions on alarm
+      Role: !GetAtt LambdaRole.Arn
+      Runtime: nodejs12.x
+      Handler: index.handler
+      Code:
+        ZipFile: |
+          exports.handler = (event, context, cb) => {
+            console.log(JSON.stringify(event, null, 2), JSON.stringify(context, null, 2));
+          }
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-ErrorLogLambda
+  ErrorLogLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      Principal: logs.amazonaws.com
+      FunctionName: !Ref ErrorLogLambda
+      SourceArn: !GetAtt LambdaLogGroup.Arn
+
+  LambdaLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${AWS::StackName}-LoggingLambda
+      RetentionInDays: 1
+
+  SubscriptionFilter:
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      LogGroupName: !Ref LambdaLogGroup
+      FilterPattern: ERROR
+      DestinationArn: !GetAtt ErrorLogLambda.Arn
+  MetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName: !Ref LambdaLogGroup
+      FilterPattern: "[ERROR]"
+      MetricTransformations:
+        - MetricName: ErrorLogEntry
+          MetricNamespace: Logs/Error
+          MetricValue: 1
