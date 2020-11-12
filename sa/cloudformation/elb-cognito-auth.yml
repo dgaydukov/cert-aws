@@ -2,6 +2,7 @@ AWSTemplateFormatVersion: 2010-09-09
 
 # Create elb + ec2 in private subnet + cognito listener api rule (only authorized users can access page)
 # Auth available only for https (port 443), that's why we don't use http listener. For https listener you have to provide CertificateArn (import some cert and use it in template)
+# see details here: https://www.thorntech.com/2018/09/user-authentication-alb-cognito
 
 # call: curl -k --http1.1 {ELB_URL}/public.html
 # call with auth: curl -k --http1.1 --cookie 'auth=COGNITO_ID_TOKEN' {ELB_URL}/private.html

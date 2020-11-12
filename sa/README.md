@@ -20,25 +20,19 @@ Bit by Bit: An Illustrated History of Computers
 Kingpin: How One Hacker Took Over the Billion-Dollar Cybercrime Underground
 The Art of Multiprocessor Programming
 https://en.wikipedia.org/wiki/Black_Swan_(film)
+https://www.youtube.com/watch?v=fU9hR3kiOK0 (dynamoDB streams)
+-----------------------------------------------------------------------------------------------------------------------
 https://www.youtube.com/watch?v=CnRtbtis79U (Алексей Шипилёв — Shenandoah: сборщик мусора, который смог)
 https://www.youtube.com/watch?v=iGRfyhE02lA (Владимир Иванов — G1 Garbage Collector)
 https://www.youtube.com/watch?v=c1jVn5Sm8Uw (Алексей Шипилёв – Shenandoah GC 2.0)
 https://www.youtube.com/watch?v=iB2N8aqwtxc (Алексей Шипилёв — Прагматика Java Memory Model)
-https://www.youtube.com/watch?v=fU9hR3kiOK0 (dynamoDB streams)
+https://real-logic.co.uk/about.html (videos by Martin Thompson)
 https://mechanical-sympathy.blogspot.com
-http://concurrencyfreaks.blogspot.com/
+http://concurrencyfreaks.blogspot.com
 https://www.slideshare.net/trishagee/introduction-to-the-disruptor
 https://martinfowler.com/articles/lmax.html
 https://www.infoq.com/presentations/mechanical-sympathy
-https://real-logic.co.uk/about.html (videos by Martin Thompson)
-https://www.thorntech.com/2018/09/user-authentication-alb-cognito
-----------------------------------------------------------------------------------------------
-* add spring websocket broadcast
-* try work spring boot with javax.websocket (SpringBootApplication with ServerEndpoint)
-* run .war project in intellij
-* kafka poll wait for specified timeout (don't return even if there are already messages)
-* kafka cluster docker example
-----------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------
 + s3 call lambda(custom api) when file is updated
 + ses vs sns on calling lambda when new message arrived
 * RDS
