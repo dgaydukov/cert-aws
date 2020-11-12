@@ -1,0 +1,61 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+# create billing alarm + budget alarm
+# use https://www.mailinator.com/v3/#/#inboxpane to confirm subscription (for sns topic email should confirm that they are willing to receive notifications) and then test real emails
+
+Parameters:
+  NotificationEmail:
+    Description: Email where to send notification
+    Default: mybillinguser@mailinator.com
+    Type: String
+
+Resources:
+  AlarmSnsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: !Sub ${AWS::StackName}-AlarmSnsTopic
+      TopicName: !Sub ${AWS::StackName}-AlarmSnsTopic
+      Subscription:
+        - Endpoint: !Ref NotificationEmail
+          Protocol: EMAIL
+
+  BillingAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${AWS::StackName}-BillingAlarm
+      AlarmDescription: Notify user if cost exceeds 20$
+      Namespace: AWS/Billing
+      MetricName: EstimatedCharges
+      Statistic: Maximum
+      Period: 7200
+      Threshold: 20
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      AlarmActions:
+        - !Ref AlarmSnsTopic
+
+  BillingBudget:
+    Type: AWS::Budgets::Budget
+    Properties:
+      Budget:
+        BudgetName: !Sub ${AWS::StackName}-BillingBudget
+        TimeUnit: MONTHLY
+        BudgetType: COST
+        BudgetLimit:
+          Amount: 20
+          Unit: USD
+      NotificationsWithSubscribers:
+        - Notification:
+            Threshold: 5
+            NotificationType: ACTUAL
+            ComparisonOperator: GREATER_THAN
+          Subscribers:
+            - SubscriptionType: EMAIL
+              Address: !Ref NotificationEmail
+        - Notification:
+            Threshold: 15
+            NotificationType: ACTUAL
+            ComparisonOperator: GREATER_THAN
+          Subscribers:
+            - SubscriptionType: EMAIL
+              Address: !Ref NotificationEmail

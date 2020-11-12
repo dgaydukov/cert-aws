@@ -156,8 +156,8 @@ Resources:
   AlarmSnsTopic:
     Type: AWS::SNS::Topic
     Properties:
-      DisplayName: AlarmSnsTopic
-      TopicName: AlarmSnsTopic
+      DisplayName: !Sub ${AWS::StackName}-AlarmSnsTopic
+      TopicName: !Sub ${AWS::StackName}-AlarmSnsTopic
       Subscription:
         - Endpoint: !GetAtt AlarmLambda.Arn
           Protocol: lambda

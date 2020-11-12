@@ -39,7 +39,6 @@ https://www.thorntech.com/2018/09/user-authentication-alb-cognito
 * kafka poll wait for specified timeout (don't return even if there are already messages)
 * kafka cluster docker example
 ----------------------------------------------------------------------------------------------
-+ create template with both cloudwatch & aws budget cost alarms (when your usage above 1$ and 5$)
 + s3 call lambda(custom api) when file is updated
 + ses vs sns on calling lambda when new message arrived
 * RDS

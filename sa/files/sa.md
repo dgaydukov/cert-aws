@@ -139,6 +139,7 @@ So to start I would suggest to create aws account (it's free) and play with free
 There are 2 types of billing alarms
 * CloudWatch billing alarm
 * aws budget - has more settings than CloudWatch, can warn based on forecast spend for a month, quarter or year
+You can check difference in `sa/cloudformation/cw-alarm-budget.yml`.
 You can view your costs by going to `My Billing DashBoard`, there you would see total incurred cost divided by services (for example 2$ for EC2).
 You can go to `Bills` on the left menu and there you would see detailed info on what exactly cost and how much. 
 
