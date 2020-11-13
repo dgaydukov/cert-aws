@@ -33,9 +33,6 @@ https://www.slideshare.net/trishagee/introduction-to-the-disruptor
 https://martinfowler.com/articles/lmax.html
 https://www.infoq.com/presentations/mechanical-sympathy
 -----------------------------------------------------------------------------------------------------------------------
-+ s3 call lambda(custom api) when file is updated
-+ ses vs sns on calling lambda when new message arrived
-* RDS
 + create data pipeline to ELT from rds to s3
 + create cf template with aws config and see how you can manage config change (add config rule)
 + add `AWS::RDS::DBSecurityGroup` to rds

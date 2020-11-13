@@ -21,7 +21,6 @@ Resources:
       Tags:
         - Key: Name
           Value:  !Sub ${AWS::StackName}-MyVpc
-
   InternetGateway:
     Type: AWS::EC2::InternetGateway
     DependsOn: VPC
@@ -34,7 +33,6 @@ Resources:
     Properties:
       VpcId: !Ref VPC
       InternetGatewayId: !Ref InternetGateway
-
   PublicSubnet:
     Type: AWS::EC2::Subnet
     Properties:
@@ -42,8 +40,7 @@ Resources:
       CidrBlock: 10.100.1.0/24
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-MyVpc-Public
-
+          Value: !Sub ${AWS::StackName}-MyVpc-PublicSubnet
   PrivateSubnet:
     Type: AWS::EC2::Subnet
     Properties:
@@ -51,8 +48,7 @@ Resources:
       CidrBlock: 10.100.2.0/24
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-MyVpc-Private
-
+          Value: !Sub ${AWS::StackName}-MyVpc-PrivateSubnet
   PublicRT:
     Type: AWS::EC2::RouteTable
     Properties:
@@ -67,7 +63,6 @@ Resources:
       RouteTableId: !Ref PublicRT
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId: !Ref InternetGateway
-
   PrivateRT:
     Type: AWS::EC2::RouteTable
     Properties:
@@ -75,8 +70,6 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AWS::StackName}-MyVpc-Private-RT
-
-
   PublicSubnetRTAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:

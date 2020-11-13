@@ -1146,7 +1146,47 @@ Eventual consistency - since put/read is atomic, you won't read partially update
 Although bucket name is global across all regions, you still select region when you create bucket, and actual data is stored in that particular region.
 Using bucket policy you can specify from which ip (CIDR notation) and at what time you allow to access data.
 Server access logs - you can enable them and see who is accessing your s3 (IP address/time/action(get/post/put)/response)
-Event notification - you can send events (sns/sqs/lambda) base on s3 action (get/post/put).
+Event notification - you can send events (sns/sqs/lambda) base on s3 action (get/post/put). Take a look at `sa/cloudformation/s3-event.yml` for more details. There we call lambda when file was uploaded. Below is event exampmle
+```
+{
+    "Records": [
+        {
+            "eventVersion": "2.1",
+            "eventSource": "aws:s3",
+            "awsRegion": "us-east-1",
+            "eventTime": "2020-11-13T02:06:44.875Z",
+            "eventName": "ObjectCreated:Put",
+            "userIdentity": {
+                "principalId": "AWS:AIDAXW6JAMSCQ5XBYR3LP"
+            },
+            "requestParameters": {
+                "sourceIPAddress": "{USER_IP_ADDRESS}"
+            },
+            "responseElements": {
+                "x-amz-request-id": "512C48E624067F44",
+                "x-amz-id-2": "fbGuJV2V2IZy2QbmgWHPB/6nuNnMAjQus8nWaad+cBdskEEtr8BzX/qZDj2PfE2uoEDObOgfiPiAAAckICqL4f/w8J2KHikx"
+            },
+            "s3": {
+                "s3SchemaVersion": "1.0",
+                "configurationId": "a1f4ef63-00a3-4fad-ab27-e2ac99c8996b",
+                "bucket": {
+                    "name": "event-us-east-1-my-s3-policy-bucket-123",
+                    "ownerIdentity": {
+                        "principalId": "A2AZQBHGMZ77N2"
+                    },
+                    "arn": "arn:aws:s3:::event-us-east-1-my-s3-policy-bucket-123"
+                },
+                "object": {
+                    "key": "yukon.pdf",
+                    "size": 20597,
+                    "eTag": "ff71372d153e50f36013168082e78b66",
+                    "sequencer": "005FADEA3CBBC21AC1"
+                }
+            }
+        }
+    ]
+}
+```
 To achieve better performance you should to use random names for objects, but [it's no longer required](https://aws.amazon.com/about-aws/whats-new/2018/07/amazon-s3-announces-increased-request-rate-performance). 
 Randomized named worked better cause when names are sequential all data store in the same place and it's harder to extract it.
 Storage Classes - can be configured at the object level and a single bucket can contain objects stored across Standard/Intelligent/Standard-IA/Single-Zone-IA
