@@ -33,12 +33,12 @@ https://www.slideshare.net/trishagee/introduction-to-the-disruptor
 https://martinfowler.com/articles/lmax.html
 https://www.infoq.com/presentations/mechanical-sympathy
 -----------------------------------------------------------------------------------------------------------------------
+* rds ssl connection
+* add cf template for iam database authentication (then go to public ec2 and try to access db with both regular username/password and iam token)
 + create data pipeline to ELT from rds to s3
-+ create cf template with aws config and see how you can manage config change (add config rule)
-+ add `AWS::RDS::DBSecurityGroup` to rds
 + use ssl encryption with talking with rds mysql server
 + migrate rds into s3 using dms
-* ELB
++ create cf template with aws config and see how you can manage config change (add config rule)
 + elb access logs store to s3 => trigger lambda to process logs and put them into elasticsearch
 + elb logs to s3
 + add HealthCheck to elb + default ec2 healthcheck from asg (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-elb-health-check.html)
@@ -48,7 +48,6 @@ https://www.infoq.com/presentations/mechanical-sympathy
 + create elb with eks with several apps deployed there, and use elb path routing to route to eks nodeport. So we have single elb and multiple microservices in eks and all works (internal paths not exposed by elb, and can be accessed only inside eks cluster)
 + ecs + elb with dynamic port mapping
 * try glacier select to csv archive
-* add cf template for iam database authentication (then go to public ec2 and try to access db with both regular username/password and iam token)
 * create cf template with dynamodb vpc endpoint and access dynamodb from ec2 in private subnet (add auto scaling to dynamoDb)
 * connect 2 vpc with privatelink (access ec2 from one vpc from another)
 * create custom vpn server in ec2 and try to connect to it (do both use oepnvpn server ami and any ami (OpenVPN Access Server from marketplace which is free tier, in this case you should configure it through browser admin panel) + manually configure openvpn server)
@@ -58,7 +57,6 @@ https://www.infoq.com/presentations/mechanical-sympathy
 * add cross-account access to s3
 * create codepipeline with cf template and use codedeploy/beanstalk as deploy stage (compare them)
 * what is stronger bucket policy or acl (it should be that explicit deny always overwrites allow)
-* iam policy with mfa condition to delete objects from s3
 * transit gateway - add on-premise network imitated by third vpc (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-transitgateway.html - guide to add on-premise, https://theithollow.com/2018/12/12/setup-aws-transit-gateway)
 * put spring app into ECS and EKS and compare the difference (try fargate too). Try auto scaling in eks/ecs
 * Try maximum automate site-to-site vpn cloudformation template (try to extract somehow all IP addresses and PSK secret string and put it into ec2 userdata for VpnServer)

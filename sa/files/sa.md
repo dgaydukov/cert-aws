@@ -349,6 +349,9 @@ aws ec2 describe-instances  --query="Reservations[*].Instances[*].{Instance:Inst
 
 # show state for all images
 aws ec2 describe-images --query "Images[*].State"
+
+# list mfa devices
+aws iam list-virtual-mfa-devices
 ```
 Create new profile to access aws services from console `aws configure --profile awssa`.
 There are 3 env variables that overwrites `~/.aws/config` settings
@@ -1125,7 +1128,15 @@ curl -r 0-1 https://my-test-s3-bucket-1.s3.amazonaws.com/index.html
 S3 security
 * use s3/custom encryption to encrypt data before storing them on s3 and decrypt them when you download them
 * use versioning to preserve, retrieve, and restore every version of every object stored in your Amazon S3 bucket
-* enable MFA for bucket delete
+* enable mfa delete for bucket - it's part of versioning. So you can just enable versioning or enable versioning + mfa delete (you can't enable mfa delete without enable versioning).
+mfa delete can be enabled only from cli (currently no way to enable it from web console). You should use root account (so you should activate mfa first for root account) cause only the bucket owner (root account) can enable MFA Delete.
+`aws s3api put-bucket-versioning --bucket=my2fadeletebucket --versioning-configuration Status=Enabled,MFADelete=Enabled --mfa "arn:aws:iam::{ACCOUNT_ID}:mfa/root-account-mfa-device 882794" --profile=root`
+If you use cli, don't forget to clean it after you set up mfa delete. Since mfa delete automatically enable versioning, if you just delete file it adds additional version with delete marker.  If you want permanently delete file you have to delete specific version.
+You can't delete version from console, if you try you get `You can’t delete object versions because Multi-factor authentication (MFA) delete is enabled for this bucket. To modify MFA delete settings, use the AWS CLI, AWS SDK, or the Amazon S3 REST API.`. 
+If you try to delete from cli without 2fa you will get `An error occurred (AccessDenied) when calling the DeleteObject operation: Mfa Authentication must be used for this request`. 
+If you supply 2fa and run `aws s3api delete-object --bucket=my2fadeletebucket --key=dummy.pdf --version-id=hZaCTAcGEMX9tzF6MUfAq4obRq_AhWk8 --mfa="arn:aws:iam::{ACCOUNT_ID}:mfa/user2fa 547063" --profile=user2fa`
+you will get `An error occurred (AccessDenied) when calling the DeleteObject operation: This operation may only be performed by the bucket owner`.
+So only root user can delete versions from now on.
 * use access logging to track who/which bucket/what action was executed on s3
 Although s3 is object-based storage, you can easily emulate OS by creating objects like `path1/path2/file1`
 S3/S3 IA/Glacier - replicate data across 3 AZ go guarantee data won't be lost in case of emergency.
@@ -2294,6 +2305,13 @@ If you have not equal number of EC2 in different AZ (let's say 2 in az1, and 8 i
 In this case each elb will route all traffic into 10 instances, so each instances will get 10% of traffic. But if you disable cross-zone balancing, then 50% in first zone would be divided between 2 instances (so each got 25%) and 50% from az2 would be divided in 8 instances (so each got 8.25% traffic). With ALB cross-zone balancing enabled by default.
 Connection draining - makes sure that any back-end instances you have deregistered will complete requests in progress before the deregistration process starts
 ELB (except NLB) has sticky session - you can bind user's session to specific ec2 and every time this user hit elb he goes to the same ec2. To use this send `AWSELB` cookie and elb remember to which ec2 instance to route request.
+There is no concept of sticky session on NLB, cause on level 4 there is no cookies, so no way to track connections. Yet nlb selects target group  using a flow hash algorithm. It bases the algorithm on:
+* protocol
+* source IP address and source port
+* destination IP address and destination port
+* TCP sequence number
+Routes each individual TCP connection to a single target for the life of the connection. The TCP connections from a client have different source ports and sequence numbers, and can be routed to different targets.
+So if you open new tab, that would mean that new port is opened, in this case nlb would see it as new connection and could route request to different ec2.
 XFF (X-Forward-For) - header of original IP address of user (cause your ec2 would see IP of LB).
 Health Check - you can monitor health of ec2 and always redirect user to healthy ec2 (ELB doesn't kill unhealthy ec2). There are 3 types of health checks:
 * EC2 health check - watches for instance availability from hypervisor/networking point of view. For example, in case of a hardware problem, the check will fail. Also, if an instance was misconfigured and doesn't respond to network requests, it will be marked as faulty.
@@ -2426,8 +2444,8 @@ TLD Server will find IP address of second level domain, but if you are using thi
 RDS (Relational Database Service) - aws managed service, that make it easy install/operate relational database in the cloud. It helps easily scale compute resources or storage associated with your db, simplifies replication.
 if you want to import data you have to:
 * dump data to you local machine
-* copy dump to some ec2 in same vpc
-* pump data into rds from ec2
+* copy dump to some ec2/s3 in same vpc
+* pump data into rds from ec2/s3
 There are 2 ways to backup:
 * automatic backup - snapshots takes by RDS daily, retained for limited period (by default 7 days). First snapshot contains full db instance, subsequent - incremental taking only what has been changed.
 Volume snapshot - take daily during backup window + store transaction logs every 5 min - this allow for point-in-time recovery. If you disable automatic backup and then re-enable it, you will be able to recover point-in-time starting from the time when you re-enable automatic backup
@@ -2485,6 +2503,9 @@ In SQL, anything you evaluate/compute with `NULL` results into `UNKNOWN`, that's
 Read replica vs elasticache - they both solve same problem but for different purposes:
 * read replica - when your data constantly changing
 * elasticache - since it's a cache if data constantly changing you have to constantly clear the cache - which basically remove advantages of cache
+Security group:
+* `AWS::EC2::SecurityGroup` - use if your rds resides inside vpc
+* `AWS::RDS::DBSecurityGroup` - use if you are using old classic ec2 (without vpc)
 
 ###### SQS
 Payload vs attributes:
