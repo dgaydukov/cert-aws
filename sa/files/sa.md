@@ -2280,7 +2280,8 @@ You can use EB with Docker:
 Database Migration Service - used for easy migration between different db (like from MySql to DynamoDB), and also for data replication. Use it to migrate any supported db into s3 using `csv/parquet` format.
 There are 2 types of conversion:
 * engine conversion - homogeneous, when source and target - same db (for example both are mysql)
-* SCT (Schema Conversion Tool) - heterogeneous, for converting between existing schemas
+* SCT (Schema Conversion Tool) - heterogeneous, for converting between existing schemas. It's a separate software that you install in on-premise or ec2 and run.
+So you download it and verify checksum, install jdbc drives for 2 databases
 To run migration you need:
 * create replication instance - instance that would run migration (download from source, transform, upload to destination). Use multi-AZ deployment, in this case if during middle of migration your replication instance failed for some reason, migration would continue with failover instance. 
 Otherwise there is a risk that migration would be half-completed. You should put replication instance into the same vpc as your source or target, but you can use different vpc and connect them with vpc peering.
@@ -2439,6 +2440,10 @@ Steps of DNS resolution (when you type dns name in browser):
 * contact dns server to resolve IP
 There are 13 RS (Root Servers) registered by ICANN. When RS receive request it redirects it to TLD (top level domain, like .com, .edu..) Server.
 TLD Server will find IP address of second level domain, but if you are using third or more level domain it will contact Domain Level Name Server to get IP address of third or more level domain.
+Route53 Resolver - helps to query on-premise dns from vpc and vice versa (used mostly for hybrid apps). There are 2 endpoints:
+* inbound - forward dns query from on-premise to vpc
+* outbound - forward dns query from vpc to on-premise dns resolver
+For both types, IP are private, so in order to work you have to connect your network to vpc through direct connect or VPN.
 
 ###### RDS
 RDS (Relational Database Service) - aws managed service, that make it easy install/operate relational database in the cloud. It helps easily scale compute resources or storage associated with your db, simplifies replication.
@@ -2601,6 +2606,8 @@ mysql -u ssl_user -p'password' -h {RDS_ENDPOINT} -D mydb --ssl-ca=rds-ca-2019-ro
 IAM auth - you can access db not with username/password but by using iam permission (use `sa/cloudformation/rds-multi-az.yml` to test it out):
 * by default it disabled
 * you should explicitly enable it by setting `EnableIAMDatabaseAuthentication: true` in cf template (you can also enable it from cli)
+* it can only work over ssl (it won't work without secure connection)
+* You first create user then role with policy to this user:
 ```
 # first create user
 CREATE USER mydbuser IDENTIFIED WITH AWSAuthenticationPlugin AS 'RDS';
