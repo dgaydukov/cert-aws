@@ -33,8 +33,6 @@ https://www.slideshare.net/trishagee/introduction-to-the-disruptor
 https://martinfowler.com/articles/lmax.html
 https://www.infoq.com/presentations/mechanical-sympathy
 -----------------------------------------------------------------------------------------------------------------------
-* rds ssl connection
-* add cf template for iam database authentication (then go to public ec2 and try to access db with both regular username/password and iam token)
 + create data pipeline to ELT from rds to s3
 + use ssl encryption with talking with rds mysql server
 + migrate rds into s3 using dms

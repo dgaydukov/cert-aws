@@ -2506,6 +2506,120 @@ Read replica vs elasticache - they both solve same problem but for different pur
 Security group:
 * `AWS::EC2::SecurityGroup` - use if your rds resides inside vpc
 * `AWS::RDS::DBSecurityGroup` - use if you are using old classic ec2 (without vpc)
+SSL connection (use `sa/cloudformation/rds-multi-az.yml` template to test it out):
+* by default ssl enabled in rds. Connect to rds and run:
+```
+MySQL [mydb]> SHOW VARIABLES LIKE '%ssl%';
++---------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Variable_name | Value                                                                                                                                                                                                                                                                                   |
++---------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| have_openssl  | YES                                                                                                                                                                                                                                                                                     |
+| have_ssl      | YES                                                                                                                                                                                                                                                                                     |
+| ssl_ca        | /rdsdbdata/rds-metadata/ca-cert.pem                                                                                                                                                                                                                                                     |
+| ssl_capath    |                                                                                                                                                                                                                                                                                         |
+| ssl_cert      | /rdsdbdata/rds-metadata/server-cert.pem                                                                                                                                                                                                                                                 |
+| ssl_cipher    | ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-SHA256:ECDHE-RSA-AES256-SHA:ECDHE-RSA-AES128-SHA:AES256-GCM-SHA384:AES128-GCM-SHA256:AES256-SHA:AES128-SHA:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA:DHE-DSS-AES128-SHA:DHE-DSS-AES256-SHA |
+| ssl_crl       |                                                                                                                                                                                                                                                                                         |
+| ssl_crlpath   |                                                                                                                                                                                                                                                                                         |
+| ssl_fips_mode | OFF                                                                                                                                                                                                                                                                                     |
+| ssl_key       | /rdsdbdata/rds-metadata/server-key.pem                                                                                                                                                                                                                                                  |
++---------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+10 rows in set (0.00 sec)
+```
+To see whether you session use ssl or not run `status` or `\s`
+```
+MySQL [mydb]> status
+--------------
+mysql  Ver 15.1 Distrib 5.5.68-MariaDB, for Linux (x86_64) using readline 5.1
+
+Connection id:		    13
+Current database:	    mydb
+Current user:		    admin@10.100.1.222
+SSL:			        Not in use
+Current pager:		    stdout
+Using outfile:		    ''
+Using delimiter:	    ;
+Server:			        MySQL
+Server version:		    8.0.20 Source distribution
+Protocol version:	    10
+Connection:		        rm19odgxd4k3dhx.cmeydtld5sy2.us-east-1.rds.amazonaws.com via TCP/IP
+Server characterset:	utf8mb4
+Db     characterset:	utf8mb4
+Client characterset:	utf8
+Conn.  characterset:	utf8
+TCP port:		        3306
+Uptime:			        16 min 40 sec
+
+Threads: 3  Questions: 9688  Slow queries: 0  Opens: 278  Flush tables: 3  Open tables: 184  Queries per second avg: 9.688
+```
+As you see `SSL: Not in use`, that means our current connection is not using ssl.
+* In order to use ssl you ust download certificate and connect using cert
+```
+wget https://s3.amazonaws.com/rds-downloads/rds-ca-2019-root.pem
+mysql -u admin -p'admin123' -h {RDS_ENDPOINT} -D mydb --ssl-ca=rds-ca-2019-root.pem
+```
+After you connect if you run status again you will see
+```
+MySQL [mydb]> \s
+--------------
+mysql  Ver 15.1 Distrib 5.5.68-MariaDB, for Linux (x86_64) using readline 5.1
+
+Connection id:		    23
+Current database:	    mydb
+Current user:		    admin@10.100.1.222
+SSL:			        Cipher in use is ECDHE-RSA-AES256-GCM-SHA384
+Current pager:		    stdout
+Using outfile:		    ''
+Using delimiter:	    ;
+Server:			        MySQL
+Server version:		    8.0.20 Source distribution
+Protocol version:	    10
+Connection:		        rm19odgxd4k3dhx.cmeydtld5sy2.us-east-1.rds.amazonaws.com via TCP/IP
+Server characterset:	utf8mb4
+Db     characterset:	utf8mb4
+Client characterset:	utf8
+Conn.  characterset:	utf8
+TCP port:		        3306
+Uptime:			        49 min 54 sec
+
+Threads: 3  Questions: 11063  Slow queries: 0  Opens: 279  Flush tables: 3  Open tables: 185  Queries per second avg: 3.695
+```
+Now you can see `SSL: Cipher in use is ECDHE-RSA-AES256-GCM-SHA384` that your connection using ssl.
+* You can require ssl for specific user:
+```
+# connect to db
+mysql -u admin -p'admin123' -h {RDS_ENDPOINT} -D mydb
+# create user with ssl required
+CREATE USER 'ssl_user'@'%' IDENTIFIED BY 'password' REQUIRE SSL;
+GRANT ALL PRIVILEGES ON mydb.* TO 'ssl_user'@'%';
+FLUSH PRIVILEGES;
+# try to connect without ssl, you will get: ERROR 1045 (28000): Access denied for user 'user3'@'10.100.1.222' (using password: YES)
+mysql -u ssl_user -p'password' -h {RDS_ENDPOINT} -D mydb --ssl-ca=rds-ca-2019-root.pem
+# now connect using ssl
+mysql -u ssl_user -p'password' -h {RDS_ENDPOINT} -D mydb --ssl-ca=rds-ca-2019-root.pem
+```
+IAM auth - you can access db not with username/password but by using iam permission (use `sa/cloudformation/rds-multi-az.yml` to test it out):
+* by default it disabled
+* you should explicitly enable it by setting `EnableIAMDatabaseAuthentication: true` in cf template (you can also enable it from cli)
+```
+# first create user
+CREATE USER mydbuser IDENTIFIED WITH AWSAuthenticationPlugin AS 'RDS';
+GRANT ALL PRIVILEGES ON mydb.* TO 'mydbuser'@'%';
+# get access token and connect
+TOKEN=$(aws rds generate-db-auth-token --hostname {RDS_ENDPOINT} --port 3306 --username mydbuser --region=us-east-1)
+mysql -h {RDS_ENDPOINT} --user=mydbuser --password=$TOKEN --ssl-ca=rds-ca-2019-root.pem
+```
+If you want to build resource for role you should pass not rdsID, but `DbiResourceId`, so you can't use `Resource: !Sub arn:aws:rds-db:${AWS::Region}:${AWS::AccountId}:dbuser:${MultiAzMysqlDb}/mydbuser`.
+Below is example of fetching 2 of them. And there is no way to fetch resourceId from cf `AWS::RDS::DBInstance`, that's why we use `*`.
+```
+aws rds describe-db-instances --query "DBInstances[*].[DBInstanceIdentifier,DbiResourceId]"
+[
+    [
+        "rm19odgxd4k3dhx",
+        "db-K7WGNELFM45SMZJAJMDI7T4F2E"
+    ]
+]
+```
 
 ###### SQS
 Payload vs attributes:

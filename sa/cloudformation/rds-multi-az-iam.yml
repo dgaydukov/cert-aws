@@ -1,14 +1,12 @@
 AWSTemplateFormatVersion: 2010-09-09
 
-
-# ssh to bastion instance and connect to db `mysql -u admin -p'admin123' -h {yourRdsEndpoint} -D mydb`
+# ssh to bastion instance and connect to db `mysql -u admin -p'admin123' -h {RDS_ENDPOINT} -D mydb`
 # run `CREATE TABLE users(id INT, name VARCHAR(50)); INSERT INTO users VALUES(1, "Jack"); SELECT * FROM users;`
 # check ip address of your server by running `nslookup {yourRdsEndpoint}`
 # go to aws console and reboot rds with failover
 # go to bastion and check ip address of rds `nslookup {yourRdsEndpoint}` -- it should be changed to standby replica
 # make sure all data are preserved in standby replica
 # if you don't specify db security group, default vpc security group would be assigned. You can assign it to ec2 with `!GetAtt VPC.DefaultSecurityGroup`. In this case your ec2 would also be able to access db, cause you share same default SG
-
 
 Resources:
   VPC:
@@ -113,6 +111,7 @@ Resources:
     Type: AWS::EC2::Instance
     Properties:
       InstanceType: t2.micro
+      IamInstanceProfile: !Ref InstanceProfile
       ImageId: ami-09d95fab7fff3776c
       KeyName: mykey
       UserData:
@@ -133,6 +132,34 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AWS::StackName}-MyVpc-BastionInstance
+
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref DbAccessRole
+  DbAccessRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-DbAccessRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: AllowRdsConnect
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "rds-db:connect"
+                Resource: !Sub arn:aws:rds-db:${AWS::Region}:${AWS::AccountId}:dbuser:*/mydbuser
 
   MySqlSG:
     Type: AWS::EC2::SecurityGroup
@@ -161,6 +188,7 @@ Resources:
     Type: AWS::RDS::DBInstance
     Properties:
       DBInstanceClass: db.t2.micro
+      EnableIAMDatabaseAuthentication: true
       MultiAZ: true
       AllocatedStorage: 10
       Engine: MySQL
