@@ -33,8 +33,6 @@ https://www.slideshare.net/trishagee/introduction-to-the-disruptor
 https://martinfowler.com/articles/lmax.html
 https://www.infoq.com/presentations/mechanical-sympathy
 -----------------------------------------------------------------------------------------------------------------------
-* create data lake with lake formation
-* create private hosted zone, see how it all works
 * create kms and encrypt something with it
 * create auto-scale group with ec2 httpd (but store data in efs, this would guarantee that if instance launched in another AZ data won't be lost)
 * create auto-scale group with single ec2 and eip and after terminate associate same eip to new ec2 (in launch config userdata add ability to associate eip to current ec2 + you need role for ec2 to be able to associate eip to itself)
