@@ -22,6 +22,10 @@ The Art of Multiprocessor Programming
 https://en.wikipedia.org/wiki/Black_Swan_(film)
 https://www.youtube.com/watch?v=fU9hR3kiOK0 (dynamoDB streams)
 -----------------------------------------------------------------------------------------------------------------------
+run .war project in intellij + run javax.websocket there
+kafka poll wait for specified timeout (don't return even if there are already messages)
+kafka cluster docker example
+-----------------------------------------------------------------------------------------------------------------------
 https://www.youtube.com/watch?v=CnRtbtis79U (Алексей Шипилёв — Shenandoah: сборщик мусора, который смог)
 https://www.youtube.com/watch?v=iGRfyhE02lA (Владимир Иванов — G1 Garbage Collector)
 https://www.youtube.com/watch?v=c1jVn5Sm8Uw (Алексей Шипилёв – Shenandoah GC 2.0)
@@ -33,14 +37,11 @@ https://www.slideshare.net/trishagee/introduction-to-the-disruptor
 https://martinfowler.com/articles/lmax.html
 https://www.infoq.com/presentations/mechanical-sympathy
 -----------------------------------------------------------------------------------------------------------------------
-* create auto-scale group with ec2 httpd (but store data in efs, this would guarantee that if instance launched in another AZ data won't be lost)
-* create auto-scale group with single ec2 and eip and after terminate associate same eip to new ec2 (in launch config userdata add ability to associate eip to current ec2 + you need role for ec2 to be able to associate eip to itself)
 * create cf template with aws config and see how you can manage config change (add config rule)
 * aws config cf template (check that ec2 is of specific type and alert when type has been changed)
 * elb access logs store to s3 => trigger lambda to process logs and put them into elasticsearch
 * elb logs to s3
 * add HealthCheck to elb + default ec2 healthcheck from asg (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-elb-health-check.html)
-* add Simple elb with 2 ec2 from 2 private subnets (use nat gateway to install httpd) https://stackoverflow.com/questions/22541895/amazon-elb-for-ec2-instances-in-private-subnet-in-vpc
 * add elb to 2 vpc (load traffic between 2 vpc)
 * elb to ec2 using https (https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/configuring-https-endtoend.html). By default elb terminate https traffic and forward to ec2 just http, since it's inside aws and can't be listened by anybody.
 * create elb with eks with several apps deployed there, and use elb path routing to route to eks nodeport. So we have single elb and multiple microservices in eks and all works (internal paths not exposed by elb, and can be accessed only inside eks cluster)
