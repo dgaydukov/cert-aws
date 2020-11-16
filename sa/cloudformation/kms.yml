@@ -1,0 +1,28 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+# !important => we explicitly setting PendingWindowInDays, it's better to set this explicitly, otherwise default value would be 30, and aws would delete key after 30 days you remove stack
+
+Resources:
+  KmsKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: My symmetric key
+      PendingWindowInDays: 7
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: 2012-10-17
+        Id: key-default-1
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: "*"
+            Action: "kms:*"
+            Resource: "*"
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-KmsKey
+  KmsKeyAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: alias/mykey
+      TargetKeyId: !Ref KmsKey
