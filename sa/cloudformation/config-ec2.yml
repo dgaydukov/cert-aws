@@ -1,0 +1,78 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+# !important => make sure your bucket has correct policy, otherwise you will get error: Insufficient delivery policy to s3 bucket: config-us-east-1-my-s3-policy-bucket-123, unable to assume role: arn:aws:iam::{ACCOUNT_ID}:role/config-ConfigRole
+# !important => ConfigurationRecorder & DeliveryChannel should be created at the same time, otherwise you will get errors like: Configuration recorder is not available to put delivery channel
+# !important => since Source.Owner is AWS, that means it's managed rule and we don't need custom lambda (if you want custom rule set owner to CUSTOM_LAMBDA)
+
+Resources:
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    Properties:
+      BucketName: !Sub ${AWS::StackName}-${AWS::Region}-my-s3-policy-bucket-123
+
+  ConfigRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-ConfigRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - config.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: AllowConfigAccessTo
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "config:*"
+                  - "ec2:*"
+                Resource:
+                  - "*"
+              - Effect: Allow
+                Action:
+                  - s3:GetBucketAcl
+                Resource:
+                  - !Sub arn:aws:s3:::${S3Bucket}
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                Resource:
+                  - !Sub arn:aws:s3:::${S3Bucket}/*
+
+  DeliveryChannel:
+    Type: AWS::Config::DeliveryChannel
+    Properties:
+      ConfigSnapshotDeliveryProperties:
+        DeliveryFrequency: One_Hour
+      S3BucketName: !Ref S3Bucket
+      SnsTopicARN: !Sub arn:aws:sns:${AWS::Region}:${AWS::AccountId}:cloudwatch_alarm
+  ConfigRecorder:
+    Type: AWS::Config::ConfigurationRecorder
+    Properties:
+      Name: !Sub ${AWS::StackName}-ConfigRecorder
+      RecordingGroup:
+        ResourceTypes:
+          - "AWS::EC2::Volume"
+      RoleARN: !GetAtt ConfigRole.Arn
+  Ec2ConfigRule:
+    DependsOn: ConfigRecorder
+    Type: AWS::Config::ConfigRule
+    Properties:
+      ConfigRuleName: !Sub ${AWS::StackName}-Ec2ConfigRule
+      Description: validate that tag "MyTag" is assigned to ec2 volume
+      InputParameters:
+        tag1Key: env
+        tag1Value: dev,qa,uat
+      Scope:
+        ComplianceResourceTypes:
+          - "AWS::EC2::Volume"
+      Source:
+        Owner: AWS
+        SourceIdentifier: REQUIRED_TAGS

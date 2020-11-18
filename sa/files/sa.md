@@ -1141,7 +1141,9 @@ So only root user can delete versions from now on.
 Although s3 is object-based storage, you can easily emulate OS by creating objects like `path1/path2/file1`
 S3/S3 IA/Glacier - replicate data across 3 AZ go guarantee data won't be lost in case of emergency.
 There are 3 ways to secure buckets:
-* use ACL (old feature)
+* use ACL (old feature) - to use this user should have permission to `s3:PutBucketAcl`.
+acl can be applied to bucket or object. To read object you should apply acl directly to object, bucket acl are not inhereted to objects automatically.
+acl can only add list/read/write access, no way to set deny. If you use acl + bucket policy, explicit deny overwrites all allows and acl too.
 * use bucket policy (json file with policies)
 * use iam policy
 You can also turn on lifecycle management (move you files to glacier after 30 days)
@@ -3017,7 +3019,9 @@ For this to work you should assign a role to ec2 with policy `AmazonEC2RoleforSS
 Config - manages service that provides aws resources inventory, config history, change notification. When you turn it on it create config item for each resource.
 It provides detailed view of the configuration of AWS resources in your AWS account (how the resources are related and how they were configured in the past so that you can see how the configurations and relationships change over time).
 It integrated with cloudTrail, and record CloudTrailID for any resource change. Config Item - point-in-time record of aws resource, that include metadata, attributes, relationships, current configuration, and related events
-Config Rule - desired configuration of resource that is evaluated against actual change (and report in case of mismatch). Conformance Pack - collection of config rules.
+Config Rule - desired configuration of resource that is evaluated against actual change (and report in case of mismatch). Conformance Pack - collection of config rules. There are 2 types of rules:
+* managed - use one of many aws predefined rules to build your rule on top of it
+* custom - you create rule from scratch and write your lambda that would be invoked by your rule to evaluate resource
 CloudTrail - list of all api calls (cli & CF templates in the end are transformed into api calls). It stores point-in-time configuration of your aws resources.
 
 ###### Aurora
