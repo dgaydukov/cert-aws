@@ -1749,14 +1749,25 @@ Throughput is of 2 types:
 You can increase throughput as much as you want but decrease up to 9 times per day. It's the only db that grow/shrink based on load.
 DynamoDB Streams - captures a time-ordered sequence of item-level changes in a DynamoDB table and durably stores the information for up to 24 hours.
 AWS maintains separate endpoints for DynamoDB and DynamoDB Streams. Streams can be enabled or disabled for an Amazon DynamoDB table.
-Stream records are organized into groups, also referred to as shards. With streams you can
+Stream records are organized into groups, also referred to as shards. With streams you can:
 * build transactional system (based on insert/update/delete records from one table do some operation in another)
 * log/audit/aggregate data
 * replicate data to another regions for query purpose using DynamoDB Cross-Region Replication Library
-Stream useful for:
+Streams useful for:
 * replicating
 * update elasticache (so your cache would be always updated to latest state of db)
 * in case your app need to know about all updates
+Cache problems:
+* invalidation - how you guarantee that once db write happens, you update cache
+* race condition - if 2 thread update db and update cache they may update db & cache in different order (in db you would have value from thread 1 and in cache from thread 2)
+* cold start - if you reboot your server, now every request is cache miss (you have to request db)
+So dynamoDB streams can nicely solve these 3 problems. Kafka also use this concept of streams inside for replication data across nodes.
+Notice that relational db also has kind of streams internally for replication/indexing(when you add data your index automatically rebuilt), it just doesn't expose this stream as api.
+Cold start can be solved if you have stream, you just go to the beginning and read all items sequintially & concurrently.
+Streams are also useful if you want:
+* analytics - user add 2 items to a cart and then remove - final state doesn't change, but for analytics it may be useful
+* point-in-time query
+One problem is schema evolution - solution to use avro format, and for each message include schema version
 DAX (DynamoDB Accelerator) - in-memory cache for dynamoDb, can expedite up to 10 times. The benefit is that you don't have to modify source code, you just enable cache and it works.
 Global Tables (cross-region replication) - multi-region/master db that automatically replicates across multiple regions. It's multiple replica tables (one per region) that DynamoDB treats as a single unit.
 When app write data to replica table in one region, dynamoDb propagate changes to all regions, so if one region would be unavailable your app continue to work normally.
@@ -2630,6 +2641,9 @@ aws rds describe-db-instances --query "DBInstances[*].[DBInstanceIdentifier,DbiR
     ]
 ]
 ```
+Materialized view:
+* simple - just a wrapper on top of query
+* materiazlied - temporary table
 
 ###### SQS
 Payload vs attributes:

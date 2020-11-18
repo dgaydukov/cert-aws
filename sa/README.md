@@ -15,17 +15,9 @@ Here is my experience of taking 2 certifications, both associate & professional:
 * [Free SAP questions](https://www.examtopics.com/exams/amazon/aws-certified-solutions-architect-professional)
 
 ### TODO
-Bit by Bit: An Illustrated History of Computers
-Вторжение. Краткая история русских хакеров
-Kingpin: How One Hacker Took Over the Billion-Dollar Cybercrime Underground
-The Art of Multiprocessor Programming
-https://en.wikipedia.org/wiki/Black_Swan_(film)
-https://www.youtube.com/watch?v=fU9hR3kiOK0 (dynamoDB streams)
------------------------------------------------------------------------------------------------------------------------
 run .war project in intellij + run javax.websocket there
 kafka poll wait for specified timeout (don't return even if there are already messages)
 kafka cluster docker example
------------------------------------------------------------------------------------------------------------------------
 https://www.youtube.com/watch?v=CnRtbtis79U (Алексей Шипилёв — Shenandoah: сборщик мусора, который смог)
 https://www.youtube.com/watch?v=iGRfyhE02lA (Владимир Иванов — G1 Garbage Collector)
 https://www.youtube.com/watch?v=c1jVn5Sm8Uw (Алексей Шипилёв – Shenandoah GC 2.0)
