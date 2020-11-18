@@ -121,6 +121,7 @@
 * 3.76 [EventBridge](#eventbridge)
 * 3.76 [Managed Blockchain](#managed-blockchain)
 * 3.77 [GuardDuty](#guardduty)
+* 3.78 [Secrets Manager](#systems-manager)
 
 
 
@@ -3708,3 +3709,11 @@ Yet this link is private, so members should have vpc and use vpc privatelink to 
 It's thread management tools that helps to protect aws accounts/workloads/data by analazying data from cloudTrail/vpc flowLogs/dns logs using ML.
 It's regional service, so all collected data is aggregated/analyzied within region. It doesn't store any data, once data is analyzied it discarded.
 threat intelligence - list of malicious IP addresses maintained by aws and third-party partners.
+
+###### Secrets Manager
+SM allows you to rotate/manage/retrieve db credentials, API keys, and other secrets throughout their lifecycle. You can encrypt secrets at rest using kms (you can choose your own, otherwise SM create new kms for you).
+To retrieve secrets, you simply replace secrets in plain text in your app with code to pull in those secrets programmatically using the Secrets Manager APIs.
+You use iam to control which users/roles have access to which stores. SM can store json, so you can store any text up to 64KB.
+Key rotation for RDS/DocumentDB/RedShift supported out-of-the-box. You can add key rotation to oracle on ec2 by modifying sample lambda.
+You can configure cw events to be nofified when SM rotate credentials. SM never store plaintext secrets to any persistant layer.
+This can be ideal for lambda evn vars, cause they are shown in lambda console. Moreover you can use lambda in private subnet without internet access and still be able to access SM with privatelink (create vpc endpoint for SM).

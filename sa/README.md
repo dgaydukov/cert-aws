@@ -37,11 +37,9 @@ https://www.slideshare.net/trishagee/introduction-to-the-disruptor
 https://martinfowler.com/articles/lmax.html
 https://www.infoq.com/presentations/mechanical-sympathy
 -----------------------------------------------------------------------------------------------------------------------
-* https://aws.amazon.com/secrets-manager/faqs (use it for lambda env variable, cause so far everybody can see it from lambda console)
-* elb access logs store to s3 => trigger lambda to process logs and put them into elasticsearch
-* elb logs to s3
-* add HealthCheck to elb + default ec2 healthcheck from asg (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-elb-health-check.html)
 * add elb to 2 vpc (load traffic between 2 vpc)
+* elb access logs store to s3 => trigger lambda to process logs and put them into elasticsearch
+* add HealthCheck to elb + default ec2 healthcheck from asg (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-elb-health-check.html)
 * elb to ec2 using https (https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/configuring-https-endtoend.html). By default elb terminate https traffic and forward to ec2 just http, since it's inside aws and can't be listened by anybody.
 * create elb with eks with several apps deployed there, and use elb path routing to route to eks nodeport. So we have single elb and multiple microservices in eks and all works (internal paths not exposed by elb, and can be accessed only inside eks cluster)
 * enable elb connection draining and see how it works when you de-register instance or it failed
