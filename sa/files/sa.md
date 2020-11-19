@@ -1293,6 +1293,40 @@ SSE (server side encryption) can be of 3 types:
 * sse-c - encrypt/decrypt with customer key - you have to provide key for every request get/put and s3 manage encryption (when you put object s3 encrypt it using provided key, when you get object - s3 decrypt object with your key from request). You have to use https + cli/sdk.
 You provide key in [headers for each request](https://docs.aws.amazon.com/AmazonS3/latest/dev/ServerSideEncryptionCustomerKeysSSEUsingRESTAPI.html), when you use cli/sdk it's automatically done.
 So when you have a requirement that customer want to manage key with sse you have to use this third option. In this case s3 manages encryption/decryption but you manage keys.
+s3 cross-account access - there are 3 ways:
+* use s3 resource policy - you will need to add policy in account B for user to be able to access bucket.
+```
+Version: 2012-10-17
+Statement:
+  - Effect: Allow
+    Principal:
+      AWS: arn:aws:iam::{ACCOUNT_B}:user/accountBusername
+    Action:
+      - s3:GetObject
+      - s3:PutObject
+      - s3:PutObjectAcl
+    Resource:
+      - arn:aws:s3:::AccountABucketName/*
+```
+* use s3 acl - use below xml policy to give cross-account access
+```
+<AccessControlPolicy xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+  <Owner>
+    <ID>AccountACanonicalUserID</ID>
+    <DisplayName>AccountADisplayName</DisplayName>
+  </Owner>
+  <AccessControlList>
+    <Grant>
+      <Grantee xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="CanonicalUser">
+        <ID>AccountBCanonicalUserID</ID>
+        <DisplayName>AccountBDisplayName</DisplayName>
+      </Grantee>
+      <Permission>FULL_CONTROL</Permission>
+    </Grant>
+  </AccessControlList>
+</AccessControlPolicy>
+```
+* use iam cross-account role - create role in account A with ability to assume role for account B and policy to access s3 bucket
 
 ###### Glacier
 Glacier - low-cost tape-drive storage value with $0.007 per gigabyte per month. Used to store backups that you don't need frequently.
@@ -2318,7 +2352,16 @@ Target group can be of 3 types: ec2/container/list of IP (IP can be seated insid
 If you enable AZ for ELB, it creates lb node in AZ, after this traffic goes to this node. The best practice to have 1 node in each AZ.
 If you have not equal number of EC2 in different AZ (let's say 2 in az1, and 8 in az2) then you should enable cross-zone balancing.
 In this case each elb will route all traffic into 10 instances, so each instances will get 10% of traffic. But if you disable cross-zone balancing, then 50% in first zone would be divided between 2 instances (so each got 25%) and 50% from az2 would be divided in 8 instances (so each got 8.25% traffic). With ALB cross-zone balancing enabled by default.
-Connection draining - makes sure that any back-end instances you have deregistered will complete requests in progress before the deregistration process starts
+Connection draining - makes sure that any back-end instances you have deregistered will complete requests in progress before the deregistration process starts. It's useful if you use ALB+ASG. in this case if asg decide to remove instance due to low load, elb will wait for this timeout to finish all current requests, but will not route any new requests.
+When timeout over, elb will forcibly close all connections. It's enabled by default, value from 0-3600, default - 300sec.
+```
+TG:
+  Type: AWS::ElasticLoadBalancingV2::TargetGroup
+  Properties:
+    TargetGroupAttributes:
+    - Key: deregistration_delay.timeout_seconds
+      Value: 600
+```
 ELB (except NLB) has sticky session - you can bind user's session to specific ec2 and every time this user hit elb he goes to the same ec2. To use this send `AWSELB` cookie and elb remember to which ec2 instance to route request.
 There is no concept of sticky session on NLB, cause on level 4 there is no cookies, so no way to track connections. Yet nlb selects target group  using a flow hash algorithm. It bases the algorithm on:
 * protocol
@@ -2332,6 +2375,13 @@ Health Check - you can monitor health of ec2 and always redirect user to healthy
 * EC2 health check - watches for instance availability from hypervisor/networking point of view. For example, in case of a hardware problem, the check will fail. Also, if an instance was misconfigured and doesn't respond to network requests, it will be marked as faulty.
 * ELB health check (1 heath check inside that check port status `AWS::ElasticLoadBalancingV2::TargetGroup`) - verifies that a specified TCP port on an instance is accepting connections OR a specified web page returns 2xx code. Thus ELB health checks are a little bit smarter and verify that actual app works instead of verifying that just an instance works.
 * Custom health check - If your application can't be checked by simple HTTP request and requires advanced test logic, you can implement a custom check in your code and set instance health though API
+You can set asg healthcheck by:
+```
+ASG:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      HealthCheckType: ELB # means asg would monitor both ec2 & elb healthchecks, and replace instance if either one failed
+```
 ALB Request Routing - you can redirect user to different ec2 based on request attributes (subdomains, headers, url params..)
 Listener Rule - can forward request but not change. So if you have a rule `/api => EC2_1, /internal => EC2_2`. That means EC2_1 should have url `/api` and EC2_2 should have url `/internal`.
 Since we can modify rules, you can use elb to hide some api endpoints. For example you can create 2 rules like:
@@ -2350,6 +2400,28 @@ Smart certificate selection - nlb support multiple certificates per tls connecti
 * after you can go to `listeners=>View/edit certificates=>add certificate` to add other certificates
 * if hostname match single cert - use this cert, otherwise - use best cert client can support
 SNI (Server Name Indication) - host multiple tls application, each with it's own (or multiple) ssl certificate behind single ELB, which would choose optimal certificate for each client.
+You can create multi-vpc elb, but if you want to route traffic to multiple vpc, better for each vpc to have single elb, and use route53 to route traffic to multiple elb.
+Yet if you want to use single elb to multiple vpc, you should use vpc peering and for target group set `TargetType: ip` and set list of private IP addresses to `TargetDescription.Id` attribute.
+End-to-end encryption - usually we terminate ssl on elb and from there we send traffic to ec2 using http, cause anyway from elb traffic is inside vpc, so it's secured.
+But if you want, you can implement encrypted communication end-to-end. For this you need to add TargetGroup that forward traffic to ec2 using https. In this case you need some kind of nginx in your ec2 to terminate ssl there.
+```
+TG:
+  Type: AWS::ElasticLoadBalancingV2::TargetGroup
+  Properties:
+    Port: 443
+    Protocol: HTTPS
+```
+s3 logs - you can store elb logs in s3 and analyze it later with athena - below example would store all elb logs in specified s3 bucket:
+```
+  ELB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      LoadBalancerAttributes:
+        - Key: access_logs.s3.enabled
+          Value: true
+        - Key: access_logs.s3.bucket
+          Value: s3_bucket_location
+```
 
 ###### CloudWatch
 CloudWatch - monitoring service for aws resources and apps running in aws cloud. IAM permission for CloudWatch are given to a resource as a whole (so you can't give access for only some of EC2, you give either for all EC2 instances or none).

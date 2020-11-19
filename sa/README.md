@@ -28,26 +28,22 @@ http://concurrencyfreaks.blogspot.com
 https://www.slideshare.net/trishagee/introduction-to-the-disruptor
 https://martinfowler.com/articles/lmax.html
 https://www.infoq.com/presentations/mechanical-sympathy
+The Art of Multiprocessor Programming
 -----------------------------------------------------------------------------------------------------------------------
-* add elb to 2 vpc (load traffic between 2 vpc)
-* elb access logs store to s3 => trigger lambda to process logs and put them into elasticsearch
-* add HealthCheck to elb + default ec2 healthcheck from asg (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-elb-health-check.html)
-* elb to ec2 using https (https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/configuring-https-endtoend.html). By default elb terminate https traffic and forward to ec2 just http, since it's inside aws and can't be listened by anybody.
-* create elb with eks with several apps deployed there, and use elb path routing to route to eks nodeport. So we have single elb and multiple microservices in eks and all works (internal paths not exposed by elb, and can be accessed only inside eks cluster)
-* enable elb connection draining and see how it works when you de-register instance or it failed
 * ecs + elb with dynamic port mapping
+* create elb with eks with several apps deployed there, and use elb path routing to route to eks nodeport. So we have single elb and multiple microservices in eks and all works (internal paths not exposed by elb, and can be accessed only inside eks cluster)
 * try glacier select to csv archive
-* create cf template with dynamodb vpc endpoint and access dynamodb from ec2 in private subnet (add auto scaling to dynamoDb)
-* create dynamodb lsi & gsi and compare them
-* trigger lambda when dynamodb change happend with dynamodb streams
 * connect 2 vpc with privatelink (access ec2 from one vpc from another)
 * create vpc link and connect http api to ec2 in private subnet
 * create custom vpn server in ec2 and try to connect to it (do both use oepnvpn server ami and any ami (OpenVPN Access Server from marketplace which is free tier, in this case you should configure it through browser admin panel) + manually configure openvpn server)
 * vpc endpoint service (add ec2 (with basic httpd service)+NLB and share it to vpc from another region)
 * create cognito identity with cognito user pool and other social providers (use basic java app to test it). Looks like cognito identity doesn't have it's own credentials but use credentials from IdP (https://docs.aws.amazon.com/cognito/latest/developerguide/authentication-flow.html)
 * redshift enhanced vpc routing (send data inside vpc between redhshift & s3 and view vpc flow logs)
-* add cross-account access to s3
+* create cf template with dynamodb vpc endpoint and access dynamodb from ec2 in private subnet (add auto scaling to dynamoDb)
+* create dynamodb lsi & gsi and compare them
+* trigger lambda when dynamodb change happend with dynamodb streams
 * solve final test for saa
+* add cross-account access to s3
 * create codepipeline with cf template and use codedeploy/beanstalk as deploy stage (compare them)
 * transit gateway - add on-premise network imitated by third vpc (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-transitgateway.html - guide to add on-premise, https://theithollow.com/2018/12/12/setup-aws-transit-gateway)
 * Deploy spring app into ECS and EKS and compare the difference (try fargate too). Try auto scaling in eks/ecs
@@ -75,4 +71,4 @@ https://www.infoq.com/presentations/mechanical-sympathy
 * Github Project: add logic to `sa/cloudformation/custom-resource/handler.yml` to update `ResponseURL` (pre-sign s3 url)
 * Github Project: add resource handler to validate ACM Certificate, so you can automate `sa/cloudformation/elb-asg-route53-acm.yml` template, no more need to manually update route53 record
 * Github Project: use spot instance to handle sqs, use `AWS::Events::Rule` to catch termination notice and put message into second queue. Monitor second queue, when instance would be stopped - stop requesting new messages from queue, finish processing remaining messages and quit
-* Github Project: create asg based on sqs queue size using custom metric backlogPerInstance (https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-using-sqs-queue.html). Create same but using spot fleet instead of asg (https://aws.amazon.com/blogs/compute/dynamic-scaling-with-ec2-spot-fleet)
+* Github Project: create asg based on sqs queue size using custom metric backlogPerInstance (https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-using-sqs-queue.html). Create same but using spot fleet instead of asg (https://aws.amazon.com/blogs/compute/dynamic-scaling-with-ec2-spot-fleet)``
