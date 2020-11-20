@@ -1,69 +1,255 @@
 AWSTemplateFormatVersion: 2010-09-09
 
-#
+# !important => we use SecurityGroupIngress to avoid circular problem. Cause we need that InstanceSG allows access from instances with InstanceSG. But if we add it inside InstanceSG we got: An error occurred (ValidationError) when calling the UpdateStack operation: Circular dependency between resources: [InstanceSG]
+# !important => when deploy ecs service, stack can stuck in UPDATE_IN_PROGRESS. That means service is created but can't run tasks. Go to ecs and open service and modify manually DesiredCount to 0 and save. CF template would be completed, then investigate.
 
 Resources:
-  Policy:
-    Version: 2012-10-17
-    Statement:
-      - Effect: Allow
-        Principal:
-          AWS: arn:aws:iam::{ACCOUNT_B}:user/accountBusername
-        Action:
-          - s3:GetObject
-          - s3:PutObject
-          - s3:PutObjectAcl
-        Resource:
-          - arn:aws:s3:::AccountABucketName/*
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.100.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value:  !Sub ${AWS::StackName}-MyVpc
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    DependsOn: VPC
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-IGW
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+  PublicSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.100.1.0/24
+      AvailabilityZone: us-east-1a
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-PublicSubnetA
+  PublicSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.100.2.0/24
+      AvailabilityZone: us-east-1b
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-PublicSubnetB
+  PublicRT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-Public-RT
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: !Ref PublicRT
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+  PublicSubnetARTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnetA
+      RouteTableId: !Ref PublicRT
+  PublicSubnetBRTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnetB
+      RouteTableId: !Ref PublicRT
 
-#  ELB:
-#    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
-#    Properties:
-#      Scheme: internet-facing
-#      Type: application
-#      SecurityGroups:
-#        - !GetAtt ElbSG.GroupId
-#      Subnets:
-#        - !Ref PublicSubnet1
-#        - !Ref PublicSubnet2
-#      Tags:
-#        - Key: Name
-#          Value: !Sub ${AWS::StackName}-MyVpc-ELB
-#  TG:
-#    Type: AWS::ElasticLoadBalancingV2::TargetGroup
-#    Properties:
-#      VpcId: !Ref VPC
-#      TargetType: instance
-#      Port: 80
-#      Protocol: HTTP
-#      Targets:
-#        - Id: !Ref PublicInstance1
-#        - Id: !Ref PublicInstance2
-#      Tags:
-#        - Key: Name
-#          Value: !Sub ${AWS::StackName}-MyVpc-TG
-#  HttpListener:
-#    Type: AWS::ElasticLoadBalancingV2::Listener
-#    Properties:
-#      DefaultActions:
-#        - Type: fixed-response
-#          FixedResponseConfig:
-#            StatusCode: 403
-#      LoadBalancerArn: !Ref ELB
-#      Port: 80
-#      Protocol: HTTP
-#  HttpRule:
-#    Type: AWS::ElasticLoadBalancingV2::ListenerRule
-#    Properties:
-#      Priority: 10
-#      Actions:
-#        - Type: forward
-#          TargetGroupArn: !Ref TG
-#      Conditions:
-#        - Field: path-pattern
-#          PathPatternConfig:
-#            Values:
-#              - "/"
-#              - "/index.html"
-#              - "/public.html"
-#      ListenerArn: !Ref HttpListener
+  EblSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable HTTP access from anywhere
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-WebServerSG
+  InstanceSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH access from anywhere and all traffic from ELB and itself
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: -1
+          SourceSecurityGroupId: !Ref EblSG
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-WebServerSG
+  InstanceSgIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref InstanceSG
+      IpProtocol: -1
+      SourceSecurityGroupId: !GetAtt InstanceSG.GroupId
+  LaunchConfig:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      LaunchConfigurationName: !Sub ${AWS::StackName}-MyVpc-LaunchConfig
+      InstanceType: t2.micro
+      ImageId: ami-09d95fab7fff3776c
+      KeyName: mykey
+      AssociatePublicIpAddress: true
+      SecurityGroups:
+        - !GetAtt InstanceSG.GroupId
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 8
+  ASG:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: !Sub ${AWS::StackName}-MyVpc-ASG
+      LaunchConfigurationName: !Ref LaunchConfig
+      MinSize: 1
+      MaxSize: 4
+      VPCZoneIdentifier:
+        - !Ref PublicSubnetA
+        - !Ref PublicSubnetB
+  ELB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Scheme: internet-facing
+      Type: application
+      SecurityGroups:
+        - !GetAtt EblSG.GroupId
+      Subnets:
+        - !Ref PublicSubnetA
+        - !Ref PublicSubnetB
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-ELB
+  TG:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub ${AWS::StackName}-MyVpc-TG
+      Port: 80
+      Protocol: HTTP
+      VpcId: !Ref VPC
+  HttpListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      Port: 80
+      Protocol: HTTP
+      LoadBalancerArn: !Ref ELB
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TG
+  HttpRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref TG
+      Conditions:
+        - Field: path-pattern
+          Values: [ / ]
+      ListenerArn: !Ref HttpListener
+      Priority: 10
+
+  EcsCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Sub ${AWS::StackName}-EcsCluster
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      ContainerDefinitions:
+        - Name: MyApp
+          MountPoints:
+            - SourceVolume: "my-vol"
+              ContainerPath: "/var/www/my-vol"
+          Image: "amazon/amazon-ecs-sample"
+          Cpu: 256
+          PortMappings:
+            - ContainerPort: 80
+              HostPort: 80
+          EntryPoint:
+            - "/usr/sbin/apache2"
+            - "-D"
+            - "FOREGROUND"
+          Memory: 512
+          Essential: true
+        - Name: "busybox"
+          Image: "busybox"
+          Cpu: 256
+          EntryPoint:
+            - "sh"
+            - "-c"
+          Memory: 512
+          Command:
+            - "/bin/sh -c \"while true; do /bin/date > /var/www/my-vol/date; sleep 1; done\""
+          Essential: false
+          VolumesFrom:
+            - SourceContainer: MyApp
+      Volumes:
+        - Host:
+            SourcePath: "/var/lib/docker/vfs/dir/"
+          Name: "my-vol"
+
+  EcsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: [ecs.amazonaws.com]
+            Action: ['sts:AssumeRole']
+      Policies:
+        - PolicyName: ecs-service
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'ec2:AttachNetworkInterface'
+                  - 'ec2:CreateNetworkInterface'
+                  - 'ec2:CreateNetworkInterfacePermission'
+                  - 'ec2:DeleteNetworkInterface'
+                  - 'ec2:DeleteNetworkInterfacePermission'
+                  - 'ec2:Describe*'
+                  - 'ec2:DetachNetworkInterface'
+                  - 'elasticloadbalancing:DeregisterInstancesFromLoadBalancer'
+                  - 'elasticloadbalancing:DeregisterTargets'
+                  - 'elasticloadbalancing:Describe*'
+                  - 'elasticloadbalancing:RegisterInstancesWithLoadBalancer'
+                  - 'elasticloadbalancing:RegisterTargets'
+                Resource: '*'
+
+  EcsService:
+    DependsOn: HttpRule
+    Type: AWS::ECS::Service
+    Properties:
+      ServiceName: !Sub ${AWS::StackName}-EcsService
+      LaunchType: EC2
+      DesiredCount: 1
+      Cluster: !Ref EcsCluster
+      TaskDefinition: !Ref TaskDefinition
+      Role: !GetAtt EcsRole.Arn
+      LoadBalancers:
+        - ContainerName: MyApp
+          ContainerPort: 80
+          TargetGroupArn: !Ref TG
+
+
+

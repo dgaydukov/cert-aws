@@ -2041,6 +2041,22 @@ In this case your launch template would be only for spot instances. And if you t
 Use `MixedInstancesPolicy` of ASG. But remove spot from launch template. If you try to use both you would get error: 
 `Incompatible launch template: You cannot use a launch template that is set to request Spot Instances (InstanceMarketOptions) when you configure an Auto Scaling group with a mixed instances policy. Add a different launch template to the group and try again.`
 Take a look at `sa/cloudformation/asg-on-demand-spot.yml` for exact template how to use asg + launch template to have both on-demand & spot instances.
+`UpdatePolicy` - attribute in cf to update asg in case launchConfig/launchTemplate changed. By default if you change template/config only newly created instance would use latest version, currently running ec2 won't be replaced.
+But you can use this policy to gradually replace all currently running ec2. There are 3 policies to replace running ec2 in case of config/template update:
+* AutoScalingReplacingUpdate - create new asg with instances built from new template, and after creation finished, remove old one (during creation process you basically have 2 asg).
+If you set `WillReplace: true`, add `CreationPolicy`. If nwe asg can't be created for some reason using this policy, it will be removed and you will use current asg (with old version instances).
+```
+UpdatePolicy:
+  AutoScalingReplacingUpdate:
+    WillReplace: true
+```
+* AutoScalingRollingUpdate - update instances in current asg, you can specify do you update one-by-one or by batches
+* AutoScalingScheduledAction - applied when asg has scheduled action fired. If you use it, then when scheduled action fired, MinSize/MaxSize/DesiredCapacity would be taken from asg not from scheduled action.
+```
+UpdatePolicy:
+  AutoScalingScheduledAction:
+    IgnoreUnmodifiedGroupSizeProperties: true
+```
 Spot fleet `AWS::EC2::SpotFleet` - a fleet (group of 1 or more ec2 instances) of spot instances. You can create requests of 2 types:
 * request - create single request. If it failed, or if you remove instances, nothing would happen.
 * maintain - maintain request perpetually. If it failed or if you remove instances, request would automatically add new (in case it can fetch spot instances from the pool)

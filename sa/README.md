@@ -30,8 +30,9 @@ https://martinfowler.com/articles/lmax.html
 https://www.infoq.com/presentations/mechanical-sympathy
 The Art of Multiprocessor Programming
 -----------------------------------------------------------------------------------------------------------------------
-* ecs + elb with dynamic port mapping
-* create elb with eks with several apps deployed there, and use elb path routing to route to eks nodeport. So we have single elb and multiple microservices in eks and all works (internal paths not exposed by elb, and can be accessed only inside eks cluster)
+* solve final test for saa
+* ecs + elb with dynamic port mapping (sa/cloudformation/ecs-elb.yml)
+* eks + elb with elb path routing to route to eks nodeport
 * try glacier select to csv archive
 * connect 2 vpc with privatelink (access ec2 from one vpc from another)
 * create vpc link and connect http api to ec2 in private subnet
@@ -42,8 +43,6 @@ The Art of Multiprocessor Programming
 * create cf template with dynamodb vpc endpoint and access dynamodb from ec2 in private subnet (add auto scaling to dynamoDb)
 * create dynamodb lsi & gsi and compare them
 * trigger lambda when dynamodb change happend with dynamodb streams
-* solve final test for saa
-* add cross-account access to s3
 * create codepipeline with cf template and use codedeploy/beanstalk as deploy stage (compare them)
 * transit gateway - add on-premise network imitated by third vpc (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-transitgateway.html - guide to add on-premise, https://theithollow.com/2018/12/12/setup-aws-transit-gateway)
 * Deploy spring app into ECS and EKS and compare the difference (try fargate too). Try auto scaling in eks/ecs

@@ -53,7 +53,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-MyVpc-Public-RT1
+          Value: !Sub ${AWS::StackName}-MyVpc-PublicRT
   PublicRoute:
     Type: AWS::EC2::Route
     DependsOn: AttachGateway
