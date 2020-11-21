@@ -18,6 +18,7 @@ Here is my experience of taking 2 certifications, both associate & professional:
 run .war project in intellij + run javax.websocket there
 kafka poll wait for specified timeout (don't return even if there are already messages)
 kafka cluster docker example
+spring + hibernate sharding (https://docs.jboss.org/hibernate/shards/3.0/reference/en/html_single)
 https://www.youtube.com/watch?v=CnRtbtis79U (Алексей Шипилёв — Shenandoah: сборщик мусора, который смог)
 https://www.youtube.com/watch?v=iGRfyhE02lA (Владимир Иванов — G1 Garbage Collector)
 https://www.youtube.com/watch?v=c1jVn5Sm8Uw (Алексей Шипилёв – Shenandoah GC 2.0)
@@ -30,9 +31,6 @@ https://martinfowler.com/articles/lmax.html
 https://www.infoq.com/presentations/mechanical-sympathy
 The Art of Multiprocessor Programming
 -----------------------------------------------------------------------------------------------------------------------
-* solve final test for saa
-* ecs + elb with dynamic port mapping (sa/cloudformation/ecs-elb.yml)
-* eks + elb with elb path routing to route to eks nodeport
 * try glacier select to csv archive
 * connect 2 vpc with privatelink (access ec2 from one vpc from another)
 * create vpc link and connect http api to ec2 in private subnet
@@ -42,9 +40,11 @@ The Art of Multiprocessor Programming
 * redshift enhanced vpc routing (send data inside vpc between redhshift & s3 and view vpc flow logs)
 * create cf template with dynamodb vpc endpoint and access dynamodb from ec2 in private subnet (add auto scaling to dynamoDb)
 * create dynamodb lsi & gsi and compare them
-* trigger lambda when dynamodb change happend with dynamodb streams
+* trigger lambda when dynamodb change happend with dynamodb streams (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-lambda-eventsourcemapping.html)
 * create codepipeline with cf template and use codedeploy/beanstalk as deploy stage (compare them)
 * transit gateway - add on-premise network imitated by third vpc (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-transitgateway.html - guide to add on-premise, https://theithollow.com/2018/12/12/setup-aws-transit-gateway)
+* ecs + elb with dynamic port mapping (sa/cloudformation/ecs-elb.yml) + add fargate launch type
+* eks + elb with elb path routing to route to eks nodeport
 * Deploy spring app into ECS and EKS and compare the difference (try fargate too). Try auto scaling in eks/ecs
 * Deploy spring app using opsworks stacks
 * Try maximum automate site-to-site vpn cloudformation template (try to extract somehow all IP addresses and PSK secret string and put it into ec2 userdata for VpnServer)

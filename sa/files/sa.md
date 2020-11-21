@@ -327,6 +327,12 @@ Since s3 is global service but has region, 5 urls are possible:
 * bucket name first without region  `https://www.aumingo.com.s3.amazonaws.com/index.html`
 * bucket name first with region     `https://www.aumingo.com.s3.us-east-1.amazonaws.com/index.html`
 * static website                    `http://www.aumingo.com.s3-website-us-east-1.amazonaws.com`
+Note that all this urls can be divided into 2 types:
+* path-style - can be:
+    * global - https://s3.amazonaws.com/bucket_name
+    * regional - https://s3.us-east-1.amazonaws.com/bucket_name
+* virtual-hosted - you add your bucket name first
+Note that path style is [deprecating soon](https://aws.amazon.com/blogs/aws/amazon-s3-path-deprecation-plan-the-rest-of-the-story). The reason is that millions of bucket hit same dns record, and it can create a bottleneck.
 There is no way to set https for static website.
 FIPS endpoint - endpoint that use a TLS software library that complies with Federal Information Processing Standards.
 So for kms you have 2 endpoints:
@@ -929,6 +935,25 @@ Good example to allow all actions on s3 except delete bucket:
 NotAction+Deny - deny access to all actions except those under Notaction. Notice that this action doesn't give any rights on actions inside Notaction. You still should add explicit allow. 
 It only explicitly deny to all other actions except those under Notaction.
 * Deny - type of Effect
+same way you can use NotAction/NotResource/NotPrincipal.
+For example if you want to limit s3 to specific users. Of course you can create deny for all current users, but in this case once somebody add new user with `s3:*` action, he will get access.
+So instead of explicitly deny to all users you can use Deny+NotPrincipal. In this case you would deny to all users except your desired user.
+This approach is bit difficult for roles, cause role principal is defined by 2 arn:
+* role arn -              arn:aws:iam::{ACCOUNT_ID}:role/roleName
+* assumed role user arn - arn:aws:sts::{ACCOUNT_ID}:assumed-role/roleName/roleSessionName  (roleSessionName - can be changed depending who is assuming this role)
+The problem is that Principal/NotPrincipal doesn't support wildcard. But you can use conditions
+```
+Effect: Deny
+Principal: "*"
+Action: "s3:*"
+Resource: [arn:aws:s3:::MyExampleBucket, arn:aws:s3:::MyExampleBucket/*]
+Condition:
+    StringNotLike
+        aws:userId": [AROAEXAMPLEID:*, 111111111111]
+```
+Here we set role with wildcard and root, in case role would be deleted (otherwise access to bucket would be lost). You can use both roleId and userId here:
+* get roleId `aws iam get-role --role-name=rolename` - extract Role.RoleId
+* get userId `aws iam get-user --user-name=username` - extract User.UserId
 Role for user:
 * create role `S3Viewer` of type: Another AWS Account (enter desired accountID or your own) and assign policy  `AmazonS3ReadOnlyAccess`
 * create new policy `AssumeS3ViewerRole`
@@ -1080,6 +1105,33 @@ There are 6 policy types:
 * Identity-based policies - for iam identity
 * Resource-based policies - define policies separately for aws resources like s3 bucket policy (not all resources support this)
 * Permissions boundaries - same policy as for identity, but added not as permission policy to iam identity but as permission boundary. Specify what permission user can potentially have.
+Don't confuse resource-based policy and resource-level permission:
+* resource-based policy - separate policy, added directly to resource and using `Principal` attribute to denote who can access this policy
+* resource-level permission - `Resource` attribute for identity-based policy, indicates to which particular resources to apply this policy (not relevant to resource-based cause it's applied to specified resource already)
+Note that not all action support resource-level permission. So if you create a policy to allow users to launch ec2 in specific region
+```
+Effect: Allow
+Action: [ec2:*]
+Resource: arn:aws:ec2:us-east-1:{ACCOUNT_ID}:instance/*
+```
+This won't work, cause `ec2:*` specified all actions, but not all ec2 actions support resource. So that's why this policy doesn't achive desired result.
+Instead you should specify actions:
+```
+Effect: Allow
+Action: [ec2:RunInstances, ec2:TerminateInstances, ec2:StopInstances, ec2:StartInstances]
+Resource: arn:aws:ec2:us-east-1:{ACCOUNT_ID}:instance/*
+```
+But user still can't launch new instance in us-east-1 (although he can stop/start/terminate).
+```
+Effect: Allow
+Action: [ec2:RunInstances]
+Resource: [arn:aws:ec2:us-east-1:{ACCOUNT_ID}:instance/*",
+            "arn:aws:ec2:us-east-1:{ACCOUNT_ID}:key-pair/*",
+            "arn:aws:ec2:us-east-1:{ACCOUNT_ID}:security-group/*",
+            "arn:aws:ec2:us-east-1:{ACCOUNT_ID}:volume/*",
+            "arn:aws:ec2:us-east-1::image/ami-*"]
+```
+This policy will allow launch new instances in us-east-1 region.
 So they don't actually give these permissions but merely state that this identity can potentially have up to these permission.
 So the actual permission are calculated as intersection of permission policy & permission boundary. Whenever you create new iam identity (user/group/role) you can add actual permissions and permission boundaries.
 The idea behind is that you can delegate responsibility to others (you can create policy that would allow identity to create iam users only with certain boundary => so all newly created users would have your predefined boundary, [example](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_boundaries.html#access_policies_boundaries-delegate))
@@ -1201,8 +1253,8 @@ Event notification - you can send events (sns/sqs/lambda) base on s3 action (get
     ]
 }
 ```
+Randomized named worked better cause when names are sequential all data store in the same place and it's harder to extract it. But you no longer have to randomize prefix naming for performance, and can use sequential date-based naming for your prefixes
 To achieve better performance you should to use random names for objects, but [it's no longer required](https://aws.amazon.com/about-aws/whats-new/2018/07/amazon-s3-announces-increased-request-rate-performance). 
-Randomized named worked better cause when names are sequential all data store in the same place and it's harder to extract it.
 Storage Classes - can be configured at the object level and a single bucket can contain objects stored across Standard/Intelligent/Standard-IA/Single-Zone-IA
 You can also use S3 Lifecycle policies to:
 * automatically transition objects between storage classes without any application changes
@@ -1327,6 +1379,10 @@ Statement:
 </AccessControlPolicy>
 ```
 * use iam cross-account role - create role in account A with ability to assume role for account B and policy to access s3 bucket
+Read/write limits:
+* 5500 GET per prefix
+* 3500 POST/PUT/DELETE per prefix
+So same rules as for dynamoDB (where read/writes per partition), so you can get unlimited read/write by creating many prefixes (number is not limited).
 
 ###### Glacier
 Glacier - low-cost tape-drive storage value with $0.007 per gigabyte per month. Used to store backups that you don't need frequently.
@@ -1364,9 +1420,13 @@ EFS (Elastic File System) - delivers simple network filesystem for EC2. It suppo
 System size is grow as you add more files to file system. It allows parallel access from multiple EC2 within the same region.
 It accessed by EC2 using mount targets which are created by AZ. If you need temporary storage EFS not the best option, look at EC2 Local Instance Store.
 Mount helper - `amazon-efs-utils` utility that defines a new network file system type, called efs, which you can use with `mount` command
-There are 2 performance model:
-* General (if you need less then 7k file operation per second) 
-* Max I/O
+There are 2 performance modes (plz note that they both equivalent in term of price, so you can choose any, no price effect):
+* General (if you need less then 7k file operation per second) - better to use if you need low latency
+* Max I/O (if thousands of ec2 access same efs) - provide high I/O for trade-off of latency - not best scenario if low latency is required
+There are 2 throughput modes:
+* bursting - throughput scales as your efs size grows
+* provisioned - you can provision desired throughput regardless of efs size (use it if amount of data is low, but access is high)
+Notice that performance mode can be chosen during creation, and can't be changed after.
 When you create efs it creates mount target in each az. Instances in each az talk to efs by using this mount targets.
 To mount efs to ec2, mount helper should be installed and running `sudo yum install -y amazon-efs-utils`. You can mount it by `sudo mount -t efs fs-bc0a413f:/ ./mnt`.
 For some AMI (Amazon Linux/RHEL/Ubuntu) it's already installed, you just need to start it. You can check the status by `sudo service nfs status`
@@ -2178,7 +2238,10 @@ That is because this RT - is default. If you create new RT and associate subnet 
 Every RT has routes with 2 fields (if you want to get to such destination go to this target).
 * IGW (Internet Gateway) - entry point between your VPC and Internet. It allows EC2 in VPC directly access Internet. You can use public IP or elastic IP(won't change after stop/start) to both communicate with Internet and receive requests from outside web-servers.
 * NAT Gateway - Network address resolution service in private subnet to access the Internet. Instances from private subnets use NAT gateway to access Internet. Nat allows outbound communication, but doesn't allows machines on the Internet to access instances inside VPC.
-Since Nat GateWay created per AZ for HA it's suggested to create it in every AZ where you have instances. In this case single AZ failure will not block internet access from other private networks. With IGW you have both outbound and inbound access, but with Nat - only outbound (your instance can access Internet, but is unaccessable from Internet).
+Since Nat GateWay created per AZ for HA it's suggested to create it in every AZ where you have instances. In this case single AZ failure will not block internet access from other private networks. With IGW you have both outbound and inbound access, 
+but with Nat - only outbound (your instance can access Internet, but is unaccessable from Internet).
+Nat gateway/instance can't route traffic through: vpc peering, site-to-site vpn, direct connect, so it can't be used by resources on the other side of these connections.
+Moreover vpc peering can't use NAT instance/gateway, IGW or VPG.
 * Virtual private gateway - VPC+VPN
 * Peering Connection - create private secure connection between 2 VPC
 * Egress-only Internet Gateway - egress(going out) only access from VPC to Internet over IPv6
@@ -2477,7 +2540,9 @@ Route53 also supports:
 * WRR (Weighted Round Robin) where you can assign weight ans divide your traffic (for example you have new feature and want only 25% of users to use it).
 * LBR (Latency Based Routing), in case you have aws resources in multiple regions, route53 will redirect users to region with lowest latency.
 With Route53 you can also have private DNS name within your VPC, and such a name would be unaccesable outside VPC.
-Heath check - a check that requested resource is available. DNS Failover - return result only if health check is fine.
+Heath check - a check that requested resource is available (can be used for any endpoint in the internet). DNS Failover - return result only if health check is fine.
+For health checks route53 use health checkers that resides in different locations and don't communicate with one another (that's why your instance can be requested several times during specified interval)
+Then route53 check if more than 18% of checkers are success, it considers endpoint healthy, otherwise unhealthy.
 DNS responses use:
 * UDP if size less than 512 KB
 * TCP is size exceeds 512 KB
@@ -2566,6 +2631,7 @@ Read replica (replica db only for reading) for horizontal scaling:
 * can be cross-AZ and cross-region
 * implemented using db (mysql or other) native asynchronous replication, that's why lag can occur, comparing with multi-AZ replication (synchronous replication)
 * can be promoted to become master database.
+Although you can use read replica for HA, it's recommended to use multi-AZ, cause it's syncronous and would guarantee that in case of fail, db in another AZ is most up-to-date (with read replica you can get some lag, and ended up with stale data on promoting it to master).
 Enhanced monitoring - allows you to view all metrics with 1 sec granularity. Get current database `SELECT DATABASE() FROM DUAL;`.
 RDS Proxy - database proxy that helps:
 * pooling & sharing db connections (useful for serverless, when you constantly open and close connections)
@@ -2803,7 +2869,7 @@ Although you can use iam to control access to sqs, it's better to use access con
 You can send messages:
 * 256KB - normal sqs message
 * up to 2GB - using java library, [message is stored in s3](https://aws.amazon.com/about-aws/whats-new/2015/10/now-send-payloads-up-to-2gb-with-amazon-sqs)
-Metric to use in auto scaling group:
+Metric to use in auto scaling group (each sqs queue sends metrics to CW every 5 min):
 * `ApproximateAgeOfOldestMessage` - age of the oldest message in queue. Useful when you have time bound for each message to handle.
 * `ApproximateNumberOfMessagesVisible` - current queue length. Useful when you want to auto scale based on number of messages in queue
 * `ApproximateNumberOfMessagesNotVisible` - total number of messages including in-flight (those that has been polled by app but not yet deleted)
