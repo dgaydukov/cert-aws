@@ -31,6 +31,10 @@ https://martinfowler.com/articles/lmax.html
 https://www.infoq.com/presentations/mechanical-sympathy
 The Art of Multiprocessor Programming
 -----------------------------------------------------------------------------------------------------------------------
+https://aws.amazon.com/qldb/faqs
+(quantum has nothing to do with quantum computing, here it means indivisible state change)
+https://en.wikipedia.org/wiki/Snapshot_isolation
+https://engineering.linkedin.com/distributed-systems/log-what-every-software-engineer-should-know-about-real-time-datas-unifying
 * try glacier select to csv archive
 * connect 2 vpc with privatelink (access ec2 from one vpc from another)
 * create vpc link and connect http api to ec2 in private subnet
