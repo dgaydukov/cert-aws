@@ -1683,6 +1683,14 @@ Kinesis vs Kafka vs Apache Storm (kinesis & kafka are message brokers - middlema
 * kafka - data stored in Kafka Partition, config store - Apache Zookeeper, replica instances - can be configured
 * kinesis - data stored in Shards, config store - DynamoDB, synchronously replicates across 3 AZ
 * storm - middleman between hadoop (which works with batches only) and streaming source. It takes incoming stream, organize data into packages and sends it to hadoop for further processing. Data sources are called spouts and each processing node is a bolt.
+You can view kinesis video using following api:
+* GetMedia API (real-time api with low latency) - you have to build your own player to view video from this api using [Stream Parser Library](https://docs.aws.amazon.com/kinesisvideostreams/latest/dg/parser-library.html)
+To upload video to kinesis you should use PutMedia api and upload mkv files. MKV (matroshka) - multimedia container formats
+* HLS (HTTP Live Streaming) - you can use for live playback or to view archived video. You can use third-party player `Video.js/Google Shaka Player` to display stream using HLS streaming session URL.
+You can also play back video by typing the HLS streaming session URL in the Location bar of the Safari/Edge browsers.
+* MPEG-DASH (Dynamic Adaptive Streaming over HTTP) - same as HLS, just different format
+* GetClip API - use it to download clip (MP4) with archived/on-demand media from video stream over the time range
+ 
 
 ###### Lambda
 Lambda - piece of code that can be executed without any server env (just write code in python/javascript and it will run).
@@ -1747,7 +1755,14 @@ Presto faster than spark cause it doesn't care about fault-tolerance. If one of 
 Spark supports mid-query fault-tolerance and can recover from such a situation but in order to do that, it needs to do some extra bookkeeping and essentially "plan for failure". That overhead results in slower performance when your cluster does not experience any faults.
 
 ###### Glue
-Glue - fully managed ETL (extract, transform, load) to catalog/clean/enrich/move your data.
+Glue - fully managed ETL (extract, transform, load) to catalog/clean/enrich/move your data. Consist of:
+* Data Catalog - central metadata repository. Consist of:
+    * trigger - you can create trigger to fire on cron or when some events done. With it you can create a chain of etl jobs. Can be of 3 types:
+        * scheduled - run on cron
+        * conditional - based on some condition (run third job when 2 other completed)
+        * on-demand - manually activate your trigger
+* ETL engine - autogenerate ETL code in python/scala for integration with apache spark
+* scheduler - handles dependency resolution/job monitoring/retries
 Glue crawlers scan various data stores you own to automatically infer schemas and partition structure and populate the Glue Data Catalog with corresponding table definitions and statistics.
 You can then directly query your data lake with Athena and Redshift Spectrum.
 AntiPattern:
@@ -2200,6 +2215,7 @@ It will never limit permission to internal user of current account who has permi
 Feature sets (you select it when you create organization) - how your organization manage its accounts:
 * Consolidated billing - provides only shared billing functionality (you can't define SCP/TP with this type)
 * all - consolidating bulling + all available features 
+You can switch from consolidated billing to all by just updating org (there is no need to delete & create org).
 Both types provide discounts:
 * s3 - more you use - less you pay, so in case of single bill aws treats all accounts as single, so all s3 usage is calculated and paid by single account
 * ec2 - suppose accountA has 6 RI, accountB - 0. During some hour accountA - used 3 instances, B - also 3. B was using on-demand, but because of single bill and A has 3 not used RI, it would be calculated as 6 RI. So you won't pay anything for B on-demand instances.
@@ -2878,6 +2894,9 @@ Batching - ability to send/receive batch of up to 10 messages:
 * use `SendMessageBatch/DeleteMessageBatch/ChangeMessageVisibilityBatch` operations. `ReceiveMessage` - receive both single/batch.
 * reduce costs - since sqs is charged per request, and you can batch up to 10 messages, you can save on costs
 * you need to change app logic - for sender to batch messages before sending, to receiver wait longer and process a list of messages instead of 1
+You can have multiple queues running at the same time. For example:
+* high priority queue with on-demand instances
+* low priority queue with spot instances
 
 ###### API Gateway
 AGW - managed api service that makes it easy to publish/manage api at any scale. It can:
@@ -2926,7 +2945,9 @@ Resource policy - just like iam policy you can specify on the AGW level who can 
 * vpc or vpc endpoints
 Http vs Rest api:
 * rest api (AWS::ApiGateway)- old version, currently offers more features and full control over API requests and responses. Consists of 3 parts:
-    * integration - lambda, http backend or any aws service
+    * integration - lambda, http backend or any aws service - 2 types:
+        * custom - if you want to throw errors you should add mapping to integration response and codes (400/500) to method response. Otherwise agw would return 200 even for errors
+        * proxy - you should send response codes from lambda
     * request flow - logic before request reach integration. There are 3 parts:
         * auth - optional step:
             * authorization check - 3 ways:
@@ -3310,6 +3331,15 @@ You can specify conditions (discard results with low confidence score) under whi
 Terminology
 * label - object/concept found in image based on description (for example, human/face/sun and so on..)
 * confidence score - number 0-100 that indicates the probability that prediction is correct
+Face recognition from video:
+* upload video to kinesis video using `PutMedia`
+* crete stream in rekognition using `CreateStreamProcessor` and provide 2 streams:
+    * input - kinesis video stream
+    * output - kinesis data stream (to store processed results)
+Once created it will start automatically monitor kinesis video stream and consume videos for face recognition.
+If you want to process images for face recognition:
+* use s3 as source
+* use ec2 to call `DetectFaces` api to process single image and store results in s3/redshift
 
 ###### Global Accelerator
 GA allows you to create 2 static anycast IP addresses and routing users to nearest server to them.
@@ -3783,7 +3813,7 @@ Users can use their browser or special desktop client to user ws. To authenticat
 
 ###### Batch
 It's a set of batch management tools that allows to run hundreds of thousands of batch computing jobs on AWS. Resources are dynamically provisioned.
-It handles job execution and compute resource management and you can concentrate on code. It's best suited for: deep learning, genomics analysis, image processing, media transcoding.
+It handles job execution and compute resource management and you can concentrate on code. It's best suited for: deep learning, genomics analysis, image processing, media transcoding, bash scripting.
 You simply submit jobs to batch and it provision ec2 or spot fleet and run your jobs there. Job Definition - specify params, env vars, RAM & CPU number requirements.
 It uses ecs to execute containerized jobs, so ecs agent should be installed on ec2 (you can use ecs ami or create your own).
 When you create your own ami, it should include:
@@ -3791,9 +3821,6 @@ When you create your own ami, it should include:
 * docker daemon running
 * ECS container agent
 * awslogs log driver with `ECS_AVAILABLE_LOGGING_DRIVERS` env var
-You can have multiple queues running at the same time. For example:
-* high priority queue with on-demand instances
-* low priority queue with spot instances
 
 ###### DocumentDB
 It's fully managed, mongo-compatible document database service. You can store/query json data.
@@ -3867,7 +3894,10 @@ EventBridge vs SNS
 
 ###### Managed Blockchain
 Blockchain network - peer-to-peer network running a decentralized blockchain framework. When you create blockchain you choose type (hyperledger/etherium) and version and create first member.
-Other members can be added later by voting process. Blockchain active as long as at least 1 member there, as long as this is the case nobody, even creator can delete blockchain.
+Other members can be added later by voting process. Blockchain active as long as at least 1 member there, as long as this is the case nobody, even creator can't delete blockchain.
+There are 2 types of members:
+* same account - just send invitation
+* other aws account - create network invitation for another account
 Aws account and creator don't own network. For any changes there should be voting process between all network members.
 Peer node - when member join network it should have at least 1 peer node which store copy of distributed ledger with all transactions.
 Each blockchain has unique identifier `ResourceID.MemberID.NetworkID.managedblockchain.AWSRegion.amazonaws.com:PortNumber`. Port depends on blockcahin framework you are using.
