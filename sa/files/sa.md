@@ -122,6 +122,7 @@
 * 3.76 [Managed Blockchain](#managed-blockchain)
 * 3.77 [GuardDuty](#guardduty)
 * 3.78 [Secrets Manager](#systems-manager)
+* 3.79 [Quantum Ledger Database](#quantum-ledger-database)
 
 
 
@@ -1538,6 +1539,10 @@ df -h
 sudo dd if=/dev/zero of=/mnt/volume/tmpfile bs=1M count=1024
 sudo dd if=/mnt/volume/tmpfile of=/dev/null bs=1M count=1024
 ```
+Volume modification - you can modify ebs volume (both type & size) on the fly (without volume detachment or ec2 stopping), but there are some limitations:
+* gp2 root can't be modified to st1/sc1. If detached & modified to st1/sc1 it can't be attached as root.
+* decreasing size is not supported 
+* gp2 non-root can be modified to st1/sc1, but size can't be less than minimum size of these types (for example min size for sc1-500GB, so you can't modify 10GB gp2 to 10GB sc1)
 Multi-volume snapshots - point-in-time snapshots for all ebs volumes attached to an ec2. After creation each snapshot treated as separate one.
 It's a best practice to tag multi-volume snapshots so you can manage them as single entity.
 DLM (Data Lifecycle Manager) - manage the lifecycle of ebs snapshot. If you combine it with CloudWatch and CloudTrail you get complete backup solution for ebs.
@@ -3915,3 +3920,12 @@ You use iam to control which users/roles have access to which stores. SM can sto
 Key rotation for RDS/DocumentDB/RedShift supported out-of-the-box. You can add key rotation to oracle on ec2 by modifying sample lambda.
 You can configure cw events to be nofified when SM rotate credentials. SM never store plaintext secrets to any persistant layer.
 This can be ideal for lambda evn vars, cause they are shown in lambda console. Moreover you can use lambda in private subnet without internet access and still be able to access SM with privatelink (create vpc endpoint for SM).
+
+###### Quantum Ledger Database
+QLDB - ledger database with cryptographically verifiable history of all changes made to your app data (quantum has nothing to do with quantum computing, here it means indivisible state change)
+Traditional db allow to overwrite/delete data, so devs use audit tables. While this may work it put stress on devs to guarantee that audit table works correctly.
+For QLDB data written to append-only journal, providing the developer with full data lineage. So it can work as secure/crypto-proof substitute for audit tables.
+Notice that QLDB is neither blockcahin nor distributed ledger. It's purpose-built database to store all changes to system.
+So it offers history/immutability/verifiability combined with scalability and ease of use of a fully managed AWS database.
+To connect and work with QLDB you have to use [AWS-provided QLDB driver](https://docs.aws.amazon.com/qldb/latest/developerguide/getting-started-driver.html).
+In the core of QLDB, replication, DynamoDB Streams, kafka, version control lay simple concept called log - append-only storage of all events happened.
