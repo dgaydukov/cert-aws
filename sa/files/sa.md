@@ -123,6 +123,7 @@
 * 3.77 [GuardDuty](#guardduty)
 * 3.78 [Secrets Manager](#systems-manager)
 * 3.79 [Quantum Ledger Database](#quantum-ledger-database)
+* 3.80 [AppStream 2.0](#appstream-20)
 
 
 
@@ -2220,6 +2221,9 @@ It will never limit permission to internal user of current account who has permi
 Feature sets (you select it when you create organization) - how your organization manage its accounts:
 * Consolidated billing - provides only shared billing functionality (you can't define SCP/TP with this type)
 * all - consolidating bulling + all available features 
+If you want to give access to billing info to specific iam, 2 steps required (notice just create iam user is not enough):
+* activate iam access (Access to the Billing and Cost Management console) (see `sa/files/images/activate-iam-access.png`)
+* create iam user with billing access policy (action `aws-portal:ViewBilling` for read-only access)
 You can switch from consolidated billing to all by just updating org (there is no need to delete & create org).
 Both types provide discounts:
 * s3 - more you use - less you pay, so in case of single bill aws treats all accounts as single, so all s3 usage is calculated and paid by single account
@@ -2405,6 +2409,14 @@ DHCP options sets - set of rules how to create private domain name. When you cre
 You can crete your custom set and link it to any vpc. You can also remove DHCP set form vpc, in this case no dns name would be created.
 If you want to change vpc DHCP set you can do it only after you've created vpc, go to `Actions=>Edit DHCP options set` and select another set or remove it from vpc. 
 Yet if you unlink DHCP from default vpc, and try to create ec2, it will still use default dhcp rules and add public/private dns names.
+You can't modify DHCP options set. If you want to change it you must create new one and associate it with VPC.
+You can have many DCHP, but only 1 can be associated with VPC. After you associate new DHCP after some time (depends on how often instances renew DHCP lease) ec2 will pick up new dns name (no need to restart instances).
+There are 2 options:
+* domain-name-servers=AmazonProvidedDNS - Route 53 Resolver server that resides in reserved instance +2 (for example 10.100.0.0/16 CIRD - dhcp server on 10.100.0.2)
+* domain-name=your_domain_name
+If you create ec2 2 dns host names would be assigned:
+* public -  ec2-{ec2_IP}.compute-1.amazonaws.com
+* private - ip-{ec2_IP}.{your_domain_name}
 
 ###### Elastic Beanstalk
 Imagine you have spring boot app that use mysql and you want to deploy it to aws, what you have to do:
@@ -3929,3 +3941,44 @@ Notice that QLDB is neither blockcahin nor distributed ledger. It's purpose-buil
 So it offers history/immutability/verifiability combined with scalability and ease of use of a fully managed AWS database.
 To connect and work with QLDB you have to use [AWS-provided QLDB driver](https://docs.aws.amazon.com/qldb/latest/developerguide/getting-started-driver.html).
 In the core of QLDB, replication, DynamoDB Streams, kafka, version control lay simple concept called log - append-only storage of all events happened.
+
+###### AppStream 2.0
+Fully managed non-persistent app & desktop streaming service that provides instant access to desktop applications from anywhere.
+Simplifies app management, improves security, reduces costs by moving a company’s app from their users physical devices to the AWS Cloud.
+aws streaming protocol (NICE DCV) provides responsive & fluid performance that is almost indistinguishable from a natively installed app
+NICE DCV is a proprietary protocol used to stream high-quality, application video over varying network conditions (video and audio encoded using standard H.264 over HTTPS)
+Original version (no longer available) was SDK-based service where customer should write their own implementation of streaming. 
+v2.0 provides out-of-the-box desktop app streaming into HTML5-compatible web browser with no plugins required. It also allows you to access services inside vpc.
+AppStream 2.0 Windows Client - native application that is designed for users who require additional functionality not available from web browsers (four monitors, 4K monitors and USB peripherals such as 3D mice)
+There are 2 modes:
+* application - user will see only application
+* desktop - user will see desktop of underlying OS on which app is run
+You can centrally manage versions, so users don't need to patch their apps. You can use tags to identify all resources used by a particular department, project, application, vendor, or use case
+To start streaming you need to create AppStream 2.0 stack (fleet of AppStream 2.0 instances that executes and streams applications to end users)
+If you want to stream your app you should create image using Image Builder. If you want appstream 2.0 communiate with on-premise create vpc and connect it to on-premise using VPN or Direct Connect.
+You app should be compatible with Windows Server 2012/2016/2019 (these OS currently supported by AppStream 2.0). If you need to support any dependency (like .NET framework) just add them to image.
+You can choose fleet instance type during creating, you can also change it after creation, just stop fleet, change type, start fleet. 
+You can also choose graphic GPU instance types if your app require GPU processing (like Adobe Premiere Pro, Autodesk Revit, and Siemens NX)
+You can customize your users' Amazon AppStream 2.0 experience with your logo, color, text, and help links in the application catalog page.
+You can enable persistent apps, so user can save all their settings, these info is stored in s3 bucket under your account (data in encrypted using s3 keys).
+You can copy AppStream 2.0 image to another region, or share it with other aws accounts.
+There are 2 types of fleet (you should specify it on creation and can't change type afterwards):
+* always-on - always running even if user disconnected, best if user need immediate access
+* on-demand - run only when user connect to app and use it, best if user can wait up to 2 min so app can start
+It uses Fleet Auto Scaling to adjust number of ec2 running based on number of user sessions. You can use fixed (number of ec2 not changing) and dynamic scaling.
+There are 3 metrics for auto scaling:
+* Capacity utilization - based on the percentage of instances in your fleet that are being used
+* Available capacity - based on the number of available instances in your fleet
+* Insufficient capacity error - provision new instances when users can’t start streaming sessions due to lack of capacity
+There are 3 persistent solutions (for saving & access files between sessions):
+* s3 - native solution (home folder). Create vpc endpoint for s3 and add endpoint policy so AppStream have access to it
+* Google Drive for G Suite - users can link their G Suite account to access files on Google Drive
+* Microsoft OneDrive for Business - users can link their OneDrive for Business account to access their files on OneDrive
+There are 2 ways to monitor:
+* AppStream lightweight real-time console of state of all sessions
+* all metrics sent to CloudWatch every minute
+There are 3 ways to authenticate users:
+* built-in user management - manage your users in the AppStream 2.0 management console from the User Pool tab
+* custom identity
+* federated access using SAML 2.0 (for this type you can enable MFA) - use your own AD
+SAP - one of best candidates to be deployed on this platform.
