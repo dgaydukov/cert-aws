@@ -1,0 +1,108 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+# create ec2 instance with 2 raid (type 0 & 1), then ssh to machine and run: lsblk and then sudo cat /proc/mdstat
+# !important => we use `yes | bash_command` to force creating raid device, cause without it, command would request user interaction by request him: `continue creating device`
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.100.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value:  !Sub ${AWS::StackName}-MyVpc
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    DependsOn: VPC
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-IGW
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.100.0.0/24
+      AvailabilityZone: us-east-1a
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-PublicSubnet
+  PublicRT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-PublicRT
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: !Ref PublicRT
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+  PublicSubnetRTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref PublicRT
+
+  BastionSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH access from anywhere
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-BastionSG
+  BastionInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-09d95fab7fff3776c
+      KeyName: mykey
+      UserData:
+        Fn::Base64:
+          !Sub |
+          #!/usr/bin/env bash
+          sudo mdadm --create --verbose /dev/md0 --level=0 --name=RAID_0 --raid-devices=2 /dev/xvdb /dev/xvdc
+          yes | sudo mdadm --create --verbose /dev/md1 --level=1 --name=RAID_1 --raid-devices=2 /dev/xvdd /dev/xvde
+          sudo mkfs.ext4 -L RAID_0 /dev/md0 && sudo mkdir -p /mnt/raid0 && sudo mount LABEL=RAID_0 /mnt/raid0
+          sudo mkfs.ext4 -L RAID_1 /dev/md1 && sudo mkdir -p /mnt/raid1 && sudo mount LABEL=RAID_1 /mnt/raid1
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: 0
+          SubnetId: !Ref PublicSubnet
+          GroupSet:
+            - !GetAtt BastionSG.GroupId
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 8
+        - DeviceName: /dev/xvdb
+          Ebs:
+            VolumeSize: 8
+        - DeviceName: /dev/xvdc
+          Ebs:
+            VolumeSize: 8
+        - DeviceName: /dev/xvdd
+          Ebs:
+            VolumeSize: 8
+        - DeviceName: /dev/xvde
+          Ebs:
+            VolumeSize: 8
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-BastionInstance

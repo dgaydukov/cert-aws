@@ -1270,10 +1270,13 @@ Storage Class Analysis - filters that helps analyse access pattern for whole buc
 * Glacier - 4h to read data
 * Glacier Deep Archive - 12h to read data
 TA (Transfer Acceleration) - fast (up to 5 times) file transfer over long distances between on-premise and s3, by using CloudFront edge locations, so when you upload file to s3, it first goes to nearest edge location, and from there transferred to s3 using aws internal network.
-To use TA your app should use `.s3-accelerate.amazonaws.com/.s3-accelerate.dualstack.amazonaws.com` endpoints. You can also use standard endpoints to access s3. So you can use different endpoints for standard and accelerated s3 access.
+To use TA your app should use (you can also use standard endpoints to access s3, so you can use different endpoints for standard and accelerated s3 access):
+* `.s3-accelerate.amazonaws.com` - standard endpoint
+* `.s3-accelerate.dualstack.amazonaws.com` - endpoint to user over IPv6. 
 So use TA if you have geographically distributed customers or you constantly moves GB/TB of data across continents. If you file less than 1GB you should use CloudFront’s PUT/POST, otherwise use TA.
 If you need to transfer large amount of data from single space, SnowBall can be a good option, cause TA is mostly for many users from different locations.
 TA doesn't cache data in edge location, so if you want low latency then it's better to use plain cf distribution, cause in this case all files would be cached in all edge locations.
+You can use [comparison tool](http://s3-accelerate-speedtest.s3-accelerate.amazonaws.com/en/accelerate-speed-comparsion.html) to compare general upload speed for TA across different regions (what speed increase you can get for each region if you use TA).
 Replication - automatic & asynchronous copy of data between 2 s3 buckets, can be within same account or between different aws accounts. There are 2 types:
 * SRR (Same-Region replication)
 * CRR (Cross-Region replication)
@@ -1488,6 +1491,17 @@ So if you run without tls you would get `mount.nfs4: Operation not permitted`
 ###### EBS
 EBS (Elastic Block Storage) - simple block storage for EC2. After EBS is attached to EC2 you can format it with desired file system.
 It automatically replicated within AZ to provide higher durability (yet if AZ failed it would be unaccessible).
+Yet this replication is to protect against aws component failure, if you want to protect against human failure you have to use RAID.
+RAID (Redundant Array of Inexpensive/Independent Disks) - data storage virtualization technology that combines multiple physical disks into one or more logical units for the purposes of data redundancy and performance improvement.
+RAID is accomplished at software level, so you can use any configuration as long as it supported by OS.
+There are 2 main types:
+* raid 0 (stripe multiple volumes together) - I/O performance is more important than fault-tolerance (can be good for database, cause fault tolerance is achieved by read-replicas)
+* raid 1 (mirror your data for extra redundancy) - fault tolerance is more important than I/O performance
+raid 5 & raid 6 - are not recommended to use with ebs, cause they would decrease performance by 20-30% compared to raid 0.
+If you have 2 io1 500GB with 4000 IOPS you can:
+* raid 0 - 1000GB with 8000 IOPS & 1000 MB/s
+* raid 1 - 500GB with 4000 IOPS & 500 MB/s
+RAID snapshot - use ebs multi-volume snapshot for it.
 Most AMI (Amazon Machine Images) are backed by Amazon EBS, and use an EBS volume to boot EC2 instances.
 You can attach multiple EBS to single EC2, but single EBS can only be attached to 1 EC2 at the same time.
 EBS allows to create point-in-time snapshots (backup) and store them in s3.
@@ -2228,6 +2242,7 @@ You can switch from consolidated billing to all by just updating org (there is n
 Both types provide discounts:
 * s3 - more you use - less you pay, so in case of single bill aws treats all accounts as single, so all s3 usage is calculated and paid by single account
 * ec2 - suppose accountA has 6 RI, accountB - 0. During some hour accountA - used 3 instances, B - also 3. B was using on-demand, but because of single bill and A has 3 not used RI, it would be calculated as 6 RI. So you won't pay anything for B on-demand instances.
+It doesn't matter what account (payer or linked) create RI or use it, as long as they share consolidated billing, discount would be applied.
 This would work if B launched same type of ec2 in the same AZ as RI from accountA.
 * rds - same as ec2, but only dbType(oracle/mysql)/instanceType/launchType(multi-AZ) should match.
 RI (Reserved instances) - 2 reports:
@@ -2417,6 +2432,14 @@ There are 2 options:
 If you create ec2 2 dns host names would be assigned:
 * public -  ec2-{ec2_IP}.compute-1.amazonaws.com
 * private - ip-{ec2_IP}.{your_domain_name}
+Overlay Multicast - method of building IP level multicast across a network fabric supporting unicast IP routing, such as VPC (kernel replicate packets to all subscribers, so if you stream 10 pps (packet-per-second) to 10 subscriber, totally 100 pps would be required).
+Multicast - network capability that allows one-to-many distribution of data, you transmit network packets to subscribers that typically reside within a MG (multicast group).
+MG can have zero or more subscribers, who can join or leave MG. Usually multicast implemented in physical networks using hardware replication along a distribution tree.
+So if you need multicast in aws you have to:
+* create eni
+* create overlay network multicast
+AWS provides multicast support for Transit Gateway since 2019.
+
 
 ###### Elastic Beanstalk
 Imagine you have spring boot app that use mysql and you want to deploy it to aws, what you have to do:
@@ -2664,7 +2687,13 @@ Read replica (replica db only for reading) for horizontal scaling:
 * can be cross-AZ and cross-region
 * implemented using db (mysql or other) native asynchronous replication, that's why lag can occur, comparing with multi-AZ replication (synchronous replication)
 * can be promoted to become master database.
-Although you can use read replica for HA, it's recommended to use multi-AZ, cause it's syncronous and would guarantee that in case of fail, db in another AZ is most up-to-date (with read replica you can get some lag, and ended up with stale data on promoting it to master).
+There are 3 ways to establish read-replica:
+* rds native read-replica
+* ec2 read replica - use `mysqldump` to make initial transfer
+* on-premise read replica - use `mysqldump` to make initial transfer and create VPN connection, so data transfer is secured
+Although [mysql supports replication over ssl](https://www.howtoforge.com/how-to-set-up-mysql-database-replication-with-ssl-encryption-on-centos-5.4), 
+[rds doesn't support this yet](https://serverfault.com/questions/816863/aws-rds-mysql-replication-with-user-with-require-ssl) so make sure if you replicate outside vpc to secure connection.
+Although you can use read replica for HA, it's recommended to use multi-AZ, cause it's synchronous and would guarantee that in case of fail, db in another AZ is most up-to-date (with read replica you can get some lag, and ended up with stale data on promoting it to master).
 Enhanced monitoring - allows you to view all metrics with 1 sec granularity. Get current database `SELECT DATABASE() FROM DUAL;`.
 RDS Proxy - database proxy that helps:
 * pooling & sharing db connections (useful for serverless, when you constantly open and close connections)
