@@ -908,6 +908,10 @@ Amazon DynamoDB Table   arn:aws:dynamodb:us-east-1:ACCOUNT_ID:table/myTable
 Don't confuse:
 * AssumeRole - ability of principal to assume other role for himself
 * PassRole - ability of principal create resource (lambda/ec2) and pass role to this resource
+There are 2 api to get access delegation (note that after you get session, permission evaluated on each request, so although you can't revoke session, you can modify permission after and by this revoke access):
+* sts:GetFederationToken (15 min – 36 hours, default - 12h, for root user - max 1h) - a mix of caller permission & passed permission (if you don't pass any permissions returned session will have no permissions)
+just call `aws sts get-federation-token --name=bob --policy='{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":"s3:*","Resource":["*"]}]}'`
+* sts:AssumeRole (15 min – 1 hour) - all permission of specified role (role should have trusted policy for this user/account)
 If principal doesn't have `PassRole` permission, and try to create ec2 with role, he will get `is not authorized to perform: iam:PassRole on resource`. 
 Below example of policy to allow principal to create only ec2 with only specific role
 ```
@@ -1133,6 +1137,7 @@ Resource: [arn:aws:ec2:us-east-1:{ACCOUNT_ID}:instance/*",
             "arn:aws:ec2:us-east-1:{ACCOUNT_ID}:volume/*",
             "arn:aws:ec2:us-east-1::image/ami-*"]
 ```
+You can use tags to segregate prod from dev env. In this case you would like to deny `ec2:CreateTag & ec2:DeleteTags` to all users except selected few to ensure tags lock down.
 This policy will allow launch new instances in us-east-1 region.
 So they don't actually give these permissions but merely state that this identity can potentially have up to these permission.
 So the actual permission are calculated as intersection of permission policy & permission boundary. Whenever you create new iam identity (user/group/role) you can add actual permissions and permission boundaries.
@@ -1142,13 +1147,29 @@ The idea behind is that you can delegate responsibility to others (you can creat
 * Session policies - limit the permissions that the role or user's identity-based policies grant to the session
 Condition operator - use it to set condition to policy:
 * `...IfExists` - add it to the end of any condition operator name except `Null`. If key is present - process request as specified, if not - return true
-* `Null` - if condition value is present. Only 2 values are possible: true - key doens't exists => policy evaluated to true, false - key exists => policy evaluated to false.
+* `Null` - if condition value is present. Only 2 values are possible: true - key doesn't exists => policy evaluated to true, false - key exists => policy evaluated to false.
 * `Bool` - if condition value is true or false. 
 Condition key - a key that can be used in condition block:
 * global keys - those started with `aws:` prefix. [List of global condition keys](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_condition-keys.html)
 * service-specific key - started with prefix based on service like `iam:` or `sts:`. [Full list of service-specific condition keys](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_actions-resources-contextkeys.html#context_keys_table)
 ABAC (attribute-based access control) - policy conditions basically allows you to create access control based on attributes.
 Policy version - required if you are using variables (like `${aws:username}`. If you leave version, variables are treated like literal values.
+Custom identity broker - you can generate URL that lets users who sign in to your organization, access the AWS Management Console.
+If your organization use IdP compatible with SAML (like AD) you don't need to write any code, just enable SAML access to management console.
+To get aws console url you should:
+* validate that user is authenticated within your system
+* call one of STS (Security Token Service) api to get temporary credentials (you can call either global or regional endpoint, in case of regional - you can reduce latency, if you use sdk endpoint is determined automatically):
+    * AssumeRole (recommended) - assume iam role. DurationSeconds - specify time from 15 min - max session duration setting for the role. There are 3 types:
+        * AssumeRole - get temporary credentials for existing IAM user
+        * AssumeRoleWithWebIdentity - get temporary credentials for user who authenticated through a public IdP (Amazon/Facebook/Google/Cognito), take a look at `sa/cloudformation/cognito-iam.yml`
+        * AssumeRoleWithSAML - get temporary credentials for user who authenticated with SAML. In the api call you have to provide SAML assertion, encoded in base64, returned by the SAML IdP
+    * GetFederationToken - returns intersection of user permission and passed policy. DurationSeconds - specify time from 15 min - 36 hours
+    * GetSessionToken - returns a set of temporary credentials to an existing IAM user (duration 15min - 36h, default - 12h). Basically same as `GetFederationToken`, but you don't supply policy and get all permission available for calling user.
+* call federation endpoint and supply the temporary credentials to request a sign-in token 
+You got json from previous step: `{"sessionId":"", "sessionKey":"", "sessionToken":""}`, so encode it to url to get URL_ENCODED_SESSION
+send request to: `https://signin.aws.amazon.com/federation?Action=getSigninToken&SessionDuration=1800&Session={URL_ENCODED_SESSION}`
+* construct console sign-in url and return it to user
+You can use [java example](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_enable-console-custom-url.html#STSConsoleLink_programJava) to get sing-in url
 
 ###### S3
 S3 (Simple Storage Service) used for:
@@ -1710,7 +1731,10 @@ To upload video to kinesis you should use PutMedia api and upload mkv files. MKV
 You can also play back video by typing the HLS streaming session URL in the Location bar of the Safari/Edge browsers.
 * MPEG-DASH (Dynamic Adaptive Streaming over HTTP) - same as HLS, just different format
 * GetClip API - use it to download clip (MP4) with archived/on-demand media from video stream over the time range
- 
+If you have need to store data durable with ordering and data should be read with 4 hours interval by 2 apps, you have 2 choices:
+* put data into first sqs, first app read from first sqs and copy data into second sqs for second app (sqs should be of fifo type)
+* use kinesis data stream - this is more approprite solution, cause first solution require app to make sure that messages would be put into second queue, here no extra coding required (ordering built-in)
+So if you have app that reads from same stream or consume from same stream several hours later you data streams (don't reinvent the wheel with sqs)
 
 ###### Lambda
 Lambda - piece of code that can be executed without any server env (just write code in python/javascript and it will run).
@@ -2204,6 +2228,15 @@ If you try to hibernate instance in ASG, it will mark it as unhealthy (cause fro
 There are 2 types of fleet:
 * spot - list of spot ec2 instances you can request
 * ec2 - list of spot/on-demand/reserved instances you can request
+Multi-region key pair:
+* key is region specific (if you create key from console, you would download private key), key name should be unique within region
+* you can import key (you importing public key only), but can't export
+* if you want to copy key from one region to another:
+    * convert your private key into public key with specific format `ssh-keygen -e -m RFC4716 -f mykey.pem`
+    * go to new region and `actions => import key pair` and import public key
+    * you can create simple bash script to copy your key into all available regions
+* you can remove key pair even if there are ec2 running with it (when you create ec2 key is copied into it, so you can remove key pair, but can still login to ec2)
+* key pair is not copied as part of AMI (when you copy ami to another region)
 
 ###### Athena
 Athena is an interactive query service that makes it easy to analyze data in Amazon S3 using standard SQL. It uses presto under the hood. Presto - good solution if you need to connect to multiple data sources.
@@ -2416,8 +2449,13 @@ EC2 Tenancy - you can set it for individual ec2:
 * ec2 layer - SG
 PG (Placement group) - create ec2 in underlying hardware in such a way as to avoid correlated failures:
 * cluster - packs instances close together inside AZ (good when you need high speed node-to-node communication, used in HPC apps). t2.micro can't be placed into cluster PG
+Capacity error - if you have instances in your PG and try to launch one more you may get this error. The problem is that underlying hardware has no capacity for one more instance.
+Solution - to stop & start all ec2 (in single launch request, cause if you launch 4 and then 1 you can again get same error), in this case, your PG can be moved to hardware with larger underlying capacity.
 * partition (up to 7 per AZ) - spread instances between different hardware partitions (so group in instances inside one partition don't share any hardware with group of instances from another partition)
+used to deploy large distributed and replicated workloads, such as HDFS, HBase, and Cassandra, across distinct racks
+If your request failed that means there is insufficient unique hardware to fulfill the request, you can try again later when aws makes more distinct hardware available over time
 * spread - strictly place instances into distinct hardware to reduce correlated failures
+PG can be only within same AZ, yet you can peered vpc and instances can be put into same PG (if both vpc have subnet in same AZ).
 Prefix list - set of one or more CIDR blocks (can be used in SG as `SourcePrefixListId` to define not single CIDR range but a set of them).
 If you want your ec2 to be accessed from elb you should put `SourceSecurityGroupId` id of SG for elb (in this way only elb or whoever has same SG can access ec2).
 DHCP options sets - set of rules how to create private domain name. When you create new vpc, default DHCP set would be linked to it. It also add dns server into your vpc to determine dns rules.
@@ -2943,6 +2981,10 @@ Batching - ability to send/receive batch of up to 10 messages:
 You can have multiple queues running at the same time. For example:
 * high priority queue with on-demand instances
 * low priority queue with spot instances
+There are 2 types of delay (when you send message to queue you can specify Delivery delay of message):
+* queue delay (up to 15 min) - time before all messages become visible
+* message delay (up to 15 min, not supported by FIFO queue) - using message timer (let you specify an initial invisibility period for a message added to a queue)
+So you can set message delay either for whole queue or for individual messages
 
 ###### API Gateway
 AGW - managed api service that makes it easy to publish/manage api at any scale. It can:

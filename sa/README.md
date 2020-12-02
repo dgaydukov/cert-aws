@@ -16,7 +16,7 @@ Here is my experience of taking 2 certifications, both associate & professional:
 
 ### TODO
 enable AspectJ proxy mode for the @EnableAsync and provide a weaver (so you can call `@Async` from same class)
-run .war project in intellij + run javax.websocket there
+run .war project in intellij + run `javax.websocket` there
 kafka poll wait for specified timeout (don't return even if there are already messages)
 kafka cluster docker example
 spring + hibernate sharding (https://docs.jboss.org/hibernate/shards/3.0/reference/en/html_single)
