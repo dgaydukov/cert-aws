@@ -250,6 +250,8 @@ ENI (elastic network interface) - logical networking component in a VPC that rep
 * public IPv4 (changes after stop/start)
 * elastic IPv4 (static public IP, won't be changed after stop/start)
 * IPv6, mac-address, security groups and so on...
+* it has static mac address. So if your ec2 need static mac address, create eni and assign it to ec2. This would guarantee that if you restart/recreate instance, max address would stay the same.
+Don't confuse it with elastic IP which provide static public IP address, where ENI provides static mac address.
 You can create ENI by going to `EC2 => Network & Security => Network interfaces` and create network interface and attach/detach it to ec2 instance.
 Every instance in VPC has a default ENI - primary network interface, you can't detach it. You can create new and attach. Number of ni that can be attached to ec2 depends on it's size (more computing power - more ni can be attached).
 Both ENA & EFA are ENI that provide some advanced networking
@@ -883,6 +885,15 @@ Example of event for lambda
 ```
 Make sure you have logic to update `ResponseURL`, otherwise stack that use your lambda would be stuck in `UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS` state. 
 Description - first level tag, where you can put template description, max size 1024 symbols (if you try to exceed limit you will got exception `An error occurred (ValidationError) when calling the UpdateStack operation: Template format error: 'Description' length is greater than 1024.`)
+All resources can have several generic attributes:
+* DeletionPolicy - what to do with resource after resource deletion (either stack deleted, or stack updated but resource was removed from stack):
+    * Delete - delete resource with all it's contents. This is default policy, but `AWS::RDS::DBCluster` & `AWS::RDS::DBInstance` (that don't specify the `DBClusterIdentifier` property) - default policy is Snapshot. For s3 you must ensure that bucket is empty before it can be deleted.
+    * Retain - retain resource with all it's contents. Yet if you update stack in such a way that new resource of this type is created, than old resource would be deleted & new would be created with same name.
+    * Snapshot - for resources that support snapshot, first create snapshot and then delete resource. It applicable for `AWS::EC2::Volume`, elasticache, rds, redshift
+    Although you can use retain for RDS, this would mean that RDS instance would continue to run, so for RDS it's better to always use snapshot deletion policy.
+* DependsOn - resource would be created after specified resources
+* Metadata - associate some metadata with resource
+* UpdatePolicy & UpdateReplacePolicy - what to do in case of stack update
 
 ###### IAM
 There are 3 types of permission:
@@ -1158,7 +1169,7 @@ Custom identity broker - you can generate URL that lets users who sign in to you
 If your organization use IdP compatible with SAML (like AD) you don't need to write any code, just enable SAML access to management console.
 To get aws console url you should:
 * validate that user is authenticated within your system
-* call one of STS (Security Token Service) api to get temporary credentials (you can call either global or regional endpoint, in case of regional - you can reduce latency, if you use sdk endpoint is determined automatically):
+* call one of sts api to get temporary credentials (you can call either global or regional endpoint, in case of regional - you can reduce latency, if you use sdk endpoint is determined automatically):
     * AssumeRole (recommended) - assume iam role. DurationSeconds - specify time from 15 min - max session duration setting for the role. There are 3 types:
         * AssumeRole - get temporary credentials for existing IAM user
         * AssumeRoleWithWebIdentity - get temporary credentials for user who authenticated through a public IdP (Amazon/Facebook/Google/Cognito), take a look at `sa/cloudformation/cognito-iam.yml`
@@ -1170,6 +1181,8 @@ You got json from previous step: `{"sessionId":"", "sessionKey":"", "sessionToke
 send request to: `https://signin.aws.amazon.com/federation?Action=getSigninToken&SessionDuration=1800&Session={URL_ENCODED_SESSION}`
 * construct console sign-in url and return it to user
 You can use [java example](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_enable-console-custom-url.html#STSConsoleLink_programJava) to get sing-in url
+STS (Security Token Service) api calls:
+* DecodeAuthorizationMessage - in case api call return 403, some api may returned encoded message (it's encoded cause it may have some private info). So to decode you have to use this api, and have permission to use this api.
 
 ###### S3
 S3 (Simple Storage Service) used for:
@@ -1692,6 +1705,12 @@ Origin Failover - ability to fail over to second origin in case first origin is 
 * create origin group for distribution and configure origin failover policy there
 * cf always route requests to primary, only if it get fail status it route it to second origin
 * you can configure cf request timeout (by default 3 times for 10 sec each)
+There are 2 types of ssl for cf:
+* Default CloudFront Certificate (*.cloudfront.net) - use it if you want to access your distribution using cf domain name (like `https://d111111abcdef8.cloudfront.net/logo.jpg`)
+* SNI Custom SSL Certificate (choose once from ACM) - use if if you want to access your distribution using custom domain name (like `https://www.example.com/logo.jpg`)
+If you want to use custom domain name + cf you should:
+* provision SNI custom ssl certificate 
+* configure route53 alias record to cf distribution
 
 ###### Kinesis
 It is a platform for streaming data on AWS, making it easy to load and analyze streaming data.
@@ -1797,6 +1816,7 @@ There are several engines you can run on top of emr:
 * Spark - general purpose execution framework that is able to run multiple different workloads such as ETL/ML
 Presto faster than spark cause it doesn't care about fault-tolerance. If one of the Presto worker nodes experiences a failure (say, shuts down) in most cases queries that are in progress will abort and need to be restarted.
 Spark supports mid-query fault-tolerance and can recover from such a situation but in order to do that, it needs to do some extra bookkeeping and essentially "plan for failure". That overhead results in slower performance when your cluster does not experience any faults.
+Spark Streaming - solution to process/analyze data in real-time. On aws if you want to use it you have to provision: kinesis data streams + emr with spark streaming and apache zeppelin
 
 ###### Glue
 Glue - fully managed ETL (extract, transform, load) to catalog/clean/enrich/move your data. Consist of:
@@ -1997,6 +2017,7 @@ Enhanced VPC routing - forces `COPY/UNLOAD` traffic between your cluster and you
 * all features of vpc
 * vpc flow logs for `COPY/UNLOAD` commands
 * vpc endpoint (route traffic between s3 & redshift)
+Plz note there is no such command as `load` only `COPY` to load data into redshift and `UNLOAD` to read data from redshift.
 Migration:
 * lift-and-shift - is a bad practice cause performance depends on distkey/sortkey/dataCompression and when you just move you current warehouse without redesigning tables you won't get query performance.
 * best practice - to denormalize data if you migrate from heavily normalized database.
@@ -2313,7 +2334,8 @@ Every RT has routes with 2 fields (if you want to get to such destination go to 
 * NAT Gateway - Network address resolution service in private subnet to access the Internet. Instances from private subnets use NAT gateway to access Internet. Nat allows outbound communication, but doesn't allows machines on the Internet to access instances inside VPC.
 Since Nat GateWay created per AZ for HA it's suggested to create it in every AZ where you have instances. In this case single AZ failure will not block internet access from other private networks. With IGW you have both outbound and inbound access, 
 but with Nat - only outbound (your instance can access Internet, but is unaccessable from Internet).
-Nat gateway/instance can't route traffic through: vpc peering, site-to-site vpn, direct connect, so it can't be used by resources on the other side of these connections.
+You can also use [rollback solution](https://aws.amazon.com/articles/high-availability-for-amazon-vpc-nat-instances-an-example), so in case not whole AZ, but only nat instance failed, script would switch traffic from this AZ to second AZ Nat instance
+Nat gateway/instance can't route traffic through: vpc peering, site-to-site vpn, DX, so it can't be used by resources on the other side of these connections.
 Moreover vpc peering can't use NAT instance/gateway, IGW or VPG.
 * Virtual private gateway - VPC+VPN
 * Peering Connection - create private secure connection between 2 VPC
@@ -2415,9 +2437,10 @@ You can use vpn above dx, but it's redundant, cause dx is already secured. Best 
 LAG (Link Aggregation Groups) - ability to order multiple direct connect ports and manage them as single larger connection (max number is 4 ports, port types should be the same, all 1GB, or all 10GB). LAG connections operate in Active/Active mode.
 DXG (Direct Connect Gateway) - grouping of VGW (virtual private gateways) and VIF (private virtual interfaces). Multi-account DXG allows to associate up to 10 VPC (from different accounts) or up to 3 Transit Gateway.
 Direct Connect and DCG support both 1500 and 9001 MTU (you can also modify it if you need). DX VIF - you have to create one of the following VIF to start using dx:
-* private - access vpc using private IP
-* public - access all aws public services using public IP. If you want to use vpn over dx you have to create this VIF.
+* private - access private instances inside vpc using their private IP
+* public - access public aws services (like s3) using their public IP
 * transit - access vpc Transit Gateway associated with dx
+Each DX by default create 2 virtual interfaces public & private.
 Don't confuse 3 links:
 * VPC PrivateLink - expose aws services (except s3/dynamoDb who are using gateway endpoint) or private ec2 to vpc in the same or other aws account, by adding eni inside vpc for exposed service.
 If you have 3 vpc and ec2 in each of them, and you want to connect these 3 ec2 you can use either PrivateLink or vpc peering. PrivateLink is better solution, cause it allows you to connect only these 3 ec2, without exposing all other services from these vpc to each other.
@@ -2426,7 +2449,7 @@ Yet keep in mind that vpc endpoint can't be cross-region. So your 3 vpc from abo
 * VPC Link - connect API GateWay to private ec2.
 VPC Endpoint - private connection to AWS services without IGW/NAT/VPN. It make sure all traffic goes inside aws network. There are 2 types:
 * Gateway endpoint — target for a route in your route table for traffic destined to a supported AWS service (s3/dynamoDB)
-* Interface endpoint — ENI with a private IP address from the IP range of your subnet that serves as an entry point for traffic destined to a supported service.
+* Interface endpoint — ENI with a private IP address from the IP range of your subnet that serves as an entry point for traffic destined to a supported service (supported only within single region)
 So instead of calling public dns name of some service, aws creates ENI inside your subnet, and so you don't need internet access anymore. You can directly call this private IP since it's inside your vpc.
 Using this enables you to connect to services powered by AWS PrivateLink (so basically all aws services + your custom created via endpoint services, except those in gateway endpoint).
 Endpoint services - you create some service (ec2) and add NLB(not application/classic lb), and other aws accounts can connect to your service via interface endpoint.
@@ -2623,8 +2646,8 @@ As other resource policy, key policy include `Principal` - who is using policy s
 It's best practice to give root user full access. Cause if you give some user full access, then delete this user, you can't use cmk. You must contact aws support.
 So compare to other services cmk doesn't implicitly allow access to root user, you have to add it explicitly.
 KMS vs CloudHSM:
-* cloudHSM - your personal key encryption hardware in aws cloud
-* kmd - shared hardware tenancy, you have your own partition inside shared with other aws customers
+* cloudHSM - your personal key encryption hardware in aws cloud. Note that it doesn't provide encryption/decryption services like kms, it only stores keys (so you can't encrypt s3 bucket with it, but you can encrypt it with kms).
+* kms - shared hardware tenancy, you have your own partition inside shared with other aws customers
 When you use kms for every policy (for example read policy for s3) you have to add `kms:Decrypt`, so s3 would have access to kms in order to decrypt data. So if you provide only s3 read without kms, s3 won't decrypt your data and you can't read it.
 
 ###### Route53
@@ -2704,7 +2727,7 @@ TLD Server will find IP address of second level domain, but if you are using thi
 Route53 Resolver - helps to query on-premise dns from vpc and vice versa (used mostly for hybrid apps). There are 2 endpoints:
 * inbound - forward dns query from on-premise to vpc
 * outbound - forward dns query from vpc to on-premise dns resolver
-For both types, IP are private, so in order to work you have to connect your network to vpc through direct connect or VPN.
+For both types, IP are private, so in order to work you have to connect your network to vpc through DX/VPN.
 
 ###### RDS
 RDS (Relational Database Service) - aws managed service, that make it easy install/operate relational database in the cloud. It helps easily scale compute resources or storage associated with your db, simplifies replication.
@@ -2898,6 +2921,9 @@ aws rds describe-db-instances --query "DBInstances[*].[DBInstanceIdentifier,DbiR
 Materialized view:
 * simple - just a wrapper on top of query
 * materiazlied - temporary table
+Oracle RAC (Real Application Cluster) - shared-everything db cluster technology from Oracle, allows single db (a set of data files) to be concurrently accessed many db server instances.
+Currently RAC is not supported by RDS, but you can deploy it in ec2. In this case for backup you have to create a script to create/store ebs snapshots.
+[Aurora can be used as managed service instead of Oracle RAC](https://aws.amazon.com/blogs/database/amazon-aurora-as-an-alternative-to-oracle-rac)
 
 ###### SQS
 Payload vs attributes:
@@ -3081,6 +3107,9 @@ Http vs Rest api:
 * http api (AWS::ApiGatewayV2) - new version, cheaper. There is no mock integration, only lambda
 [AWS::ApiGateway::GatewayResponse](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-apigateway-gatewayresponse.html) - useful if you need to return cors (or other) headers when http error happened.
 For example you can return cors headers, in case of some error, so browser won't be confused, [list of errors](https://docs.aws.amazon.com/apigateway/latest/developerguide/supported-gateway-response-types.html)
+Logging:
+* rest api - you can log into CloudWatch & Kinesis Data Firehose, [AWS::ApiGateway::Stage AccessLogSetting](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-apigateway-stage-accesslogsetting.html)
+* http api - you can log into CloudWatch only [AWS::ApiGatewayV2::Stage AccessLogSettings](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-apigatewayv2-stage-accesslogsettings.html)
 
 ###### Cognito
 Cognito - managed user service that add user sing-in/sign-up/management email/phone verification/2FA logic. There are 2 pools:
@@ -3306,8 +3335,8 @@ CloudTrail - list of all api calls (cli & CF templates in the end are transforme
 Aurora - mysql/postgres compatible (most app that works with mysql/postgres would switch with no problem to aurora) aws database solution. 
 It's serverless - cause you can set-up min & max capacity and aurora would scale up/down based on load. You can also set up pause if aurora idle for specified time (like turn off if it's idle for more than 5 min). It's ideal for saving money in dev env, but don't use it in prod, cause wake up can be up to 30 sec.
 Yet some features of mysql/postgres are not supported in aurora (like MyISAM storage engine). It runs 5x faster than mysql and 3x faster than postgres. And cost 1/10 of similar solution.
-It replicates 6  copy of itself in at least 3 AZ (2 copies in each az) - so it's highly available. Backups and failover are done automatically. Self-healing storage - blocks are constantly checked and restored.
-Aurora serverlsess - cheap version of aurora, pay only for what you use (aurora start up/down, scale up/down automatically base on your load).
+It replicates 6 copies of itself in at least 3 AZ (2 copies in each az) - so it's highly available. Backups and failover are done automatically. Self-healing storage - blocks are constantly checked and restored.
+So although MariaDB was designed to be compatible with MySql, you can't migrate it to Aurora.
 You have 2 options to migrate to aurora
 * use `mysqldump/pg_dump`, export data from mysql/postgres, and import it into aurora
 * use RDS DB Snapshot migration
@@ -3322,6 +3351,25 @@ You can call lambda from function & stored procedures for MySql Aurora:
     * public cluster - it can access lambda through the internet - so no additional config required
     * private cluster - you have to add NAT gateway or lambda vpc endpoint so your cluster in private subnet can access lambda
 You can also use s3 form MySql Aurora and you have to configure access to s3 same way as for lambda.
+Backtracking - rewind db to specified time (acts like a backup, if you do some destructive operation you can rewind db to previous state):
+* target backtrack window - amount of time you want to be able to backtrack your DB cluster (you can set 24 hours - you can rewind db during whole day)
+* actual backtrack window - actual amount of time you can backtrack your DB cluster (if you set target to 24, but you have heavy load and there is no enough space to store all records, your actual backtrack time can be like 12h)
+Backtracking works by generating change log (called change records), and you pay hourly to store them.
+Aurora serverlsess:
+* internally it uses router fleet that supports continuous connections and distributes the workload among resources + warm resource pool that ready to be used
+* cheap version of aurora, pay only for what you use (aurora start up/down, scale up/down automatically base on your load).
+* for standard aurora you select instance type, with serverless you just select min & max ACU (aurora capacity unit) (2 - 64GB RAM), compute is scaling accordingly.
+* please note that both standard & serverless aurora support only MySql/Postgres. MariaDB (fork of MySql) is unsupported, there is separate RDS type for this.
+* cluster volume always encrypted (you can choose encryption key, but you can't disable encryption)
+* use cases: new apps, infrequently used apps, variable/unpredictable workloads, multi-tenant apps
+* it doesn't support: cloning, global database, multi-master cluster, replicas, iam db access, backtracking
+* accessible only from VPC (have no public IP). If you create lambda in same subnet as db you can access db from lambda
+* scaling point - time when aurora can start scaling, if not found within 5 min, value of `ForceApplyCapacityChange` timeout used. In this case if you have running transaction you can get error: `ERROR 1105 (HY000): The last transaction was aborted due to Seamless Scaling. Please retry.`
+* data api - special api to run query, use it outside vpc to access db
+Aurora global:
+* spans multiple regions (one master region with both read/write and up to 5 replica regions with only read), enable low-latency global reads and disaster recovery
+* cross-region replication is fast, usually less than 1 sec
+* it doesn't support: serverless, backtracking
 
 ###### CloudTrail
 CT - service that logs activity of your aws account (who made request, what params were passed, when and so on..). It's useful for compliance, when you need to ensure that only certain rules has ever been applied.
@@ -3427,7 +3475,10 @@ Face recognition from video:
 Once created it will start automatically monitor kinesis video stream and consume videos for face recognition.
 If you want to process images for face recognition:
 * use s3 as source
-* use ec2 to call `DetectFaces` api to process single image and store results in s3/redshift
+* use ec2 to call `DetectFaces` api (`aws rekognition detect-faces`) to process single image and store results in s3/redshift
+Note that for both `DetectFaces/CompareFaces` you must pass:
+* base64-encoded image bytes or reference to s3
+* if you call from cli, image bytes is not supported, image must be png/jpeg file
 
 ###### Global Accelerator
 GA allows you to create 2 static anycast IP addresses and routing users to nearest server to them.
@@ -3453,7 +3504,7 @@ Now you can access them using GA IP address, by using it you would be routed to 
 Healthchecks are already built into endpoints, so you don't need to explicitly define them.
 
 ###### FSx
-FSx - file system for windows and lustre. File system is accessible from inside aws. If you want to access it from on-premises you have to use direct connect or VPN.
+FSx - file system for windows and lustre. File system is accessible from inside aws. If you want to access it from on-premises you have to use DX/VPN.
 Lustre - distributed file system for cluster computing (portmanteau word derived from Linux and cluster).
 Generally FSx is cheaper than EFS (cause EFS provides 100% durability with multi-AZ deployment). FSx Lustre on average more faster then EFS
 FSx for Windows - fully managed, highly reliable, and scalable file storage using SMB protocol. File Share - specific folder inside file system.
@@ -3587,6 +3638,10 @@ Difference with other platform:
 OpsWorks Stacks create lifecycle events and on each of them some recipes could be executed (default events - setup/configure/deploy/undeploy/shutdown).
 OpsWorks for Chef Automate - fully managed Chef server and automation tools for ci/cd. You can migrate to it from Stacks, but you would need to rewrite some recipes, but most recipes would work without any change.
 OpsWorks for Puppet Enterprise - managed Puppet Enterprise server and automation tools for ci/cd (including orchestration/provisioning/deploying services in ec2)
+You can use cf template to create stack:
+* use cf template to create VPC/Route53/Nat/Bastion and so on (but not ec2, they are created inside opsWorks)
+* using `AWS::OpsWorks::Stack` create stack and `AWS::OpsWorks::App` to create java app (or any other programming language)
+* use `AWS::OpsWorks::Instance` to create instances (don't use `AWS::EC2::Instance`)
 
 ###### SWF
 Simple Workflow Service - coordinate work (tasks) across distributed apps. With SWF you don't need to use messaging system, cause tasks works as messages.
@@ -3677,7 +3732,7 @@ There are 2 types of sharing:
 * individual sharing - share resource with individual account
 
 ###### DataSync
-DataSync - online data transfer service that simplifies/automates/accelerates copying large amounts of data to and from s3/efs/FSx over the internet/Direct Connect.
+DataSync - online data transfer service that simplifies/automates/accelerates copying large amounts of data to and from s3/efs/FSx over the internet/DX.
 How it works:
 * uses a purpose-built network protocol and scale-out architecture to accelerate transfer to and from AWS.
 * automatically scales and handles moving files and objects, scheduling data transfers, monitoring the progress of transfers, encryption, verification of data transfers, and notifying customers of any issues
@@ -3694,7 +3749,7 @@ During migration DataSync:
 * performs integrity checks to ensure transferred data is correspond to source data, by calculating file checksum and compare it with on-premise file checksum
 * you can monitor transfer progress in CloudWatch (how many files and total volume)
 * ensure file transfer even if some interruption (like network problem). In this case DataSync will resume file transfer and complete it after failed attempt
-* use direct connect + vpc endpoint so data transfer happens inside vpc and doesn't go outside aws network
+* use DX + vpc endpoint so data transfer happens inside vpc and doesn't go outside aws network
 To transfer data you should do 3 things
 * Deploy a DataSync agent in on-premise VM. Agent can be installed on ec2 by using AMI.
 * Create a data transfer task
@@ -3770,6 +3825,7 @@ Product has versioning, so end users can choose new version or update their stac
 
 ###### Inspector 
 It's automated security assessment service that test the network accessibility of your ec2 and apps running on them.
+Plz note that it designed to ec2 only, so you can't use it to perform security assessment of API gateway, lambda and so on.
 You install agent on your OS, and it collects data and send it to inspector for analyzing. Assessment template - configuration based on which inspector validates your system.
 
 ###### Neptune
@@ -4026,7 +4082,7 @@ There are 2 modes:
 * desktop - user will see desktop of underlying OS on which app is run
 You can centrally manage versions, so users don't need to patch their apps. You can use tags to identify all resources used by a particular department, project, application, vendor, or use case
 To start streaming you need to create AppStream 2.0 stack (fleet of AppStream 2.0 instances that executes and streams applications to end users)
-If you want to stream your app you should create image using Image Builder. If you want appstream 2.0 communiate with on-premise create vpc and connect it to on-premise using VPN or Direct Connect.
+If you want to stream your app you should create image using Image Builder. If you want appstream 2.0 communiate with on-premise create vpc and connect it to on-premise using DX/VPN.
 You app should be compatible with Windows Server 2012/2016/2019 (these OS currently supported by AppStream 2.0). If you need to support any dependency (like .NET framework) just add them to image.
 You can choose fleet instance type during creating, you can also change it after creation, just stop fleet, change type, start fleet. 
 You can also choose graphic GPU instance types if your app require GPU processing (like Adobe Premiere Pro, Autodesk Revit, and Siemens NX)
