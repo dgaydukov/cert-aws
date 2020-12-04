@@ -1131,22 +1131,22 @@ Effect: Allow
 Action: [ec2:*]
 Resource: arn:aws:ec2:us-east-1:{ACCOUNT_ID}:instance/*
 ```
-This won't work, cause `ec2:*` specified all actions, but not all ec2 actions support resource. So that's why this policy doesn't achive desired result.
+This won't work, cause `ec2:*` specified all actions, but not all ec2 actions support resource. So that's why this policy doesn't achieve desired result.
 Instead you should specify actions:
 ```
 Effect: Allow
 Action: [ec2:RunInstances, ec2:TerminateInstances, ec2:StopInstances, ec2:StartInstances]
 Resource: arn:aws:ec2:us-east-1:{ACCOUNT_ID}:instance/*
 ```
-But user still can't launch new instance in us-east-1 (although he can stop/start/terminate).
+But user still can't launch new instance in us-east-1 (although he can stop/start/terminate) cause he needs permissions to key-pairs, security groups, EBS volumes, ami.
 ```
 Effect: Allow
 Action: [ec2:RunInstances]
-Resource: [arn:aws:ec2:us-east-1:{ACCOUNT_ID}:instance/*",
-            "arn:aws:ec2:us-east-1:{ACCOUNT_ID}:key-pair/*",
-            "arn:aws:ec2:us-east-1:{ACCOUNT_ID}:security-group/*",
-            "arn:aws:ec2:us-east-1:{ACCOUNT_ID}:volume/*",
-            "arn:aws:ec2:us-east-1::image/ami-*"]
+Resource: ["arn:aws:ec2:us-east-1:{ACCOUNT_ID}:instance/*",
+           "arn:aws:ec2:us-east-1:{ACCOUNT_ID}:key-pair/*",
+           "arn:aws:ec2:us-east-1:{ACCOUNT_ID}:security-group/*",
+           "arn:aws:ec2:us-east-1:{ACCOUNT_ID}:volume/*",
+           "arn:aws:ec2:us-east-1::image/ami-*"]
 ```
 You can use tags to segregate prod from dev env. In this case you would like to deny `ec2:CreateTag & ec2:DeleteTags` to all users except selected few to ensure tags lock down.
 This policy will allow launch new instances in us-east-1 region.
@@ -2258,6 +2258,21 @@ Multi-region key pair:
     * you can create simple bash script to copy your key into all available regions
 * you can remove key pair even if there are ec2 running with it (when you create ec2 key is copied into it, so you can remove key pair, but can still login to ec2)
 * key pair is not copied as part of AMI (when you copy ami to another region)
+When you copy ami:
+* create ec2 in region A => take volume snapshot => create ami from snapshot => copy ami to region B
+* in region A you have key pair named `mykey`
+* key pair not be copied to region B, you have to manually import it into region B
+* authorized key with public key from key pair would be stored inside ami in `~/.ssh/authorized_keys` file, under `mykey` name
+* when you launch copied ami in region B you would have to provide key pair from region B
+* let's suppose you create new keypair in region B `region_b_mykey`. Now your ami would have 2 keys in  `~/.ssh/authorized_keys`
+* if you create key pair in region B with same name `mykey` it would overwrite original public key
+* conclusion: public key is copied with ami to new region and stay under `~/.ssh/authorized_keys`. But to launch ami in new region you have to provide some key pair. 
+If you create new key pair with new name you will be able ssh into ec2 with 2 keys (one from first region and another from second region)
+If you create new key pair with same name, it would overwrite original public key in ami.
+Ami is nothing but representation of snapshot, so you can't delete snapshot if there is ami for it. First de-register ami, then delete snapshot.
+Multiple IP - you can assign multiple private IP addresses to ec2, with this you can:
+* host multiple websites on a single server, using multiple SSL certs each associating with a specific IP address
+* in case if failure, reassign secondary IP to another ec2
 
 ###### Athena
 Athena is an interactive query service that makes it easy to analyze data in Amazon S3 using standard SQL. It uses presto under the hood. Presto - good solution if you need to connect to multiple data sources.
@@ -2629,6 +2644,11 @@ By default alarm call only ec2 actions (stop/start/terminate/recover). There are
 * create alarm and call lambda through sns (cause you can't call lambda directly from alarm) - execute logic in lambda
 In this case in your lambda you should have only business logic (like add new ec2). Validation logic would be inside alarm (for example when cpu more than 80%), but you are limited for alarms (there is no alarm to validate that port return 200)
 * create scheduled rule and call lambda every minute - in this case you should have business & validation logic inside lambda. Yet you are not limited and can create any type of validation (for example check that port returns 200)
+You can create cross-account & cross-region cw dashboard and view your resources (like ec2 metrics) across several regions or accounts:
+* go to `cloudwatch => settings => configure`. From here you can:
+    * share data - create role `CloudWatch-CrossAccountSharingRole` with access to this account cw panel (if you use console it would create cf template which you must run)
+    * share organization list - create a role to allow other accounts list accounts inside your org (`organizations:ListAccounts` and `organizations:ListAccountsForParent`)
+    * view cross-account data - just enable to view other accounts dashboard
 
 ###### KMS
 Key Management Service - a service for generating/storing/auditing keys. If you have a lot of encryption it's better to use central key management service.
@@ -2772,6 +2792,8 @@ There are 3 types of groups:
     * MariaDB Audit Plugin - records db activity like users logging or queries
     * MySQL memcached - enables apps to use InnoDB tables in a manner similar to NoSQL key-value data stores
 You can enable encryption when you create db, but once created you can't enable it. So if you create unencrypted db and want to turn on encryption you have to take snapshot encrypt it and create new encrypted db from it, then remove old db.
+If encryption is enabled you can't disable it after db creation, yet you can create unencrypted db. Same holds true for read replica. For encrypted db only encrypted read replica is possible (there is no way to have encrypted read-replica for unencrypted db or vice versa).
+Not all ec2 types [support encryption](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Overview.Encryption.html#Overview.Encryption.Availability)
 IAM db auth - you can add db user and use iam user to authenticate to your db. You still have your initial username/password and can you them to access db, but you can also use temporary tokens generated by `aws rds generate-db-auth-token` command to get token and to access your db using this token (token would be valid for 15 min).
 On-premise to rds data migration:
 * copy dump to s3 and from s3 import into rds (you can also use ec2, but create new ec2 for this purpose in to wise, yet this would work: copy dump to ec2 within same vpc as rds, go to ec2, connect from there to rds, and pump data into rds)
@@ -2924,6 +2946,20 @@ Materialized view:
 Oracle RAC (Real Application Cluster) - shared-everything db cluster technology from Oracle, allows single db (a set of data files) to be concurrently accessed many db server instances.
 Currently RAC is not supported by RDS, but you can deploy it in ec2. In this case for backup you have to create a script to create/store ebs snapshots.
 [Aurora can be used as managed service instead of Oracle RAC](https://aws.amazon.com/blogs/database/amazon-aurora-as-an-alternative-to-oracle-rac)
+External replication (you can make both RDS & Aurora to replicate to external):
+* Aurora
+    * you can replicate aurora as source/target to external mysql db
+    * [aurora external replication](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/AuroraMySQL.Replication.MySQL.html)
+* rds (for MySql/MariaDB you can configure replication using binlog or GTID)
+    * rds mysql can have up to 5 read replicas (each read replica can also be a source for there read replica)
+    * read replica can't have engine version less than source db
+    * if you create read replica for MyISAM (no tx support) you should lock db (don't do any create/update/delete), run replication, wait until it's done and then work normally
+    * you can set up replication delay (for example to replicate all changes after 1 hour)
+    * [rds external replication](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/MySQL.Procedural.Importing.External.Repl.html)
+GTID (global transaction identifiers) - unique identifiers generated for committed MySQL transactions, mostly used to make binlog replication simpler and easier to troubleshoot.
+MyISAM vs InnoDB:
+* myisam: only full table-level locking, doesn't support tx
+* inndodb: both row-level & table-level locking, support transactions, foreign keys, relationship constraints
 
 ###### SQS
 Payload vs attributes:
@@ -3383,9 +3419,12 @@ By default:
 * logs stored for 90 days and only management events stored. If you need longer you should create trail. Trail stores data in s3, you have to analyze it yourself (usually using Athena)
 * trail viewable in region where it's created. for all-region trail - it's viewable in all regions.
 * trail collects data from all regions. You can create single region trail [only from cli](https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-create-and-update-a-trail-by-using-the-aws-cli-create-trail.html#cloudtrail-create-and-update-a-trail-by-using-the-aws-cli-examples-single), no way to create single-region trail from console. 
-* trail created with GSE enabled (it's true for both when you create from console and from cli. Although when you create trail from cli you can specify `--no-include-global-service-events` not to include GSE into this trail)
+* trail created with GSE enabled (it's true for both when you create from console and from cli. Although when you create trail from cli you can specify `--no-include-global-service-events` not to include GSE into this trail). 
 When aws launch new region, in case of all region trail - new trail would be created in newly launched region.
 * trail in s3  encrypted using SSE. You can set custom encryption with KMS.
+Cross-account trails (you can configure to deliver CT events from multiple accounts to single s3 bucket):
+* create s3 bucket in account A, accountAMyS3Bucket and add bucket policy to allow cross account access
+* in account B (or any other) create CT and set bucket name as accountAMyS3Bucket. From now all logs would be delivered to bucket in another account
 Log file validation - guaranty that logs were not tampered with. When turn in, ct create a hash for each log file, and every hour store all these hashes in digest file in the same s3 bucket. 
 Each digest file is signed with private key that generated by ct. You can download public keys with `list-public-keys` command, and validate signed files. But you have no access to private keys - they are managed by ct.
 Private key is unique for each region within aws account. When you retrieve public keys you specify time range - 1 or more public keys may be returned. Mare sure your s3 bucket has correct write policy, otherwise CT won't be able to store logs there.
