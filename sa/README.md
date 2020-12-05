@@ -15,6 +15,7 @@ Here is my experience of taking 2 certifications, both associate & professional:
 * [Free SAP questions](https://www.examtopics.com/exams/amazon/aws-certified-solutions-architect-professional)
 
 ### TODO
+fix gradle project in intellij
 enable AspectJ proxy mode for the @EnableAsync and provide a weaver (so you can call `@Async` from same class)
 run .war project in intellij + run `javax.websocket` there
 kafka poll wait for specified timeout (don't return even if there are already messages)

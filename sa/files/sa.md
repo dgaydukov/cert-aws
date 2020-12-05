@@ -2305,7 +2305,7 @@ Feature sets (you select it when you create organization) - how your organizatio
 * Consolidated billing - provides only shared billing functionality (you can't define SCP/TP with this type)
 * all - consolidating bulling + all available features 
 If you want to give access to billing info to specific iam, 2 steps required (notice just create iam user is not enough):
-* activate iam access (Access to the Billing and Cost Management console) (see `sa/files/images/activate-iam-access.png`)
+* activate iam access - Access to the Billing and Cost Management console, see `sa/files/images/activate-iam-access.png` (only root user can do this)
 * create iam user with billing access policy (action `aws-portal:ViewBilling` for read-only access)
 You can switch from consolidated billing to all by just updating org (there is no need to delete & create org).
 Both types provide discounts:
@@ -2515,7 +2515,6 @@ So if you need multicast in aws you have to:
 * create eni
 * create overlay network multicast
 AWS provides multicast support for Transit Gateway since 2019.
-
 
 ###### Elastic Beanstalk
 Imagine you have spring boot app that use mysql and you want to deploy it to aws, what you have to do:
