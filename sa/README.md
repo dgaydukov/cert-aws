@@ -33,6 +33,7 @@ https://github.com/LMAX-Exchange/disruptor
 https://martinfowler.com/articles/lmax.html
 https://www.infoq.com/presentations/mechanical-sympathy
 The Art of Multiprocessor Programming
+Play Framework vs google guice vs spring
 -----------------------------------------------------------------------------------------------------------------------
 * try glacier select to csv archive
 * connect 2 vpc with privatelink (access ec2 from one vpc from another)

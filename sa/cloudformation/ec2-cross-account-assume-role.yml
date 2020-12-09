@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: 2010-09-09
 
 # EC2 cross-account role - you can't assign role from another account, yet you can assign role from same account, but then assume role from another. So your role is assuming role from another account
-# Here we don't have real cross-account, 2 roles in same account, but we emulate it. Ec2Role & PublicInstance in one account, and ec2 assume S3Role through the role Ec2Role
+# Here we don't have real cross-account, 2 roles in same account, but we emulate it. Ec2Role (with policy to assume roles) & PublicInstance in one account, and ec2 assume CrossAccountS3Role from another account
 # You can manually assume role `aws sts assume-role --role-arn={ROLE_ARN} --role-session-name=mysession`, but it's better to add role into credentials and then just call `aws s3 ls --profile=s3`.
 # You can also name profile default, in this case you won't have to pass `--profile` into each request. But caution - default access would be overwritten
 
@@ -81,23 +81,19 @@ Resources:
               Service: ec2.amazonaws.com
             Action:
               - sts:AssumeRole
-  AssumeS3RolePolicy:
-    Type: AWS::IAM::Policy
-    Properties:
-      PolicyName: !Sub ${AWS::StackName}-S3ReadPolicy
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Action: "sts:AssumeRole"
-            Resource: !GetAtt S3Role.Arn
-      Roles:
-        - !Ref Ec2Role
+      Policies:
+        - PolicyName: !Sub ${AWS::StackName}-S3ReadPolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action: sts:AssumeRole
+                Resource: !GetAtt CrossAccountS3Role.Arn
 
-  S3Role:
+  CrossAccountS3Role:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Sub ${AWS::StackName}-S3Role
+      RoleName: !Sub ${AWS::StackName}-CrossAccountS3Role
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -106,20 +102,16 @@ Resources:
               AWS: !Sub ${AWS::AccountId}
             Action:
               - sts:AssumeRole
-  S3ReadPolicy:
-    Type: AWS::IAM::Policy
-    Properties:
-      PolicyName: !Sub ${AWS::StackName}-S3ReadPolicy
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Action:
-              - "s3:Get*"
-              - "s3:List*"
-            Resource: "*"
-      Roles:
-        - !Ref S3Role
+      Policies:
+        - PolicyName: !Sub ${AWS::StackName}-S3ReadPolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "s3:Get*"
+                  - "s3:List*"
+                Resource: "*"
 
   InstanceProfile:
     Type: AWS::IAM::InstanceProfile
@@ -147,7 +139,7 @@ Resources:
           chmod 775 /home/ec2-user/.aws
           sudo chown ec2-user:ec2-user /home/ec2-user/.aws
           echo "[s3]
-          role_arn=${S3Role.Arn}
+          role_arn=${CrossAccountS3Role.Arn}
           credential_source=Ec2InstanceMetadata" > /home/ec2-user/.aws/credentials
       BlockDeviceMappings:
         - DeviceName: /dev/xvda

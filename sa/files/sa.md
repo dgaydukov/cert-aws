@@ -1183,6 +1183,11 @@ send request to: `https://signin.aws.amazon.com/federation?Action=getSigninToken
 You can use [java example](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_enable-console-custom-url.html#STSConsoleLink_programJava) to get sing-in url
 STS (Security Token Service) api calls:
 * DecodeAuthorizationMessage - in case api call return 403, some api may returned encoded message (it's encoded cause it may have some private info). So to decode you have to use this api, and have permission to use this api.
+Cross-account ec2 role (ec2 from accountA can assume role from accountB, take a loot at `sa/cloudformation/ec2-cross-account-assume-role.yml`):
+* create ec2 role (it should have permission to assume role from accountB) in accountA (`sts:AssumeRole` for ec2 service)
+* create cross-account role in accountB (`sts:AssumeRole` for aws account)
+* create instance profile in accountA (if using aws console it would be created automatically, when you assign role to ec2)
+* go to ec2 (it would already have role from accountA) and configure aws to assume role from accountB, now your ec2 can access accountB resources
 
 ###### S3
 S3 (Simple Storage Service) used for:
@@ -1848,13 +1853,20 @@ One-to-many:
 * nosql - partitionKey as one key (authorId), and sortKey (bookId) as key from second table
 Many-to-many:
 * relational- authors, books, author_book - special table to store auhorId+bookId
-* nosql - create 1 primary key with partition key + sort key and second primary key where you swap partition and sort key.
+* nosql - create 1 primary key with partition key + sort key and second primary key where you swap partition and sort key:
+* adjacency list - way to represent graph data (nodes and edges) in flat model. Suppose we have a bunch of people and want to represent them as friends. We can use graph representation.
+But can use java, if we create `Map<String, List<String>>` where key is person and value is list of this friends. This will add some redundancy/duplication 
+(if Mike & Bob friends, then under key Mark Bob would be inside list of friends, and under kye Bob, Mark would be inside list of friends)
+Yet this duplication in space guarantees instant result, you can get list of friends of anybody within O(1) - cause we are using Map.
 Partition key should have a large number of distinct values relative to the number of items in the table (customerId for orders table - there are many distinct customers comparing to total number of orders).
 This is because max RCU (read capacity unit) - 3000, WCU (write capacity unit) - 1000 per partition. So if you choose wrong partition key and make a lot of request to single partition you will get `ProvisionedThroughputExceededException`.
 That's why you should have equal distribution across partition key. Best practices to select partition key:
 * use high cardinality attr - email/customerId/orderId/productId
 * use composite attr - combine several attr into single string to be used as key
 * add random key to partition key
+One way to offload dynamoDB writes is to use sqs:
+* you can decrease WCU and save on costs
+* you can use it as protection against accidental load spikes
 When you build NoSql schema you should:
 * create ERD (entity relations diagram) - same as for relational db, define entities and relations between them
 * define access pattern - how data would be accessed
@@ -1909,7 +1921,8 @@ Although dynamoDb is proprietary solution with closed source code there are 2 op
 GSI (Global Secondary Index) - special read-only table created by dynamoDb to simplify search for indexed fields. Index speed up search but require more memory to store itself. You should configure separate read/write capacity for this.
 It's a way to have DynamoDB replicate the data in your table into a new structure using a different primary key schema. This makes it easy to support additional access patterns
 LSI (Local Secondary Index) - same partition as primary key, but different sort key. You can have one per table and create when table is created, just like primary key. It uses the same read/write capacity as table.
-Scanning - like `select * from` operation in RDS, just go over all records.
+Scanning - like `select * from` operation in RDS, just go over all records. Max size is 1MB, if table size above this then `LastEvaluatedKey` returned with last scanned item. For next scan you should supply this value as `ExclusiveStartKey`.
+So you can create `while loop` in java code where first time you pass `ExclusiveStartKey=null` and each subsequent step you will pass `ExclusiveStartKey=LastEvaluatedKey`.
 DynamoDb just like s3 is eventual consistent, so if you update data and read it right away you can get old value (cause items are persisted on multiple machines, and depending from what machine you read you can get stale data).
 You can disable eventual consistency by setting `ConsistentRead: true`. In this case `getItem/query/scan` operations would always return correct value, but reads would take longer time.
 To read data of size:
@@ -1976,6 +1989,12 @@ For example you can store users/profile/orders in single table. UserId - would b
 * no easy way to export data fro analytics (dynamoDB is OLTP, designed to handle unlimited number of small transactions)
 Anti-pattern:
 * using GraphQL + dynamoDB. Reason is that graphQL using resolver, and make many queries to dynamoDB instead of single query
+Multiple table approach:
+* if you have table that actively queried during one day and then no more you have to re-create table every day
+* time series - if you know that during first day you query a lot, second - not much, and third - very little - create new table for each day, and for older table modify WCU/RCU to set it to minimum value
+Max item size:
+* max size of item is 400 KB (size of both keys+values, cause for each item we store all keys in a row)
+* if you need more space you can have multiple items per key (use sorted key) or compress (GZIP/LZO using `java.util.zip.GZIPInputStream` and store item as binary) or load data into s3 and store s3 link inside item
 
 ###### RedShift
 Database vs Data Warehouse:
@@ -3422,7 +3441,7 @@ By default:
 When aws launch new region, in case of all region trail - new trail would be created in newly launched region.
 * trail in s3  encrypted using SSE. You can set custom encryption with KMS.
 Cross-account trails (you can configure to deliver CT events from multiple accounts to single s3 bucket):
-* create s3 bucket in account A, accountAMyS3Bucket and add bucket policy to allow cross account access
+* create s3 bucket in account A, accountAMyS3Bucket and add bucket policy to allow cross-account access
 * in account B (or any other) create CT and set bucket name as accountAMyS3Bucket. From now all logs would be delivered to bucket in another account
 Log file validation - guaranty that logs were not tampered with. When turn in, ct create a hash for each log file, and every hour store all these hashes in digest file in the same s3 bucket. 
 Each digest file is signed with private key that generated by ct. You can download public keys with `list-public-keys` command, and validate signed files. But you have no access to private keys - they are managed by ct.
@@ -4068,7 +4087,7 @@ It's a service that can deliver aws/custom events to any aws service. There are 
 * schedule - call target (aws service) on some schedule
 It's built upon CloudWatch events, uses the same api, but extends it into custom events. But you can still build event-driven solution based on CloudWatch events.
 There are over 90 services that act as source, and 15 services that can be a target.
-Schema Registry - collection of schemas. Schema - json structure of event (with all fields and tyeps and possible values, like phone number - 10 digits).
+Schema Registry - collection of schemas. Schema - json structure of event (with all fields and types and possible values, like phone number - 10 digits).
 Cross-account event - you can configure event that it generated in one account and sent into another.
 EventBridge vs SNS
 * eventBrdige - body - only json, target - 15 services, native integration with many third-party services (like zendesk)
@@ -4086,8 +4105,8 @@ Each blockchain has unique identifier `ResourceID.MemberID.NetworkID.managedbloc
 Yet this link is private, so members should have vpc and use vpc privatelink to access blockchain endpoint.
 
 ###### GuardDuty
-It's thread management tools that helps to protect aws accounts/workloads/data by analazying data from cloudTrail/vpc flowLogs/dns logs using ML.
-It's regional service, so all collected data is aggregated/analyzied within region. It doesn't store any data, once data is analyzied it discarded.
+It's thread management tools that helps to protect aws accounts/workloads/data by analyzing data from cloudTrail/vpc flowLogs/dns logs using ML.
+It's regional service, so all collected data is aggregated/analyzed within region. It doesn't store any data, once data is analyzed it discarded.
 threat intelligence - list of malicious IP addresses maintained by aws and third-party partners.
 
 ###### Secrets Manager
@@ -4095,7 +4114,7 @@ SM allows you to rotate/manage/retrieve db credentials, API keys, and other secr
 To retrieve secrets, you simply replace secrets in plain text in your app with code to pull in those secrets programmatically using the Secrets Manager APIs.
 You use iam to control which users/roles have access to which stores. SM can store json, so you can store any text up to 64KB.
 Key rotation for RDS/DocumentDB/RedShift supported out-of-the-box. You can add key rotation to oracle on ec2 by modifying sample lambda.
-You can configure cw events to be nofified when SM rotate credentials. SM never store plaintext secrets to any persistant layer.
+You can configure cw events to be notified when SM rotate credentials. SM never store plaintext secrets to any persistent layer.
 This can be ideal for lambda evn vars, cause they are shown in lambda console. Moreover you can use lambda in private subnet without internet access and still be able to access SM with privatelink (create vpc endpoint for SM).
 
 ###### Quantum Ledger Database
