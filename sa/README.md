@@ -15,6 +15,10 @@ Here is my experience of taking 2 certifications, both associate & professional:
 * [Free SAP questions](https://www.examtopics.com/exams/amazon/aws-certified-solutions-architect-professional)
 
 ### TODO
+https://en.wikipedia.org/wiki/Brotherhood_of_the_Wolf
+https://en.wikipedia.org/wiki/Crying_Freeman_(film)
+https://en.wikipedia.org/wiki/Groundhog_Day_(film)
+https://en.wikipedia.org/wiki/Unsane
 fix gradle project in intellij
 enable AspectJ proxy mode for the @EnableAsync and provide a weaver (so you can call `@Async` from same class)
 run .war project in intellij + run `javax.websocket` there
@@ -34,7 +38,11 @@ https://martinfowler.com/articles/lmax.html
 https://www.infoq.com/presentations/mechanical-sympathy
 The Art of Multiprocessor Programming
 Play Framework vs google guice vs spring
+jooq vs hibernate
+hibernate second level cache (how cache system works)
 -----------------------------------------------------------------------------------------------------------------------
+* cross-zone nlb
+* add egress internet gateway and try to access ipv6 from private ec2
 * try glacier select to csv archive
 * connect 2 vpc with privatelink (access ec2 from one vpc from another)
 * create vpc link and connect http api to ec2 in private subnet

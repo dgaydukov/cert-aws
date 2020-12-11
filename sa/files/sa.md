@@ -210,7 +210,6 @@ There are 2 types of proxy
     * security (by implementing WAF you can filter on proxy level all unwanted requests, so they don't even go to your app server)
     * cpu offload (for example you should response with gzip, your app server can response with plain text but nginx would convert it to gzip)
 
-
 ###### Ingress vs Egress
 Ingress - traffic that enters an entity, so it's a request sent from public Internet to private cloud.
 Egress - traffic that exits an entity, so all traffic (data) that leaves your VPC into public internet.
@@ -1667,7 +1666,8 @@ That improve speed and give security. As you see this is basically the same as G
 You have 2 types of distribution: 
 * web - static web content (files/pics)
 * RTMP - streaming media
-If you create distribution to be accessed from dns name you should add all possible urls to cname in CF. If you are going to access it from example.com/www.example.com/photos.example.com, all 3 dns names should be added to Cname names when you create distribution.
+If you create distribution to be accessed from dns name you should add all possible urls to cname in CF. If you are going to access it from example.com/www.example.com/photos.example.com, 
+all 3 dns names should be added to cnames (Alternate Domain Names) names when you create distribution.
 OAI (Origin Access Identity) - CF user that can access origin. To access s3 from CF you should add bucket policy (but you don't need to allow public access).
 But if you do this user can access your s3 files by s3 url like `https://my-test-s3-bucket-1.s3.amazonaws.com/info.html`. But if you want that your s3 objects to be accessed only by CF url like `https://d1vyzpsqe05sg1.cloudfront.net/info.html`
 You should add bucket policy to your bucket like
@@ -1716,6 +1716,10 @@ There are 2 types of ssl for cf:
 If you want to use custom domain name + cf you should:
 * provision SNI custom ssl certificate 
 * configure route53 alias record to cf distribution
+Origin Protocol Policy - how cf fetch objects from your origin server (applies only to custom origins). There are 3 types:
+* http - always use http
+* https - always use https
+* Match Viewer - use same protocol as user use to communicate with cf (so if user request object form cf using http then use http)
 
 ###### Kinesis
 It is a platform for streaming data on AWS, making it easy to load and analyze streaming data.
@@ -1995,6 +1999,9 @@ Multiple table approach:
 Max item size:
 * max size of item is 400 KB (size of both keys+values, cause for each item we store all keys in a row)
 * if you need more space you can have multiple items per key (use sorted key) or compress (GZIP/LZO using `java.util.zip.GZIPInputStream` and store item as binary) or load data into s3 and store s3 link inside item
+DynamoDB vs s3:
+* if you need low-latency and you data size less then 400KB use dynamoDB, cause on average it faster
+* if your data is more then 400KB, or latency is no issue, you can store data in s3
 
 ###### RedShift
 Database vs Data Warehouse:
@@ -2254,6 +2261,7 @@ There are 2 ways to create asg in cf:
 ASG troubleshoot:
 * more than 1 policy triggered by single event -> in this case asg launch policy with the greater impact (if one policy add 2 ec2 and another 4 -> 4 ec2 would be added)
 * scale-out and scale-in triggered by single event -> in this case scale-out wins
+Plz note that by itself auto scaling doesn't improve latency: if you need low latency look at elasticache/read replica/cloudfront.
 Hibernation (suspend-to-disk) - like OS sleep command, temporary store RAM in ebs volume, and restore RAM from ebs on wake-up (ebs volume must be large enough to store RAM and be encrypted). When wake-up happens:
 * ram is restored from ebs
 * all running processes are resumed
@@ -2308,6 +2316,13 @@ Because you pay for each query based on the amount of scanned data, you can redu
 * data partition - reduce amount of scanned data for each query. Athena uses hive for partitioning. You can partition by any key, good practice to partition based on date/location.
 You specify partition in WHERE clause, so athena scan only this single partition instead of whole bucket. It can also help avoid errors, cause if data not partitioned and you run query against whole bucket you may get exceptions.
 * use workgroups - you can separate users/apps and set limits on amount of data each query or the entire workgroup can process, and to track costs. Use iam policy to control access to it.
+IDS (Intrusion detection system) - monitor network/system for malicious activity, policy violation and reports to sysadmin or SIEM (security information and event management) system
+IPS (Intrusion prevention system) - located behind firewall, provides additional layer of security by scanning/analyzing suspicious content for potential threats
+You should install IDS/IPS agent on ec2 and they would: ids - monitor vpc environment for malicious activity, ips - monitor incoming/outgoing traffic
+There are 3 ways to use ids/ips:
+* install it on each ec2 running in vpc
+* install it on proxy/NAT and forward all traffic through this proxy/NAT
+* set up security VPC with ec2 with agents installed, and peer this vpc with your vpc, and accept traffic only from this security VPC (this is good if you have thousands ec2 in your main vpc, so instead of installing agent on all of them, it's better to use second vpc)
 
 ###### Organizations
 Organizations - service that allows to tie several accounts to master account and centrally manage them (billing, services, policies), so it basically collection of AWS accounts that you can organize into a hierarchy and manage centrally.
@@ -2373,7 +2388,10 @@ Nat gateway/instance can't route traffic through: vpc peering, site-to-site vpn,
 Moreover vpc peering can't use NAT instance/gateway, IGW or VPG.
 * Virtual private gateway - VPC+VPN
 * Peering Connection - create private secure connection between 2 VPC
-* Egress-only Internet Gateway - egress(going out) only access from VPC to Internet over IPv6
+* EIGW - egress(going out) only access from VPC to Internet over IPv6.
+Nat gateway doesn't support IPv6, so if you private ec2 need internet for IPv6 traffic you have to use EIGW.
+EIGW (Egress-only Internet Gateway - highly available/scalable outbound communication component for IPv6 traffic. Just like nat, there is no way to establish inbound connection from the internet.
+Note that nat is outbound only for IPv4, and EIGW is outbound only for IPv6. IPv6 are globally unique, and are therefore public by default. You also need to add route to EIGW from private subnet.
 Old terminology
 * VPC = VRF (virtual routing and forwarding)
 * Subnet = VLAN
@@ -2399,6 +2417,10 @@ Or you can also think that rules are evaluated in decreasing order by overwritin
 90  - tcp - 80    - DENY
 100 - all traffic - ALLOW
 ```
+Url-based filter:
+* note that SG can filter only on IP (there is no way to filter traffic based on url)
+* you can use iptables (which can filter based on URL) + SG. So SG just open port for all IP or for list of predefined IP addresses, and iptables add additional filter based on url
+* you can use proxy server and puth your ec2 to private subnet. This is best solution, cause in proxy server you can do all type of filtering you want. Plus proxy can have caching, so second time request don't need to go to outside world, it ca be served from cache
 You can only assign one NACL to one subnet, yet you can assign many SG to same ec2. You can't block specific IP with SG, you need to use NACL.
 Stateful - if you send request from your ec2 you will got response even if SG doesn't have any outbound rules
 If you set up NACL (let's say for ssh) you should also add outbound rules (cause nacl are stateless). But for ssh outbound port is not 22, it's ephemeral port - When a client connects to a server, a random port from the ephemeral port range (1024-65535) becomes the client's source port.
@@ -2475,6 +2497,7 @@ Direct Connect and DCG support both 1500 and 9001 MTU (you can also modify it if
 * public - access public aws services (like s3) using their public IP
 * transit - access vpc Transit Gateway associated with dx
 Each DX by default create 2 virtual interfaces public & private.
+When you establish DX/VPN make sure that your vpc has no IP range conflict with on-premises network. All private IP addresses on both network should be unique (just the same rule as for vpc peering)
 Don't confuse 3 links:
 * VPC PrivateLink - expose aws services (except s3/dynamoDb who are using gateway endpoint) or private ec2 to vpc in the same or other aws account, by adding eni inside vpc for exposed service.
 If you have 3 vpc and ec2 in each of them, and you want to connect these 3 ec2 you can use either PrivateLink or vpc peering. PrivateLink is better solution, cause it allows you to connect only these 3 ec2, without exposing all other services from these vpc to each other.
@@ -2527,6 +2550,9 @@ There are 2 options:
 If you create ec2 2 dns host names would be assigned:
 * public -  ec2-{ec2_IP}.compute-1.amazonaws.com
 * private - ip-{ec2_IP}.{your_domain_name}
+If you want to use DX/VPN for vpc-to-on-premises communication you have to:
+* configure route53 entry to access by internal IP
+* add route53 resolver to resolve to forward query over DX
 Overlay Multicast - method of building IP level multicast across a network fabric supporting unicast IP routing, such as VPC (kernel replicate packets to all subscribers, so if you stream 10 pps (packet-per-second) to 10 subscriber, totally 100 pps would be required).
 Multicast - network capability that allows one-to-many distribution of data, you transmit network packets to subscribers that typically reside within a MG (multicast group).
 MG can have zero or more subscribers, who can join or leave MG. Usually multicast implemented in physical networks using hardware replication along a distribution tree.
@@ -2534,6 +2560,15 @@ So if you need multicast in aws you have to:
 * create eni
 * create overlay network multicast
 AWS provides multicast support for Transit Gateway since 2019.
+Migrate vpc to IPv6:
+* your vpc can work in dualstack for either IPv4/IPv6 or both
+* v4 and v6 are independent channel from each other
+* there is no way to disable IPv4 for vpc, cause it's default setting
+* next steps will allow support for IPv6:
+    * associate IPv6 CIDR with VPC (you can either use Amazon-provided IPv6 CIDR block or your own CIDR block - you can't create custom just like for IPv4, cause in IPv6 there is no such thing as custom CIDR, all IPv6 are public)
+    * update RT (for public subnet - add a route for IPv6 to IGW, for private subnet - create EIGW and add route for IPv6 to it)
+    * update SG (include a rule for IPv6 traffic for specified ports)
+    * assign IPv6 address to each ec2 from your CIDR block
 
 ###### Elastic Beanstalk
 Imagine you have spring boot app that use mysql and you want to deploy it to aws, what you have to do:
@@ -2552,6 +2587,14 @@ With EB you shouldn't worry about java installed on ec2, if you select java it w
 You can use EB with Docker:
 * single - you deploy docker file or built image. Use this when you want one docker per ec2 instance. If docker instance crushed/killed EB would restart it automatically.
 * multicontainer - in this case eb would manage ecs cluster for you. So you don't need to manually create ecs and decide how many nodes should be running there.
+Although most popular platform are supported, if you want to use new platform you can:
+* use custom image - complete 3 steps:
+    * create ec2 form one of eb ami (when create ec2 type beanstalk and choose your ami), ssh to it and do any modification, then create snapshot and ami from it
+    * delete ec2 after, cause you need it only for creating custom ami
+    * create app with any platform, go to capacity and change amiID (basically all platforms differ in amiID they use)
+* use custom platform - more advanced then custom image, you can create new platform from scratch, customize OS and scripts that EB runs on platform:
+    * create new ami for Ubuntu/RHEL/AmazonLinux using `Packer` - open source tool for creating machine images
+    * create a platform with `eb platform create`, this command return platformArn, which can be used later to create new apps on this platform
 
 ###### DMS
 Database Migration Service - used for easy migration between different db (like from MySql to DynamoDB), and also for data replication. Use it to migrate any supported db into s3 using `csv/parquet` format.
@@ -2563,7 +2606,11 @@ To run migration you need:
 * create replication instance - instance that would run migration (download from source, transform, upload to destination). Use multi-AZ deployment, in this case if during middle of migration your replication instance failed for some reason, migration would continue with failover instance. 
 Otherwise there is a risk that migration would be half-completed. You should put replication instance into the same vpc as your source or target, but you can use different vpc and connect them with vpc peering.
 * specify source and target endpoints
-* create & monitor tasks
+* create & monitor tasks. Here you can configure table mapping with `selection/transformation/table-settings rules` where you can do stuff like: 
+    * only migrate single table or users that were created for the last 6 months (use selection rule)
+    * rename table/column, add new column, remove column from one table or add prefix to another, convert to lower/upper-case, change column datatype, add new column as concat of 2 existing (use transformation rule)
+    * table & collection (cause for MongoDB/DocumentDB data stored not in tables but as documents gathered as collections) settings - migrate single table/view using multiple threads
+You can specify kinesis/kafka only as target (not as source)
 
 ###### ELB
 ELB (Elastic Load Balancing) - is a proxy that accept traffic (using listeners) from clients and route it to targets (usually EC2), so it basically distribute your traffic between different ec2 instances and holds 2 connections:
@@ -2576,6 +2623,9 @@ Listener - is a protocol + port for which you got incoming requests. There are 3
 * Application (osi level 7) - if you need to balance http/https. Also supports websocket & secure websocket
 * Network (ose level 4) - if you need to balance TCP/UDP
 * Classic - if you need to balance classic (without VPC) EC2 instance
+Subnets (you can specify 1 subnet per AZ):
+* alb: 2 or more subnets (so it always cross-zone)
+* nlb: 1 or more subnets
 ALB+NLB - you register target in targets group and route traffic to target groups. CLB - you register instances within LB.
 Target group can be of 3 types: ec2/container/list of IP (IP can be seated inside vpc or anywhere).
 If you enable AZ for ELB, it creates lb node in AZ, after this traffic goes to this node. The best practice to have 1 node in each AZ.
@@ -2599,7 +2649,6 @@ There is no concept of sticky session on NLB, cause on level 4 there is no cooki
 * TCP sequence number
 Routes each individual TCP connection to a single target for the life of the connection. The TCP connections from a client have different source ports and sequence numbers, and can be routed to different targets.
 So if you open new tab, that would mean that new port is opened, in this case nlb would see it as new connection and could route request to different ec2.
-XFF (X-Forward-For) - header of original IP address of user (cause your ec2 would see IP of LB).
 Health Check - you can monitor health of ec2 and always redirect user to healthy ec2 (ELB doesn't kill unhealthy ec2). There are 3 types of health checks:
 * EC2 health check - watches for instance availability from hypervisor/networking point of view. For example, in case of a hardware problem, the check will fail. Also, if an instance was misconfigured and doesn't respond to network requests, it will be marked as faulty.
 * ELB health check (1 heath check inside that check port status `AWS::ElasticLoadBalancingV2::TargetGroup`) - verifies that a specified TCP port on an instance is accepting connections OR a specified web page returns 2xx code. Thus ELB health checks are a little bit smarter and verify that actual app works instead of verifying that just an instance works.
@@ -2650,6 +2699,36 @@ s3 logs - you can store elb logs in s3 and analyze it later with athena - below 
           Value: true
         - Key: access_logs.s3.bucket
           Value: s3_bucket_location
+```
+SSL pass through (you can configure elb not to terminate ssl traffic):
+* ALB can use only HTTPS listener which terminate ssl traffic using custom certificate and pass http traffic further
+* NLB can use TCP/443 listener. In this case NLB won't terminate ssl connection but will just pass traffic further
+Keep in mind that by using nlb you can't use: warmup, sticky sessions, path-based routing
+* classic load balancer can pass through https traffic
+Get client IP address:
+* by default ec2 would see IP address of elb, not of original user (`ServletRequest.getRemoteAddr` which return `RemoteAddr` from request)
+* for the above reason `iptables` for filtering won't work, cause they always will get one IP - of elb
+* alb: use `X-Forward-For` header to get original IP address of user
+* nlb: use proxy protocol v1 (works only on level 4) - helps identify IP of client (plz note since nlb is level 4, there is no `X-Forward-For` in request, so using proxy protocol is the ony way to get client IP)
+Proxy protocol adds additional information to each request with client info (ip, host, port)
+If you want to terminate ssl on elb use ALB + HTTPS listener, if you want to terminate ssl on your ec2 use NLB + TCP listener
+You can enable proxy protocol for classic LB with:
+```
+ClassicLB
+    Type: AWS::ElasticLoadBalancing::LoadBalancer
+    Properties:
+        Policies:
+            - InstancePorts: [ "80", "443" ]
+               PolicyName: EnableProxyProtocolPolicy
+```
+NLB use proxy protocol v2
+```
+NLB
+    Type : AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+        TargetGroupAttributes:
+            - Key: proxy_protocol_v2.enabled
+              Value: true
 ```
 
 ###### CloudWatch
@@ -2711,6 +2790,11 @@ Routing policy:
 Route53 gives different answers to different DNS resolvers. If a web server becomes unavailable after a resolver caches a response, client software can try another IP address in the response.
 * Weighted - 90% of traffic to one ec2, 10 to second. Ideal for blue-green deployment (so you can route 10% for new version, see how it works, and then route all requests to new version and 0 to old).
 Weight - int value from 0 (no traffic) to 255. Percentage calculated by weightNumber/totalWeight.
+This can be useful if you have 2 `t2.nano` and then also add 2 `c5.xlarge` and use single elb. In this case load would be proportionally distributed between all 4 instances,
+but instances with lower capacity would 100% occupied, while larger would be only 50% (cause routing sends equal number of requests to each ec2).
+In this scenario you would need to manually distribute the load, like 30% to to smaller instances, and 70% to 2 larger instances:
+* create 2 elb each for separate instance type
+* create weighted routing policy and send 30% (set weight=30) to elb with smaller instance type and 70% (set weight=70) to elb with larger instance type
 Hosted zone - route53 concept of domain. For each of your domain you have 1 hosted zone where you can have records. There are 2 types:
 * public - available through the internet
 * private - available inside vpc
@@ -3141,7 +3225,7 @@ Http vs Rest api:
         * method request - use it to validate request. You should do validation on this step, even before your api reach your lambda, if you validate on lambda you pay for it (even if validation failed and much of lambda not executed).
         AWS::ApiGateway::RequestValidator (set what you want to validate requestparam/body or both), Method.RequestParameters(validate headers/querystrings) + Method.RequestModels (validate body)
         * integration request - here you can transform request using VTL before sending it to integration.
-        passthrough behavior - how api gateway handle request for `Content-type` that not defined in `Integration.RequestTemplates`:
+        pass through behavior - how api gateway handle request for `Content-type` that not defined in `Integration.RequestTemplates`:
         * NEVER - if no match, never proceed request to integration. `curl -H 'Content-type: text/xml' -H 'user-id: 1' --data '{"name":"jack","age":30}' {API_URL}/custom?status=1 -v` => `415 {"message": "Unsupported Media Type"}`.
          If match found use it for VTL request transformation and proceed to integration.
         * WHEN_NO_MATCH - if no match, proceed to integration. If match found use it for VTL request transformation and proceed to integration.
@@ -3361,7 +3445,7 @@ There are 3 types of redis cluster in cf:
 * AWS::ElastiCache::GlobalReplicationGroup - global replication cluster (not supported, `An error occurred (ValidationError) when calling the UpdateStack operation: Template format error: Unrecognized resource types: [AWS::ElastiCache::GlobalReplicationGroup]`)
 
 ###### Systems Manager
-SM (Systems Manager) - tool that helps you to manage your aws resources and automate some tasks on them.
+SM - tool that helps you to manage your aws resources and automate some tasks on them.
 When you create ec2 with SM agent role (this will give SM permission to interact with ec2), and later manage your ec2 from SM console (without need to connecting to instance with ssh), includes:
 * document (json/yaml configuration as code) - allows you to set a series of actions to be performed on ec2. You can create your own documents or use provided by default, including collecting inventory/metrics, installing apps and so on.
 * OpsCenter - place where ops team can view/resolve ops issues. It aggregates issues by creating OpsItems. On average OpsCenter reduce mean time resolution by 50%.
@@ -3503,6 +3587,11 @@ If you want to automatically renew your cert you shouldn't remove CNAME token, o
 Email validation - amazon sends email to the owner of domain that it obtains from whois service.
 For successful issuing of public certificate DNS CAA should be empty or include one of: amazon.com, amazontrust.com, awstrust.com, or amazonaws.com
 Public certs are free, but private CA - 400$ per month. You also pay for each private cert.
+ACM internally use KMS (`aws/acm` key that generated first time you request ACM):
+* acm stores all certificate private keys encrypted (acm stores only ecnrypted version of private key)
+* when you associate acm with service, acm sends certificate & encrypted private key to this service + create kms permission to allow for service to use it to decrypt private key
+* service use this permission, decrypt private key and establish secure connection using plaintext private key
+* if you disassociate acm with service, kms permission for this service would also be removed
 
 ###### Cloud9
 Cloud9 - cloud based IDE (integrated development environment) where you can run and execute your code. It basically a separate ec2 where you can install programs, write/build code, and work just like with your laptop.
@@ -3524,18 +3613,31 @@ You can specify conditions (discard results with low confidence score) under whi
 Terminology
 * label - object/concept found in image based on description (for example, human/face/sun and so on..)
 * confidence score - number 0-100 that indicates the probability that prediction is correct
-Face recognition from video:
-* upload video to kinesis video using `PutMedia`
-* crete stream in rekognition using `CreateStreamProcessor` and provide 2 streams:
-    * input - kinesis video stream
-    * output - kinesis data stream (to store processed results)
-Once created it will start automatically monitor kinesis video stream and consume videos for face recognition.
-If you want to process images for face recognition:
-* use s3 as source
-* use ec2 to call `DetectFaces` api (`aws rekognition detect-faces`) to process single image and store results in s3/redshift
-Note that for both `DetectFaces/CompareFaces` you must pass:
+Use following api to detect:
+* `DetectFaces` - detects the 100 largest faces in the image, for each face returned: bounding box of face, confidence, presence of beard/sunglasses
+* `CompareFaces` - compare face from source image with 100 faces from target image (you have to pass 2 images). Return 2 arrays of matched/unmatched faces.
+You can set `SimilarityThreshold` (default 80%) to manage at what point face should be included into matching array.
+* `DetectLabels` - use it to detect objects(flower, tree)/events(wedding, birthday)/concepts(evening/nature)
+Return results like `[{Name: flower,Confidence: 99.0562},{Name: plant,Confidence: 99.0562}]`, as you see one thing can be different objects at the same time.
+You can set `MinConfidence` (default is 55%) to filter based on confidence. You can set `MaxLabels` to limit number of objects.
+If object is person, operation doesn't provide same level of facial details as `DetectFaces`.
+* `RecognizeCelebrities` - returns: 64 largest faces in image, celebrity name/ID/url links to additional info. You can use celebrityID in `GetCelebrityInfo` to get more info later.
+* `DetectText` - detect & convert text into machine-readable from image (can detect up to 50 words per image). Use `MinConfidence` (0.5-1) to set confidence level (text below this level won't be included into result).
+Note that for all detect calls `DetectFaces/CompareFaces/DetectLabels/RecognizeCelebrities` you must pass:
 * base64-encoded image bytes or reference to s3
 * if you call from cli, image bytes is not supported, image must be png/jpeg file
+You can create/delete/list collections using `CreateCollection/DeleteCollection/DescribeCollection/ListCollections`. You can store faces in collection.
+For video processing you can use:
+* `StartFaceDetection/StartLabelDetection/StartCelebrityRecognition` - async operations that return jobId (when job is completed you would be notified by SNS). You have to pass video stored in s3.
+* `GetFaceDetection/GetLabelDetection/GetCelebrityDetection` - use jobId from above operation to get results
+Face recognition from video:
+* upload video to kinesis video using `PutMedia`
+* crete stream in rekognition using `CreateStreamProcessor` and provide 4 params:
+    * input - kinesis video stream
+    * output - kinesis data stream to store processed results (places separate json file for each analyzed frame). You can use KCL from ec2 (with asg) to read from stream and do some processing.
+    * settings - `CollectionId` where you store faces to compare and `FaceMatchThreshold` (default 80%)
+    * role-arn - role with permission to read/write from kinesis
+Once created it will start automatically monitor kinesis video stream and consume videos for face recognition. Once you finish processing you can call `StopStreamProcessor` to stop or delete with `DeleteStreamProcessor`.
 
 ###### Global Accelerator
 GA allows you to create 2 static anycast IP addresses and routing users to nearest server to them.
