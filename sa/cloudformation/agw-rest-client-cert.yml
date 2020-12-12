@@ -1,0 +1,141 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+# create rest api + domain name + client cert (valid for 1 year, after you have to rotate), and then you can access it by: https://test.aumingo.com/dev/info
+# !important => by default you can access you api with both domain name and default aws provided domain name, if you want to turn off this run 2 commands
+# aws apigateway update-rest-api --rest-api-id={REST_API_ID} --patch-operations op=replace,path=/disableExecuteApiEndpoint,value='True'
+# aws apigateway create-deployment --rest-api-id={REST_API_ID} --stage-name=dev
+# !important => if you use CertificateArn instead of RegionalCertificateArn and don't specify EndpointConfiguration (by default it edge) you will get: `Cannot import certificates for EDGE while REGIONAL is active`
+
+Parameters:
+  HostedZone:
+    Description: Second level domain (hosted zone)
+    Default: aumingo.com
+    Type: String
+
+Resources:
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-LambdaRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: !Sub ${AWS::StackName}-LogPolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                  - logs:DescribeLogStreams
+                Resource: "*"
+
+  InfoLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-InfoLambda
+      Description: Show basic information about app
+      Role: !GetAtt LambdaRole.Arn
+      Runtime: nodejs12.x
+      Handler: index.handler
+      Code:
+        ZipFile: |
+          exports.handler = (event, context, cb) => {
+              cb(null, {
+                statusCode: 200,
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({msg:"Hello World!"})
+              });
+          }
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-InfoLambda
+  ApiGatewayLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt InfoLambda.Arn
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${RestApi}/*/*/*
+
+  RestApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Description: Client certificate & custom domain example using REST API
+      Name: REST API Auth
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+
+  InfoResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref RestApi
+      ParentId: !GetAtt RestApi.RootResourceId
+      PathPart: info
+  InfoMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref RestApi
+      ResourceId: !Ref InfoResource
+      HttpMethod: GET
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${InfoLambda.Arn}/invocations
+
+  Deployment:
+    DependsOn:
+      - InfoMethod
+    Type: AWS::ApiGateway::Deployment
+    Properties:
+      RestApiId: !Ref RestApi
+      Description: My deployment
+  ClientCertificate:
+    Type: AWS::ApiGateway::ClientCertificate
+    Properties:
+      Description: API Gateway client cert to securely talk to integration endpoint
+  DevStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      StageName: dev
+      Description: Dev Stage
+      RestApiId: !Ref RestApi
+      DeploymentId: !Ref Deployment
+      ClientCertificateId: !Ref ClientCertificate
+
+
+  DomainName:
+    Type: AWS::ApiGateway::DomainName
+    Properties:
+      DomainName: !Sub test.${HostedZone}
+      RegionalCertificateArn: !Sub arn:aws:acm:${AWS::Region}:${AWS::AccountId}:certificate/238b577f-16d6-4da4-b92d-1e2ec1dd057b
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+  DomainNameMapping:
+    Type: AWS::ApiGateway::BasePathMapping
+    Properties:
+      DomainName: !Ref DomainName
+      RestApiId: !Ref RestApi
+  DnsRecordSet:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneName: !Sub ${HostedZone}.
+      Comment: DNS name for REST API
+      Name: !Sub test.${HostedZone}
+      Type: A
+      AliasTarget:
+        DNSName: !GetAtt DomainName.RegionalDomainName
+        HostedZoneId: !GetAtt DomainName.RegionalHostedZoneId
+

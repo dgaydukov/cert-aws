@@ -85,7 +85,7 @@ Resources:
         Statement:
           - Effect: Allow
             Action:
-              - "lambda:InvokeFunction"
+              - lambda:InvokeFunction
             Resource: "*"
       Roles:
         - !Ref ApiGatewayRole
