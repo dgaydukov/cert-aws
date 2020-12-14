@@ -124,6 +124,7 @@
 * 3.78 [Secrets Manager](#systems-manager)
 * 3.79 [Quantum Ledger Database](#quantum-ledger-database)
 * 3.80 [AppStream 2.0](#appstream-20)
+* 3.81 [License Manager](#license-manager)
 
 
 
@@ -2700,10 +2701,11 @@ s3 logs - you can store elb logs in s3 and analyze it later with athena - below 
         - Key: access_logs.s3.bucket
           Value: s3_bucket_location
 ```
-SSL pass through (you can configure elb not to terminate ssl traffic):
+TCP pass through (you can configure elb not to terminate ssl traffic):
 * ALB can use only HTTPS listener which terminate ssl traffic using custom certificate and pass http traffic further
-* NLB can use TCP/443 listener. In this case NLB won't terminate ssl connection but will just pass traffic further
+* NLB can use TCP/443 listener. In this case NLB won't terminate ssl connection but will just pass traffic further (no need to provide server cert)
 Keep in mind that by using nlb you can't use: warmup, sticky sessions, path-based routing
+Yet you can use TLS with nlb in this case you have to provide server cert and your nlb would terminate ssl
 * classic load balancer can pass through https traffic
 Get client IP address:
 * by default ec2 would see IP address of elb, not of original user (`ServletRequest.getRemoteAddr` which return `RemoteAddr` from request)
@@ -2730,6 +2732,7 @@ NLB
             - Key: proxy_protocol_v2.enabled
               Value: true
 ```
+2 way ssl is not supported (use api gateway if you need it), yet you can use tcp pass through for nlb/clb
 
 ###### CloudWatch
 CloudWatch - monitoring service for aws resources and apps running in aws cloud. IAM permission for CloudWatch are given to a resource as a whole (so you can't give access for only some of EC2, you give either for all EC2 instances or none).
@@ -3248,6 +3251,13 @@ For example you can return cors headers, in case of some error, so browser won't
 Logging:
 * rest api - you can log into CloudWatch & Kinesis Data Firehose, [AWS::ApiGateway::Stage AccessLogSetting](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-apigateway-stage-accesslogsetting.html)
 * http api - you can log into CloudWatch only [AWS::ApiGatewayV2::Stage AccessLogSettings](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-apigatewayv2-stage-accesslogsettings.html)
+Client Certificate (2 way ssl) - there are 2 types of certs:
+* server cert - to establish server authority and to encrypt traffic between client-server
+* client cert - to establish client authority (in case you want server to communicate with only single client)
+Take note that client cert is just addition to server cert. So your server cert would provide SSL/443 traffic, and in addition your client would provide cert to guarantee that this particular client communicate with server.
+Below is 2 examples to set up ssl server with client cert validation:
+* [node.js](https://docs.aws.amazon.com/apigateway/latest/developerguide/getting-started-client-side-ssl-authentication.html#certificate-validation)
+* [spring boot](https://www.baeldung.com/x-509-authentication-in-spring-security)
 
 ###### Cognito
 Cognito - managed user service that add user sing-in/sign-up/management email/phone verification/2FA logic. There are 2 pools:
@@ -3309,9 +3319,12 @@ File storage gateway (just like efs but only for s3, but you mount it the same w
 The size of such disk should depend upon max possible file uploaded and how much data you want to store in cache
 * Tape - cloud base VTL (Virtual Tape Library), used by your backup apps. Tape translate your app requests into Glacier.
 * Volume - provide iSCSI target, where you can create block storage and mount it to on-premise/EC2 instances.
-    * cached model - primary data in S3, frequently accessed data in on-premise.
-    * stored mode - primary data in on-premise, but you have snapshots in s3 (data transfer is async).
-Volume Gateways compress data before that data is transferred to AWS and while stored in AWS. Although data stored in s3, you can't directly access it through s3 api.
+    * cached volume (max 1024TB) - primary data in S3, frequently accessed data in on-premise.
+    * stored volume (max 512TB) - primary data in on-premise, but you have snapshots in s3 (data transfer is async)
+    So if you need instant access to your data, but your size above 512TB you have 2 options:
+    * use 2 stored volumes, so each below 512
+    * if you need to mount it as single folder - use cached volume
+Volume Gateways compress data before that data is transferred to AWS and while stored in AWS. Although data stored in s3, you can't directly access it through s3 api
 Storage Gateway optimize data transfer to cloud by using
 * intelligent buffering
 * upload/bandwidth management
@@ -3585,13 +3598,19 @@ Since public certificates proves domain identity, Amazon must verify that you ow
 DNS Validation - you modify your CNAME by adding some randomly generated token by ACM, that's how you prove that you own domain.
 If you want to automatically renew your cert you shouldn't remove CNAME token, otherwise in order to renew you would have to run dns validation again.
 Email validation - amazon sends email to the owner of domain that it obtains from whois service.
-For successful issuing of public certificate DNS CAA should be empty or include one of: amazon.com, amazontrust.com, awstrust.com, or amazonaws.com
+For successful issuing of public certificate DNS CAA should be empty or include one of: amazon.com/amazontrust.com/awstrust.com/amazonaws.com
 Public certs are free, but private CA - 400$ per month. You also pay for each private cert.
 ACM internally use KMS (`aws/acm` key that generated first time you request ACM):
-* acm stores all certificate private keys encrypted (acm stores only ecnrypted version of private key)
+* acm stores all certificate private keys encrypted (acm stores only encrypted version of private key)
 * when you associate acm with service, acm sends certificate & encrypted private key to this service + create kms permission to allow for service to use it to decrypt private key
 * service use this permission, decrypt private key and establish secure connection using plaintext private key
 * if you disassociate acm with service, kms permission for this service would also be removed
+IAM certificate:
+* preferred way to handle certs is ACM, but if you region doesn't support it (ACM is regional based) you can use IAM cert
+* you can't create new cert from iam, but you can upload pre-generated cert
+* you should uce cli/api (currently console not supported cert upload, yet if you create ELB from there you can upload)
+* use commands `UploadServerCertificate` - upload new cert, `ListServerCertificates` - list all certs, `GetServerCertificate` - get cert by id
+* don't confuse server cert with user signing cert `UploadSigningCertificate` - you upload cert for specified user, and this user can make X.509 signed requests
 
 ###### Cloud9
 Cloud9 - cloud based IDE (integrated development environment) where you can run and execute your code. It basically a separate ec2 where you can install programs, write/build code, and work just like with your laptop.
@@ -4268,3 +4287,13 @@ There are 3 ways to authenticate users:
 * custom identity
 * federated access using SAML 2.0 (for this type you can enable MFA) - use your own AD
 SAP - one of best candidates to be deployed on this platform.
+
+###### License Manager
+LM - tool to help manage licenses (you can track licenses based on vCPU, physical cores, sockets, number of ec2):
+* define rule - store settings of your licence
+* enforce rule - track licence usage & compliance, by attaching rule to ami/template. Once rule attached, user can launch new ec2 without worrying if license is supported (if unsupported, ec2 won't be launched)
+* discover usage of software in aws & on-premises - lm integrated with Systems Manager allowing to manage both ec2 & on-premises. 
+LM supports: ec2/rds/marketPlace/Systems manager. It also integrated with organizations, so you can control licenses for all organizations centrally. You can also manage BYOL(bring your own license) with LM.
+Automated discovery - specify rules and product info (name of software, publisher, version) and based on this LM will detect if specified software used.
+Resource inventory - lm uses Systems Manager inventory to track on-premises instances, by default inventory keeps info for 30 days. So even if your on-premise instance is not pingable LM still will count it as active.
+To be more accurate general advice is to manually deregister instance from SM inventory once you shut it down on-premise.

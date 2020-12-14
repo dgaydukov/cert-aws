@@ -15,6 +15,7 @@ Here is my experience of taking 2 certifications, both associate & professional:
 * [Free SAP questions](https://www.examtopics.com/exams/amazon/aws-certified-solutions-architect-professional)
 
 ### TODO
+https://sleek.com/hk/resources/offshore-companys-guide-to-tax-exemption-in-hong-kong (offshore company, no tax)
 https://en.wikipedia.org/wiki/Brotherhood_of_the_Wolf
 https://en.wikipedia.org/wiki/Crying_Freeman_(film)
 https://en.wikipedia.org/wiki/Groundhog_Day_(film)
@@ -41,8 +42,8 @@ Play Framework vs google guice vs spring
 jooq vs hibernate
 hibernate second level cache (how cache system works)
 -----------------------------------------------------------------------------------------------------------------------
-* cross-zone nlb
 * add egress internet gateway and try to access ipv6 from private ec2
+* cross-zone nlb & end-to-end nlb/alb
 * try glacier select to csv archive
 * connect 2 vpc with privatelink (access ec2 from one vpc from another)
 * create vpc link and connect http api to ec2 in private subnet
