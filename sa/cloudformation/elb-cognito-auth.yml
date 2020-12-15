@@ -194,9 +194,10 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AWS::StackName}-MyVpc-ElbSG
-  ELB:
+  ALB:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
+      Name: !Sub ${AWS::StackName}-MyVpc-ALB
       Scheme: internet-facing
       Type: application
       SecurityGroups:
@@ -204,9 +205,6 @@ Resources:
       Subnets:
         - !Ref PublicSubnet1
         - !Ref PublicSubnet2
-      Tags:
-        - Key: Name
-          Value: !Sub ${AWS::StackName}-MyVpc-ALB
   TG:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
@@ -227,7 +225,7 @@ Resources:
         - Type: fixed-response
           FixedResponseConfig:
             StatusCode: 403
-      LoadBalancerArn: !Ref ELB
+      LoadBalancerArn: !Ref ALB
       Port: 443
       Protocol: HTTPS
       Certificates:
@@ -303,7 +301,7 @@ Resources:
       AllowedOAuthScopes:
         - openid
       CallbackURLs:
-        - !Sub https://${ELB.DNSName}/oauth2/idpresponse
+        - !Sub https://${ALB.DNSName}/oauth2/idpresponse
       SupportedIdentityProviders:
         - COGNITO
       ExplicitAuthFlows:

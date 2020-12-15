@@ -1,19 +1,6 @@
 AWSTemplateFormatVersion: 2010-09-09
 
-# create vpc with 2 public subnets, and one elb and asg
-# lb should allow 80, 443, ec2 - only 80. You can manually configure route53 dns to call elb
-# you can forward 80 to target group, and it would just work, but can also redirect it to 443, and in this case you will force user to use https
-# !important => you have to go to Certificate Manager and manually approve dns record (before that stack would be in CREATE_IN_PROGRESS status)
-
-Parameters:
-  MainDomain:
-    Description: Second level domain (hosted zone)
-    Default: aumingo.com
-    Type: String
-  SubDomain:
-    Description: Third level domain (any string)
-    Default: elb
-    Type: String
+# create vpc with 2 public subnets, and one nlb and 2 ec2
 
 Resources:
   VPC:
@@ -61,7 +48,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-MyVpc-Public-RT1
+          Value: !Sub ${AWS::StackName}-MyVpc-PublicRT
   PublicRoute:
     Type: AWS::EC2::Route
     DependsOn: AttachGateway
@@ -80,8 +67,7 @@ Resources:
       SubnetId: !Ref PublicSubnet2
       RouteTableId: !Ref PublicRT
 
-
-  HttpSG:
+  LoadBalancerSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Enable HTTP access from anywhere
@@ -94,19 +80,20 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AWS::StackName}-MyVpc-Http-SG
-  HttpsSG:
+  InstanceSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Enable HTTPS access from anywhere
+      GroupDescription: Enable HTTP access only from ELB
       VpcId: !Ref VPC
       SecurityGroupIngress:
         - IpProtocol: tcp
-          FromPort: 443
-          ToPort: 443
+          FromPort: 80
+          ToPort: 80
           CidrIp: 0.0.0.0/0
+          #SourceSecurityGroupId: !GetAtt LoadBalancerSG.GroupId
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-MyVpc-Https-SG
+          Value: !Sub ${AWS::StackName}-MyVpc-Http-SG
   SshSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -121,110 +108,92 @@ Resources:
         - Key: Name
           Value: !Sub ${AWS::StackName}-MyVpc-Ssh-SG
 
-  LaunchConfig:
-    Type: AWS::AutoScaling::LaunchConfiguration
+  PublicInstance1:
+    Type: AWS::EC2::Instance
     Properties:
-      LaunchConfigurationName: !Sub ${AWS::StackName}-LaunchConfig
       InstanceType: t2.micro
       ImageId: ami-09d95fab7fff3776c
       KeyName: mykey
-      AssociatePublicIpAddress: true
       UserData:
         Fn::Base64:
           !Sub |
           #!/usr/bin/env bash
           sudo yum install httpd -y
           sudo service httpd start
-          RND=$(shuf -i 99-999 -n 1)
-          sudo echo "<h1>App #$RND</h1>" > /var/www/html/index.html
-          sudo echo "<h1>About #$RND" > /var/www/html/about.html
-      SecurityGroups:
-        - !GetAtt HttpSG.GroupId
-        - !GetAtt SshSG.GroupId
+          sudo echo "<h1>App 1</h1>" > /var/www/html/index.html
+          sudo echo "<h1>Public Page 1</h1>" > /var/www/html/public.html
+          sudo echo "<h1>Private Page 1</h1>" > /var/www/html/private.html
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: 0
+          SubnetId: !Ref PublicSubnet1
+          GroupSet:
+            - !GetAtt InstanceSG.GroupId
+            - !GetAtt SshSG.GroupId
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
           Ebs:
             VolumeSize: 8
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-PublicInstance1
+#  PublicInstance2:
+#    Type: AWS::EC2::Instance
+#    Properties:
+#      InstanceType: t2.micro
+#      ImageId: ami-09d95fab7fff3776c
+#      KeyName: mykey
+#      UserData:
+#        Fn::Base64:
+#          !Sub |
+#          #!/usr/bin/env bash
+#          sudo yum install httpd -y
+#          sudo service httpd start
+#          sudo echo "<h1>App 2</h1>" > /var/www/html/index.html
+#          sudo echo "<h1>Public Page 2</h1>" > /var/www/html/public.html
+#          sudo echo "<h1>Private Page 2</h1>" > /var/www/html/private.html
+#      NetworkInterfaces:
+#        - AssociatePublicIpAddress: true
+#          DeviceIndex: 0
+#          SubnetId: !Ref PublicSubnet2
+#          GroupSet:
+#            - !GetAtt InstanceSG.GroupId
+#            - !GetAtt SshSG.GroupId
+#      BlockDeviceMappings:
+#        - DeviceName: /dev/xvda
+#          Ebs:
+#            VolumeSize: 8
+#      Tags:
+#        - Key: Name
+#          Value: !Sub ${AWS::StackName}-MyVpc-PublicInstance2
 
-  ASG:
-    Type: AWS::AutoScaling::AutoScalingGroup
-    Properties:
-      AutoScalingGroupName: !Sub ${AWS::StackName}-MyVpc-ASG
-      LaunchConfigurationName: !Ref LaunchConfig
-      MinSize: 2
-      MaxSize: 4
-      HealthCheckGracePeriod: 10
-      TargetGroupARNs:
-        - !Ref TG
-      VPCZoneIdentifier:
-        - !Ref PublicSubnet1
-        - !Ref PublicSubnet2
-
-  ALB:
+  NLB:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
-      Name: !Sub ${AWS::StackName}-MyVpc-ALB
+      Name: !Sub ${AWS::StackName}-MyVpc-NLB
       Scheme: internet-facing
-      Type: application
-      SecurityGroups:
-        - !GetAtt HttpSG.GroupId
-        - !GetAtt HttpsSG.GroupId
+      Type: network
       Subnets:
         - !Ref PublicSubnet1
         - !Ref PublicSubnet2
-  HttpAlbListener:
-    Type: AWS::ElasticLoadBalancingV2::Listener
-    Properties:
-      DefaultActions:
-        - Type: redirect
-          RedirectConfig:
-            Port: 443
-            Protocol: HTTPS
-            StatusCode: HTTP_301
-      LoadBalancerArn: !Ref ALB
-      Port: 80
-      Protocol: HTTP
-  HttpsAlbListener:
-    Type: AWS::ElasticLoadBalancingV2::Listener
-    Properties:
-      DefaultActions:
-        - Type: forward
-          TargetGroupArn: !Ref TG
-      LoadBalancerArn: !Ref ALB
-      Port: 443
-      Protocol: HTTPS
-      Certificates:
-        - CertificateArn: !Ref SslCert
   TG:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       VpcId: !Ref VPC
       TargetType: instance
       Port: 80
-      Protocol: HTTP
+      Protocol: TCP
+      Targets:
+        - Id: !Ref PublicInstance1
       Tags:
         - Key: Name
           Value: !Sub ${AWS::StackName}-MyVpc-TG
-
-  DnsRecordSet:
-    Type: AWS::Route53::RecordSet
+  HttpListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
-      HostedZoneName: !Join ["", [!Ref MainDomain, "."]]
-      Comment: DNS name for my instance.
-      Name: !Join ["", [!Ref SubDomain, ".", !Ref MainDomain]]
-      Type: A
-      AliasTarget:
-        DNSName: !GetAtt ALB.DNSName
-        HostedZoneId: !GetAtt ALB.CanonicalHostedZoneID
-
-  SslCert:
-    Type: AWS::CertificateManager::Certificate
-    Properties:
-      DomainName: !Join ["", [!Ref SubDomain, ".", !Ref MainDomain]]
-      ValidationMethod: DNS
-      DomainValidationOptions:
-        - DomainName: !Join ["", [!Ref SubDomain, ".", !Ref MainDomain]]
-          ValidationDomain: !Join ["", [!Ref SubDomain, ".", !Ref MainDomain]]
-      Tags:
-        - Key: Name
-          Value: !Sub ${AWS::StackName}-MyVpc-${SubDomain}.${MainDomain}
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TG
+      LoadBalancerArn: !Ref NLB
+      Port: 80
+      Protocol: TCP

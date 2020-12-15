@@ -171,9 +171,10 @@ Resources:
         - Key: Name
           Value: !Sub ${AWS::StackName}-MyVpc-PublicInstance2
 
-  ELB:
+  ALB:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
+      Name: !Sub ${AWS::StackName}-MyVpc-ALB
       Scheme: internet-facing
       Type: application
       SecurityGroups:
@@ -181,9 +182,6 @@ Resources:
       Subnets:
         - !Ref PublicSubnet1
         - !Ref PublicSubnet2
-      Tags:
-        - Key: Name
-          Value: !Sub ${AWS::StackName}-MyVpc-ELB
   TG:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
@@ -204,7 +202,7 @@ Resources:
         - Type: fixed-response
           FixedResponseConfig:
             StatusCode: 403
-      LoadBalancerArn: !Ref ELB
+      LoadBalancerArn: !Ref ALB
       Port: 80
       Protocol: HTTP
   HttpRule:

@@ -129,6 +129,7 @@ Resources:
   ELB:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
+      Name: !Sub ${AWS::StackName}-MyVpc-ELB
       Scheme: internet-facing
       Type: application
       SecurityGroups:
@@ -136,9 +137,6 @@ Resources:
       Subnets:
         - !Ref PublicSubnetA
         - !Ref PublicSubnetB
-      Tags:
-        - Key: Name
-          Value: !Sub ${AWS::StackName}-MyVpc-ELB
   TG:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
