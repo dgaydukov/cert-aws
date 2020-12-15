@@ -42,7 +42,6 @@ Play Framework vs google guice vs spring
 jooq vs hibernate
 hibernate second level cache (how cache system works)
 -----------------------------------------------------------------------------------------------------------------------
-* add egress internet gateway and try to access ipv6 from private ec2
 * cross-zone nlb & end-to-end nlb/alb
 * try glacier select to csv archive
 * connect 2 vpc with privatelink (access ec2 from one vpc from another)

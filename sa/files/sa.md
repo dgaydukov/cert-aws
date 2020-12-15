@@ -2376,6 +2376,9 @@ Amazon VPC consists of:
     * /29 => 8-5=3
     * /30 => 4-5=-1
     That's why minimum size should be /28 (cause for /29 you got size 3, there is no point in such a network)
+You can configure subnet to associate either IPv4 or IPv6 public address on ec2 creation, but not both - for this you should set true to either one:
+* `MapPublicIpOnLaunch` - associate public IPv4 with newly created ec2
+* `AssignIpv6AddressOnCreation` - associate IPv6 (it can be only public) with newly created ec2. If true you must also specify `Ipv6CidrBlock`
 * RT (Route table) - set of rules (routes) to determine where network traffic from your VPC is directed. Single RT can be associated with multiple subnets, but single subnet can be associated to one RT only.
 When you create vpc, default RT is created and all subnets by default assigned to this RT, yet if you go to this RT you will see that subnets are not explicitly associated with it.
 That is because this RT - is default. If you create new RT and associate subnet with it, or implicitly associate default RT with subnet, you will see that RT has this association.
@@ -2567,6 +2570,14 @@ Migrate vpc to IPv6:
 * there is no way to disable IPv4 for vpc, cause it's default setting
 * next steps will allow support for IPv6:
     * associate IPv6 CIDR with VPC (you can either use Amazon-provided IPv6 CIDR block or your own CIDR block - you can't create custom just like for IPv4, cause in IPv6 there is no such thing as custom CIDR, all IPv6 are public)
+    * update subnet with ipv6 address range
+    Run this `ifconfig | grep inet6`, if there is no ipv6 associated with subnet only 2 ipv6 interfaces would be available, but if you add ipv6 range to subnet you will see third, global ip
+    ```
+    inet6 2600:1f18:612d:8500:fef6:b51e:c111:d80  prefixlen 128  scopeid 0x0<global>
+    inet6 fe80::81:29ff:fe35:e2d7  prefixlen 64  scopeid 0x20<link>
+    inet6 ::1  prefixlen 128  scopeid 0x10<host>
+    ```
+    Even for private subnets you must to associate IPv6 CIDR range with private subnet and with private ec2 (otherwise ec2 can't communicate with internet, if you try to ping you will get `connect: Network is unreachable`)
     * update RT (for public subnet - add a route for IPv6 to IGW, for private subnet - create EIGW and add route for IPv6 to it)
     * update SG (include a rule for IPv6 traffic for specified ports)
     * assign IPv6 address to each ec2 from your CIDR block
