@@ -125,6 +125,7 @@
 * 3.79 [Quantum Ledger Database](#quantum-ledger-database)
 * 3.80 [AppStream 2.0](#appstream-20)
 * 3.81 [License Manager](#license-manager)
+* 3.82 [Elastic Transcoder](#elastic-transcoder)
 
 
 
@@ -1631,6 +1632,9 @@ To work with CF you should create origin server Then you add you origin server t
 Origin server can be:
 * static (s3)
 * dynamic (ec2/elb or any other on-premise http server, also called custom origin)
+Origin must be internet-accessable:
+* for ec2 - it should have public IP (you can't route to private ec2)
+* for elb - it should be internet-facing (cf can't route to internal elb)
 Later when user request this link CF check the closest edge location for data, and if found in cache - return, if not request it from origin server and cache it.
 To ensure origin availability you can add backup origin and configure CF in case it get 4xx/5xx response from main origin, to use backup origin.
 Edge cache is smart, it can remove less popular content to make room for other data.
@@ -4061,6 +4065,8 @@ In case of rule fail you can configure CloudFront to show error page. Rules take
 You can use shield to protect on-premise servers. For this use aws endpoint with shield in front of your on-premise server. Shield notify about attack by sending metrics to CloudWatch.
 * FM (Firewall Manager) - tool that makes it easier for you to configure your WAF rules and vpc SG across your accounts. So if you have single account no need to use FM, but if you have aws organization with many accounts
 it's better to use single tool to configure waf across all accounts, cause FM integrated with organization so have a single place to quickly respond to incidents.
+WAF sandwich (see `sa/files/images/waf-sandwich.png`) - concept where instead of aws was you use custom software with waf on ec2.
+In this case you have elb -> custom waf with asg -> elb -> ec2 with app. So basically you put your custom waf ec2 into ASG and between 2 elb.
 
 ###### Trusted Advisor
 It reviews your account and makes recommendations for saving money, improving system performance, closing security gaps.
@@ -4314,3 +4320,11 @@ LM supports: ec2/rds/marketPlace/Systems manager. It also integrated with organi
 Automated discovery - specify rules and product info (name of software, publisher, version) and based on this LM will detect if specified software used.
 Resource inventory - lm uses Systems Manager inventory to track on-premises instances, by default inventory keeps info for 30 days. So even if your on-premise instance is not pingable LM still will count it as active.
 To be more accurate general advice is to manually deregister instance from SM inventory once you shut it down on-premise.
+
+###### Elastic Transcoder
+ET - highly scalable & cost effective tool to convert/transcode video/audio from source format into pc/smartphone/tablet format.
+You create pipeline, specify input & output s3 bucket, and also s3 bucket for thumbnail. Then create a job on pipeline, that would transcode files.
+In job you can specify start/end time, so you can convert not whole file but only part of it, and you would be charged for this part only.
+Pipeline acts like a queue for jobs, and process jobs in order they were added, but it can also process them simultaneously.
+Preset - template with settings that transcoder apply while running jobs (codec or video resolution). You can use existing presets or create your own.
+You can use SNS to notify of job start/complete/warn/error.

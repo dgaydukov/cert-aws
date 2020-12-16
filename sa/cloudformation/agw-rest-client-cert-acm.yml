@@ -8,8 +8,12 @@ AWSTemplateFormatVersion: 2010-09-09
 
 Parameters:
   HostedZone:
-    Description: Second level domain (hosted zone)
-    Default: aumingo.com
+    Description: Hosted zone name
+    Default: aumingo.com.
+    Type: String
+  Domain:
+    Description: Domain name
+    Default: test.aumingo.com
     Type: String
 
 Resources:
@@ -118,8 +122,8 @@ Resources:
   DomainName:
     Type: AWS::ApiGateway::DomainName
     Properties:
-      DomainName: !Sub test.${HostedZone}
-      RegionalCertificateArn: !Sub arn:aws:acm:${AWS::Region}:${AWS::AccountId}:certificate/238b577f-16d6-4da4-b92d-1e2ec1dd057b
+      DomainName: !Sub ${Domain}
+      RegionalCertificateArn: !Ref SslCert
       EndpointConfiguration:
         Types:
           - REGIONAL
@@ -128,12 +132,23 @@ Resources:
     Properties:
       DomainName: !Ref DomainName
       RestApiId: !Ref RestApi
+  SslCert:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Sub ${Domain}
+      ValidationMethod: DNS
+      DomainValidationOptions:
+        - DomainName: !Sub ${Domain}
+          ValidationDomain: !Sub ${Domain}
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-${Domain}
   DnsRecordSet:
     Type: AWS::Route53::RecordSet
     Properties:
-      HostedZoneName: !Sub ${HostedZone}.
+      HostedZoneName: !Sub ${HostedZone}
       Comment: DNS name for REST API
-      Name: !Sub test.${HostedZone}
+      Name: !Sub ${Domain}
       Type: A
       AliasTarget:
         DNSName: !GetAtt DomainName.RegionalDomainName

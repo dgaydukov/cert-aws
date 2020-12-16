@@ -7,6 +7,16 @@ AWSTemplateFormatVersion: 2010-09-09
 # call: curl -k --http1.1 {ELB_URL}/public.html
 # call with auth: curl -k --http1.1 --cookie 'auth=COGNITO_ID_TOKEN' {ELB_URL}/private.html
 
+Parameters:
+  HostedZone:
+    Description: Hosted zone name
+    Default: aumingo.com.
+    Type: String
+  Domain:
+    Description: Domain of your hozted zone
+    Default: test.aumingo.com
+    Type: String
+
 Resources:
   VPC:
     Type: AWS::EC2::VPC
@@ -229,7 +239,7 @@ Resources:
       Port: 443
       Protocol: HTTPS
       Certificates:
-        - CertificateArn: !Sub arn:aws:acm:${AWS::Region}:${AWS::AccountId}:certificate/238b577f-16d6-4da4-b92d-1e2ec1dd057b
+        - CertificateArn: !Ref SslCert
   PublicHttpsRule:
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Properties:
@@ -266,6 +276,28 @@ Resources:
           PathPatternConfig:
             Values:
               - "/private.html"
+
+  DnsRecordSet:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneName: !Sub ${HostedZone}
+      Comment: DNS name for NLB
+      Name: !Sub ${Domain}
+      Type: A
+      AliasTarget:
+        DNSName: !GetAtt ALB.DNSName
+        HostedZoneId: !GetAtt ALB.CanonicalHostedZoneID
+  SslCert:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Sub ${Domain}
+      ValidationMethod: DNS
+      DomainValidationOptions:
+        - DomainName: !Sub ${Domain}
+          ValidationDomain: !Sub ${Domain}
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-${Domain}
 
   UserPool:
     Type: AWS::Cognito::UserPool
