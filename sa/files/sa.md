@@ -2699,7 +2699,7 @@ TG:
   Type: AWS::ElasticLoadBalancingV2::TargetGroup
   Properties:
     Port: 443
-    Protocol: HTTPS
+    Protocol: HTTPS # for NLB use TLS protocol
 ```
 s3 logs - you can store elb logs in s3 and analyze it later with athena - below example would store all elb logs in specified s3 bucket:
 ```
@@ -2744,6 +2744,12 @@ NLB
               Value: true
 ```
 2 way ssl is not supported (use api gateway if you need it), yet you can use tcp pass through for nlb/clb
+NLB is different from ALB:
+* there is no SG for nlb. If you target group is ec2, you have to enable 2 sources:
+    * rule for port 80 for source IP of your clients
+    * rule for port 80 for private IP of your nlb (for health checks), or open for cidr for whole vpc or subnets range. For each subnet you associate with nlb, it add 1 nlb instance into each subnet with 1 private IP.
+* if TG type is instance nlb is transparent) - your ec2 would behave same way as client directly connects to it (although clinet IP is his real IP in this case, you can still enable proxy protocol and get IP from there)
+* if TG type is IP (nlb acts as NAT) - your ec2 would see client IP as nlb internal IP (use proxy protocol in this case to get client IP)
 
 ###### CloudWatch
 CloudWatch - monitoring service for aws resources and apps running in aws cloud. IAM permission for CloudWatch are given to a resource as a whole (so you can't give access for only some of EC2, you give either for all EC2 instances or none).

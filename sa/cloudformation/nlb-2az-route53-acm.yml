@@ -1,6 +1,17 @@
 AWSTemplateFormatVersion: 2010-09-09
 
-# create vpc with 2 public subnets, and one nlb and 2 ec2
+# create vpc with 2 public subnets with ec2 in each + nlb with both http + tls offload
+# you can access it by either: curl https://test.aumingo.com or without https
+
+Parameters:
+  HostedZone:
+    Description: Hosted zone name
+    Default: aumingo.com.
+    Type: String
+  Domain:
+    Description: Domain of your hozted zone
+    Default: test.aumingo.com
+    Type: String
 
 Resources:
   VPC:
@@ -56,58 +67,34 @@ Resources:
       RouteTableId: !Ref PublicRT
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId: !Ref InternetGateway
-  PublicSubnet1RTAssociation:
+  PublicSubnet1RtAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId: !Ref PublicSubnet1
       RouteTableId: !Ref PublicRT
-  PublicSubnet2RTAssociation:
+  PublicSubnet2RtAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId: !Ref PublicSubnet2
       RouteTableId: !Ref PublicRT
 
-  LoadBalancerSG:
+  WebServerSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Enable HTTP access from anywhere
-      VpcId: !Ref VPC
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 80
-          ToPort: 80
-          CidrIp: 0.0.0.0/0
-      Tags:
-        - Key: Name
-          Value: !Sub ${AWS::StackName}-MyVpc-Http-SG
-  InstanceSG:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Enable HTTP access only from ELB
-      VpcId: !Ref VPC
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 80
-          ToPort: 80
-          CidrIp: 0.0.0.0/0
-          #SourceSecurityGroupId: !GetAtt LoadBalancerSG.GroupId
-      Tags:
-        - Key: Name
-          Value: !Sub ${AWS::StackName}-MyVpc-Http-SG
-  SshSG:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Enable SSH access from anywhere
+      GroupDescription: Enable SSH/HTTP access from anywhere
       VpcId: !Ref VPC
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 22
           ToPort: 22
           CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-MyVpc-Ssh-SG
-
+          Value: !Sub ${AWS::StackName}-MyVpc-WebServerSG
   PublicInstance1:
     Type: AWS::EC2::Instance
     Properties:
@@ -121,12 +108,38 @@ Resources:
           sudo yum install httpd -y
           sudo service httpd start
           sudo echo "<h1>App 1</h1>" > /var/www/html/index.html
-          sudo echo "<h1>Public Page 1</h1>" > /var/www/html/public.html
-          sudo echo "<h1>Private Page 1</h1>" > /var/www/html/private.html
+          sudo echo "<h1>Page 1</h1>" > /var/www/html/page.html
       NetworkInterfaces:
         - AssociatePublicIpAddress: true
           DeviceIndex: 0
           SubnetId: !Ref PublicSubnet1
+          GroupSet:
+            - !GetAtt WebServerSG.GroupId
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 8
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-PublicInstance1
+  PublicInstance2:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-09d95fab7fff3776c
+      KeyName: mykey
+      UserData:
+        Fn::Base64:
+          !Sub |
+          #!/usr/bin/env bash
+          sudo yum install httpd -y
+          sudo service httpd start
+          sudo echo "<h1>App 2</h1>" > /var/www/html/index.html
+          sudo echo "<h1>Page 2</h1>" > /var/www/html/page.html
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: 0
+          SubnetId: !Ref PublicSubnet2
           GroupSet:
             - !GetAtt InstanceSG.GroupId
             - !GetAtt SshSG.GroupId
@@ -136,36 +149,7 @@ Resources:
             VolumeSize: 8
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-MyVpc-PublicInstance1
-#  PublicInstance2:
-#    Type: AWS::EC2::Instance
-#    Properties:
-#      InstanceType: t2.micro
-#      ImageId: ami-09d95fab7fff3776c
-#      KeyName: mykey
-#      UserData:
-#        Fn::Base64:
-#          !Sub |
-#          #!/usr/bin/env bash
-#          sudo yum install httpd -y
-#          sudo service httpd start
-#          sudo echo "<h1>App 2</h1>" > /var/www/html/index.html
-#          sudo echo "<h1>Public Page 2</h1>" > /var/www/html/public.html
-#          sudo echo "<h1>Private Page 2</h1>" > /var/www/html/private.html
-#      NetworkInterfaces:
-#        - AssociatePublicIpAddress: true
-#          DeviceIndex: 0
-#          SubnetId: !Ref PublicSubnet2
-#          GroupSet:
-#            - !GetAtt InstanceSG.GroupId
-#            - !GetAtt SshSG.GroupId
-#      BlockDeviceMappings:
-#        - DeviceName: /dev/xvda
-#          Ebs:
-#            VolumeSize: 8
-#      Tags:
-#        - Key: Name
-#          Value: !Sub ${AWS::StackName}-MyVpc-PublicInstance2
+          Value: !Sub ${AWS::StackName}-MyVpc-PublicInstance2
 
   NLB:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
@@ -188,7 +172,7 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AWS::StackName}-MyVpc-TG
-  HttpListener:
+  TcpListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       DefaultActions:
@@ -197,3 +181,36 @@ Resources:
       LoadBalancerArn: !Ref NLB
       Port: 80
       Protocol: TCP
+  TlsListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TG
+      LoadBalancerArn: !Ref NLB
+      Port: 443
+      Protocol: TLS
+      Certificates:
+        - CertificateArn: !Ref SslCert
+  SslCert:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Sub ${Domain}
+      ValidationMethod: DNS
+      DomainValidationOptions:
+        - DomainName: !Sub ${Domain}
+          ValidationDomain: !Sub ${Domain}
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-${Domain}
+
+  DnsRecordSet:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneName: !Sub ${HostedZone}
+      Comment: DNS name for NLB
+      Name: !Sub ${Domain}
+      Type: A
+      AliasTarget:
+        DNSName: !GetAtt NLB.DNSName
+        HostedZoneId: !GetAtt NLB.CanonicalHostedZoneID

@@ -72,7 +72,7 @@ Resources:
       GatewayId: !Ref InternetGateway
 
 
-  PublicSubnet1RTAssociation:
+  PublicSubnet1RtAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId: !Ref PublicSubnet1
