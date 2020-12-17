@@ -1174,6 +1174,11 @@ To get aws console url you should:
     * AssumeRole (recommended) - assume iam role. DurationSeconds - specify time from 15 min - max session duration setting for the role. There are 3 types:
         * AssumeRole - get temporary credentials for existing IAM user
         * AssumeRoleWithWebIdentity - get temporary credentials for user who authenticated through a public IdP (Amazon/Facebook/Google/Cognito), take a look at `sa/cloudformation/cognito-iam.yml`
+        This is open api, anybody can call (you don't need to be iam authenticated to call it). Identity is verified by idToken provided in call. Assumed role should have policy to allow federated access.
+        If you provide wrong token or your role has wrong federated access (for example your role `"Principal": { "Federated": "graph.facebook.com" }` but you supply token from google), you get error `Not authorized to perform sts:AssumeRoleWithWebIdentity`
+        You can set duration from 15 min up to max session duration of role (1 hour -12 hour), by default - 1 hour.
+        You can also pass inline permission - result would be intersection between role permission & your inline permission. By doing this you can limit role permission further.
+        If you are using amazon cognito IdP, you still need to configure cognito identity pool.
         * AssumeRoleWithSAML - get temporary credentials for user who authenticated with SAML. In the api call you have to provide SAML assertion, encoded in base64, returned by the SAML IdP
     * GetFederationToken - returns intersection of user permission and passed policy. DurationSeconds - specify time from 15 min - 36 hours
     * GetSessionToken - returns a set of temporary credentials to an existing IAM user (duration 15min - 36h, default - 12h). Basically same as `GetFederationToken`, but you don't supply policy and get all permission available for calling user.
@@ -3289,7 +3294,7 @@ Cognito also support SAML or OpenID Connect, social identity providers (such as 
 * Identity Pool - temporary credentials to access aws services. If your users don't need to access aws resources, you don't need identity pool, user pool would be enough.
 You can use users from User Pool or Federated Pool (Facebook, Google) as users to whom give temporary credentials.
 You pay for MAU (monthly active users) - user who within a month made some identity operation signIn/singUp/tokenRefresh/passwordChange.
-Free tier - 50k MAU per month. You can call `AssumeRoleWithWebIdentity` to get temporary credentials.
+Free tier - 50k MAU per month. You can call `AssumeRole` to get temporary credentials.
 So you can singin to user_pool but you can use user_pool id token to get aws credentials from identity_pool
 There are 3 types of cognito tokens (with accord to OpenID):
 * id token - jwt token that has personal user info (name, email, phone). So you shouldn't use it outside your backend, cause it includes sensitive info. Usually id token = access token + user's personal details.
@@ -3301,13 +3306,20 @@ Example creating users from cli:
 aws cognito-idp sign-up --client-id={USER_POOL_CLIENT_ID} --username=john.doe@gmail.com --password=P@1ssword --user-attributes Name="email",Value="john.doe@gmail.com" Name="name",Value="John Doe"
 # confirm user as admin (without confirmation password sent to eamil)
 aws cognito-idp admin-confirm-sign-up --user-pool-id={USER_POOL_ID} --username=john.doe@gmail.com
-
 # login & get idToken
 aws cognito-idp initiate-auth --client-id={USER_POOL_CLIENT_ID} --auth-flow=USER_PASSWORD_AUTH --auth-parameters USERNAME=john.doe@gmail.com,PASSWORD=P@1ssword
 # create cognito identity id
 aws cognito-identity get-id --identity-pool-id={IDENTITY_POOL_ID} --logins cognito-idp.us-east-1.amazonaws.com/{USER_POOL_ID}={ID_TOKEN}
-# get temporary aws credentials
+
+# from now you have 2 optios to get temporary credentials
+
+# option1: get temporary aws credentials with cognito
 aws cognito-identity get-credentials-for-identity --identity-id={IDENTITY_ID} --logins cognito-idp.us-east-1.amazonaws.com/{USER_POOL_ID}={ID_TOKEN}
+
+# option2: get temporary aws credentials using AssumeRoleWithWebIdentity api
+# get open id token that you later use
+aws cognito-identity get-open-id-token --identity-id={IDENTITY_ID} --logins cognito-idp.us-east-1.amazonaws.com/{USER_POOL_ID}={ID_TOKEN}
+aws sts assume-role-with-web-identity --role-arn={ROLE_ARN} --role-session-name=temprole --web-identity-token={OPEN_ID_TOKEN}
 ```
 
 ###### CodePipeline(CodeCommit/CodeBuild/CodeDeploy)
@@ -3544,30 +3556,56 @@ Aurora global:
 * it doesn't support: serverless, backtracking
 
 ###### CloudTrail
-CT - service that logs activity of your aws account (who made request, what params were passed, when and so on..). It's useful for compliance, when you need to ensure that only certain rules has ever been applied.
+CT - service that logs activity of your aws account (who made request, what params were passed, when and so on..). It's useful for compliance, when you need to ensure that only certain rules have ever been applied.
 On average event appear in CT after 15 min after api call was made.
 There are 3 types of logs
 * management events - api calls to modify aws resources (create ec2/s3 and so on...)
 * data events - api calls to modify actual data (s3 get/put/delete object + lambda calls)
 * insights events - CT use ML (Machine Learning) to determine any anomaly (like spike in some api calls) and notify you.
 By default:
-* log files delivered within 15 minutes of account activity
+* log files delivered within 15 minutes of account activity. 
 * logs stored for 90 days and only management events stored. If you need longer you should create trail. Trail stores data in s3, you have to analyze it yourself (usually using Athena)
 * trail viewable in region where it's created. for all-region trail - it's viewable in all regions.
 * trail collects data from all regions. You can create single region trail [only from cli](https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-create-and-update-a-trail-by-using-the-aws-cli-create-trail.html#cloudtrail-create-and-update-a-trail-by-using-the-aws-cli-examples-single), no way to create single-region trail from console. 
 * trail created with GSE enabled (it's true for both when you create from console and from cli. Although when you create trail from cli you can specify `--no-include-global-service-events` not to include GSE into this trail). 
 When aws launch new region, in case of all region trail - new trail would be created in newly launched region.
 * trail in s3  encrypted using SSE. You can set custom encryption with KMS.
+SNS delivery - you can configure to get notification each time new log file delivered to s3 bucket (not single event, but whole file with many events).
 Cross-account trails (you can configure to deliver CT events from multiple accounts to single s3 bucket):
 * create s3 bucket in account A, accountAMyS3Bucket and add bucket policy to allow cross-account access
 * in account B (or any other) create CT and set bucket name as accountAMyS3Bucket. From now all logs would be delivered to bucket in another account
-Log file validation - guaranty that logs were not tampered with. When turn in, ct create a hash for each log file, and every hour store all these hashes in digest file in the same s3 bucket. 
-Each digest file is signed with private key that generated by ct. You can download public keys with `list-public-keys` command, and validate signed files. But you have no access to private keys - they are managed by ct.
+Log file validation - guaranty that logs were not tampered with. When turn in, CT create a hash for each log file, and every hour store all these hashes in digest file in the same s3 bucket. 
+Each digest file is signed with private key that generated by CT. You can download public keys with `list-public-keys` command, and validate signed files. But you have no access to private keys - they are managed by CT.
 Private key is unique for each region within aws account. When you retrieve public keys you specify time range - 1 or more public keys may be returned. Mare sure your s3 bucket has correct write policy, otherwise CT won't be able to store logs there.
 Organization trail - created by master account to log all events in all aws accounts for this organization (can be one/all region). You can deliver CT logs to CloudWatch, in this case CT would deliver logs to s3 & CloudWatch logs.
 GSE (Global Service Events) - services like IAM/STS/CloudFront add logs to all trails that support GSE. It's turn on by default. You can turn it off only from cli/sdk.
 * create trail `aws cloudtrail create-trail --name=multiRegionTrail --s3-bucket-name=my-test-s3-bucket-1 --is-multi-region-trail`
 S3 bucket should have both `s3:GetBucketAcl/s3:PutObject` enabled in bucket policy, otherwise you got `Incorrect S3 bucket policy is detected for bucket`.
+Below is bucket policy example:
+```
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "Service": "cloudtrail.amazonaws.com"
+            },
+            "Action": "s3:GetBucketAcl",
+            "Resource": "arn:aws:s3:::my-test-s3-bucket-1"
+        },
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "Service": "cloudtrail.amazonaws.com"
+            },
+            "Action": "s3:PutObject",
+            "Resource": "arn:aws:s3:::my-test-s3-bucket-1/*"
+        }
+    ]
+}
+```
+Result of CT creation:
 ```
 {
     "Name": "multiRegionTrail",
@@ -3731,6 +3769,8 @@ Redundant site-to-site vpn - create 2 customer gateways (with 2 separate devices
     * each site should have non-overlapping IP range (VGW acts as hub and re-advertise these ranges to other sites, so they communicate with each other)
     * create site-to-site vpn for each site but with same virtual gateway (many CGW to single VGW)
 Both of them using IPSec protocol (encrypt all IP packets of data before sending over the internet and decrypt them back on receiving).
+Note that IPSec operates on network layer of osi, so it provide pretection/encryption for data in transit, yet source/destination may not be aware of IPSec, so it doesn't provide end-to-end protection.
+VPG (virtual private gateway) terminate IPSec connection and from there on traffic goes unencrypted.
 Client VPN endpoint - allows end users to access aws network over TLS. Target network (vpc subnet) - network that you associate with VPN endpoint, so end users can access it.
 You create vpn endpoint, associate it with target network and distribute vpn config file with end users. End user download openVpn and using your config connect to vpc.
 When you create client vpn you can enable split-tunnel.
