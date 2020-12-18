@@ -1745,7 +1745,7 @@ Consumer decide from which shard to read, they query kinesis, get list of shards
     * apache flink - use java/scala to process & analyze data
 AntiPattern:
 * Small scale consistent throughput (Kinesis Data Streams is designe and optimized for large data throughput)
-* Long-term data storage and analytics (By default Kinesis Data Streams stores data 24 hours, you can extend retention up to 168 hours (7 days), if you need longer you should considered RDS/DynamoDb/S3/Glacier)
+* Long-term data storage and analytics. By default Kinesis Data Streams stores data 24 hours, you can extend retention up to 168 hours (7 days), if you need longer you should considered RDS/DynamoDb/S3/Glacier
 Auto-scaling:
 * app auto scaling - CloudWatch alarm + App Auto Scaling + api gateway + lambda (that actually change number of shards) - you have to use CloudFormation template to set it up (you can set it up manually for testing)
 * [kinesis auto scaling utility](https://github.com/awslabs/amazon-kinesis-scaling-utils) - you can deploy it as beanstalk (or java server) and it will monitor CloudWatch to dynamically scale out/in your shards
@@ -2310,6 +2310,7 @@ Ami is nothing but representation of snapshot, so you can't delete snapshot if t
 Multiple IP - you can assign multiple private IP addresses to ec2, with this you can:
 * host multiple websites on a single server, using multiple SSL certs each associating with a specific IP address
 * in case if failure, reassign secondary IP to another ec2
+For compute intensive use C3, for graphic-intesive use G3
 
 ###### Athena
 Athena is an interactive query service that makes it easy to analyze data in Amazon S3 using standard SQL. It uses presto under the hood. Presto - good solution if you need to connect to multiple data sources.
@@ -2335,9 +2336,14 @@ There are 3 ways to use ids/ips:
 * set up security VPC with ec2 with agents installed, and peer this vpc with your vpc, and accept traffic only from this security VPC (this is good if you have thousands ec2 in your main vpc, so instead of installing agent on all of them, it's better to use second vpc)
 
 ###### Organizations
-Organizations - service that allows to tie several accounts to master account and centrally manage them (billing, services, policies), so it basically collection of AWS accounts that you can organize into a hierarchy and manage centrally.
+Org - service that allows to tie several accounts to master account and centrally manage them (billing, services, policies), so it basically collection of AWS accounts that you can organize into a hierarchy and manage centrally.
 Master Account - aws account from which you create your organization. From there you can also create/invite/delete other accounts. It's charged to pay all bills by all accounts. Once chosen, you can't change master account.
-As long as you have organization and your account - master account, it can't accept invitation to join other organizations. If you want it to become member account, you have to delete your organization first.
+Master account can remove member account from org. Member account can also leave org. Before removing account you should:
+* enable IAM user access to billing in the member account
+* account has the information required for it to operate as a standalone account
+Plz note that master account can't leave org. If master wants to leave you have to delete org.
+To leave org you need iam access policy: `organizations:DescribeOrganization/organizations:LeaveOrganization`
+As long as you have organization and your account - master account, it can't accept invitation to join other org. If you want it to become member account, you have to delete your organization first.
 OU (Organization Unit) - group of accounts under one name, can be used to build hierarchical structure. Account can be a member of only 1 organization/OU at a time. OU can be a member of only 1 OU at a time.
 Typical use case is to have 2 accounts (dev + prod) to separate concerns, but to manage them from single one. There are 2 types of policies:
 * SCP (Service Control Policy) - policy you can apply to a group of aws accounts, defines service actions (like run EC2 instance), it follows the same rules as IAM policies.
@@ -2632,6 +2638,11 @@ Otherwise there is a risk that migration would be half-completed. You should put
     * rename table/column, add new column, remove column from one table or add prefix to another, convert to lower/upper-case, change column datatype, add new column as concat of 2 existing (use transformation rule)
     * table & collection (cause for MongoDB/DocumentDB data stored not in tables but as documents gathered as collections) settings - migrate single table/view using multiple threads
 You can specify kinesis/kafka only as target (not as source)
+If you want to migrate old/unsupported db engine, you should:
+* export your db into csv
+* upload your scv to s3
+* create task to migrate data where source would b3 s3 and target - your desired target db
+* add table mapping rules in json
 
 ###### ELB
 ELB (Elastic Load Balancing) - is a proxy that accept traffic (using listeners) from clients and route it to targets (usually EC2), so it basically distribute your traffic between different ec2 instances and holds 2 connections:
@@ -2698,7 +2709,7 @@ Smart certificate selection - nlb support multiple certificates per tls connecti
 * when you create nlb from console you can specify only default certificate
 * after you can go to `listeners=>View/edit certificates=>add certificate` to add other certificates
 * if hostname match single cert - use this cert, otherwise - use best cert client can support
-SNI (Server Name Indication) - host multiple tls application, each with it's own (or multiple) ssl certificate behind single ELB, which would choose optimal certificate for each client.
+SNI (Server Name Indication) - host multiple tls application, each with it's own (or multiple) ssl certificate behind single ELB, which would choose optimal certificate for each client. Supported only by elb.
 You can create multi-vpc elb, but if you want to route traffic to multiple vpc, better for each vpc to have single elb, and use route53 to route traffic to multiple elb.
 Yet if you want to use single elb to multiple vpc, you should use vpc peering and for target group set `TargetType: ip` and set list of private IP addresses to `TargetDescription.Id` attribute.
 End-to-end encryption - usually we terminate ssl on elb and from there we send traffic to ec2 using http, cause anyway from elb traffic is inside vpc, so it's secured.
@@ -3863,11 +3874,11 @@ You can configure 2 permission sets:
 * Session Duration - time for which user can be logged in for aws, 1(default) - 12hours. After specified time user automatically logged out
 
 ###### OpsWorks
-OpsWorks - config management service that provides managed instances of Chef/Puppet which help automate servers' configuration/deployment/management. There are 3 solutions:
-* OpsWorks Stacks
-* OpsWorks for Chef Automate
-* OpsWorks for Puppet Enterprise
-OpsWorks Stacks - manages apps and servers in aws and on-premises, you model your app as stack containing different layers (elb, rds, ec2).
+OpsWorks - config management service that provides managed instances of Chef/Puppet which help automate server configuration/deployment/management. There are 3 solutions:
+* OpsWorks Stacks - manages apps and servers in aws and on-premises, you model your app as stack containing different layers (elb, rds, ec2)
+You app would usually have 1 stack and many layers. Also if your app use java & python, it can be better to divide it into 2 layers
+* OpsWorks for Chef Automate - fully managed Chef server and automation tools for ci/cd. You can migrate to it from Stacks, but you would need to rewrite some recipes, but most recipes would work without any change
+* OpsWorks for Puppet Enterprise - managed Puppet Enterprise server and automation tools for ci/cd (including orchestration/provisioning/deploying services in ec2)
 You run Chef recipes using Chef Solo to automate package installation/deployment/management of your stack.
 So it helps you provision/manage your app in aws using Chef solo installed in one of ec2. 
 Difference with other platform:
@@ -3875,11 +3886,9 @@ Difference with other platform:
 * beanstalk - app management platform (you just upload code and beanstalk configure everything else use it's own CF templates)
 * cloudFormation - infra management platform. If you need to provision a lot of resources use CloudFormation, if you have something like LAMP stack use beanstalk
 OpsWorks Stacks create lifecycle events and on each of them some recipes could be executed (default events - setup/configure/deploy/undeploy/shutdown).
-OpsWorks for Chef Automate - fully managed Chef server and automation tools for ci/cd. You can migrate to it from Stacks, but you would need to rewrite some recipes, but most recipes would work without any change.
-OpsWorks for Puppet Enterprise - managed Puppet Enterprise server and automation tools for ci/cd (including orchestration/provisioning/deploying services in ec2)
 You can use cf template to create stack:
 * use cf template to create VPC/Route53/Nat/Bastion and so on (but not ec2, they are created inside opsWorks)
-* using `AWS::OpsWorks::Stack` create stack and `AWS::OpsWorks::App` to create java app (or any other programming language)
+* use `AWS::OpsWorks::Stack` create stack and `AWS::OpsWorks::App` to create java app (or any other programming language)
 * use `AWS::OpsWorks::Instance` to create instances (don't use `AWS::EC2::Instance`)
 
 ###### SWF

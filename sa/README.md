@@ -19,6 +19,7 @@ https://sleek.com/hk/resources/offshore-companys-guide-to-tax-exemption-in-hong-
 https://en.wikipedia.org/wiki/Brotherhood_of_the_Wolf
 https://en.wikipedia.org/wiki/Crying_Freeman_(film)
 https://en.wikipedia.org/wiki/Groundhog_Day_(film)
+https://en.wikipedia.org/wiki/The_Notebook (movie)
 https://en.wikipedia.org/wiki/Unsane
 fix gradle project in intellij
 enable AspectJ proxy mode for the @EnableAsync and provide a weaver (so you can call `@Async` from same class)
@@ -44,6 +45,7 @@ hibernate second level cache (how cache system works)
 -----------------------------------------------------------------------------------------------------------------------
 * use facebook/google token to get temporary credentials (see `sa/cloudformation/cognito-iam.yml`). Do we need identity pool in case of federated provider like facebook/google
 According to [this](https://aws.amazon.com/blogs/mobile/understanding-amazon-cognito-authentication) for public IdP (facebook/google) you don't need identity pool and can call AssumeRoleWithWebIdentity directly with their token
+Why do we need identity pool + federated IdP (facebook/google) if federated IdP can directly assume role (cause you can add facebook/google through IdentityPoolRoleAttachment to cognito identity pool, but why do you need it if you can just get credential from role directly using sts)?
 * try glacier select to csv archive
 * connect 2 vpc with privatelink (access ec2 from one vpc from another)
 * create vpc link and connect http api to ec2 in private subnet
