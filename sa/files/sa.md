@@ -126,6 +126,7 @@
 * 3.80 [AppStream 2.0](#appstream-20)
 * 3.81 [License Manager](#license-manager)
 * 3.82 [Elastic Transcoder](#elastic-transcoder)
+* 3.83 [Elemental Media](#elemental-media)
 
 
 
@@ -1470,13 +1471,12 @@ EFS (Elastic File System) - delivers simple network filesystem for EC2. It suppo
 System size is grow as you add more files to file system. It allows parallel access from multiple EC2 within the same region.
 It accessed by EC2 using mount targets which are created by AZ. If you need temporary storage EFS not the best option, look at EC2 Local Instance Store.
 Mount helper - `amazon-efs-utils` utility that defines a new network file system type, called efs, which you can use with `mount` command
-There are 2 performance modes (plz note that they both equivalent in term of price, so you can choose any, no price effect):
+There are 2 performance modes - can be chosen during creation, and can't be changed after (plz note that they both equivalent in term of price, so you can choose any, no price effect):
 * General (if you need less then 7k file operation per second) - better to use if you need low latency
 * Max I/O (if thousands of ec2 access same efs) - provide high I/O for trade-off of latency - not best scenario if low latency is required
 There are 2 throughput modes:
-* bursting - throughput scales as your efs size grows
-* provisioned - you can provision desired throughput regardless of efs size (use it if amount of data is low, but access is high)
-Notice that performance mode can be chosen during creation, and can't be changed after.
+* bursting - throughput scales as your efs size grows. You also earns credit and when you have load pikes you can use credit
+* provisioned (1 - 1024 MB/s) - you can provision desired throughput regardless of efs size (use it if amount of data is low, but access is high)
 When you create efs it creates mount target in each az. Instances in each az talk to efs by using this mount targets.
 To mount efs to ec2, mount helper should be installed and running `sudo yum install -y amazon-efs-utils`. You can mount it by `sudo mount -t efs fs-bc0a413f:/ ./mnt`.
 For some AMI (Amazon Linux/RHEL/Ubuntu) it's already installed, you just need to start it. You can check the status by `sudo service nfs status`
@@ -1611,6 +1611,7 @@ When you create snapshot policy you have to enter:
 * resource type: VOLUME - for single ebs volume, INSTANCE - for all ebs volumes for ec2 (multi-volume snapshot)
 * target tags - tags for ebs volume or ec2 instance for which this policy would be applied
 * schedules - start time when run snapshot creation. You have 1 mandatory schedule and 3 optional - so you can create snapshots at different frequency using single policy.
+You can run scheduled policy every 1,2,3,4,6,8,12,24 hours.
 If several schedules trigger at the same time, DLM will create only 1 snapshot.
 * retention - how to retain, you can use either based on total count (retain last 5 snapshots) or age (for how long you would like to keep snapshots)
 Snapshot deletion may not reduce costs, cause snapshot is incremental backup, and if other snapshot use same data, when you delete snapshot - you in no way change total size.
@@ -1621,6 +1622,12 @@ Suppose we have 3 snapshots:
 So totally - 16GB.
 If you remove A - only 4GB would be removed, cause 6 is still used by others.
 If you remove B - nothing would be removed, cause 4GB of B is still used by latest snapshot.
+Encryption:
+* you can encrypt your volume using KMS (if you don't have any CMK then default `aws/ebs` key would be used)
+* encryption happens on servers that host ec2, so data-at-rest & data-in-transit (between ec2 and attached ebs) are encrypted
+* you can attach both encrypted & unencrypted volumes to same ec2 simultaneously
+* volume encrypted by data key, data key encrypted with CMK and stored on same disk. On decryption first data key decrypted, than all data decrypted by data key
+* encryption handled by hypervisor, plaintext data key stored in hypervisor memory to run encrypt I/O to ebs
 
 ###### EC2 Instance Store
 Similar to EBS, but located on the same machine as EC2 (EBS connected through network), available only during lifetime of EC2.
@@ -1763,12 +1770,13 @@ Kinesis vs Kafka vs Apache Storm (kinesis & kafka are message brokers - middlema
 * kinesis - data stored in Shards, config store - DynamoDB, synchronously replicates across 3 AZ
 * storm - middleman between hadoop (which works with batches only) and streaming source. It takes incoming stream, organize data into packages and sends it to hadoop for further processing. Data sources are called spouts and each processing node is a bolt.
 You can view kinesis video using following api:
-* GetMedia API (real-time api with low latency) - you have to build your own player to view video from this api using [Stream Parser Library](https://docs.aws.amazon.com/kinesisvideostreams/latest/dg/parser-library.html)
+* `GetMedia` (real-time api with low latency) - you have to build your own player to view video from this api using [Stream Parser Library](https://docs.aws.amazon.com/kinesisvideostreams/latest/dg/parser-library.html)
 To upload video to kinesis you should use PutMedia api and upload mkv files. MKV (matroshka) - multimedia container formats
-* HLS (HTTP Live Streaming) - you can use for live playback or to view archived video. You can use third-party player `Video.js/Google Shaka Player` to display stream using HLS streaming session URL.
+* `GetHLSStreamingSessionURL` - retrieve HLS (HTTP Live Streaming) url that you can open in browser or media player, you can use for live playback or to view archived video. 
+You can use third-party player `Video.js/Google Shaka Player` to display stream using HLS streaming session URL.
 You can also play back video by typing the HLS streaming session URL in the Location bar of the Safari/Edge browsers.
-* MPEG-DASH (Dynamic Adaptive Streaming over HTTP) - same as HLS, just different format
-* GetClip API - use it to download clip (MP4) with archived/on-demand media from video stream over the time range
+* `GetDASHStreamingSessionURL` MPEG-DASH (Dynamic Adaptive Streaming over HTTP) - same as HLS, just different format
+* `GetClip` - use it to download clip (MP4) with archived/on-demand media from video stream over the time range
 If you have need to store data durable with ordering and data should be read with 4 hours interval by 2 apps, you have 2 choices:
 * put data into first sqs, first app read from first sqs and copy data into second sqs for second app (sqs should be of fifo type)
 * use kinesis data stream - this is more approprite solution, cause first solution require app to make sure that messages would be put into second queue, here no extra coding required (ordering built-in)
@@ -2189,13 +2197,25 @@ When you terminate instance it will wait for `HeartbeatTimeout` (default 1 hour)
 ```
 To complete you should call `aws autoscaling complete-lifecycle-action --lifecycle-action-result=CONTINUE --instance-id=i-01b8eb322fb0e88e7 --lifecycle-hook-name=asg-ScaleInHook-1X3I4VRP056CX --auto-scaling-group-name=asg-VPC-A-ASG`
 Termination policy - customizing how asg would terminate your instances:
-* Default
+* Default - terminate ec2 with oldest launch config (if all instance has same date launch config, terminate instance closest to next billing hour)
 * OldestInstance - remove oldest instances first, useful when you're upgrading the instances
 * OldestLaunchConfiguration - remove instances that have the oldest launch configuration, useful when you're updating a group and phasing out the instances from a previous configuration
 * NewestInstance - remove newest instance first, useful when you're testing a new launch configuration but don't want to keep it
 * ClosestToNextInstanceHour - remove instances that are closest to the next billing hour
 * OldestLaunchTemplate - remove instances that have the oldest LT
 * AllocationStrategy - remove instances to align the remaining instances to the allocation strategy for the type of instance that is terminating (either a Spot Instance or an On-Demand Instance)
+You can manually terminate any ec2 if you know it's id with `TerminateInstanceInAutoScalingGroup` api (you can optionally choose to change desired capacity, so asg won't add new ec2 instead of removed)
+Scaling process (2 default are `Launch/Terminate`):
+* AddToLoadBalancer - add new ecw to TG
+* AlarmNotification - accept CW alarms
+* AZRebalance - balance number of ec2 evenly across several AZ. In this case asg first add new ec2 in one az and only after remove it from another - this ensure that no capacity would be under-provision. But this also can create 2 problems:
+    * over-provision - for some time new ec2 would be added, before old would be removed
+    * if you reach max capacity - then this activity is blocked, cause you can't add new ec2 in another AZ if max capacity. But asg can increase max capacity for up to 10% to guarantee that rebalance would happen
+* HealthCheck - check health status and mark instance unhealthy
+* ReplaceUnhealthy - terminate instances marked unhealthy and create new 
+* ScheduledActions - perform scheduling scaling
+You can suspend/resume any of this scaling policy using `SuspendProcesses/ResumeProcesses`.
+Administrative suspension - aws would terminate launch attempts if asg failed to launch instance for 24 hours. You can also set suspension to (launch/terminate). In this case asg won't try to attempt to launch/terminate instances (if you suspend termination, spot instances would be terminated anyway)
 LT (launch template) vs LC (launch configuration):
 * LC (old version) - immutable (you can create one LC and if you want to add change you have to add second LC). Only basic ec2 settings are supported.
 * LT (new version) - you can have multiple versions in single template. You can have advanced features like subnetID, multiple instance types, dedicated hosts and so on.
@@ -2204,8 +2224,6 @@ ASG with both on-demand & spot instances:
 * You can't use launch config, cause it only support on-demand (by default) or spot (add `SpotPrice: 0.002` to `AWS::AutoScaling::LaunchConfiguration`).
 If you try to asg + launch config with spot, and no spot instances can be fetch you will get exception: `Launching a new EC2 instance. Status Reason: Your Spot request price of 0.002 is lower than the minimum required Spot request fulfillment price of 0.0038. Launching EC2 instance failed.`.
 If you can't fetch spot instances, your asg would be without instances, yet it will continue try to create instance. So far it looked like it would try to fetch every time increase number of two, so fetch 1,2,4,8,16,32 minutes. See screenshot from my pc `sa/files/images/asg-activity-history.png`.
-Administrative suspension - aws would terminate launch attempts if asg failed to launch instance for 24 hours.
-You can also set suspension to (launch/terminate). In this case asg won't try to attempt to launch/terminate instances. Pay attention if you suspend termination, spot instances would be terminated anyway
 * You have to use launch template. But don't hardcode spot into launch template with:
 ```
 InstanceMarketOptions:
@@ -3102,6 +3120,10 @@ GTID (global transaction identifiers) - unique identifiers generated for committ
 MyISAM vs InnoDB:
 * myisam: only full table-level locking, doesn't support tx
 * inndodb: both row-level & table-level locking, support transactions, foreign keys, relationship constraints
+RDS on VMware - manage private on-premise database with rds using rds connector (software appliance for VMware vSphere env)
+For both rds & rds on vmware you can create read replica but you should enable automatic backup (with retention period greater than 0).
+For rds on vmware you can create only 1 read replica and only in the same region. Rds on vmware support DX, but doesn't support aurora.
+You can also backup to s3 & create read replica in aws.
 
 ###### SQS
 Payload vs attributes:
@@ -4377,3 +4399,32 @@ In job you can specify start/end time, so you can convert not whole file but onl
 Pipeline acts like a queue for jobs, and process jobs in order they were added, but it can also process them simultaneously.
 Preset - template with settings that transcoder apply while running jobs (codec or video resolution). You can use existing presets or create your own.
 You can use SNS to notify of job start/complete/warn/error.
+
+###### Elemental Media
+This family include following products:
+* MediaConnect
+* MediaConvert
+* MediaLive
+* MediaPackage
+* MediaStore
+* MediaTailor
+* Interactive Video Service & Kinesis Video Streams - part of media, but not part of Elemental package
+MediaConnect - reliable/secure transport service for live video (takes video from one source and send to securely sends to one/more destinations).
+You create a flow to connect source with dest and choose:
+* transport protocol 
+* type of encryption
+* destinations
+Flow returns ingest endpoint where you send videos as a single unicast transport stream
+MediaConvert - file-based video processing service for format/compress offline content to delivery to tv/devices.
+File-based video transcoding - process video to reduce size, change format, compress. It's preferred over Elastic Transcoder, since it's major product and soon more features would be added to it, that won't be availabe in Transcoder.
+MediaLive - cloud-based live video encoding service & broadcast for delivery of high-quality live video streams. Video providers can deliver video streams to their audience.
+Video encoding - compresses a video stream from high-quality video to smaller-sized versions with little loss as possible.
+statmux (statistical multiplexing) - distribute content via traditional broadcast methods, extracts more bandwidth capacity from the network.
+You can use SG and whiltelist IP that push content to MediaLive, and iam to secure content. It supports RTP/RTMP/HLS for incoming videos.
+MediaPackage - video origination and just-in-time packaging service for package and deliver live video streams. So it customize live video stream to format requested by viewing device.
+You can use CloudFront with MediaPackage to distribute content, but can also use any third-party CDN. It tightly integrated with MediaLive.
+MediaStore - media origin and storage service for delivery live streaming video with low latency. It maintains replicated cache after each update so you get low latency & predictable performance.
+It can be choose as output destination for MediaLive. It provides read-after-write and read-after-update consistency. Here is example of streaming solution in aws `sa/files/images/medialive-mediastore-solution.png`
+Don't confuse:
+* MediaLive - broadcast-grade live video encoding service for streaming video to end-users
+* Kinesis Video - securely stream video from connected devices to aws for further real-time/batch-driven analysis ML, video playback, analytics. So you can use it to build machine-vision apps for smart home/city
