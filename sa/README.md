@@ -34,15 +34,12 @@ https://www.youtube.com/watch?v=iB2N8aqwtxc (Алексей Шипилёв — �
 https://real-logic.co.uk/about.html (videos by Martin Thompson)
 https://mechanical-sympathy.blogspot.com
 http://concurrencyfreaks.blogspot.com
-https://www.slideshare.net/trishagee/introduction-to-the-disruptor
-https://github.com/LMAX-Exchange/disruptor
-https://martinfowler.com/articles/lmax.html
+http://bad-concurrency.blogspot.com
 https://www.infoq.com/presentations/mechanical-sympathy
 The Art of Multiprocessor Programming
 Play Framework vs google guice vs spring
 jooq vs hibernate
 hibernate second level cache (how cache system works)
-example using sbe & aeron
 -----------------------------------------------------------------------------------------------------------------------
 * use facebook/google token to get temporary credentials (see `sa/cloudformation/cognito-iam.yml`). Do we need identity pool in case of federated provider like facebook/google
 According to [this](https://aws.amazon.com/blogs/mobile/understanding-amazon-cognito-authentication) for public IdP (facebook/google) you don't need identity pool and can call AssumeRoleWithWebIdentity directly with their token

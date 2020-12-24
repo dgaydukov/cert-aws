@@ -1634,7 +1634,14 @@ Similar to EBS, but located on the same machine as EC2 (EBS connected through ne
 So it's not durable, once EC2 instance stop/restart/fail all data would be lost.
 It's not available for all ec2 types, only for [some of them](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/InstanceStorage.html#instance-store-volumes)
 You still have to use at lease 1 EBS + additional instance store. For some types you can select to remove instance store, but ebs should be present always.
-So you can't create ec2 without ebs. It's differ from EBS cause it's directly attach to machine (ebs connected via network) and provide lowest latency.
+There are a few limitations compared to ebs:
+* you can't create ec2 with only ephemeral storage without ebs
+* differ from EBS cause it's directly attach to machine (ebs connected via network) and provide lowest latency
+* by default disk is unencrypted, and compare to ebs you can't set up encryption. If you need it you have to implement either disk-level encryption or file-system-level encryption
+* you can't backup instance store same way you can back up ebs. You have to ssh to machine and copy data from instance store to ebs using `rsync`
+* you can't create snapshot/image from instance store. You have to ssh to machine and manually create ami using Amazon EC2 AMI tools
+for instance store you create manifest & files, build it into bundle, and upload bundle to s3, register AMI from s3. When you run this ami, aws fetch bundle from s3 and create ec2 from this bundle
+for ebs you can create snapshot for volume, and then image from snapshot. You can also create image directly from ec2 console.
 
 ###### CloudFront
 CloudFront is a CDN (content delivery/distribution network) - that speed up the distribution of your data using edge locations.
@@ -1882,6 +1889,8 @@ But can use java, if we create `Map<String, List<String>>` where key is person a
 Yet this duplication in space guarantees instant result, you can get list of friends of anybody within O(1) - cause we are using Map.
 Partition key should have a large number of distinct values relative to the number of items in the table (customerId for orders table - there are many distinct customers comparing to total number of orders).
 This is because max RCU (read capacity unit) - 3000, WCU (write capacity unit) - 1000 per partition. So if you choose wrong partition key and make a lot of request to single partition you will get `ProvisionedThroughputExceededException`.
+Keep in mind if you use java SDK, it already have retry logic within (you don't have to write retry code yourself), so your requests will eventually succeed unless your retry queue is too large to finish. In this case try to lower your request to db or enlarge RCU/WCU.
+AWS SDK generally provide retry logic for most calls and also exponential backoff (use progressively longer waits between retries for consecutive error responses - 1,2,4,8,16 seconds after each failed retry)
 That's why you should have equal distribution across partition key. Best practices to select partition key:
 * use high cardinality attr - email/customerId/orderId/productId
 * use composite attr - combine several attr into single string to be used as key
@@ -2788,6 +2797,11 @@ NLB is different from ALB:
     * rule for port 80 for private IP of your nlb (for health checks), or open for cidr for whole vpc or subnets range. For each subnet you associate with nlb, it add 1 nlb instance into each subnet with 1 private IP.
 * if TG type is instance nlb is transparent) - your ec2 would behave same way as client directly connects to it (although clinet IP is his real IP in this case, you can still enable proxy protocol and get IP from there)
 * if TG type is IP (nlb acts as NAT) - your ec2 would see client IP as nlb internal IP (use proxy protocol in this case to get client IP)
+Test your elb (you can run software test to imitate high-load to check your elb):
+* elb scales up/down proportionally to the load. But if load dramatically increased over short time you may get 503, yet if it steadily increasing elb can catch up
+* elb scales from 1-7 minutes. So once elb scaled it add new IP to dns response with TTL 60 sec (client expect to re-resolve dns after 60 sec)
+* factor in elb dns - when test, make sure to re-resolve DNS every 60 sec to get new IP (cause otherwise elb may add more capacity, but your tests are hitting single IP)
+* factor in sticky session - when test, keep in mind that your automatic tests may hit same ec2 because of this
 
 ###### CloudWatch
 CloudWatch - monitoring service for aws resources and apps running in aws cloud. IAM permission for CloudWatch are given to a resource as a whole (so you can't give access for only some of EC2, you give either for all EC2 instances or none).
@@ -3387,6 +3401,7 @@ The size of such disk should depend upon max possible file uploaded and how much
 * Volume - provide iSCSI target, where you can create block storage and mount it to on-premise/EC2 instances.
     * cached volume (max 1024TB) - primary data in S3, frequently accessed data in on-premise.
     * stored volume (max 512TB) - primary data in on-premise, but you have snapshots in s3 (data transfer is async)
+    For both types in s3 you stored encrypted with SSE snapshot, so you can't view actual files directly from s3
     So if you need instant access to your data, but your size above 512TB you have 2 options:
     * use 2 stored volumes, so each below 512
     * if you need to mount it as single folder - use cached volume
@@ -3792,6 +3807,9 @@ Lustre has integration with s3 so you can access objects from s3 as files
 On the high level vpn server is just bastion server but for end users. Bastion server is for developers/administrators, you explicitly access it though ssh, and from there you access all internal resources.
 With vpn server everything the same, only difference - connecting is hide before some user-friendly program, like [openvpn client](https://openvpn.net/download-open-vpn), but once connected, end user has all the same access to all internal resources. 
 When you access resources in both cases it looks like you are accessing them from inside vpc, and thus you can add SG rule to allow not all public IP addresses (`0.0.0.0/0`) but only CIDR addresses of vpn server allocated CIDR block, or from bastion server internal IP.
+Don't confuse ssl vs IPsec connection type (they differ in a way how they encrypt data-in-transit):
+* SSL VPN (used by aws client vpn) - operates on transport layer and encrypt data sent between 2 processes identified by port number
+* IPsec VPN (used by Site-to-Site vpn) - operates on network layer and encrypt data sent between hosts identified by IP
 AWS VPN consists of 3 services:
 * AWS Client VPN - connect users to aws vpc or on-premises network
 * AWS Site-to-Site VPN (has 2 tunnels for redundancy) - connect your on-premises network with vpc
@@ -3927,10 +3945,10 @@ So of course you can reinvent the wheel, but it's better to use ready solutions 
 ###### Data Pipeline
 DP - ELT tool that simplify data movement/processing in aws, integrates with on-premise and cloud-based storage systems.
 You can transfer data between RDS/S3/EMR/DynamoDB. Pipeline - runs activities (common tasks) on data nodes. Data node - location where pipeline reads data or where it writes data.
-Example of DP:
-* extract log data from on-premise to s3
-* launch transient Amazon EMR cluster, load s3 data, transform it and load transformed data to s3
-* copy transformed data from s3 to RedShift
+Example of DP (you can schedule time when to run, like once a day):
+* export of dynamoDB to s3 & export from s3 to dynamoDB (DP would launch transient EMR cluster on each run to execute export)
+* just run transient EMR cluster
+* rds to s3 export, s3 to rds export, rds to redshift, s3 to redshift (DP would launch ec2 on each run to execute export)
 
 ###### ElasticSearch & CloudSearch
 ES - open source search service, it's usually a part of ELK stack
