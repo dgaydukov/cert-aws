@@ -27,7 +27,7 @@ Mappings:
       ami: ami-09d95fab7fff3776c
 
 Resources:
-  DevEC2:
+  DevInstance:
     Condition: Dev
     Type: AWS::EC2::Instance
     Properties:
@@ -40,8 +40,8 @@ Resources:
             VolumeSize: 8
       Tags:
         - Key: Name
-          Value: !Join [ "-", [ !Sub '${AWS::StackName}-${Env}', !FindInMap [RegionMap, !Ref "AWS::Region", name] ] ]
-  ProdC2:
+          Value: !Join [ "-", [ !Sub ${AWS::StackName}-${Env}, !FindInMap [RegionMap, !Ref "AWS::Region", name] ] ]
+  ProdInstance:
     Condition: Prod
     Type: AWS::EC2::Instance
     Properties:

@@ -154,6 +154,7 @@ Resources:
       MinSize: 2
       MaxSize: 4
       HealthCheckGracePeriod: 10
+      HealthCheckType: ELB
       TargetGroupARNs:
         - !Ref TG
       VPCZoneIdentifier:

@@ -2537,9 +2537,14 @@ service ipsec restart
     * vpn - IPSec connection over the Internet between on-premise and vpc. It's slower than dx since it use public internet. But secure/cheaper & can be setup very quickly. 
 You can use vpn above dx, but it's redundant, cause dx is already secured. Best practice to configure vpn as failover for dx (in case it failed).
 LAG (Link Aggregation Groups) - ability to order multiple direct connect ports and manage them as single larger connection (max number is 4 ports, port types should be the same, all 1GB, or all 10GB). LAG connections operate in Active/Active mode.
-DXG (Direct Connect Gateway) - grouping of VGW (virtual private gateways) and VIF (private virtual interfaces). Multi-account DXG allows to associate up to 10 VPC (from different accounts) or up to 3 Transit Gateway.
-Direct Connect and DCG support both 1500 and 9001 MTU (you can also modify it if you need). DX VIF - you have to create one of the following VIF to start using dx:
-* private - access private instances inside vpc using their private IP
+DXG (Direct Connect Gateway):
+* by default you can connect 1 vpc to your on-premise using DX + VIF to aws service like s3 or vpc
+If you use private VIF you have to choose either VPG or DXG. So without DXG you can connect only 1 vpc to your DX. But if you use DXG you can connect multiple vpc.
+* so you can create DXG and associate it with multiple VPG (vpg itself should be associated with vpc first) - by doing this you basically associate single DXG with multiple vpc (can be different region/account)
+Then you create private VIF and associate it not with single VPG but with DXG - so you have single DX that can be connected to multiple vpc cross-region & cross-account
+* multi-account DXG allows to associate up to 10 VPC (from different accounts) or up to 3 Transit Gateway.
+Direct Connect and DXG support both 1500 and 9001 MTU (you can also modify it if you need). DX VIF - you have to create one of the following VIF to start using dx:
+* private - access private instances inside vpc using their private IP (here you connect your DX to either DXG or VPG)
 * public - access public aws services (like s3) using their public IP
 * transit - access vpc Transit Gateway associated with dx
 Each DX by default create 2 virtual interfaces public & private.
@@ -2562,6 +2567,43 @@ and to access your service from PrivateLink you don't need to have internet gate
 If you share your service with aws marketplace you can get vanity dns name like `us-east-1.vpce.mycoolsite.com`. 
 By default ec2 instances dns name is disabled (only ip address is given). You can enable it for vpc by going to `Actions=>Edit DNS Hostname`.
 You can change subnet setting `Actions=>Modify auto-assign IP settings` and in this case when you create ec2, it would by default select subnet settings (enable/disable auto-assign public IP address). Of course you can also change it on ec2 level.
+VPC Endpoint Security:
+* endpoint policy (supported only for those services that support resource policy) - you can create resource policy for endpoint, by default whole service is open
+Let's consider s3 example (you would have to modify 2 policy):
+* endpoint policy - allow access from anywhere (it's safe cause endpoint would be accessable only from vpc)
+```
+{
+  "Statement": [
+    {
+      "Principal": "*",
+      "Action": ["s3:GetObject", "s3:PutObject"],
+      "Effect": "Allow",
+      "Resource": ["arn:aws:s3:::my_bucket", "arn:aws:s3:::my_bucket/*"]
+    }
+  ]
+}	
+```
+* s3 resource policy - allow access from endpoint policy only by specifying condition. So basically it would be deny policy to everything if request not from endpoint
+```
+{
+  "Statement": [
+    {
+      "Principal": "*",
+      "Action": "s3:*",
+      "Effect": "Deny",
+      "Resource": ["arn:aws:s3:::my_bucket", "arn:aws:s3:::my_bucket/*"],
+      "Condition": {
+        "StringNotEquals": {
+          "aws:sourceVpce": "vpce-123"
+        }
+      }
+    }
+  ]
+}	
+```
+You can also use condition based on vpc like `"StringNotEquals": {"aws:sourceVpc": "vpc-123"}`
+Keep in mind that you can't allow/deny based on sourceIP condition, cause from now on your bucket accessed not from ec2, but from endpoint and sourceIP would be IP of endpoint
+* endpoint SG - you can associate any SG with endpoint, if you don't associate any, default SG would be associated
 VPC Tenancy:
 * multi-tenant (virtual isolation) - you share your instances on the same server as other aws clients, you instance is divided by virtualization
 * single-tenant (dedicated, physical isolation) - you get completely separate hardware (can be useful if you have regulatory requirements)
@@ -2709,16 +2751,19 @@ There is no concept of sticky session on NLB, cause on level 4 there is no cooki
 Routes each individual TCP connection to a single target for the life of the connection. The TCP connections from a client have different source ports and sequence numbers, and can be routed to different targets.
 So if you open new tab, that would mean that new port is opened, in this case nlb would see it as new connection and could route request to different ec2.
 Health Check - you can monitor health of ec2 and always redirect user to healthy ec2 (ELB doesn't kill unhealthy ec2). There are 3 types of health checks:
-* EC2 health check - watches for instance availability from hypervisor/networking point of view. For example, in case of a hardware problem, the check will fail. Also, if an instance was misconfigured and doesn't respond to network requests, it will be marked as faulty.
-* ELB health check (1 heath check inside that check port status `AWS::ElasticLoadBalancingV2::TargetGroup`) - verifies that a specified TCP port on an instance is accepting connections OR a specified web page returns 2xx code. Thus ELB health checks are a little bit smarter and verify that actual app works instead of verifying that just an instance works.
-* Custom health check - If your application can't be checked by simple HTTP request and requires advanced test logic, you can implement a custom check in your code and set instance health though API
-You can set asg healthcheck by:
+* EC2  - watches for instance availability from hypervisor/networking point of view. For example, in case of a hardware problem, the check will fail. Also, if an instance was misconfigured and doesn't respond to network requests, it will be marked as faulty.
+* ELB (1 heath check inside that check port status `AWS::ElasticLoadBalancingV2::TargetGroup`) - verifies that a specified TCP port on an instance is accepting connections OR a specified web page returns 2xx code. Thus ELB health checks are a little bit smarter and verify that actual app works instead of verifying that just an instance works.
+* Custom  - If your application can't be checked by simple HTTP request and requires advanced test logic, you can implement a custom check in your code and set instance health though API
+You can set asg healthcheck by (by default for asg - healthcheck is EC2, if you set ELB - asg would monitor both ec2 & elb healthchecks, and replace instance if either one failed):
 ```
 ASG:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
-      HealthCheckType: ELB # means asg would monitor both ec2 & elb healthchecks, and replace instance if either one failed
+      HealthCheckType: ELB
 ```
+So when you use asg+elb, you would better to change `HealthCheckType` from EC2 to ELB.
+For `TargetGroup` you can configure healthcheck and choose protocol `HealthCheckProtocol`. Possible values are HTTP/HTTPS/TCP.
+If protocol of TG is HTTP(S), then you can't choose TCP healthcheck. So TCP healthcheck is mostly for NLB.
 ALB Request Routing - you can redirect user to different ec2 based on request attributes (subdomains, headers, url params..)
 Listener Rule - can forward request but not change. So if you have a rule `/api => EC2_1, /internal => EC2_2`. That means EC2_1 should have url `/api` and EC2_2 should have url `/internal`.
 Since we can modify rules, you can use elb to hide some api endpoints. For example you can create 2 rules like:
@@ -2922,6 +2967,8 @@ Route53 Resolver - helps to query on-premise dns from vpc and vice versa (used m
 * inbound - forward dns query from on-premise to vpc
 * outbound - forward dns query from vpc to on-premise dns resolver
 For both types, IP are private, so in order to work you have to connect your network to vpc through DX/VPN.
+Traffic flow - you can manually add dns records to your hosted zones, but it can be complex to manage them. So you can create traffic flow in visual editor and manage all your dns records from there.
+You can use versioning to quickly restore any previous version. You can manage hundreds of records with nice visual editor.
 
 ###### RDS
 RDS (Relational Database Service) - aws managed service, that make it easy install/operate relational database in the cloud. It helps easily scale compute resources or storage associated with your db, simplifies replication.
@@ -3239,7 +3286,7 @@ AGW - managed api service that makes it easy to publish/manage api at any scale.
 * send both websocket & http calls
 You can also use AGW with openApi to quickly generate api endpoints and underlying models. 
 Stage - like a tag, allows your api have multiple versions, like dev stage - myapi.com/dev/users.
-Don't use stages for differente environments, but instead use different aws accounts for different env.
+Don't use stages for different environments, but instead use different aws accounts for different env.
 Real use case for stages is if you need to support different versions of api for prod at the same time.
 You can add documentation to your api and expose it as swagger file. AGW can generate client-side SSL certificate, and you backend can get public key, so it can verify that requests are coming from AGW.
 AGW calls are supported by CloudFront, so your api is highly available.
@@ -3820,8 +3867,9 @@ Redundant site-to-site vpn - create 2 customer gateways (with 2 separate devices
     * each site should have non-overlapping IP range (VGW acts as hub and re-advertise these ranges to other sites, so they communicate with each other)
     * create site-to-site vpn for each site but with same virtual gateway (many CGW to single VGW)
 Both of them using IPSec protocol (encrypt all IP packets of data before sending over the internet and decrypt them back on receiving).
-Note that IPSec operates on network layer of osi, so it provide pretection/encryption for data in transit, yet source/destination may not be aware of IPSec, so it doesn't provide end-to-end protection.
+Note that IPSec operates on network layer of osi, so it provide protection/encryption for data in transit, yet source/destination may not be aware of IPSec, so it doesn't provide end-to-end protection.
 VPG (virtual private gateway) terminate IPSec connection and from there on traffic goes unencrypted.
+Customer Gateway - to configure vpn, you have to create customer gateway in your on-premise, and then you have to notify aws about this. So from aws side it's just a way to notify aws about your customer gateway (you just supply IP of your real customer gateway).
 Client VPN endpoint - allows end users to access aws network over TLS. Target network (vpc subnet) - network that you associate with VPN endpoint, so end users can access it.
 You create vpn endpoint, associate it with target network and distribute vpn config file with end users. End user download openVpn and using your config connect to vpc.
 When you create client vpn you can enable split-tunnel.

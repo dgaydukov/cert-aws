@@ -16,11 +16,17 @@ Here is my experience of taking 2 certifications, both associate & professional:
 
 ### TODO
 https://sleek.com/hk/resources/offshore-companys-guide-to-tax-exemption-in-hong-kong (offshore company, no tax)
+https://en.wikipedia.org/wiki/The_Picture_of_Dorian_Gray
+https://www.youtube.com/watch?v=YVbdd8oOwOY
+https://en.wikipedia.org/wiki/Mad_Max_Beyond_Thunderdome
 https://en.wikipedia.org/wiki/Brotherhood_of_the_Wolf
 https://en.wikipedia.org/wiki/Crying_Freeman_(film)
 https://en.wikipedia.org/wiki/Groundhog_Day_(film)
 https://en.wikipedia.org/wiki/The_Notebook (movie)
 https://en.wikipedia.org/wiki/Unsane
+https://en.wikipedia.org/wiki/500_Days_of_Summer
+how lmax disruptor multi-cast works
+check all the test for lamx disruptor (https://github.com/LMAX-Exchange/disruptor/tree/master/src/test/java/com/lmax/disruptor)
 fix gradle project in intellij
 enable AspectJ proxy mode for the @EnableAsync and provide a weaver (so you can call `@Async` from same class)
 run .war project in intellij + run `javax.websocket` there
@@ -36,10 +42,12 @@ https://mechanical-sympathy.blogspot.com
 http://concurrencyfreaks.blogspot.com
 http://bad-concurrency.blogspot.com
 https://www.infoq.com/presentations/mechanical-sympathy
+https://www.infoq.com/profile/Martin-Thompson
 The Art of Multiprocessor Programming
 Play Framework vs google guice vs spring
 jooq vs hibernate
 hibernate second level cache (how cache system works)
+https://github.com/real-logic/aeron/tree/master/aeron-cluster
 -----------------------------------------------------------------------------------------------------------------------
 * use facebook/google token to get temporary credentials (see `sa/cloudformation/cognito-iam.yml`). Do we need identity pool in case of federated provider like facebook/google
 According to [this](https://aws.amazon.com/blogs/mobile/understanding-amazon-cognito-authentication) for public IdP (facebook/google) you don't need identity pool and can call AssumeRoleWithWebIdentity directly with their token
