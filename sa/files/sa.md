@@ -127,6 +127,7 @@
 * 3.81 [License Manager](#license-manager)
 * 3.82 [Elastic Transcoder](#elastic-transcoder)
 * 3.83 [Elemental Media](#elemental-media)
+* 3.84 [Billing and Cost Management](#billing-and-cost-management)
 
 
 
@@ -942,6 +943,10 @@ Below example of policy to allow principal to create only ec2 with only specific
     ]
 }
 ```
+Mobile app access - there are 2 ways to access aws resources from mobile app:
+* Web Identity Federation - you can get iam access from Facebook/Google/Amazon
+* TVM (token vending machine - java code run on ec2 that request temporary credentials on behalf of user) - old way to get temporary credentials. Don't use it, better to use cognito.
+It's also not scalable, cause it's implemented on single ec2 - so it's single point of failure.
 Don't confuse:
 * Notaction - opposite of Action, can be used with Allow/Deny
 Notaction+Allow - add access to all actions except those under Notaction
@@ -1512,8 +1517,8 @@ fs-a1bee823.efs.us-east-1.amazonaws.com:/ nfs4      8.0E     0  8.0E   0% /mnt/e
 ```
 If you run `mount | column -t | grep nfs4`
 ```
-fs-a1bee823.efs.us-east-1.amazonaws.com:/  on  /mnt/efs                         type  nfs4        (rw,relatime,vers=4.1,rsize=1048576,wsize=1048576,namlen=255,hard,noresvport,proto=tcp,timeo=600,retrans=2,sec=sys,clientaddr=10.100.1.148,local_lock=none,addr=10.100.1.9)
-127.0.0.1:/                                on  /mnt/pnt                         type  nfs4        (rw,relatime,vers=4.1,rsize=1048576,wsize=1048576,namlen=255,hard,noresvport,proto=tcp,port=20391,timeo=600,retrans=2,sec=sys,clientaddr=127.0.0.1,local_lock=none,addr=127.0.0.1)
+fs-a1bee823.efs.us-east-1.amazonaws.com:/  on  /mnt/efs     type  nfs4      (rw,relatime,vers=4.1,rsize=1048576,wsize=1048576,namlen=255,hard,noresvport,proto=tcp,timeo=600,retrans=2,sec=sys,clientaddr=10.100.1.148,local_lock=none,addr=10.100.1.9)
+127.0.0.1:/                                on  /mnt/pnt     type  nfs4      (rw,relatime,vers=4.1,rsize=1048576,wsize=1048576,namlen=255,hard,noresvport,proto=tcp,port=20391,timeo=600,retrans=2,sec=sys,clientaddr=127.0.0.1,local_lock=none,addr=127.0.0.1)
 ```
 As you see it mounted on port `port=20391`, which is port of stunnel.
 IAM access:
@@ -1607,6 +1612,10 @@ Multi-volume snapshots - point-in-time snapshots for all ebs volumes attached to
 It's a best practice to tag multi-volume snapshots so you can manage them as single entity.
 DLM (Data Lifecycle Manager) - manage the lifecycle of ebs snapshot. If you combine it with CloudWatch and CloudTrail you get complete backup solution for ebs.
 You can create/manage snapshots manually but using DLM is best practice. DLM execute snapshot management based on policies defined when you create dlm.
+There are 3 types of dlm policy:
+* EBS snapshot policy - automate lifecycle of ebs (either single volume or instance)
+* EBS-backed AMI policy - automate lifecycle of ebs-backed ami (only instance type available, cause there can be only 1 ami per instance)
+* Cross-account copy event policy - copy shanpshots to another account, should be used with conjunction with ebs snapshot policy
 When you create snapshot policy you have to enter:
 * resource type: VOLUME - for single ebs volume, INSTANCE - for all ebs volumes for ec2 (multi-volume snapshot)
 * target tags - tags for ebs volume or ec2 instance for which this policy would be applied
@@ -2394,6 +2403,11 @@ This would work if B launched same type of ec2 in the same AZ as RI from account
 RI (Reserved instances) - 2 reports:
 * utilization - how many % of total RI are actually used
 * coverage - how much % of overall instance usage covered by RI. So when it drops below 50% you should investigate which of on-demand instances are running 24/7 and possibly replace it with RI.
+Add new member - there are 2 ways to add new member:
+* create account from scratch - if you remove it from org, you can make it standalone account
+When you add this type of account, aws automatically create `OrganizationAccountAccessRole` with `AdministratorAccess` policy. 
+If you are adding already existing account, it's recommended to create there cross-account role with same name.
+* add already existing account
 
 ###### Well-Architected Tool
 Well-Architected Tool is a aws service that allows you to validate your current infrastructure against 5 pillars of well-architected framework.
@@ -2969,6 +2983,15 @@ Route53 Resolver - helps to query on-premise dns from vpc and vice versa (used m
 For both types, IP are private, so in order to work you have to connect your network to vpc through DX/VPN.
 Traffic flow - you can manually add dns records to your hosted zones, but it can be complex to manage them. So you can create traffic flow in visual editor and manage all your dns records from there.
 You can use versioning to quickly restore any previous version. You can manage hundreds of records with nice visual editor.
+Simple AD dns resolving (you can set-up on-premise-to-vpc connection using AD + DX/VPN):
+* simple AD provides dns resolution out of the box (you don't need to configure any dns servers manually, although you can do this) with redundant dns servers in each AZ
+* these dns forwards all dns requests to vpc internal dns server (note that for this dns name shouldn't correspond to dns of AD or be it subdomain, if they are the same simple AD won't forward dns request)
+* simple AD provides 2 private IP for dns resolution, which you add them to your on-premise dns forwarder
+* make sure SG allows dns traffic from on-premise to simple AD
+* you can use vpc dhcp option set to forward request form vpc to on-premise dns server
+[Unbound](https://nlnetlabs.nl/projects/unbound/about) - software to forward dns requests:
+* you can use it to forward dns request from on-premise to vpc dns server, and from any ec2 to on-premise dns server
+As you see you can use simple AD, unbound, route53 resolver to resolve dns between on-premise & vpc.
 
 ###### RDS
 RDS (Relational Database Service) - aws managed service, that make it easy install/operate relational database in the cloud. It helps easily scale compute resources or storage associated with your db, simplifies replication.
@@ -3147,7 +3170,7 @@ IAM auth - you can access db not with username/password but by using iam permiss
 CREATE USER mydbuser IDENTIFIED WITH AWSAuthenticationPlugin AS 'RDS';
 GRANT ALL PRIVILEGES ON mydb.* TO 'mydbuser'@'%';
 # get access token and connect
-TOKEN=$(aws rds generate-db-auth-token --hostname {RDS_ENDPOINT} --port 3306 --username mydbuser --region=us-east-1)
+TOKEN=$(aws rds generate-db-auth-token --hostname={RDS_ENDPOINT} --port=3306 --username=mydbuser --region=us-east-1)
 mysql -h {RDS_ENDPOINT} --user=mydbuser --password=$TOKEN --ssl-ca=rds-ca-2019-root.pem
 ```
 If you want to build resource for role you should pass not rdsID, but `DbiResourceId`, so you can't use `Resource: !Sub arn:aws:rds-db:${AWS::Region}:${AWS::AccountId}:dbuser:${MultiAzMysqlDb}/mydbuser`.
@@ -3453,7 +3476,7 @@ The size of such disk should depend upon max possible file uploaded and how much
     * use 2 stored volumes, so each below 512
     * if you need to mount it as single folder - use cached volume
 Volume Gateways compress data before that data is transferred to AWS and while stored in AWS. Although data stored in s3, you can't directly access it through s3 api
-Storage Gateway optimize data transfer to cloud by using
+Storage Gateway optimize data transfer to cloud by using:
 * intelligent buffering
 * upload/bandwidth management
 * multi-part upload (in case of S3)
@@ -3997,6 +4020,9 @@ Example of DP (you can schedule time when to run, like once a day):
 * export of dynamoDB to s3 & export from s3 to dynamoDB (DP would launch transient EMR cluster on each run to execute export)
 * just run transient EMR cluster
 * rds to s3 export, s3 to rds export, rds to redshift, s3 to redshift (DP would launch ec2 on each run to execute export)
+Don't confuse:
+* data pipeline - for automated batch jobs, without human interaction (like run bash script every day at 12)
+* step functions or SWF - when you need human interaction
 
 ###### ElasticSearch & CloudSearch
 ES - open source search service, it's usually a part of ELK stack
@@ -4494,3 +4520,13 @@ It can be choose as output destination for MediaLive. It provides read-after-wri
 Don't confuse:
 * MediaLive - broadcast-grade live video encoding service for streaming video to end-users
 * Kinesis Video - securely stream video from connected devices to aws for further real-time/batch-driven analysis ML, video playback, analytics. So you can use it to build machine-vision apps for smart home/city
+
+###### Billing and Cost Management
+This is where you pay your bills, aws automatically charged credit card that you used on sign-up. You can:
+* estimate & plan costs with free cost explorer
+* receive alerts if costs exceed some threshold
+* simplify multi-org bill management
+Cost Allocation Tags (by default all these tags deactivated) - there are 2 types:
+* AWS-generated cost allocation tags - first you have to activate tags (by default 13 deactivated tags). After aws generate csv report based on active tags
+* User-Defined Cost Allocation Tags - tags that you add to your resources. After you add tag, you can activate it from console.
+Once tag is activated it can be seen from csv usage report. If you have multi-org, and want to get tag-based report, you have to activate tags only from master account
