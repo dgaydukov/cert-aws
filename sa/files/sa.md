@@ -312,11 +312,11 @@ There are 2 types of AMI
 * ebs-boot - ebs snapshot + metadata (architecture, kernel, AMI name, description, block device mappings)
 Most ami are of second type (ebs-boot). If you need to launch new ec2 from snapshot, you should first convert snapshot into ami and then just launch ami.
 You can't remove snapshot if it has ami created from it, yet after you de-register ami you can delete snapshot. That means inside aws ami is just logical representation of snapshot.
-Linux AMI virtualization types
-* HVM (Hardware Virtual Machine) - means that virtualization technology using hardware extensions for faster access to resources
-* PV (paravirtual) - boot with a special boot loader called PV-GRUB, which starts the boot cycle and then chain loads the kernel specified in the menu.lst
-AMI doesn't include kernel, it's loaded from AKI (Amazon Kernel Image).
-In November 2017 new virtualization came out as Nitro (combines a KVM-based hypervisor with customized hardware (ASICs) aiming to provide a performance that is indistinguishable from bare metal machines)
+Linux AMI virtualization types - AMI doesn't include kernel, it's loaded from AKI (Amazon Kernel Image):
+* HVM (Hardware Virtual Machine) - means that virtualization technology using hardware extensions for faster access to resources. For better performance it's recommended over PV. It can run OS without any modification as if it was run on bare metal.
+* PV (paravirtual) - boot with a special boot loader called PV-GRUB, which starts the boot cycle and then chain loads the kernel specified in the `menu.lst`. This type doesn't support GPU. You need to add some modification to OS kernel.
+* Nitro (November 2017) - combines a KVM-based hypervisor with customized hardware (ASICs) aiming to provide a performance that is indistinguishable from bare metal machines
+All AWS AMI uses the Xen hypervisor on bare metal, hypervisor takes care of CPU scheduling & memory partitioning, but unaware of networking/external storage devices/video/any other common I/O functions.
 
 ###### AWS CLI
 CLI (Command Line Interface) - can be useful to quickly automate some aws manual tasks. Internally it just convert cli calls into aws API calls and wrap results into useful format.
@@ -1396,11 +1396,36 @@ presigned url access - determined by access of creator of such url:
 * if creator of such url has read access - you can use this url to read
 * if creator of such url can write - you can put object by this url
 SSE (server side encryption) can be of 3 types:
-* sse-s3 - keys are managed by s3
+* sse-s3 - keys are managed by s3. Each object encrypted with unique key, key encrypted with master key, which is constantly rotates.
 * sse-kms - keys are managed by kms (you select single key either managed by aws like aws/s3 or your CMK)
+Bucket key for kms:
+    * if you have millions of objects in s3, then for each get/put s3 would call kms to extract data key
+    * you can activate bucket key for kms - kms would create bucket level key, that would be used to generate data key for actual encryption
+    * bucket level key used for time-limited period, reducing the need to call kms api
 * sse-c - encrypt/decrypt with customer key - you have to provide key for every request get/put and s3 manage encryption (when you put object s3 encrypt it using provided key, when you get object - s3 decrypt object with your key from request). You have to use https + cli/sdk.
 You provide key in [headers for each request](https://docs.aws.amazon.com/AmazonS3/latest/dev/ServerSideEncryptionCustomerKeysSSEUsingRESTAPI.html), when you use cli/sdk it's automatically done.
 So when you have a requirement that customer want to manage key with sse you have to use this third option. In this case s3 manages encryption/decryption but you manage keys.
+You can force user to upload only encrypted files by adding following resource policy:
+```
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Deny",
+      "Principal": "*",
+      "Action": "s3:PutObject",
+      "Resource": "arn:aws:s3:::mybucket/*",
+      "Condition": {
+        "Null": {
+          "s3:x-amz-server-side-encryption": "true"
+        }
+      }
+    }
+  ]
+}
+```
+You can also force to use specific type of encryption by adding `Deny` with `"Condition":{ "StringNotEquals":{ "s3:x-amz-server-side-encryption":"aws:kms"}}` - would deny any put operation, if it's not encrypted with kms
+If you want to use sse-s3 then instead of `aws:kms` add `AES256`.
 s3 cross-account access - there are 3 ways:
 * use s3 resource policy - you will need to add policy in account B for user to be able to access bucket.
 ```
@@ -1439,6 +1464,14 @@ Read/write limits:
 * 5500 GET per prefix
 * 3500 POST/PUT/DELETE per prefix
 So same rules as for dynamoDB (where read/writes per partition), so you can get unlimited read/write by creating many prefixes (number is not limited).
+Don't confuse:
+* `aws s3api` - 1-to-1 mapping to low-lever s3 api
+* `aws s3` - high-level mapping to s3 api (syncing - under-the-hood make many calls to low-lever api). To properly work you have to add all low-level api to iam user (sometimes it's not that obvious, cause you don't know which calls are made by which api)
+Sql Select - both s3 & glacier can select specific bytes instead of whole file. Let's suppose you have big `stores.csv.gzip` file, but you need only rows where country=usa.
+You can download whole file from s3, open and parse yourself using java sdk. But there is better option:
+* s3 - `s3api select-object-content --expression="select * from table t where t.country=usa"`, run sql on JSON/CSV/Parquet file (you should pass both `input/output-serialization` and specify one of 3 formats)
+* glacier - `s3api restore-object --restore-request=request.json` where you put sql into json file - this is in case you recover data from glacier
+You can also use `glacier initiate-job` and specify sql under `--job-parameters.SelectParameters.Expression={your_sql}`.
 
 ###### Glacier
 Glacier - low-cost tape-drive storage value with $0.007 per gigabyte per month. Used to store backups that you don't need frequently.
@@ -1960,6 +1993,10 @@ Although dynamoDb is proprietary solution with closed source code there are 2 op
 * use it from localstack
 GSI (Global Secondary Index) - special read-only table created by dynamoDb to simplify search for indexed fields. Index speed up search but require more memory to store itself. You should configure separate read/write capacity for this.
 It's a way to have DynamoDB replicate the data in your table into a new structure using a different primary key schema. This makes it easy to support additional access patterns
+GSI projection - you can choose which attributes will go to gsi:
+* KEYS_ONLY - only partition key + sort key (this is minimal you can't create gsi without these 2 keys)
+* INCLUDE - KEYS_ONLY + any other non-key attributes that you specify
+* ALL - include all attributes from original table
 LSI (Local Secondary Index) - same partition as primary key, but different sort key. You can have one per table and create when table is created, just like primary key. It uses the same read/write capacity as table.
 Scanning - like `select * from` operation in RDS, just go over all records. Max size is 1MB, if table size above this then `LastEvaluatedKey` returned with last scanned item. For next scan you should supply this value as `ExclusiveStartKey`.
 So you can create `while loop` in java code where first time you pass `ExclusiveStartKey=null` and each subsequent step you will pass `ExclusiveStartKey=LastEvaluatedKey`.
@@ -3351,7 +3388,7 @@ Http vs Rest api:
             * authorization check - 3 ways:
                 * iam (`authorizationType=AWS_IAM`) - add iam access key for each request. Then iam policy evaluate does user has access to this api
                 Below an example of allowing call GET /pets endpoint.
-                 ```
+                ```
                 {
                   "Version": "2012-10-17",
                   "Statement": [
@@ -3362,6 +3399,22 @@ Http vs Rest api:
                     }
                   ]
                 } 
+                ```
+                With iam policy for user/role you can also add resource policy directly attached to api (in this case you have to provide principal)
+                For private api you use combination of resource policy (allow access from specific vpce) and vpc endpoint policy (allow access from vpc or everywhere, since it can be accessable only from within vpc)
+                Example of resource policy:
+                ```
+                {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": "*",
+                            "Action": "execute-api:Invoke",
+                            "Resource": "arn:aws:execute-api:region:account-id:*"
+                        }
+                    ]
+                }
                 ```
                 * cognito authorizer (`authorizationType=COGNITO_USER_POOLS`) - authroize using conginto user pool access token
                 * lambda/custom authorizer (`authorizationType=CUSTOM`) - write you own lambda where you set auth rules
@@ -3401,6 +3454,9 @@ Take note that client cert is just addition to server cert. So your server cert 
 Below is 2 examples to set up ssl server with client cert validation:
 * [node.js](https://docs.aws.amazon.com/apigateway/latest/developerguide/getting-started-client-side-ssl-authentication.html#certificate-validation)
 * [spring boot](https://www.baeldung.com/x-509-authentication-in-spring-security)
+REST API error mapping - you can map exceptions from lambda to your api:
+* first add desired code to method integration (like 422)
+* second add integration response with lambda error regex and select code from method integration
 
 ###### Cognito
 Cognito - managed user service that add user sing-in/sign-up/management email/phone verification/2FA logic. There are 2 pools:
@@ -4170,7 +4226,10 @@ SNS vs SES for email sending - although both can be used to send emails, there a
     * to receive emails user must be subscribed to email topic
 * ses - sending emails for end users
     * supports custom email header fields, and many MIME types
-    
+There are 2 ways to unsubscribe from sns emails:
+* click `unsubscribe` button in email
+* delete subscription from sns topic (using cli or console)
+
 ###### AppSync
 AppSync- allows developers to manage/synchronize mobile app data across devices, access/modify data when mobile device in offline state, so basically your app can work in offline mode.
 It supports Android/iOS/JavaScript. You can use open source clients to connect to AppSync GraphQL endpoint to fetch/save data. You can use dynamoDB/ElasticSearch/Lambda as data sources for AppSync.
@@ -4329,6 +4388,9 @@ When you create your own ami, it should include:
 * docker daemon running
 * ECS container agent
 * awslogs log driver with `ECS_AVAILABLE_LOGGING_DRIVERS` env var
+You don't need:
+* provision ASG, cause batch handling underlying instances
+* provision sqs, cause batch use job queue
 
 ###### DocumentDB
 It's fully managed, mongo-compatible document database service. You can store/query json data.

@@ -1,7 +1,14 @@
 AWSTemplateFormatVersion: 2010-09-09
 
-# Create userpool + identitypool + s3 role. Now you can use cognito user to get access to s3 (without creating iam user).
+# Create userpool + identitypool + s3 role - for cognito access. Create s3 role for facebook access.
+# For cognito you need userpool+identitypool+role. For facebook, only role with facebook principal is enough
 # See in sa/files/sa.md under cognito, how you can create user and then create identity id and then get temporary credentials
+
+Parameters:
+  FacebookAppId:
+    Description: id of facebook app
+    Default: 123
+    Type: String
 
 Resources:
   UserPool:
@@ -45,12 +52,12 @@ Resources:
     Properties:
       IdentityPoolId: !Ref IdentityPool
       Roles:
-        authenticated: !GetAtt AssumedRole.Arn
+        authenticated: !GetAtt CogntioRole.Arn
 
-  AssumedRole:
+  CogntioRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Sub ${AWS::StackName}-AssumedRole
+      RoleName: !Sub ${AWS::StackName}-CogntioRole
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -59,6 +66,33 @@ Resources:
               Federated: cognito-identity.amazonaws.com
             Action:
               - sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                cognito-identity.amazonaws.com:aud: !Ref IdentityPool
+      Policies:
+        - PolicyName: AllowS3View
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "s3:*"
+                Resource: "*"
+  FacebookRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-FacebookRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: graph.facebook.com
+            Action:
+              - sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                graph.facebook.com:app_id: !Ref FacebookAppId
       Policies:
         - PolicyName: AllowS3View
           PolicyDocument:

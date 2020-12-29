@@ -49,10 +49,6 @@ jooq vs hibernate
 hibernate second level cache (how cache system works)
 https://github.com/real-logic/aeron/tree/master/aeron-cluster
 -----------------------------------------------------------------------------------------------------------------------
-* use facebook/google token to get temporary credentials (see `sa/cloudformation/cognito-iam.yml`). Do we need identity pool in case of federated provider like facebook/google
-According to [this](https://aws.amazon.com/blogs/mobile/understanding-amazon-cognito-authentication) for public IdP (facebook/google) you don't need identity pool and can call AssumeRoleWithWebIdentity directly with their token
-Why do we need identity pool + federated IdP (facebook/google) if federated IdP can directly assume role (cause you can add facebook/google through IdentityPoolRoleAttachment to cognito identity pool, but why do you need it if you can just get credential from role directly using sts)?
-* try glacier select to csv archive
 * connect 2 vpc with privatelink (access ec2 from one vpc from another)
 * create vpc link and connect http api to ec2 in private subnet
 * create custom vpn server in ec2 and try to connect to it (do both use oepnvpn server ami and any ami (OpenVPN Access Server from marketplace which is free tier, in this case you should configure it through browser admin panel) + manually configure openvpn server)
@@ -69,7 +65,6 @@ Why do we need identity pool + federated IdP (facebook/google) if federated IdP 
 * Deploy spring app into ECS and EKS and compare the difference (try fargate too). Try auto scaling in eks/ecs
 * Deploy spring app using opsworks stacks
 * Try maximum automate site-to-site vpn cloudformation template (try to extract somehow all IP addresses and PSK secret string and put it into ec2 userdata for VpnServer)
-* Try some other vpn server in on-premise site of site-to-site vpn
 * Install ec2 with openswan and use it as personal vpn server
 * migrate rds to s3 using glue etl (https://aws.amazon.com/blogs/database/how-to-extract-transform-and-load-data-for-analytic-processing-using-aws-glue-part-2)
 * Try Athena & Aws Glue with cloudformation/cloudtrail-s3.yml (combine all json files into one. Find who put object into s3)
@@ -78,7 +73,6 @@ Why do we need identity pool + federated IdP (facebook/google) if federated IdP 
 * create cloudsearch/elasticsearch clusters and try to put logs from ec2 there
 * try emr on t2 (with different engines hive/hbase/presto/spark)
 * deploy datasync agent on ec2 and imitate data transfer to s3
-* create transfer family server endpoint ftps/sftp and transfer files to s3
 * try to create aws sso user with permission set and add 1 free app, and then try to login to both aws console & this app
 * create vpc with custom DHCP options set and create ec2 instance and see it private/public domain name
 * create aws microsoft AD and see how it works + add aws sso with this ad + use ADFS to add AD to iam as identity provider and assume role (so you can access aws without iam user). cf template iam create identity provider with both saml & openId connect, and with cognito/aws AD (by the way learn how AD works internally)
