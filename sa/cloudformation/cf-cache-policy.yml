@@ -1,0 +1,32 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+# TODO: this is incomplete, distribution throw error, it's just an example how to activate gzip/brotli compression
+
+Resources:
+  CachePolicy:
+    Type: AWS::CloudFront::CachePolicy
+    Properties:
+      CachePolicyConfig:
+        Name: !Sub ${AWS::StackName}-CachePolicy
+        MinTTL: 3600
+        MaxTTL: 7200
+        DefaultTTL: 3600
+        ParametersInCacheKeyAndForwardedToOrigin:
+          EnableAcceptEncodingBrotli: true
+          EnableAcceptEncodingGzip: true
+          CookiesConfig:
+            CookieBehavior: none
+          HeadersConfig:
+            HeaderBehavior: none
+          QueryStringsConfig:
+            QueryStringBehavior: none
+  Distribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        CacheBehaviors:
+          - CachePolicyId: !Ref CachePolicy
+        IPV6Enabled: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-Distribution

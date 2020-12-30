@@ -152,12 +152,12 @@ You can go to `Bills` on the left menu and there you would see detailed info on 
 
 ###### Region, AZ, Edge Location
 There are different geographic regions across the globe where aws data centers are located. One region is divided between several AZ (availability zone).
-Each regions is completely independent and connected through Internet (no private cables between regions).
+Each region is completely independent and connected through Internet (no private cables between regions).
 Each AZ is isolated within a regions, but connected through low-latency links (not through public Internet).
 AZ name is region + az identifier like `us-east-1a`. AZ consists of one or more discrete data centers. 
 To distribute load equally AZ letter is different for every account (for accountA letter `a` point to AZ1, but for accountB letter `a` point to another AZ2, so by this equal distribution of loads across different AZ is achieved)
-LZ (local zone) - extension of region closer to your users.
-Edge location - A site that CloudFront uses to cache copies of your content for faster delivery to users at any location
+LZ (local zone) - extension of region closer to your users. LZ named like `us-east-1-lax-1a`, to use it you must first enable it.
+Edge location - site that CloudFront uses to cache copies of your content for faster delivery to users at any location
 
 ###### AWS Well-Architected Framework
 It describes best practices to deliver app to aws cloud, based on 5 pillars:
@@ -170,41 +170,31 @@ It describes best practices to deliver app to aws cloud, based on 5 pillars:
 ###### What is DevOps
 DevOps is implementation of agile to ops team.
 Before agile developers write code and throw it to ops team. After agile developers started to make more changes, but ops still take a lot of time to go to prod.
-Here come agile for operations, which become DevOps. Basic concepts of DevOps are:
+Basic concepts of DevOps are:
 * Infrastructure as code (TerraForm or CloudFormation) - treat infrastructure the same way developers treat code
 * ci/cd pipeline (Jenkins or CodeCommit/CodeBuild/CodeDeploy/CodePipeline) - enable the automated deployment of production-ready application code.
 Continuous deployment is continuous delivery that deploys to production (delivery more general term, refer to any deployment).
 * Automation (Elastic Beanstalk/OpsWorks) - setup, configuration, deployment, and support of infrastructure and the applications that run on it
 * Monitoring (CloudWatch/CloudTrail)
-* Security (IAM)
-Dev side of DevOps is responsible for:
-* code building
-* code coverage
-* unit testing
-* packaging
-* deployment
-Ops side of DevOps is responsible for:
-* provisioning
-* configuration
-* orchestration
-* deployment
+* Security (IAM/KMS)
+Dev side of DevOps is responsible for: code building/code coverage/unit testing/packaging/deployment
+Ops side of DevOps is responsible for: provisioning/configuration/orchestration/deployment
 
 ###### AWS Tagging
-Tags - metadata that describes resources, a simple key-value pair (value can be empty), that used for:
+Tags - metadata that describes resources, a simple key-value pair (value can be empty), used for:
 * organize/search/filter your resources by tags
 * cost allocation (cost explorer can use tags to break down costs by tags)
 * automation (start/stop dev env during non-business hours to reduce costs)
 * iam supports tag-based conditions
 Tags should be used consistently, otherwise there is no point.
-Default tag `Name` should be used for every resource for easier cost balance calculation
+Default tag `Name` should be used for every resource for easier cost balance calculation (you can activate it under `Cost allocation tags`)
 
 ###### AWS LoadBalancer vs App LoadBalancer
 ELB (Elastic Load Balancer) - aws load balancer that includes 3 types
 * ALB (Application Load Balancer) - used for http/https request
-* NLB (Network Load Balancer) - used for any tcp request
+* NLB (Network Load Balancer) - used for any tcp request, works on network layer
 * CLB (Classic Load Balancer) - old lb, now mostly outdated
-App loadbalancer (in our case spring app) - is EC2 instance with Eureka (Service Discovery) + Ribbon (Load Balancer) - a separate spring app 
-that discovers all instances and allows you to use human readable names instead of urls.
+App loadbalancer (in our case spring app) - is EC2 instance with Eureka (Service Discovery) + Ribbon (Load Balancer) - a separate spring app, that discovers all instances and allows you to use human readable names instead of urls.
 There are 2 types of proxy
 * forward proxy - sits in front of client and redirect client's request to server, yet client can still directly connect to server. Use cases:
     * protect identity/privacy
@@ -216,8 +206,7 @@ There are 2 types of proxy
 
 ###### Ingress vs Egress
 Ingress - traffic that enters an entity, so it's a request sent from public Internet to private cloud.
-Egress - traffic that exits an entity, so all traffic (data) that leaves your VPC into public internet.
-Traffic often is translated using NAT in and out of a private network like the cloud.
+Egress - traffic that exits an entity, so all traffic (data) that leaves your VPC into public internet, traffic often is translated using NAT in and out of a private network like the cloud.
 So to simplify ingress - request, egress - response.
 
 ###### Bastion vs JumpServer
@@ -229,23 +218,23 @@ Bastion VPN server - selected users can connect to vpn using IpSec protocol and 
 Bastion SSH server - selected users can connect using ssh protocol and from this server they can access all internal resources
 
 ###### Disaster Recovery
-There are 2 main concepts of DR
+There are 2 main concepts of DR:
 * RTO (Recovery Time Objective) - how fast can you recover your infra (if RTО is 5 hours => at 2 am AZ was flooded, at 7 am you have fully running infra in another AZ/region)
-* RPO (Recovery Point Objective) - to which point can you recover (you make backups every hour, at 1.30 AZ was flooded, so your RPO - 1 hour)
-There are 4 types of DR in aws
+* RPO (Recovery Point Objective) - to which point can you recover starting from point-in-time of failure, so it basically how much data you can afford to lose (you make backups every hour, at 1.30 AZ was flooded, so your RPO - 1 hour)
+There are 4 types of DR in aws:
 * backup and restore - you store all you backups on tape (e.g. using iron mountain)
 * pilot light - you have replica of your main infra, but it always down. So when disaster happen you just start everything. White it's down every 1-3 month you update it (run ec2, install patches..)
 * warm standby - constantly running scaled in version of your main infra
 * multi site - the fastest cause we constantly have complete copy running in another region
-HA vs DR
+Don't confuse:
 * HA - run some ec2 in another AZ and use elb to forward request to this AZ. In case one AZ fail you can still use your service. Yet this won't protect against whole region failure
-* DR - run some critical stuff in another region and use route53 failover to this region. But major part is restored once you start DR. When we talk about DR we usually assume entire region goes down.
-HA vs FT
+* DR - run some critical stuff in another region and use route53 failover to this region. But major part is restored, once you start DR. When we talk about DR we usually assume entire region goes down.
+Don't confuse:
 * HA (High availability) - system can recover with short downtime. Example - start new ec2 from ami and use ebs from down ec2 in case of failure.
 * FT (fault tolerance) - system continue provide services even in case of failures. You build FT by introducing redundancy. Example - add elb + asg.
 Availability vs. Durability on ebs example
 * Availability - ebs available 99.9% time, but in case of AZ failure it won't be available (cause ebs is linked to subnet/AZ). But when AZ becomes again available your data won't be lost.
-* Durability - ebs 11 9 durable (after dot we have 11 nines), that means if you have 1000 volumes you can expect to lose 1 volume per year.
+* Durability - ebs 11/9 durable (after dot we have 11 nines), that means if you have 1000 volumes you can expect to lose 1 volume per year.
 
 ###### ENI, ENA, EFA
 ENI (elastic network interface) - logical networking component in a VPC that represents a virtual network card that has attributes:
@@ -257,28 +246,29 @@ ENI (elastic network interface) - logical networking component in a VPC that rep
 Don't confuse it with elastic IP which provide static public IP address, where ENI provides static mac address.
 You can create ENI by going to `EC2 => Network & Security => Network interfaces` and create network interface and attach/detach it to ec2 instance.
 Every instance in VPC has a default ENI - primary network interface, you can't detach it. You can create new and attach. Number of ni that can be attached to ec2 depends on it's size (more computing power - more ni can be attached).
-Both ENA & EFA are ENI that provide some advanced networking
-* ENA (Elastic Network Adapter) - ENI that provides enhanced networking capabilities. There is a selected [set of instances](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/enhanced-networking-ena.html#ena-requirements) that support ena. You can ssh to ec2 and run `modinfo ena` if you see response your ENI is ENA.
-When you need several ec2 to have low latency & high network throughput it's better to put them into cluster PG, instead of just adding ean to each of them.
+Both ENA & EFA are ENI that provide some advanced networking:
+* ENA (Elastic Network Adapter) - ENI that provides enhanced networking capabilities. There is a selected [set of instances](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/enhanced-networking-ena.html#ena-requirements) that support ena. 
+You can ssh to ec2 and run `modinfo ena` if you see response your ENI is ENA. When you need several ec2 to have low latency & high network throughput it's better to put them into cluster PG, instead of just adding ENA to each of them.
 * EFA (Elastic Fabric Adapter) - ENA + OS bypass hardware interface (without involving the instance kernel) that use hardware-provided reliable transport communication.
     * allows HPC applications to communicate to talk with each other with low latency and higher throughput than traditional TCP channels.
     * EFA can only be attached at launch or to stopped instance
     * best suited for HPC/ML. HPC applications - a group of ec2 instances that perform some high load logic. They are written using MPI (Message Passing Interface) and require fast communication between instances
     * OS-bypass traffic is limited to a single subnet. In other words, EFA traffic cannot be sent from one subnet to another. Normal IP traffic from the EFA can be sent from one subnet to another
+    * although not required, it's recommended to place EFA instances into cluster PG
 
 ###### Shared Responsibility
-AWS use concept of shared responsibility
+AWS use concept of shared responsibility:
 * aws manages security of the cloud (physical devices, datacenters)
 * you manage security in the cloud (route table, NACL, SG)
 
 ###### SaaS vs PaaS vs IaaS/IAC 
-* SaaS (Software as a Service) - if you want to use third-party software like some crm, but don't want to have it staff to install it to every computer in your office, you can just use web-service of such crm. In this case crm completely managed by someone else,
+* SaaS (Software as a Service) - if you want to use third-party software like some crm, but don't want to have your admin to install it to every computer in your office, you can just use web-service of such crm. In this case crm completely managed by someone else,
 you just can access it from web browser without need to run it and support. Usually it refers to end-user applications (crm, office365, ELK stack).
 * PaaS (Platform as a Service) - in this case you develop you application (writing code) and just deploy your code without worry about infrastructure. For example if you are using spring framework, you can use [cloud foundry](https://cloud.spring.io/spring-cloud-cloudfoundry/reference/html)
 and just deploy your code, and it will provide everything else (container, java, spring framework). BeanStalk - good example where you just upload your code and aws provision all required infra for you.
 * IaaS (Infrastructure as a Service) - good example is aws that provides infrastructure (like container/networking/storage/database) as services to end users. Comparing with PaaS/SaaS users of IaaS responsible for managing infrastructure themselves. 
 The best practice is to use IAC (Infrastructure as a code) - an idea that you should code how you want to build your infrastructure. For example to run you microservice app you need to have 3 containers. 
-Of course you can manually create all of them, install all needed software there and deploy it. But you can also add script file that would do it all automatically. Most popular tools is Aws CloudFormation and Terraform.
+Of course you can manually create all of them, install all needed software there and deploy it. But you can also add script file that would do it all automatically. Most popular tools are CloudFormation & Terraform.
 
 ###### Virtualization and Containerization
 Hyperviser is VMM (Virtual Machine Monitor), that runs VM. It works as mediator between virtual OS and hardware. By acting as mediator we can run several virtual OS on one hardware at the same time.
@@ -288,12 +278,13 @@ So virtualization is a simulation of physical hardware for virtual OS.
 Containerization on the other hand is like os-level virtualization. Instead of creating a complete new OS, container share resources with host os, but have it's own file system, and by doing so divide itself from main OS.
 Hyper-V - Windows Server Virtualization, server computer running Hyper-V can be configured to expose individual virtual machines to one or more networks.
 Virtual machine like ec2 is part of physical machine in aws datacenter. It's isolated from other virtual machines by hypervisor or alike software. 
+Don't confuse:
 * Host - physical machine where all virtual machines are located
-* Guest - virtual machine
+* Guest - virtual machine that runs on host
 
 ###### Pure Serverless
 With aws serverless you can build complete backend application without writing code(like java) or using any framework (like spring). 
-For example you can use `API Gateway` to set up a few api endpoints. Then you can use `aws lambda` to set up some logic to handle these endpoints. Then you can use `sns` to send some notification/emails.
+For example you can use `API Gateway` to set up a few api endpoints. Then you can use `aws lambda` to set up some logic to handle these endpoints. Then you can use `SNS` to send some notification/emails.
 As you see without writing any application code we can have a simple backend application. But the truth is that this is only good for very simple app, usually for POC (proof of concept).
 The reason is once your application become more complex it would be very hard to ensure that everything is working fine, cause you have no tests. 
 So the conclusion is very simple. Use aws serverless only for POC, or when you want quickly to startup, then you can also create a lot of mock api so your team can start to interact with it.
@@ -301,7 +292,7 @@ But once your system become more complex you will definitely need to use some pr
 Moreover it can be expensive in certain cases. Consider situation where you have 1 lambda that need internet access to do some stuff (like captcha verification or ip address check).
 For this you need NAT, cause your lambda can't just get internet access from private subnet inside VPC. So you go and create nat gateway, and your lambda can now access internet.
 But in the end of the month you get a bill for 50 cents for lambda + 35$ for Nat Gateway. The reason is that Nat Gateway price per hour is 0.045$ + you also paying per GB transfer through your Nat, 
-but for the example let's imagine that you transfer tiny amount of 100mb per month. So instead of having cheap serverless you pay 35.5$ per month, just your lambda sometime can get internet access.
+but for the example let's imagine that you transfer tiny amount of 100mb per month. So instead of having cheap serverless you pay 35.5$ per month, just because your lambda sometimes can get internet access.
 When [aws support got pressed](https://forums.aws.amazon.com/thread.jspa?threadID=234959) over the issue, the proposed instead of Nat Gateway create custom Nat Instance (ec2 running with nat), and it would cost only 10$.
 But this idea to run additional ec2 to have internet access for single lambda upends serverless. Why do you need lambdas in the first place, when you can just put app into ec2 itself?
 
@@ -333,16 +324,15 @@ Since s3 is global service but has region, 5 urls are possible:
 * default url with region           `https://s3.us-east-1.amazonaws.com/www.aumingo.com/index.html`
 * bucket name first without region  `https://www.aumingo.com.s3.amazonaws.com/index.html`
 * bucket name first with region     `https://www.aumingo.com.s3.us-east-1.amazonaws.com/index.html`
-* static website                    `http://www.aumingo.com.s3-website-us-east-1.amazonaws.com`
+* static website (http only)        `http://www.aumingo.com.s3-website-us-east-1.amazonaws.com` (there is no way to set https for static website)
 Note that all this urls can be divided into 2 types:
 * path-style - can be:
     * global - https://s3.amazonaws.com/bucket_name
     * regional - https://s3.us-east-1.amazonaws.com/bucket_name
 * virtual-hosted - you add your bucket name first
 Note that path style is [deprecating soon](https://aws.amazon.com/blogs/aws/amazon-s3-path-deprecation-plan-the-rest-of-the-story). The reason is that millions of bucket hit same dns record, and it can create a bottleneck.
-There is no way to set https for static website.
 FIPS endpoint - endpoint that use a TLS software library that complies with Federal Information Processing Standards.
-So for kms you have 2 endpoints:
+So for kms you have 2 endpoints ([list](https://aws.amazon.com/compliance/fips) of all services that support fips endoint):
 * `kms.us-east-1.amazonaws.com`
 * `kms-fips.us-east-1.amazonaws.com`
 Basic commands
@@ -403,11 +393,11 @@ aws sts get-caller-identity
 * CloudFormation
 ```
 # create stack
-aws CloudFormation create-stack --stack-name=mystack --template-body=file://sa/cloudformation/condition.yml --region=us-east-1
+aws cloudformation create-stack --stack-name=mystack --template-body=file://sa/cloudformation/condition.yml
 # update stack and pass params
-aws CloudFormation update-stack --stack-name=mystack --template-body=file://sa/cloudformation/condition.yml --parameters=ParameterKey=Env,ParameterValue=prod --region=us-east-1
+aws cloudformation update-stack --stack-name=mystack --template-body=file://sa/cloudformation/condition.yml --parameters=ParameterKey=Env,ParameterValue=prod
 # if you are creating a stack that create iam resouce you should explicitly tell to CloudFormation that it's ok to create iam resources
-aws CloudFormation update-stack --stack-name=logs --template-body=file://sa/cloudformation/ec2-logs.yml --region=us-east-1 --capabilities=CAPABILITY_IAM
+aws cloudformation update-stack --stack-name=logs --template-body=file://sa/cloudformation/ec2-logs.yml --capabilities=CAPABILITY_IAM
 ```
 
 ###### Useful Linux Commands
@@ -450,9 +440,9 @@ Combining these 5 you can create anything from 1 min to 1 year:
 * Run job At 12.05,12.10 on 10th of every month and day should be Monday: `5,10 0 10 * 1`
 
 ###### MySql Index Design
-File stored in memory in a sequence of blocks. Each block knows where next is located. 
+File stored in memory in a sequence of blocks. Each block knows where next is located (basically LinkedList structure). 
 Usually blocks go one after another, but can be scattered around - fragmentation, in this case performance is donwgraded (that's why there are a lot of tools - defragmentators that may expedite your system).
-If you search column without index, then mysql would extract all rows in table (yup since it's not columnar it would extract all table from memory), filter your column and return result. As you see - highly ineffective.
+If you search column without index, then mysql would extract all rows in table (yup since it's not columnar it would extract all table from disk), filter your column and return result. As you see - highly ineffective.
 Index - create a sorted column representation, and when you search by column for which we have index, only values from that index would be extracted from memory.
 So now most important question on designing - on which columns to put indexes. Of course you can put it on all columns, but don't forget that indexes have their own overhead - memory.
 Best rule - analyze your query pattern and create indexes for all columns that are participate in `WHERE/ORDER BY` clauses.
@@ -464,13 +454,14 @@ Cause in first case index first filter by age, and leave 100 values, and then fi
 ### Networking
 ###### NIC
 NIC (Network interface controller) - hardware component to connect computer to network. It implements electronic circuit that operates on both physical & data link layers using either Ethernet/Wi-Fi protocols.
-If you NIC is inside network that using hub, than hub sends all packets to all pc connected to the network. But you NIC process only those that are intended for it (NIC check MAC address, and if it corresponds to address of NIC it sends frame further to CPU).
+If you NIC is inside network that using hub, than hub sends all packets to all pc connected to the network. But your NIC process only those that are intended for it (NIC check MAC address, and if it corresponds to address of NIC it sends frame further to CPU).
 Promiscuous mode - you turn off MAC address check, and all packets that are sent to NIC (regardless of destination MAC address) are forwarded to CPU to process. This mode is turned off by default, can be useful for traffic sniffing.
 Traffic sniffing - catch all traffic and analyze it, best tool is [WireShark](https://www.wireshark.org).
 You can detect promiscuous mode by sending a ping (ICMP echo request) with the wrong MAC address but the right IP address. In normal mode NIC would drop packet, but in promiscuous - you would get response.
 It is not possible for ec2 running in promiscuous mode to receive/sniff traffic that is intended for a different virtual instance.
 Since most modern networks using switch, and it sends data directly to special pc (compare to hub which just replicate packet to everybody in the network), just turning promiscuous mode won't help much, 
-cause switch will route only those packets that are only designated for your NIC, so you can't sniff all network traffic. Hopefully Managed switches provide Port Mirroring (ability to mirror all incoming packets to some specific port, port - is not tcp/udp port but physical connection nest inside switch)
+cause switch will route only those packets that are only designated for your NIC, so you can't sniff all network traffic. 
+Hopefully Managed switches provide Port Mirroring (ability to mirror all incoming packets to some specific port, port - is not tcp/udp port but physical connection nest inside switch)
 If your switch is not managed and you can't turn on port mirroring in the switch you can employ ARP-Spoofing.
 ARP is used to by switches to get mac address by ip address. So switch basically sends ARP requests to all connected devices, and if IP address in ARP request match device IP address, device responds with MAC address.
 Key here is that switch has no way to verify response. So for all ARP your host can response with it's onw mac address. In this case all packets that switch receives would be transmitted to your host.
@@ -511,7 +502,7 @@ There are 7 levels in OSI model, here is the list from lowest to upper:
 * Session layer - establish and destroy connection between 2 hosts.
 * Presentation layer - encode/decode information passed between 2 hosts.
 * Application layer - apps works on this level by using HTTP/FTP
-On each of this layer passed information is called different.
+On each of this layer passed information is called different:
 * Application/Presentation/Session - PDU
 * Transport - TCP - segments, UDP - datagramm
 * Network - packets
@@ -535,25 +526,25 @@ Host: 192.168.1.10
 It uses connectionless service model using UDP. It is implemented with two UDP port numbers for its operations which are the same as for the bootstrap protocol (BOOTP). UDP port number 67 is the destination port of a server, and UDP port number 68 is used by the client.
 * POP3 (Post Office Protocol Version 3, 110, POP3S-995) - work on get-and-delete principle. Client connect to server, download new mails, and sent delete message to server
 * IMAP (Internet Message Access Protocol, 143) - more complex analogy of pop3, don't remove messages from server
-* SMTP (Simple Mail Transfer Protocol, 25) - send mail to mail server. Don't cofuse IMAP/POP3 - read email from mailServer, SMTP - send email to mailServer
+* SMTP (Simple Mail Transfer Protocol, 25) - send mail to mail server. Don't confuse IMAP/POP3 - read email from mailServer, SMTP - send email to mailServer
 * Telnet (terminal network, 23) - allows to communicate with remote OS by sending unencrypted text data. Nowadays mostly outdated and replaced by ssh
 * SSH (Secure Shell, 22) - like telnet, but exchange encrypted data
-* FTP (File Transfer Protocol, 20) - transfer file to server, unsecured. You can use FTPS(port 21) or FTPS (port 22) for secure file transfer 
+* FTP (File Transfer Protocol, 20) - transfer file to server, unsecured. You can use FTPS (port 21) or FTPS (port 22) for secure file transfer 
 
 ###### Low Level Protocols
 * ICMP (Internet Control Message Protocol) - located at network layer - error reporting and query service.
 Ping command use ICMP echo to determine availability of some destination
 * Mac address - unique address of every network device, consists of 48 bits (12 symbols), first 24 - set by IEEE, another 24 - by manufacturer (example: 005555.001234).
-* ARP (Address Resolution Protocol) - used to discover link layer address (mac-address) associated with given network layer address (ip-address). For for IPv4. You can play with in in linux by `arp --help`.
+* ARP (Address Resolution Protocol) - used to discover link layer address (mac-address) associated with given network layer address (ip-address). Only for IPv4. You can play with in in linux by `arp --help`.
 * NDP (Neighbor Discovery Protocol) - same as ARP, only for IPv6
 * NAT (Network Address Translation) - if you have 1 public IP address that's visible to whole world, and also have a private network with lots of computers there, and you want to route specific request to some computer in your network your router will use NAT. 
 It will change headers in packet and resend it to particular IP address inside private network.
 When you make request from your private ip address 192.168.0.1 to google.com, your router will substitute your ip with it's public ip address. Google will respond to router public ip address and router will got this response, and then will redirect this response back to your machine.
 * IP address - divided between public and private (used for local networks) 
 Private networks:
-10.0.0.0 — 10.255.255.255, subnet mask => 255.0.0.0 (10/8, 24 bits), mostly used in work-related networks.
-172.16.0.0 — 172.31.255.255, subnet mask => 255.240.0.0 (172.16/12, 20 bits), mostly not used anywhere.
-192.168.0.0 — 192.168.255.255 subnet mask => 255.255.0.0 (192.168/16, 16 bits), mostly used in home-related networks.
+10.0.0.0 - 10.255.255.255, subnet mask => 255.0.0.0 (10/8, 24 bits), mostly used in work-related networks.
+172.16.0.0 - 172.31.255.255, subnet mask => 255.240.0.0 (172.16/12, 20 bits), mostly not used anywhere.
+192.168.0.0 - 192.168.255.255 subnet mask => 255.255.0.0 (192.168/16, 16 bits), mostly used in home-related networks.
 * Subnet mask - used to divide ip address into 2 parts: network + host. 
 192.168.0.0/16 - first 16 bytes - network, last - ip address, totally there can be 2**16=65536 ip addresses.
 192.168.0.0/24 - first 24 bytes - network, last 8 - ip address totally 2**8 = 256 ip addresses.
@@ -563,7 +554,7 @@ In every network first/last addresses are:
 * first (all zeros, 0) - specifies network
 * last (all ones, 255) - broadcast a message to every host on a network (ARP)
 Gateway - router specified on a host, which links the host's subnet to other networks. For ordinary users gateway - Internet provider, cause it connects them to Internet.
-Gateways regulate traffic between two dissimilar networks, while routers regulate traffic between similar networks
+Gateways regulate traffic between two non-similar networks, while routers regulate traffic between similar networks
 Default gateway - ip address of router for particular network (for every network including Internet, router will have it's own ip address)
 When you send packet, tcp/ip will use subnet mask to determine if ip address in the same subnet, in this case it will send packet further, if false - it will send it to default gateway.
 There are 2 types of networks:
@@ -592,7 +583,8 @@ To solve this issue there is split of tunnel so based on destination packets are
 * iSCSI (Internet Small Computer Systems Interface) - transport layer protocol, works above TCP. Initiator (server) packages SCSI commands into network packets, and sends it to Target (remote storage).
 For all subnets you shouldn't use first & last address
 * first address - network identification (refers to the subnet itself and is used for routing purposes)
-Look at the binary representations for the ip address and the subnet mask. In the process of determining the route they are binary combined with AND. 1&0=0, 1&1=1, 0&0=0. The network part of the address remains unaffected, but the host part becomes all-zero. If you could use the .0 address for a host too, how would you different it from the net?
+Look at the binary representations for the ip address and the subnet mask. In the process of determining the route they are binary combined with AND. 1&0=0, 1&1=1, 0&0=0. 
+The network part of the address remains unaffected, but the host part becomes all-zero. If you could use the .0 address for a host too, how would you different it from the net?
 * last address - broadcast (network devices use it to send messages to all other devices in this network)
 So for /24 network you can have totally 256-2 = 254 IP addresses.
 But in cloud (every cloud, not just aws) 3 IP addresses also would be gone (router, DHCP, DNS) so totally you have 254-3 = 251.
@@ -600,7 +592,7 @@ But in real network you probably gonna have this 3 ip taken also (but you can al
 
 ###### SOA and CAA
 SOA (Start of Authority) - record in DNS containing administrative info about zone, email, last update time.
-You can use dig (domain information groper) utility to group(grip/get) information about dns
+You can use dig (domain information groper) utility to grope(grip/get) information about dns
 You can get it by `dig SOA +multiline google.com`, email is `root@amazon.com`
 ```
 amazon.com.		900 IN SOA dns-external-master.amazon.com. root.amazon.com. (
@@ -610,9 +602,8 @@ amazon.com.		900 IN SOA dns-external-master.amazon.com. root.amazon.com. (
 				3024000    ; expire (5 weeks)
 				60         ; minimum (1 minute)
 				)
-
 ```
-CAA (Certification Authority Authorization) - list of autorities who can issue certificates for this domain. You can run `dig CAA +multiline google.com`
+CAA (Certification Authority Authorization) - list of authorities who can issue certificates for this domain. You can run `dig CAA +multiline google.com`
 ```
 google.com.		86400 IN CAA 0 issue "pki.goog"
 ```
@@ -620,19 +611,19 @@ google.com.		86400 IN CAA 0 issue "pki.goog"
 ###### SSL vs TLS vs HTTPS
 SSL (Secure Sockets Layers) - outdated protocol not used today. TLS (Transport Layer Security) - main security protocol used today.
 So you can call TLS more updated & secure version of SSL. But we still call our digital certs as SSL certificates, but in reality when you buy SSL certificate from DigiCert you are buying most up-to-date TLS certificate.
-HTTPS means that our HTTP traffic is secured by TLS protocol with SSL(TLS) certificate.
+HTTPS means that our HTTP traffic is secured by TLS protocol with SSL/TLS certificate.
 CA (Certificate Authority) - entity that issues digital trusted certificates (certifies the ownership of a public key by the named subject of the certificate).
 Certificate prevents man-in-the-middle attack by encrypting all packets sent to server with certificate's public key, and on the server side everything is decrypted using private key.
-There are public (low ubiquity, issues certificates for free, like [Let's encrypt](https://letsencrypt.org/getting-started/)) and commercial(high ubiquity, charge you for issuing certificate) CA out there.
+There are public (low ubiquity, issues certificates for free, like [Let's encrypt](https://letsencrypt.org/getting-started)) and commercial(high ubiquity, charge you for issuing certificate) CA out there.
 Ubiquity - quantity of internet browsers, other devices and applications which trust a particular CA.
 SSL certificates are verified and issued by a CA. If you are using aws, everything is done inside, and certificate is generated for you.
 But you can also generate public/private keys using `openssl`, and then generate CSR and reqeust CA to issue certificate for you.
-CSR (Certificate Signing Request) - request signed with private key that contains vital information about your organization and domain, so it
-is an encrypted block of text that includes your organization’s information, such as country, email address, fully qualified domain name, etc. It is sent to the Certificate Authority when applying for an SSL certificate.
-Most detailed info [here](https://letsencrypt.org/how-it-works/)
+CSR (Certificate Signing Request) - request signed with private key that contains vital information about your organization and domain,
+so it's an encrypted block of text that includes your organization’s information, such as country, email address, fully qualified domain name, etc. 
+It is sent to the Certificate Authority when applying for an SSL certificate. Most detailed info [here](https://letsencrypt.org/how-it-works)
 
 ###### Routing
-Routing - process to select path between different networks using 5 addressing method (association)
+Routing - process to select path between different networks using one of 5 addressing methods (association):
 * `unicast` - one-to-one between a sender and destination (each destination address uniquely identifies a single receiver endpoint)
 * `broadcast` - one-to-all (single datagram from one sender is routed to all of the possibly multiple endpoints associated with the broadcast address)
 * `multicast` - one-to-many (datagrams are routed simultaneously in a single transmission to many recipients)
@@ -642,13 +633,11 @@ So if one datacenter would go offline, anycast would forward user to the next cl
 It's based on BGP and AS. With unicast path would lead to one destination, no matter what distance is.
 * `geocast` - delivery of information to a group of destinations in a network identified by their geographical locations
 Routing protocol:
-* EGP (External Gateway Protocol) - based on based on tree-like (i.e., hierarchical) topologies.
-As internet grows EGP become inefficient to find the quickest route, so new protocol was developed
-AS (Autonomous System) architecture (represented by unique number called an ASN).
-Each AS controls a collection of connected routing prefixes, representing a range of IP addresses. It then determines the routing policy inside the network.
+* EGP (External Gateway Protocol) - based on tree-like (hierarchical) topologies. As internet grows EGP become inefficient to find the quickest route, so new protocol was developed
 * BGP (Border Gateway Protocol) - makes internet to work.
 It works like GPS (the best route is determined by different factors, such as traffic congestion, roads temporarily closed for maintenance, etc).
-BGP is designed to exchange routing and reachability information between autonomous systems on the Internet
+BGP is designed to exchange routing and reachability information between AS on the Internet.
+AS (Autonomous System) architecture (represented by unique number called an ASN). Each AS controls a collection of connected routing prefixes, representing a range of IP addresses. It then determines the routing policy inside the network.
 
 ###### MTU & Jumbo frame
 PDU (Protocol data unit) - single unit of information transmitted between 2 computers. At each layer PDU has it's own name
@@ -656,8 +645,7 @@ PDU (Protocol data unit) - single unit of information transmitted between 2 comp
 * UDP - datagram
 * IP - packet
 MTU (Maximum transmission unit) - max size of PDU that can be transferred in single network layer transaction. MTU for Ethernet is 1500 bytes.
-Jumbo frame - ethernet frame with more than 1500 bytes MTU, usually up to 9000.
-The idea is that it's easy to process the contents of single large frame instead of many smaller frames.
+Jumbo frame - ethernet frame with more than 1500 bytes MTU, usually up to 9000. The idea is that it's easy to process the contents of single large frame instead of many smaller frames.
 You can test all of this with `ping` command
 ```
 # by default 84 bytes of data transfered
@@ -670,7 +658,7 @@ ping -s 1472 google.com
 
 # if you try more, ping won't work
 ping -s 1473 google.com
-#PING google.com (172.217.161.142) 1473(1501) bytes of data.
+# PING google.com (172.217.161.142) 1473(1501) bytes of data.
 
 # you can force to run large frame
 ping -M do -s 9000 google.com
@@ -679,8 +667,7 @@ ping -M do -s 9000 google.com
 ```
 
 ###### Nmap
-Nmap (Network Mapper) - free and open-source utility for network discovery and security auditing.
-First you have to install it `sudo apt-get install nmap -y`. After check version `nmap --version`.
+Nmap (Network Mapper) - free and open-source utility for network discovery and security auditing. First you have to install it `sudo apt-get install nmap -y`. After check version `nmap --version`.
 Nmap - utility to listen and check for available ports. Create ec2 in public network with all icmp and ssh open in SG.
 Then you can scan ports `nmap -Pn 34.207.196.102`. `-Pn` - just check port, without pinging host machine first (useful if icmp protocol turned off by SG).
 ```
@@ -711,7 +698,7 @@ There are 3 types of chain:
 * input - control incoming connections (if you want ssh to machine, input chain should have proper record to allow port 22)
 * forward (router/NAT) - control incoming connections not destined for localhost
 * output - control outcoming connections
-Policy can be of 2 types `sudo iptables -L|grep policy`:
+Policy can be of 2 types `sudo iptables -L | grep policy`:
 * ACCEPT - accept all connections. You can configure to accept all incoming connections `iptables --policy INPUT ACCEPT`. Then you can deny based on IP or port.
 * DROP - deny all connections
 There are 3 types of responses:
@@ -740,7 +727,7 @@ iptables -A INPUT -p tcp --dport ssh -s 10.10.0.0 -m state --state NEW,ESTABLISH
 iptables -A OUTPUT -p tcp --sport 22 -d 10.10.0.0 -m state --state ESTABLISHED -j ACCEPT
 ```
 Once you add changes they apply immediately, but when you reboot your pc, they would be scrapped. If you want to add them permanently you should save them explicitly `sudo /sbin/iptables-save`.
-SG vs iptables:
+SG vs iptables (from aws cloud there are following hierarchy of security `RouteTable => NACL => SG => iptables`):
 * SG - infra level of security. Be default all closed. Stateful. Takes effect prior to iptables.
 * iptables - os level of security. By default all open. Stateless.
 Custom chains - you can create your own custom chains
@@ -752,7 +739,7 @@ sudo iptables -A INPUT -j MYCHAIN
 # see which custom chain follows after which 
 iptables -L  -n --line-numbers
 ```
-There are 4 types if iptables:
+There are 4 types of iptables:
 * filter - 3 chains:
     * input
     * forward
@@ -787,26 +774,23 @@ target     prot opt source               destination
 DNAT       tcp  --  0.0.0.0/0            0.0.0.0/0            tcp dpt:8080 to:172.17.0.3:80
 ```
 You can resolve it by adding `iptables -I FORWARD -p tcp --dport 80 -j DROP`.
-So to summirize - there are 2 ways to block outside access to your exposed docker port:
+So to summarize - there are 2 ways to block outside access to your exposed docker port:
 * expose it only to localhost `docker run -d -p 127.0.0.1:8080:80 nginx`
 * expose to everybody but block access from iptables `iptables -I FORWARD -p tcp --dport 80 -j DROP` or add it to docker chain `iptables -I DOCKER-USER -p tcp --dport 80 -j DROP`
 Docker add 2 custom chains `DOCKER-USER & DOCKER` and ensures that all incoming requests are validated by this chain first.
 If you want your rules to be evaluated before docker rules add them to `DOCKER-USER` chain.
 You can run docker with `--iptables=false`, this would prevent docker from modifying iptables. But this will break docker networking.
-
 There are several networking drivers that you can specify in `network_mode` prop:
-* bridge - default driver, use when your containers need to communicate with one another.
-Containers connected to same bridge can communicate with each other, while to be isolated from all other containers.
+* bridge - default driver, use when your containers need to communicate with one another. Containers connected to same bridge can communicate with each other, while to be isolated from all other containers.
 * host - use host machine networking. You don't need to use port binding in this case, cause your docker port would be available as host port.
 * overlay - create network between instances run from different docker daemons (or between swarm and standalone docker)
 
 ### Services
 ###### Corretto 
-It's free amazon implementation of Java SE specification.
-As you know there are confusion around java SE. Oracle provides 2 java se implementations
+It's free amazon implementation of Java SE specification. As you know there are confusion around java SE. Oracle provides 2 java SE implementations:
 * OpenJDK - free
 * OracleJDK - paid
-Yet there are some features in OpenJDK that can be of charge. that's why you may want to use other java se implementations like
+Yet there are some features in OpenJDK that can be of charge, that's why you may want to use other java SE implementations like:
 * Amazon Corretto
 * AdoptOpenJDK
 * Azul Zulu
@@ -815,13 +799,13 @@ If you are still confuse you can take a look at [java is still free](https://www
 ###### CloudFormation 
 It's aws solution to IAC. There are 2 concepts:
 * template - json/yaml file with describe desired infrastructure
-* stack - template deployed to cloud (you can run commands like describe/list/create/update stack). If you create/update stack and errors occur all would be rolled back and you can be notified by SNS
+* stack - template deployed to cloud (you can run commands like describe/list/create/update stack). If you create/update stack and errors occur all changes would be rolled back and you can be notified by SNS
 SAM (Serverless Application Model) - framework to build serverless apps, provide a shorthand syntax to write IAC using yaml templates. Later it anyway transformed into CF full template, so you can just learn CF and stick with it.
 [sam local](https://github.com/aws/aws-sam-cli) - cli tool to test lambda locally, simulate s3/dynamoDB/kinesis/sns, it uses built-in CodeBuild/CodeDeploy to build and deploy app to cloud.
 Supported formats are JSON/YAML. Resource naming is supported not for all product, this is due to possible naming conflicts (when you update template, some resources would be recreated, but if names are not updated error would happen).
 To assign real name, you use stack + logical name, this ensures unique names. You can add deletion policy (for example you delete stack and want to preserve s3 buckets and take RDS snapshot).
 CF Registry - managed service that lets you register, use, and discover AWS and third party resource providers. You can use conditions inside templates (for example create ec2 based on input params).
-Don't confuse nested stack and imported stack:
+Don't confuse:
 * nested stack - you put one stack into another (main) by using `AWS::CloudFormation::Stack` and create only 1 stack (main). And this stack would create dependent first. It's the same as have 1 file, you just separate code, yet in aws your stacks would be divided into main and nested.
 * imported stack (Cross-Stack References) - you create 2 separate stacks with different names, and inside main you call resources from dependee stack by using `!ImportValue !Sub "${stackName}-SubnetID"`.
 In both cases your first stack should export resources, by using `Outputs`, that you want to use in main stack.
@@ -846,10 +830,9 @@ There are other 2 types of architecture:
 * onion
 But generally they resemble layered style, only difference they divide core (domain objects + services) and outer object (ui, database) and they are connected by using port (on core side) + adapter (on outer side)
 AWS-specific parameter types: If you need to pass param as ec2 key name, you can pass it as string, but if this key doesn't exist, you template would be half-created and aborted. 
-This is what for aws specific param types. If you set param type, not just `string`, but `AWS::EC2::KeyPair::KeyName`
-CF would first check that the key with such name exists (in region), and only after this would start to create your stack. 
+This is what for aws specific param types. If you set param type, not just `string`, but `AWS::EC2::KeyPair::KeyName`, CF would first check that the key with such name exists (in region), and only after this would start to create your stack. 
 Name of ssh key is not the only one, here is full list of [AWS-specific parameter types](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/parameters-section-structure.html#aws-specific-parameter-types)
-Internally CF is nothing but a service that parse your JSON/YAML, creates dependency graph and turn it into aws API calls (from bottom to top so dependencies would work).
+Internally CF is nothing but a service that parse your JSON/YAML, creates dependency graph and turn it into aws API calls (from bottom to top, so dependencies would work).
 CF uses declarative approach, cause you declare how your stack should look like, you are not telling what CF should do to in order to build it (imperative approach).
 DD (Drift Detection) - find difference between template values and actual property values in aws (can happen if someone change resource directly from console/cli). 
 DD only checks values explicitly set in template, it doesn't check default values (so if you change some default property directly from console/cli, DD won't find it).
@@ -857,12 +840,12 @@ If you want include default props into DD result you should add all these defaul
 Macros - allows you to customize templates. You write lambda that execute before template run and modify it (substitute variables, add new fields to objects). There are 2 types:
 * template level - applied to whole template (all parameters/resources)
 * snippet level - applied to single resource
-Custom resource - ability to create resource not supported by cf. When cf execute templates, and meet custom resource it call your lambda with your custom logic run. You can use it:
-* provision aws resource not supported by cf, like dynamodb global table, [full list](https://github.com/cfntools/cloudformation-gaps/projects/1)
-* provision non-aws resource with cf, like github webhook (in case you want to use github for your ci/ci instead of codeCommit)
-* provision something not related to infra, like run migrations
-Custom resource handler - executed in async callback model, that means cf run it but doesn't wait for response, instead you are given pre-sign s3 url, where you have to upload json result once you are done.
-As with all resources you have to implement logic for these 3 steps: create/update/delete. You can use [this node.js library](https://github.com/andrew-templeton/cfn-lambda) to simplify writing custom resource handler.
+Custom resource - ability to create resource not supported by CF. When CF execute templates, and meet custom resource it call your lambda with your custom logic. You can use it to provision:
+* aws resource not supported by cf, like dynamoDB global table, [full list](https://github.com/cfntools/cloudformation-gaps/projects/1)
+* non-aws resource with cf, like github webhook (in case you want to use github for your ci/ci instead of codeCommit)
+* something not related to infra, like run migrations
+Custom resource handler - executed in async callback model, that means cf run it, but doesn't wait for response, instead you are given pre-sign s3 url, where you have to upload json result once you are done.
+As with all resources you have to implement logic for these 3 steps: create/update/delete. You can use [node.js library](https://github.com/andrew-templeton/cfn-lambda) to simplify writing custom resource handler.
 You create custom resource with `Type: Custom::YouCustomResourceName` with at least one property `ServiceToken: {LAMBDA_ARN}`. When cf execute your lambda you are given event with `ResponseURL` - s3 pre-sign url where you have to put json after execution.
 Example of event for lambda
 ```
@@ -892,7 +875,7 @@ All resources can have several generic attributes:
 * DeletionPolicy - what to do with resource after resource deletion (either stack deleted, or stack updated but resource was removed from stack):
     * Delete - delete resource with all it's contents. This is default policy, but `AWS::RDS::DBCluster` & `AWS::RDS::DBInstance` (that don't specify the `DBClusterIdentifier` property) - default policy is Snapshot. For s3 you must ensure that bucket is empty before it can be deleted.
     * Retain - retain resource with all it's contents. Yet if you update stack in such a way that new resource of this type is created, than old resource would be deleted & new would be created with same name.
-    * Snapshot - for resources that support snapshot, first create snapshot and then delete resource. It applicable for `AWS::EC2::Volume`, elasticache, rds, redshift
+    * Snapshot - for resources that support snapshot, first create snapshot and then delete resource. It applicable for ebs/elasticache/rds/redshift
     Although you can use retain for RDS, this would mean that RDS instance would continue to run, so for RDS it's better to always use snapshot deletion policy.
 * DependsOn - resource would be created after specified resources
 * Metadata - associate some metadata with resource
@@ -902,17 +885,16 @@ All resources can have several generic attributes:
 There are 3 types of permission:
 * user - permission for single iam entity
 * group - collection of permissions that you can assign. Used to define users. One user can belong to multiple groups. It's a best practice to use group even if you have one user in it.
-* role - collection of permissions for specific aws service (for example ec2 can connect to s3 without any secret key). You can also create role for user, but user will have to assume this role
+* role - collection of permissions for specific aws service (for example ec2 can connect to s3 without any secret key) or other iam entity (user/role can assume role).
 EC2 role access - you can add (for example bucket write access) role to ec2 instance. Instance Profile - container for an IAM role that you can use to pass role information to an EC2.
 IAM user - `who am I` & `what can I do`. But role is just `what can I do`. So for ec2 to use role it should become type of iam instance, that's why we create instance profile.
 When you create ec2 role from console, instance profile automatically created with same name. But if you are using CLI/CloudFormation you have to manually create it `AWS::IAM::InstanceProfile` and assign it to ec2 using `IamInstanceProfile`.
-With role you should provide Access token and Session Token
-So if user is assigned to 2 groups he would get all permissions from 2 groups at the same time, but if he assigned 2 roles, he can use only one at a time (by assuming one role)
+Entity can assume only 1 role at a time, so if user is assigned to 2 groups he would get all permissions from 2 groups at the same time, but if he assigned 2 roles, he can use only one at a time (by assuming one role)
 There are 2 types of tokens:
 * Access token - combination of Access Key ID (20 chars) + Secret Access Key (40 characters)
 aws prevents replay attack by using timestamp in signature and if request older that 15 min, it's rejected.
 * Session Token - temporary session token to authenticate
-Policy - define the permissions for a user, group, or role. Resource is defined with following format `"arn:aws:service:region:account-id:[resourcetype:]resource"`.
+Policy - define the permissions for a user/group/role. Resource is defined with following format `"arn:aws:service:region:account-id:[resourcetype:]resource"`.
 Resource examples:
 ```
 Amazon S3 Bucket        arn:aws:s3:us-east-1:ACCOUNT_ID:my_aws_bucket/*
@@ -920,14 +902,10 @@ IAM User                arn:aws:iam:us-east-1:ACCOUNT_ID:user/Jack
 Amazon DynamoDB Table   arn:aws:dynamodb:us-east-1:ACCOUNT_ID:table/myTable
 ```
 Don't confuse:
-* AssumeRole - ability of principal to assume other role for himself
-* PassRole - ability of principal create resource (lambda/ec2) and pass role to this resource
-There are 2 api to get access delegation (note that after you get session, permission evaluated on each request, so although you can't revoke session, you can modify permission after and by this revoke access):
-* sts:GetFederationToken (15 min – 36 hours, default - 12h, for root user - max 1h) - a mix of caller permission & passed permission (if you don't pass any permissions returned session will have no permissions)
-just call `aws sts get-federation-token --name=bob --policy='{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":"s3:*","Resource":["*"]}]}'`
-* sts:AssumeRole (15 min – 1 hour) - all permission of specified role (role should have trusted policy for this user/account)
+* `sts:AssumeRole` - ability of principal to assume other role for himself
+* `iam:PassRole` - ability of principal create resource (lambda/ec2) and pass role to this resource
 If principal doesn't have `PassRole` permission, and try to create ec2 with role, he will get `is not authorized to perform: iam:PassRole on resource`. 
-Below example of policy to allow principal to create only ec2 with only specific role
+Below example of policy to allow principal to create ec2 with only specific role
 ```
 {
     "Version": "2012-10-17",
@@ -948,9 +926,8 @@ Mobile app access - there are 2 ways to access aws resources from mobile app:
 * TVM (token vending machine - java code run on ec2 that request temporary credentials on behalf of user) - old way to get temporary credentials. Don't use it, better to use cognito.
 It's also not scalable, cause it's implemented on single ec2 - so it's single point of failure.
 Don't confuse:
-* Notaction - opposite of Action, can be used with Allow/Deny
-Notaction+Allow - add access to all actions except those under Notaction
-Good example to allow all actions on s3 except delete bucket:
+* Notaction - opposite of Action, can be used with Allow/Deny.
+Notaction+Allow - add access to all actions except those under Notaction. Good example to allow all actions on s3 except delete bucket
 ```
 "Effect": "Allow",
 "NotAction": "s3:DeleteBucket",
@@ -959,8 +936,8 @@ Good example to allow all actions on s3 except delete bucket:
 NotAction+Deny - deny access to all actions except those under Notaction. Notice that this action doesn't give any rights on actions inside Notaction. You still should add explicit allow. 
 It only explicitly deny to all other actions except those under Notaction.
 * Deny - type of Effect
-same way you can use NotAction/NotResource/NotPrincipal.
-For example if you want to limit s3 to specific users. Of course you can create deny for all current users, but in this case once somebody add new user with `s3:*` action, he will get access.
+Same way you can use NotAction/NotResource/NotPrincipal. For example if you want to limit s3 to specific users. 
+Of course you can create deny for all current users, but in this case once somebody add new user with `s3:*` action, he will get access.
 So instead of explicitly deny to all users you can use Deny+NotPrincipal. In this case you would deny to all users except your desired user.
 This approach is bit difficult for roles, cause role principal is defined by 2 arn:
 * role arn -              arn:aws:iam::{ACCOUNT_ID}:role/roleName
@@ -1045,8 +1022,8 @@ source_profile = jack
 ```
 When you try to run any command you will get `configparser.DuplicateOptionError: While reading from '/home/diman/.aws/config' [line 38]: option 'role_arn' in section 'profile jackViewer' already exists`
 So [as explained here](https://stackoverflow.com/questions/48876077/assume-multiple-aws-iam-roles-are-a-single-time) role assuming is one at a time operation, and in case you need union (like you need to load 2 athena tables from 2 accounts)
-you have to use some sort of custom loader (using java sdk) and load them one by one assuming one role at a time.
-If you need really fine-grained control you can create policy to access s3 or ec2 by name or tag, and divide access based on evn (For example all dev s3/ec2 can be accessed for dev role, but prod only to admin)
+you have to use some sort of custom loader (using java sdk) and load them one by one, assuming one role at a time.
+If you need really fine-grained control you can create policy to access s3 or ec2 by name or tag, and divide access based on env (For example all dev s3/ec2 can be accessed for dev role, but prod only to admin)
 Yet there are some limitation, [take a look](https://stackoverflow.com/a/18956581), to work with s3 buckets you need to add `ListAllMyBuckets` for all buckets. So if you want to create a policy to work with single bucket
 ```
 {
@@ -1067,7 +1044,7 @@ Yet there are some limitation, [take a look](https://stackoverflow.com/a/1895658
     ]
 }
 ```
-You can restrict any resource by 2FA using
+You can restrict any resource by 2FA using:
 * MultiFactorAuthPresent (existence) - if user used 2FA. The key is only present when the user authenticates with short-term credentials, for long-term value=null.
 * MultiFactorAuthAge (duration) - numeric value how long ago short-term credentials with 2FA were created. If credentials were created without 2FA, value=null.
 Limit access by number of seconds, when otp code was set. `"Condition":{"NumericLessThan":{"aws:MultiFactorAuthAge":"30"}}` - set restriction that would allow access only if you enter 2FA 30 or less seconds from the time of the api call
@@ -1082,16 +1059,13 @@ Anti-pattern:
 * Deny/`"Condition":{"Bool":{"aws:MultiFactorAuthPresent":"false"}}` true if use not used 2FA with short-term credentials, false with long-term (users would be able to access resources without 2FA with just simple long-term credentials)
 because for short-term without 2FA value=false -> false=false => true, for long-term without 2FA - null!=false => false
 [See here](https://github.com/dgaydukov/cert-spring5/blob/master/files/spring5.md#aws-access-with-2fa) java details.
-`getSessionToken` api require that you supply OTP code, otherwise you get AccessDeniedException. There is no iam permission for this call. All users with valid MFA can call this api
 Please notice that although 2FA required to login to console, if you are using cli/sdk and you just add access policy without 2FA condition, you can access these resources without 2FA.
 To avoid this, it's better not to assign access policy to user/group, but instead assign them to role, and add `{"Bool": {"aws:MultiFactorAuthPresent": "true"}}` condition to role.
 In this case you have single point of entry - role with 2FA.
-short term vs long term credentials:
-* long term - your aws accessId/accessKey that you generate for iam user. They always stay the same
-* short term - aws accessId/accessKey/sessionToken - that generated by api `get-session-token/sts-assume-role` and valid for certain duration like 1 hour
-User would still be able to list all buckets.
-Due to this limitations, sometimes it's better to create multiple aws accounts (dev/prod) to divide access, and make sure that nobody from developers has access to prod env.
-You can define permissions by assigning policies to group/user. There are 2 types of policy
+Don't confuse:
+* long-term credentials - your aws accessId/accessKey that you generate for iam user. They always stay the same
+* short-term credentials - aws accessId/accessKey/sessionToken - that generated by api `get-session-token/sts-assume-role` and valid for certain duration like 1 hour
+You can define permissions by assigning policies to group/user/role. There are 2 types of policy
 * aws managed - most common policies created by aws (for example s3/ec2 access and so on...)
 * managed by you - custom policies created by end user
 Permission evaluation:
@@ -1103,7 +1077,7 @@ Federation - process to move authentication/authorization into third party to ha
 Identity federation - grant to external identities ability to secure access aws (both management console & API) without creating iam users. External identities can be of 3 types (2 created from iam console by adding identity provider, 1 from cognito):
 * SAML - corporate IdP (microsoft AD, aws AD). ADFS (Active Directory Federation Services) - used to connect AD to iam using SAML protocol. When you create role choose SAML type.
 * OpenId Connect - web IdP (cognito, facebook, google or any other openId connect). When you create role choose web identity type.
-* cognito IdP - use cogntio identity to get temporary aws credentials (you don't need to identity provider through iam console). When create role choose web identity type and select cognito as IdP~~~~~~~~
+* cognito IdP - use cogntio identity to get temporary aws credentials (you don't need to identity provider through iam console). When create role choose web identity type and select cognito as IdP
 FU (Federated user) - user of such external identity who can access aws services but don't have corresponding iam user (so it managed outside aws iam)
 FU can access aws management console in 2 ways
 * programmatically request security credentials and put them into sign-in request to the AWS
@@ -1116,11 +1090,10 @@ Principal - IAM identity (user/group/role) that can interact with aws
 * can be represented by human/application
 * can be root user / iam user / role
 Policy - json file with permission which you attach to IAM identity or aws resource (some resources can have it's own access policy, like s3 bucket policy - where you can define which user which action should take).
-Resource policy - policy for single resource:
-* s3 bucket policy
-* SQS Access Control
+Resource policy - policy for single resource like s3 bucket policy or SQS access control
 Main difference between identity and resource policy is that identity policy doesn't have `Principal` attribute, cause you link it to some iam identity which would be it's principal.
-Contrary to this resource policy have `Principal` attribute where you define to which user this policy is applied. Generally you should use identity policies cause you can define access to multiple resources there, where for resource policy access is limited to this resource only.
+Contrary to this resource policy have `Principal` attribute where you define to which user/role this policy is applied. 
+Generally you should use identity policies cause you can define access to multiple resources there, where for resource policy access is limited to this resource only.
 One example where resource policy is useful is when you need to add simple way to grant cross-account access to your S3 environment without creating iam role.
 Evaluating of identity-based & resource-based policies:
 * if at lease 1 explicit allow in either one or in both => allow
@@ -1129,7 +1102,9 @@ There are 6 policy types:
 * Identity-based policies - for iam identity
 * Resource-based policies - define policies separately for aws resources like s3 bucket policy (not all resources support this)
 * Permissions boundaries - same policy as for identity, but added not as permission policy to iam identity but as permission boundary. Specify what permission user can potentially have.
-Don't confuse resource-based policy and resource-level permission:
+So they don't actually give these permissions but merely state that this identity can potentially have up to these permission.
+So the actual permission are calculated as intersection of permission policy & permission boundary. Whenever you create new iam identity (user/group/role) you can add actual permissions and permission boundaries.
+Don't confuse:
 * resource-based policy - separate policy, added directly to resource and using `Principal` attribute to denote who can access this policy
 * resource-level permission - `Resource` attribute for identity-based policy, indicates to which particular resources to apply this policy (not relevant to resource-based cause it's applied to specified resource already)
 Note that not all action support resource-level permission. So if you create a policy to allow users to launch ec2 in specific region
@@ -1138,8 +1113,7 @@ Effect: Allow
 Action: [ec2:*]
 Resource: arn:aws:ec2:us-east-1:{ACCOUNT_ID}:instance/*
 ```
-This won't work, cause `ec2:*` specified all actions, but not all ec2 actions support resource. So that's why this policy doesn't achieve desired result.
-Instead you should specify actions:
+This won't work, cause `ec2:*` specified all actions, but not all ec2 actions support resource. So that's why this policy doesn't achieve desired result. Instead you should specify actions:
 ```
 Effect: Allow
 Action: [ec2:RunInstances, ec2:TerminateInstances, ec2:StopInstances, ec2:StartInstances]
@@ -1155,18 +1129,17 @@ Resource: ["arn:aws:ec2:us-east-1:{ACCOUNT_ID}:instance/*",
            "arn:aws:ec2:us-east-1:{ACCOUNT_ID}:volume/*",
            "arn:aws:ec2:us-east-1::image/ami-*"]
 ```
-You can use tags to segregate prod from dev env. In this case you would like to deny `ec2:CreateTag & ec2:DeleteTags` to all users except selected few to ensure tags lock down.
 This policy will allow launch new instances in us-east-1 region.
-So they don't actually give these permissions but merely state that this identity can potentially have up to these permission.
-So the actual permission are calculated as intersection of permission policy & permission boundary. Whenever you create new iam identity (user/group/role) you can add actual permissions and permission boundaries.
-The idea behind is that you can delegate responsibility to others (you can create policy that would allow identity to create iam users only with certain boundary => so all newly created users would have your predefined boundary, [example](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_boundaries.html#access_policies_boundaries-delegate))
+You can use tags to segregate prod from dev env. In this case you would like to deny `ec2:CreateTag` & `ec2:DeleteTags` to all users except selected few to ensure tags lock down.
+The idea behind is that you can delegate responsibility to others (you can create policy that would allow identity to create iam users only with certain boundary,
+so all newly created users would have your predefined boundary, [example](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_boundaries.html#access_policies_boundaries-delegate))
 * Organizations SCPs - AWS Organizations service control policy limit permissions that identity-based policies or resource-based policies grant to entities
 * ACL (Access control lists) - control which principals in other accounts can access the resource to which the ACL is attached (so they only cross-account, cannot grant permissions to entities within the same account)
 * Session policies - limit the permissions that the role or user's identity-based policies grant to the session
 Condition operator - use it to set condition to policy:
 * `...IfExists` - add it to the end of any condition operator name except `Null`. If key is present - process request as specified, if not - return true
-* `Null` - if condition value is present. Only 2 values are possible: true - key doesn't exists => policy evaluated to true, false - key exists => policy evaluated to false.
-* `Bool` - if condition value is true or false. 
+* `Null` - if condition value is present. Only 2 values are possible: key doesn't exists - policy evaluated to true, key exists - policy evaluated to false
+* `Bool` - if condition value is true or false
 Condition key - a key that can be used in condition block:
 * global keys - those started with `aws:` prefix. [List of global condition keys](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_condition-keys.html)
 * service-specific key - started with prefix based on service like `iam:` or `sts:`. [Full list of service-specific condition keys](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_actions-resources-contextkeys.html#context_keys_table)
@@ -1174,6 +1147,10 @@ ABAC (attribute-based access control) - policy conditions basically allows you t
 Policy version - required if you are using variables (like `${aws:username}`. If you leave version, variables are treated like literal values.
 Custom identity broker - you can generate URL that lets users who sign in to your organization, access the AWS Management Console.
 If your organization use IdP compatible with SAML (like AD) you don't need to write any code, just enable SAML access to management console.
+There are 2 api to get access delegation (note that after you get session, permission evaluated on each request, so although you can't revoke session, you can modify permission after and by this revoke access):
+* sts:GetFederationToken (15 min - 36 hours, default - 12h, for root user - max 1h) - a mix of caller permission & passed permission (if you don't pass any permissions returned session will have no permissions)
+just call `aws sts get-federation-token --name=bob --policy='{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":"s3:*","Resource":["*"]}]}'`
+* sts:AssumeRole (15 min - 1 hour) - all permission of specified role (role should have trusted policy for this user/account)
 To get aws console url you should:
 * validate that user is authenticated within your system
 * call one of sts api to get temporary credentials (you can call either global or regional endpoint, in case of regional - you can reduce latency, if you use sdk endpoint is determined automatically):
@@ -1786,6 +1763,11 @@ Origin Protocol Policy - how cf fetch objects from your origin server (applies o
 * http - always use http
 * https - always use https
 * Match Viewer - use same protocol as user use to communicate with cf (so if user request object form cf using http then use http)
+File compression:
+* to speed up page load your can configure cf to compress files (cf use viewer http header `Accept-Encoding` to determine to which type to compress file)
+* if you use custom origin, you can configure it to compress files, if cf get file with `Content-Encoding` set, then it won't compress it second time and just pass it
+* to activate it set `Compress Objects Automatically` to `yes` (it turned off by default). Also activate compress in cache policy, take a look at `sa/cloudformation/cf-cache-policy.yml`
+* cf compress files using gzip/brotli formats, if viewer support both cf would use brotli
 
 ###### Kinesis
 It is a platform for streaming data on AWS, making it easy to load and analyze streaming data.
@@ -4401,7 +4383,7 @@ min size - 10GB, max - 64TB. It automatically grows by 10GB chunks. Automated ba
 Cluster can scale up to 1M reads per sec with up to 15 read replicas (read replica use same underlying storage updated by master). It doesn't support cross region replica (all replicas in same region only).
 
 ###### Keyspaces
-It's managed Apache Cassandra–compatible (you can run Cassandra workloads using the same Cassandra Query Language (CQL)) database service. 
+It's managed Apache Cassandra-compatible (you can run Cassandra workloads using the same Cassandra Query Language (CQL)) database service. 
 
 ###### Cloud Development Kit
 CDK - open-source software development framework for writing cloud infra as code using c#/java/python/typescript. Under the hood cdk compiles code into CloudFormation template and run it in aws.
