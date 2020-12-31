@@ -1050,13 +1050,13 @@ You can restrict any resource by 2FA using:
 Limit access by number of seconds, when otp code was set. `"Condition":{"NumericLessThan":{"aws:MultiFactorAuthAge":"30"}}` - set restriction that would allow access only if you enter 2FA 30 or less seconds from the time of the api call
 Examples:
 * Allow/`"Condition":{"Bool":{"aws:MultiFactorAuthPresent":"true"}}` - true if user used 2FA
-* Deny/`"Condition":{"BoolIfExists":{"aws:MultiFactorAuthPresent":"false"}}` - true if user not used 2FA
+* Deny /`"Condition":{"BoolIfExists":{"aws:MultiFactorAuthPresent":"false"}}` - true if user not used 2FA
 because for short-term without 2FA value=false -> false=false => true, for long-term without 2FA value=null -> immediately return true
 * Allow/`"Condition":{"Null":{"aws:MultiFactorAuthAge":"false"}}` - null check if condition key is present. true - key doesn't exist. false - key present and not null.
-* Deny/`"Condition":{"Null":{ "aws:MultiFactorAuthAge":true}}` - true if 2FA not present. Null evaluates to true if key value is null.
+* Deny /`"Condition":{"Null":{"aws:MultiFactorAuthAge":true}}` - true if 2FA not present. Null evaluates to true if key value is null.
 Anti-pattern:
 * Allow/`"Condition":{"Null":{"aws:MultiFactorAuthPresent":"false"}}` true if request made with temp-credentials (even without 2FA), false for all long-term credentials
-* Deny/`"Condition":{"Bool":{"aws:MultiFactorAuthPresent":"false"}}` true if use not used 2FA with short-term credentials, false with long-term (users would be able to access resources without 2FA with just simple long-term credentials)
+* Deny /`"Condition":{"Bool":{"aws:MultiFactorAuthPresent":"false"}}` true if use not used 2FA with short-term credentials, false with long-term (users would be able to access resources without 2FA with just simple long-term credentials)
 because for short-term without 2FA value=false -> false=false => true, for long-term without 2FA - null!=false => false
 [See here](https://github.com/dgaydukov/cert-spring5/blob/master/files/spring5.md#aws-access-with-2fa) java details.
 Please notice that although 2FA required to login to console, if you are using cli/sdk and you just add access policy without 2FA condition, you can access these resources without 2FA.
@@ -1145,16 +1145,12 @@ Condition key - a key that can be used in condition block:
 * service-specific key - started with prefix based on service like `iam:` or `sts:`. [Full list of service-specific condition keys](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_actions-resources-contextkeys.html#context_keys_table)
 ABAC (attribute-based access control) - policy conditions basically allows you to create access control based on attributes.
 Policy version - required if you are using variables (like `${aws:username}`. If you leave version, variables are treated like literal values.
-Custom identity broker - you can generate URL that lets users who sign in to your organization, access the AWS Management Console.
+Custom identity broker - you can generate URL that lets users who sign in to your corporate portal, access the AWS Management Console.
 If your organization use IdP compatible with SAML (like AD) you don't need to write any code, just enable SAML access to management console.
-There are 2 api to get access delegation (note that after you get session, permission evaluated on each request, so although you can't revoke session, you can modify permission after and by this revoke access):
-* sts:GetFederationToken (15 min - 36 hours, default - 12h, for root user - max 1h) - a mix of caller permission & passed permission (if you don't pass any permissions returned session will have no permissions)
-just call `aws sts get-federation-token --name=bob --policy='{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":"s3:*","Resource":["*"]}]}'`
-* sts:AssumeRole (15 min - 1 hour) - all permission of specified role (role should have trusted policy for this user/account)
 To get aws console url you should:
 * validate that user is authenticated within your system
 * call one of sts api to get temporary credentials (you can call either global or regional endpoint, in case of regional - you can reduce latency, if you use sdk endpoint is determined automatically):
-    * AssumeRole (recommended) - assume iam role. DurationSeconds - specify time from 15 min - max session duration setting for the role. There are 3 types:
+    * AssumeRole (recommended) - assume iam role. `DurationSeconds` - specify time from 15 min - max session duration setting for the role. There are 3 types:
         * AssumeRole - get temporary credentials for existing IAM user
         * AssumeRoleWithWebIdentity - get temporary credentials for user who authenticated through a public IdP (Amazon/Facebook/Google/Cognito), take a look at `sa/cloudformation/cognito-iam.yml`
         This is open api, anybody can call (you don't need to be iam authenticated to call it). Identity is verified by idToken provided in call. Assumed role should have policy to allow federated access.
@@ -1163,15 +1159,15 @@ To get aws console url you should:
         You can also pass inline permission - result would be intersection between role permission & your inline permission. By doing this you can limit role permission further.
         If you are using amazon cognito IdP, you still need to configure cognito identity pool.
         * AssumeRoleWithSAML - get temporary credentials for user who authenticated with SAML. In the api call you have to provide SAML assertion, encoded in base64, returned by the SAML IdP
-    * GetFederationToken - returns intersection of user permission and passed policy. DurationSeconds - specify time from 15 min - 36 hours
+    * GetFederationToken - returns intersection of user permission and passed policy. `DurationSeconds` - specify time from 15 min - 36 hours
+    `aws sts get-federation-token --name=bob --policy='{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":"s3:*","Resource":["*"]}]}'`
     * GetSessionToken - returns a set of temporary credentials to an existing IAM user (duration 15min - 36h, default - 12h). Basically same as `GetFederationToken`, but you don't supply policy and get all permission available for calling user.
 * call federation endpoint and supply the temporary credentials to request a sign-in token 
 You got json from previous step: `{"sessionId":"", "sessionKey":"", "sessionToken":""}`, so encode it to url to get URL_ENCODED_SESSION
 send request to: `https://signin.aws.amazon.com/federation?Action=getSigninToken&SessionDuration=1800&Session={URL_ENCODED_SESSION}`
 * construct console sign-in url and return it to user
 You can use [java example](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_enable-console-custom-url.html#STSConsoleLink_programJava) to get sing-in url
-STS (Security Token Service) api calls:
-* DecodeAuthorizationMessage - in case api call return 403, some api may returned encoded message (it's encoded cause it may have some private info). So to decode you have to use this api, and have permission to use this api.
+`DecodeAuthorizationMessage` (sts api call) - in case api call return 403, some api may returned encoded message, it's encoded cause it may have some private info. So to decode you have to use this api, and have permission to use this api.
 Cross-account ec2 role (ec2 from accountA can assume role from accountB, take a loot at `sa/cloudformation/ec2-cross-account-assume-role.yml`):
 * create ec2 role (it should have permission to assume role from accountB) in accountA (`sts:AssumeRole` for ec2 service)
 * create cross-account role in accountB (`sts:AssumeRole` for aws account)
@@ -1186,14 +1182,29 @@ S3 (Simple Storage Service) used for:
 * host static websites
 * data store for computation results, analytics, video transcoding
 * durable & secure storage for backups and archives
-Anti-pattern
+Anti-pattern:
 * standalone posix filesystem (better to use EFS)
 * when you need to search/filter data by some criteria (better to use RDS/DynamoDB/CloudSearch/ELK)
 * data updated very frequently (better to use EBS/RDS/DynamoDB)
 * archives with infrequent access (better to use Glacier)
 * dynamic web-sites (better to use EC2/EFS)
-You can upload/download file by parts
-* multipart upload - your large file uploaded as parts, and on server they are assembled into single file
+You can upload/download file by parts:
+* MPU (multipart upload) - your large file uploaded as parts, and on server they are assembled into single file:
+    * by default you can upload file up to 5GB, with MPU you can upload object up to 5TB
+    * same true for copy, to copy object up to 5GB - single atomic operation, if size greater use MPU. Copy useful:
+        * move objects across different regions
+        * change metadata (by default you can set metadata on creating, here is no way to change it, only way is to copy it with new metadata)
+        * rename object (copy with new name, and delete old)
+    * expedite upload by concurrent upload large file
+    * MPU is 3 part job:
+        * `CreateMultipartUpload` - initiate upload, this api returns `UploadId` which you pass for each part you upload
+        * `UploadPart` - upload all parts
+        * `CompleteMultipartUpload` - complete upload (upon this s3 would assemble your parts into single object)
+        * Additional api calls:
+            * `ListMultipartUploads` - list parts that currently uploading
+            * `ListParts` - list already uploaded parts
+            * `AbortMultipartUpload` - abort mpu, after this no parts can be uploaded with `UploadId`, space takes by already uploaded files would be freed
+    * if you don't call complete, only partial uploads would be stored in s3, so it's a good practice to create lifecycle policy to drop MPU that wasn't completed after 1 month using `AbortIncompleteMultipartUpload` action
 * partial download - use `Range` HTTP header in a GET request, you can retrieve a specific range of bytes from s3
 ```
 # return full page => <h1>Hello world</h1>
@@ -1208,13 +1219,13 @@ curl -r 0-1 https://my-test-s3-bucket-1.s3.amazonaws.com/index.html
 # < Content-Range: bytes 0-1/20
 # < Content-Length: 2
 ```
-S3 security
+S3 security:
 * use s3/custom encryption to encrypt data before storing them on s3 and decrypt them when you download them
 * use versioning to preserve, retrieve, and restore every version of every object stored in your Amazon S3 bucket
 * enable mfa delete for bucket - it's part of versioning. So you can just enable versioning or enable versioning + mfa delete (you can't enable mfa delete without enable versioning).
 mfa delete can be enabled only from cli (currently no way to enable it from web console). You should use root account (so you should activate mfa first for root account) cause only the bucket owner (root account) can enable MFA Delete.
-`aws s3api put-bucket-versioning --bucket=my2fadeletebucket --versioning-configuration Status=Enabled,MFADelete=Enabled --mfa "arn:aws:iam::{ACCOUNT_ID}:mfa/root-account-mfa-device 882794" --profile=root`
-If you use cli, don't forget to clean it after you set up mfa delete. Since mfa delete automatically enable versioning, if you just delete file it adds additional version with delete marker.  If you want permanently delete file you have to delete specific version.
+`aws s3api put-bucket-versioning --bucket=my2fadeletebucket --versioning-configuration Status=Enabled,MFADelete=Enabled --mfa "arn:aws:iam::{ACCOUNT_ID}:mfa/root-account-mfa-device 123456" --profile=root`
+If you use cli, don't forget to clean it after you set up mfa delete. Since mfa delete automatically enable versioning, if you just delete file it adds additional version with delete marker. If you want permanently delete file you have to delete specific version.
 You can't delete version from console, if you try you get `You can’t delete object versions because Multi-factor authentication (MFA) delete is enabled for this bucket. To modify MFA delete settings, use the AWS CLI, AWS SDK, or the Amazon S3 REST API.`. 
 If you try to delete from cli without 2fa you will get `An error occurred (AccessDenied) when calling the DeleteObject operation: Mfa Authentication must be used for this request`. 
 If you supply 2fa and run `aws s3api delete-object --bucket=my2fadeletebucket --key=dummy.pdf --version-id=hZaCTAcGEMX9tzF6MUfAq4obRq_AhWk8 --mfa="arn:aws:iam::{ACCOUNT_ID}:mfa/user2fa 547063" --profile=user2fa`
@@ -1222,10 +1233,10 @@ you will get `An error occurred (AccessDenied) when calling the DeleteObject ope
 So only root user can delete versions from now on.
 * use access logging to track who/which bucket/what action was executed on s3
 Although s3 is object-based storage, you can easily emulate OS by creating objects like `path1/path2/file1`
-S3/S3 IA/Glacier - replicate data across 3 AZ go guarantee data won't be lost in case of emergency.
+S3/S3_IA/Glacier - replicate data across 3 AZ go guarantee data won't be lost in case of emergency.
 There are 3 ways to secure buckets:
 * use ACL (old feature) - to use this user should have permission to `s3:PutBucketAcl`.
-acl can be applied to bucket or object. To read object you should apply acl directly to object, bucket acl are not inhereted to objects automatically.
+acl can be applied to bucket or object. To read object you should apply acl directly to object, bucket acl are not inherited to objects automatically.
 acl can only add list/read/write access, no way to set deny. If you use acl + bucket policy, explicit deny overwrites all allows and acl too.
 * use bucket policy (json file with policies)
 * use iam policy
@@ -1235,14 +1246,15 @@ Pre-sign url - use cli/sdk to create url with key, that is accessible for limite
 * upload - anybody can upload file into this url within some time
 S3 is global service, although you assign a region to a bucket, you see all buckets across all regions
 S3 accidental delete protection:
-* add 2FA delete - user will need to enter 2FA code in order to delete
 * add versioning - when file is deleted, new version `mark delete` is added, but original file is still stored with some version
+* add 2FA delete - user will need to enter 2FA code in order to delete
 Suppose we have 2 versions A and B (current) and delete file. In this case we would have A, B, C (mark delete, current). As you see file is preserved with some version.
 Eventual consistency - since put/read is atomic, you won't read partially updated file, so you will either read old file or new file. Because s3 replicate data across several AZ, sometimes just after write you can read old file, but after some time new file would be available.
+Strong consistency - from 2020.12.01 [s3 deliver storng consitency by default](https://aws.amazon.com/about-aws/whats-new/2020/12/amazon-s3-now-delivers-strong-read-after-write-consistency-automatically-for-all-applications), unlike dynamoDB where you have to manually disable eventual consistency
 Although bucket name is global across all regions, you still select region when you create bucket, and actual data is stored in that particular region.
-Using bucket policy you can specify from which ip (CIDR notation) and at what time you allow to access data.
+Using bucket policy you can specify from which IP (CIDR notation) and at what time you allow to access data.
 Server access logs - you can enable them and see who is accessing your s3 (IP address/time/action(get/post/put)/response)
-Event notification - you can send events (sns/sqs/lambda) base on s3 action (get/post/put). Take a look at `sa/cloudformation/s3-event.yml` for more details. There we call lambda when file was uploaded. Below is event exampmle
+Event notification - you can send events (sns/sqs/lambda) base on s3 action (get/post/put). Take a look at `sa/cloudformation/s3-event.yml` for more details. There we call lambda when file was uploaded. Below is event example
 ```
 {
     "Records": [
@@ -1284,7 +1296,7 @@ Event notification - you can send events (sns/sqs/lambda) base on s3 action (get
 }
 ```
 Randomized named worked better cause when names are sequential all data store in the same place and it's harder to extract it. But you no longer have to randomize prefix naming for performance, and can use sequential date-based naming for your prefixes
-To achieve better performance you should to use random names for objects, but [it's no longer required](https://aws.amazon.com/about-aws/whats-new/2018/07/amazon-s3-announces-increased-request-rate-performance). 
+To achieve better performance you should to use random names for objects, but [it's no longer required](https://aws.amazon.com/about-aws/whats-new/2018/07/amazon-s3-announces-increased-request-rate-performance)
 Storage Classes - can be configured at the object level and a single bucket can contain objects stored across Standard/Intelligent/Standard-IA/Single-Zone-IA
 You can also use S3 Lifecycle policies to:
 * automatically transition objects between storage classes without any application changes
@@ -1299,9 +1311,9 @@ Storage Class Analysis - filters that helps analyse access pattern for whole buc
 * Glacier Deep Archive - 12h to read data
 TA (Transfer Acceleration) - fast (up to 5 times) file transfer over long distances between on-premise and s3, by using CloudFront edge locations, so when you upload file to s3, it first goes to nearest edge location, and from there transferred to s3 using aws internal network.
 To use TA your app should use (you can also use standard endpoints to access s3, so you can use different endpoints for standard and accelerated s3 access):
-* `.s3-accelerate.amazonaws.com` - standard endpoint
+* `.s3-accelerate.amazonaws.com` - IPv4 endpoint
 * `.s3-accelerate.dualstack.amazonaws.com` - endpoint to user over IPv6. 
-So use TA if you have geographically distributed customers or you constantly moves GB/TB of data across continents. If you file less than 1GB you should use CloudFront’s PUT/POST, otherwise use TA.
+So use TA if you have geographically distributed customers or you constantly moves GB/TB of data across continents. If you file less than 1GB you should use CloudFront Accelerated upload, otherwise use TA.
 If you need to transfer large amount of data from single space, SnowBall can be a good option, cause TA is mostly for many users from different locations.
 TA doesn't cache data in edge location, so if you want low latency then it's better to use plain cf distribution, cause in this case all files would be cached in all edge locations.
 You can use [comparison tool](http://s3-accelerate-speedtest.s3-accelerate.amazonaws.com/en/accelerate-speed-comparsion.html) to compare general upload speed for TA across different regions (what speed increase you can get for each region if you use TA).
@@ -1321,7 +1333,7 @@ Below rule allows POST/DELETE cors requests from example.com origin.
 </CORSConfiguration>
 ```
 Useful elements:
-* `AllowedMethod` can be one of GET/PUT/POST/DELETE/HEAD, if request is non-simple, OPTIONS automatically would work for such request (you shouldn't and can't add OPTIONS to AllowedMethod tag).
+* `AllowedMethod` can be one of GET/PUT/POST/DELETE/HEAD, if request is non-simple, OPTIONS automatically would work for such request (you can't add OPTIONS to AllowedMethod tag).
 * `AllowedHeader` - specifies which headers are allowed in a preflight request in `Access-Control-Request-Headers` header
 * `ExposeHeader` - header in the response that you want customers to be able to access from their applications
 Object Lock - store objects using WORM (write-once-read-many), so you can prevent objects to be deleted/overwritten for some time or indefinitely. There are two retention modes:
@@ -1332,7 +1344,7 @@ You can retrieve (restoration) objects in s3 console (not glacier console, cause
 * bulk - 5-12 hours, cheapest
 * standard - 3-5 hours
 * expedited - 1-5 min, most expensive
-When you restore object you should specify: Number of days the restored copy is available - during this time, when you go to object you would be able to download it using it normal url.
+When you restore object you should specify: number of days the restored copy is available - during this time, when you go to object you would be able to download it using it normal url.
 Policy to allow cloudTrail write
 ```
 {
@@ -1366,7 +1378,7 @@ Policy to allow cloudTrail write
 Versioning - if turn on, when you make any operation update/delete it create new version:
 * update - old object stored with some version, new object created with new version. If you run get - you will get latest version, if you run get with version - you got your object.
 * delete - object marked with delete marker, it still stored with some version. If you run get - you will get 404, if you run get with version - you got your object. 
-You can't add delete marker, only if you use versioning and delete file, s3 add this market itself. 
+You can't add delete marker, only if you use versioning and delete file, s3 add this marker itself. 
 You can permanently remove real object by specifying it's versionID in DELETE request. If you DELETE a delete marker, s3 would add another delete marker on top of this (so you have 2 versioned delete markers).
 You can permanently remove delete marker by specifying it's versionID in DELETE request. In this case delete marker would be removed and from now simple GET request would return latest version of object (only object owner can DELETE delete marker).
 presigned url access - determined by access of creator of such url:
@@ -1374,14 +1386,14 @@ presigned url access - determined by access of creator of such url:
 * if creator of such url can write - you can put object by this url
 SSE (server side encryption) can be of 3 types:
 * sse-s3 - keys are managed by s3. Each object encrypted with unique key, key encrypted with master key, which is constantly rotates.
-* sse-kms - keys are managed by kms (you select single key either managed by aws like aws/s3 or your CMK)
+* sse-kms - keys are managed by kms (you select single key either managed by aws like `aws/s3` or your CMK)
 Bucket key for kms:
     * if you have millions of objects in s3, then for each get/put s3 would call kms to extract data key
     * you can activate bucket key for kms - kms would create bucket level key, that would be used to generate data key for actual encryption
     * bucket level key used for time-limited period, reducing the need to call kms api
 * sse-c - encrypt/decrypt with customer key - you have to provide key for every request get/put and s3 manage encryption (when you put object s3 encrypt it using provided key, when you get object - s3 decrypt object with your key from request). You have to use https + cli/sdk.
 You provide key in [headers for each request](https://docs.aws.amazon.com/AmazonS3/latest/dev/ServerSideEncryptionCustomerKeysSSEUsingRESTAPI.html), when you use cli/sdk it's automatically done.
-So when you have a requirement that customer want to manage key with sse you have to use this third option. In this case s3 manages encryption/decryption but you manage keys.
+So when you have a requirement that customer want to manage key with sse, you have to use this this option. In this case s3 manages encryption/decryption but you manage keys.
 You can force user to upload only encrypted files by adding following resource policy:
 ```
 {
@@ -1442,7 +1454,7 @@ Read/write limits:
 * 3500 POST/PUT/DELETE per prefix
 So same rules as for dynamoDB (where read/writes per partition), so you can get unlimited read/write by creating many prefixes (number is not limited).
 Don't confuse:
-* `aws s3api` - 1-to-1 mapping to low-lever s3 api
+* `aws s3api` is 1-to-1 mapping to low-lever s3 api
 * `aws s3` - high-level mapping to s3 api (syncing - under-the-hood make many calls to low-lever api). To properly work you have to add all low-level api to iam user (sometimes it's not that obvious, cause you don't know which calls are made by which api)
 Sql Select - both s3 & glacier can select specific bytes instead of whole file. Let's suppose you have big `stores.csv.gzip` file, but you need only rows where country=usa.
 You can download whole file from s3, open and parse yourself using java sdk. But there is better option:
@@ -1458,7 +1470,8 @@ Vault Lock - compliance control policy like WORM (write-once-read-many) where yo
 Anti-pattern:
 * rapidly changing data (use EBS/EFS/RDS/DynamoDB)
 * immediate access (use S3)
-You can also use multipart upload to speed up upload by dividing large files into chunks. Just like s3 you can use REST API to work with glacier
+You can also use multipart upload to speed up upload by dividing large files into chunks. Just like s3 you can use REST API to work with glacier. 
+Like for s3 use `InitiateMultipartUpload` to get `uploadId` and use `UploadMultipartPart` to upload parts and `CompleteMultipartUpload` to complete upload.
 You can set up s3 lifecycle, after which objects from s3 would be moved to glacier (but to view/restore them you should use s3 console, cause there is no explicit vault for them in glacier, if you go to glacier console you see nothing)
 You can retrieve up to 5% of your average monthly storage for free each month (rated daily), above this you are charged additional fee
 Glacier Select - ability to run sql query directly in archive without prior retrieving of full archive. So now you can find only what you need instead of restoring full archive. 
@@ -1483,7 +1496,8 @@ There is no lifecycle rules for glacier, they only available in s3.
 
 ###### EFS
 EFS (Elastic File System) - delivers simple network filesystem for EC2. It supports NFSv4/4.1 (Network file system).
-System size is grow as you add more files to file system. It allows parallel access from multiple EC2 within the same region.
+System size is grow as you add more files to file system. It allows parallel access from multiple EC2 within the same region. 
+If you want cross-region access you have to use vpc peering or vpn if you want to access EFS from on-premise.
 It accessed by EC2 using mount targets which are created by AZ. If you need temporary storage EFS not the best option, look at EC2 Local Instance Store.
 Mount helper - `amazon-efs-utils` utility that defines a new network file system type, called efs, which you can use with `mount` command
 There are 2 performance modes - can be chosen during creation, and can't be changed after (plz note that they both equivalent in term of price, so you can choose any, no price effect):
@@ -1496,8 +1510,7 @@ When you create efs it creates mount target in each az. Instances in each az tal
 To mount efs to ec2, mount helper should be installed and running `sudo yum install -y amazon-efs-utils`. You can mount it by `sudo mount -t efs fs-bc0a413f:/ ./mnt`.
 For some AMI (Amazon Linux/RHEL/Ubuntu) it's already installed, you just need to start it. You can check the status by `sudo service nfs status`
 By default anybody can read, but root (UID 0) user can write. You can also use Access Points to create dirs in your efs for different users to read/write.
-You can also do `sudo chmod 777 /mnt/efs/` to give access to anybody to read/write. To check if directory is mounted to efs run `df /mnt/efs/`.
-EFS has only 2 storage classes: standard & IA.
+You can also do `sudo chmod 777 /mnt/efs/` to give access to anybody to read/write. To check if directory is mounted to efs run `df /mnt/efs/`. EFS has only 2 storage classes: standard & IA.
 Lifecycle policy - move infrequently accessed files into Infrequent Access (IA) storage class after some period (For example file hasn't been access for 7 days, let's move it).
 There are 2 types of encryption:
 * encryption at rest - created by default when you create new efs, use kms to encrypt data before write them on disk. Be default `aws/elasticfilesystem` key is used. You can also choose your own CMK.
@@ -1550,29 +1563,24 @@ So if you run without tls you would get `mount.nfs4: Operation not permitted`
 
 ###### EBS
 EBS (Elastic Block Storage) - simple block storage for EC2. After EBS is attached to EC2 you can format it with desired file system.
-It automatically replicated within AZ to provide higher durability (yet if AZ failed it would be unaccessible).
-Yet this replication is to protect against aws component failure, if you want to protect against human failure you have to use RAID.
+It automatically replicated within AZ to provide higher durability (yet if AZ failed it would be unaccessible). This replication is to protect against aws component failure, if you want to protect against human failure you have to use RAID.
 RAID (Redundant Array of Inexpensive/Independent Disks) - data storage virtualization technology that combines multiple physical disks into one or more logical units for the purposes of data redundancy and performance improvement.
-RAID is accomplished at software level, so you can use any configuration as long as it supported by OS.
-There are 2 main types:
+RAID is accomplished at software level, so you can use any configuration as long as it supported by OS. There are 2 main types:
 * raid 0 (stripe multiple volumes together) - I/O performance is more important than fault-tolerance (can be good for database, cause fault tolerance is achieved by read-replicas)
 * raid 1 (mirror your data for extra redundancy) - fault tolerance is more important than I/O performance
 raid 5 & raid 6 - are not recommended to use with ebs, cause they would decrease performance by 20-30% compared to raid 0.
 If you have 2 io1 500GB with 4000 IOPS you can:
 * raid 0 - 1000GB with 8000 IOPS & 1000 MB/s
 * raid 1 - 500GB with 4000 IOPS & 500 MB/s
-RAID snapshot - use ebs multi-volume snapshot for it.
-Most AMI (Amazon Machine Images) are backed by Amazon EBS, and use an EBS volume to boot EC2 instances.
-You can attach multiple EBS to single EC2, but single EBS can only be attached to 1 EC2 at the same time.
-EBS allows to create point-in-time snapshots (backup) and store them in s3.
-You can make snapshot available to other aws accounts so they can create ec2 from it.
-Snapshots are store in amazon s3 bucket (not in your bucket, so you don't have full control of it, you can't go to bucket and download snapshot) yet you can:
+RAID snapshot - use ebs multi-volume snapshot for it. Take a look at `sa/cloudformation/ec2-ebs-raid.yml` for raid details.
+Most AMI (Amazon Machine Images) are backed by Amazon EBS, and use an EBS volume to boot EC2 instances. You can attach multiple EBS to single EC2, but single EBS can only be attached to 1 EC2 at the same time.
+EBS allows to create point-in-time snapshots (backup) and store them in s3. You can make snapshot available to other aws accounts so they can create ec2 from it.
+Snapshots are stored in amazon s3 bucket (not in your bucket, so you don't have full control of it, you can't go to bucket and download snapshot) yet you can:
 * create & delete
 * recover
 * copy to other region
-If you copy snapshot with another CMK - complete new non-incremental copy of snapshot is created.
-When you take snapshot of running ebs, it would be available immediately (there is no delay).
-But when you recover snapshot ebs is read immediately, but data is loaded lazily.
+If you copy snapshot with another CMK - complete new non-incremental copy of snapshot is created, cause volume need to be reencrypted.
+When you take snapshot of running ebs, it would be available immediately (there is no delay). But when you recover snapshot ebs is read immediately, but data is loaded lazily.
 IOPS vs Throughput vs Bandwidth
 * IOPS - number of read/write operations per second, good for transactional db where we need to make lot of small writes
     * General Purpose SSD (gp2) - boot volumes, low-latency apps
@@ -1587,11 +1595,10 @@ st1     500GB-16TB     500 (1 MiB I/O)         500 MiB/s
 sc1     500GB-16TB     250 (1 MiB I/O)         250 MiB/s
 Now you see that IOPS is for many writes of small data, but Throughput for small number of writes but of large amount. But in the end total throughput is approx the same.
 * Bandwidth - pipe, throughput - water running through pipe
-EBS Volume Types
+Volume Types (you can use `iostat/blktrace/btt` to examine volume performance):
 * HDD (large streaming workloads where throughput (measured in MiB/s) is a better performance measure than IOPS.
 It has a platter and actuator arm that moves around platter and read/write (just like cd player) since to read/write arm should have a lots of movement - it's bad for high I/O
 * SSD (frequent read/write operations with small I/O size) - like a flash card, no moving parts
-You can use `iostat/blktrace/btt` to examine volume performance.
 Nitro Card for EBS - provides same speed for both encrypted & unencrypted volumes. So there is no trade-off between speed & security.
 Since you can't encrypt volume after you attached it to ec2, so in order to create encrypted volume for running ec2 you have to:
 1. take snapshot of unencrypted volume
@@ -1620,8 +1627,8 @@ Volume modification - you can modify ebs volume (both type & size) on the fly (w
 * gp2 non-root can be modified to st1/sc1, but size can't be less than minimum size of these types (for example min size for sc1-500GB, so you can't modify 10GB gp2 to 10GB sc1)
 Multi-volume snapshots - point-in-time snapshots for all ebs volumes attached to an ec2. After creation each snapshot treated as separate one.
 It's a best practice to tag multi-volume snapshots so you can manage them as single entity.
-DLM (Data Lifecycle Manager) - manage the lifecycle of ebs snapshot. If you combine it with CloudWatch and CloudTrail you get complete backup solution for ebs.
-You can create/manage snapshots manually but using DLM is best practice. DLM execute snapshot management based on policies defined when you create dlm.
+DLM (Data Lifecycle Manager) - manage the lifecycle of ebs snapshot. If you combine it with CloudWatch & CloudTrail you get complete backup solution for ebs.
+You can create/manage snapshots manually but using DLM is best practice. DLM execute snapshot management based on policies defined when you create dlm. 
 There are 3 types of dlm policy:
 * EBS snapshot policy - automate lifecycle of ebs (either single volume or instance)
 * EBS-backed AMI policy - automate lifecycle of ebs-backed ami (only instance type available, cause there can be only 1 ami per instance)
@@ -1630,8 +1637,7 @@ When you create snapshot policy you have to enter:
 * resource type: VOLUME - for single ebs volume, INSTANCE - for all ebs volumes for ec2 (multi-volume snapshot)
 * target tags - tags for ebs volume or ec2 instance for which this policy would be applied
 * schedules - start time when run snapshot creation. You have 1 mandatory schedule and 3 optional - so you can create snapshots at different frequency using single policy.
-You can run scheduled policy every 1,2,3,4,6,8,12,24 hours.
-If several schedules trigger at the same time, DLM will create only 1 snapshot.
+You can run scheduled policy every 1,2,3,4,6,8,12,24 hours. If several schedules trigger at the same time, DLM will create only 1 snapshot.
 * retention - how to retain, you can use either based on total count (retain last 5 snapshots) or age (for how long you would like to keep snapshots)
 Snapshot deletion may not reduce costs, cause snapshot is incremental backup, and if other snapshot use same data, when you delete snapshot - you in no way change total size.
 Suppose we have 3 snapshots:
@@ -1649,13 +1655,12 @@ Encryption:
 * encryption handled by hypervisor, plaintext data key stored in hypervisor memory to run encrypt I/O to ebs
 
 ###### EC2 Instance Store
-Similar to EBS, but located on the same machine as EC2 (EBS connected through network), available only during lifetime of EC2.
-So it's not durable, once EC2 instance stop/restart/fail all data would be lost.
+Similar to EBS, but located on the same machine as EC2 (EBS connected through network), available only during lifetime of EC2. So it's not durable, once EC2 instance stop/restart/fail all data would be lost. 
 It's not available for all ec2 types, only for [some of them](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/InstanceStorage.html#instance-store-volumes)
 You still have to use at lease 1 EBS + additional instance store. For some types you can select to remove instance store, but ebs should be present always.
 There are a few limitations compared to ebs:
 * you can't create ec2 with only ephemeral storage without ebs
-* differ from EBS cause it's directly attach to machine (ebs connected via network) and provide lowest latency
+* differ from EBS cause it's directly attach to machine (ebs connected via network), so it provides lowest latency
 * by default disk is unencrypted, and compare to ebs you can't set up encryption. If you need it you have to implement either disk-level encryption or file-system-level encryption
 * you can't backup instance store same way you can back up ebs. You have to ssh to machine and copy data from instance store to ebs using `rsync`
 * you can't create snapshot/image from instance store. You have to ssh to machine and manually create ami using Amazon EC2 AMI tools
@@ -1666,7 +1671,7 @@ for ebs you can create snapshot for volume, and then image from snapshot. You ca
 CloudFront is a CDN (content delivery/distribution network) - that speed up the distribution of your data using edge locations.
 When user request content, CF use nearest edge location and deliver cached version, it's faster than transfer data directly from data center.
 If content not in cache, CF retrieve it directly from s3 or HTTP and cache it. CF is not durable storage, it's just an edge cache.
-To work with CF you should create origin server Then you add you origin server to CF, and CF generate link for you.
+To work with CF you should create origin server, then you add you origin server to CF, and CF generate link for you.
 Origin server can be:
 * static (s3)
 * dynamic (ec2/elb or any other on-premise http server, also called custom origin)
@@ -1682,8 +1687,12 @@ You can delete item from CF by:
 * delete it from origin server, and when expire date come it would be deleted from CF
 * use invalidating api to remove file from CF immediately
 CF doesn't cache following requests: POST/PUT/DELETE/PATCH. By default cache is stored for 24 hours, but you can evict it by calling invalidation API.
-You can also use versioning (`/v1/img/test.png`). In this case once you update your site users will use new versions that not in CF, and edge location will download it from origin server.
-You can serve content from multiple origin servers. Field-Level Encryption - encrypt user's upload data and transfer these encrypted data to your origin.
+You can also use versioning, like `/v1/img/test.png`. In this case once you update your site users will use new versions that not in CF, and edge location will download it from origin server.
+You can serve content from multiple origin servers. 
+Security:
+* end-to-end https - you can configure so users talk to CF with https and CF talk with origin server also with https, so you have end-to-end data-in-transit security
+* field level encryption - encrypt user's upload data at the edge location and transfer these encrypted data to your origin. Origin server can use private key to decrypt data. 
+For it you must create keypair using `openssl`, then upload public key to cf using console/cli. And add private key to you origin server.
 Lambda Edge - lambda functions that allows you to override behavior of request/response to your cf edge locations. You can solve common tasks like only cognito authenticated user can view content or visitor prioritization on a website.
 You create single lambda in 1 region, and associate it with cf distribution. After this all global requests are handled by this lambda. There are 4 types of lambda edge:
 * viewer request - when CF receive request from user
@@ -1697,20 +1706,20 @@ When creating signed url/cookie you can set 3 params:
 * end-datetime   (mandatory) - we need to know when access to particular file is over
 * start-datetime (optional)
 * ip-address     (optional) - single IP address or IP range
+Don't confuse:
+* ec2 keypair - key to access ec2 by ssh
+* CF keypair - key to create presigned url
+* CF public key - key for field level encryption (you generate keypair yourself and upload public key to CF)
 In order to create presigned url you need to create CF keypair. You can do it only as root account (iam user won't work in this case). Login as root, go to `Account=>Security Credentials`, from there go to `CloudFront key pairs` and create new key pair.
-Don't confuse it with ec2 key pairs and with CF public key. They both for different purpose.
 You can make CF private by setting `Restrict Viewer Access` to yes (in this case you can also set which accounts can create signed urls, so other accounts can also generate urls to access data).
 So if you restrict access and try to access url you got error `Missing Key-Pair-Id query parameter or cookie value`.
 You can create presigned url with following command `aws cloudfront sign --url=https://d3l9m9kf4m2kpm.cloudfront.net/info.html --key-pair-id=APKAJDZCS7VF4FG32EWA  --private-key=file://cfkey.pem  --date-less-than=2020-08-19` (this command is local and doesn't call aws api, so we don't need to pass profile)
-This will create signed url by which you can access your data from CF.
-You can also use CF to distribute dynamic content (like ec2/api requests). Although at first it seems unreasonable cause for every dynamic request CF should forward it to underlying ec2.
-But the point is that such a request from user goes to closest edge location and terminates there. From there on it goes not through public internet but through aws cross-region private link.
-That improve speed and give security. As you see this is basically the same as Global Accelerator.
+This will create signed url by which you can access your data from CF. You can also use CF to distribute dynamic content (like ec2/api requests). Although at first it seems unreasonable cause for every dynamic request CF should forward it to underlying ec2.
+But the point is that such a request from user goes to closest edge location and terminates there. From there on it goes not through public internet but through aws cross-region private link. That improve speed and give security. As you see this is basically the same as Global Accelerator.
 You have 2 types of distribution: 
 * web - static web content (files/pics)
-* RTMP - streaming media
-If you create distribution to be accessed from dns name you should add all possible urls to cname in CF. If you are going to access it from example.com/www.example.com/photos.example.com, 
-all 3 dns names should be added to cnames (Alternate Domain Names) names when you create distribution.
+* RTMP - streaming media (deprecated since 2020.12.31, cause Adobe deprecated Flash by end of 2020)
+If you create distribution to be accessed from dns name you should add all possible urls to cname in CF. If you are going to access it from example.com/www.example.com/photos.example.com, all 3 dns names should be added to cname (Alternate Domain Names) when you create distribution. 
 OAI (Origin Access Identity) - CF user that can access origin. To access s3 from CF you should add bucket policy (but you don't need to allow public access).
 But if you do this user can access your s3 files by s3 url like `https://my-test-s3-bucket-1.s3.amazonaws.com/info.html`. But if you want that your s3 objects to be accessed only by CF url like `https://d1vyzpsqe05sg1.cloudfront.net/info.html`
 You should add bucket policy to your bucket like
@@ -1730,10 +1739,9 @@ You should add bucket policy to your bucket like
 }
 ```
 You can also achieve the same by updating bucket acl, and it's more granular cause you can add permission to each object separately.
-It's granular cause you can't add read to all objects, only list. So if you want to read the object you should go to that object and add `Read` permission to it explicitly.
 When you set OAI from console you can set `update bucket policy` and aws will itself add such policy to your s3 bucket. Of course you can do it manually, or edit it after this.
 In this case your s3 bucket is not public, but can be accessed only by cf user with OAI=E27OQ9NRS1N0QR.
-Accelerated file upload - you can enable POST/PUT/PATCH methods for your cf distribution, and so accelerate file uploads. So now you upload your files to nearest cf edge location and from there it's uploaded to s3/ec2 using aws internal low-latency network.
+Accelerated upload - you can enable POST/PUT/PATCH methods for your cf distribution, and so accelerate file uploads. So now you upload your files to nearest cf edge location and from there it's uploaded to s3/ec2 using aws internal low-latency network.
 There are 3 ways to limit access to cf:
 * using presigned url/cookie
 * use geo-restriction (whitelist/blacklist specific countries)
@@ -1741,7 +1749,7 @@ There are 3 ways to limit access to cf:
 If you run PCI-compliant or HIPAA-compliant workloads you should:
 * enable cf access logs - save all request to access cf data
 * save all management cf request to CloudTrail
-Anti-pattern
+Anti-pattern:
 * all users access website from specific location
 * all users use vpn to access website (users in different locations, but from aws they will use single location of vpn server)
 Canned vs custom policy (you write a policy statement in JSON format that specifies the restrictions on the signed URL) for signed url/cookie:
@@ -1770,47 +1778,47 @@ File compression:
 * cf compress files using gzip/brotli formats, if viewer support both cf would use brotli
 
 ###### Kinesis
-It is a platform for streaming data on AWS, making it easy to load and analyze streaming data.
+It is a platform for streaming data/media on AWS, making it easy to load and analyze streaming data.
 With Kinesis, you can ingest real-time data such as application logs, website clickstreams, IoT telemetry into your databases, data lakes, and data warehouses, or build your own real-time applications using this data
 * kineiss firehose (near real time) - load massive volumes of streaming data into AWS (you can configure lambda to transform you data before loading). Receives stream data and stores it in s3/RedShift/ElasticSearch
 It's near real time because it takes data from data streams in real time, buffer them and then sends batches of data into storage (s3/dynamoDB).
-* kineiss streams (real time, it's also data storage - data stored there durable for specified period) - ability to process the data in the stream. Stream for processing data it can't load data directly to s3/redshift - additional processing required, firehose - for storing data directly in s3/redshift
+* kineiss streams (real time, it's also data storage - data stored there durable for specified period) - ability to process the data in the stream. 
+Streams can't load data directly to s3/redshift - additional processing required, firehose - for storing data directly in s3/redshift
 Just like fifo/groupId when you send message to kinesis you add partitionKey - determined into which shard to put your record
-Yet there is no deduplicateId, so you can have duplicates inside shards. You can scale throuhgput for shard by dividing single shard into 2 by dividing partitionKey.
+Yet there is no deduplicateId, so you can have duplicates inside shards. You can scale throughput for shard by dividing single shard into 2 by dividing partitionKey.
 Consumer decide from which shard to read, they query kinesis, get list of shards, pick one, and start reading using iterator.
 * kineiss Analytics - analyze streaming data real time with:
     * sql - run sql queries to process data
     * apache flink - use java/scala to process & analyze data
 AntiPattern:
-* Small scale consistent throughput (Kinesis Data Streams is designe and optimized for large data throughput)
+* Small scale consistent throughput (Kinesis Data Streams is designed and optimized for large data throughput)
 * Long-term data storage and analytics. By default Kinesis Data Streams stores data 24 hours, you can extend retention up to 168 hours (7 days), if you need longer you should considered RDS/DynamoDb/S3/Glacier
 Auto-scaling:
 * app auto scaling - CloudWatch alarm + App Auto Scaling + api gateway + lambda (that actually change number of shards) - you have to use CloudFormation template to set it up (you can set it up manually for testing)
 * [kinesis auto scaling utility](https://github.com/awslabs/amazon-kinesis-scaling-utils) - you can deploy it as beanstalk (or java server) and it will monitor CloudWatch to dynamically scale out/in your shards
 Queue vs Streaming:
-* queue (not reactive) - you have to poll data, once it polled it removed from queue
+* queue (not reactive) - you have to poll data, once polled, you should manually remove from queue
 * streaming (reactive) - many consumer notify of changes, events stay for long time (not deleted)
 Write and Read to stream with java:
 * [KPL (Kinesis Producer Library)](https://github.com/awslabs/amazon-kinesis-producer) - allows you to write to kinesis data streams (c++ code, but use java binding)
-It has built-in batching & multithreading logic to collect many small events, batch them and send to kinesis
+It has built-in batching & multithreading logic to collect many small events, batch them and send to kinesis. 
 If you use KCL to retrieve message from kineiss that consist of multiple KPL records, you can use KPL on client side to retrieve these records
 It emits throughput/error/other metrics to cloudWatch, uses async architecture - so call to put record returns immediately with `Future` object from KPL
-* [KCL (Client Library Consumer)](https://github.com/awslabs/amazon-kinesis-client) - allows you to read from kinensis data streams (java library)
+* [KCL (Kinesis Client Library)](https://github.com/awslabs/amazon-kinesis-client) - allows you to read from kinensis data streams (java library)
 Kinesis vs Kafka vs Apache Storm (kinesis & kafka are message brokers - middleman between data streaming source and it's consumers):
 * kafka - data stored in Kafka Partition, config store - Apache Zookeeper, replica instances - can be configured
 * kinesis - data stored in Shards, config store - DynamoDB, synchronously replicates across 3 AZ
 * storm - middleman between hadoop (which works with batches only) and streaming source. It takes incoming stream, organize data into packages and sends it to hadoop for further processing. Data sources are called spouts and each processing node is a bolt.
 You can view kinesis video using following api:
 * `GetMedia` (real-time api with low latency) - you have to build your own player to view video from this api using [Stream Parser Library](https://docs.aws.amazon.com/kinesisvideostreams/latest/dg/parser-library.html)
-To upload video to kinesis you should use PutMedia api and upload mkv files. MKV (matroshka) - multimedia container formats
+To upload video to kinesis you should use `PutMedia` and upload MKV (matroshka - multimedia container formats) files. 
 * `GetHLSStreamingSessionURL` - retrieve HLS (HTTP Live Streaming) url that you can open in browser or media player, you can use for live playback or to view archived video. 
-You can use third-party player `Video.js/Google Shaka Player` to display stream using HLS streaming session URL.
-You can also play back video by typing the HLS streaming session URL in the Location bar of the Safari/Edge browsers.
+You can use third-party player `Video.js/Google Shaka Player` to display stream using HLS streaming session URL. You can also play back video by typing the HLS streaming session URL in the Location bar of the Safari/Edge browsers.
 * `GetDASHStreamingSessionURL` MPEG-DASH (Dynamic Adaptive Streaming over HTTP) - same as HLS, just different format
 * `GetClip` - use it to download clip (MP4) with archived/on-demand media from video stream over the time range
 If you have need to store data durable with ordering and data should be read with 4 hours interval by 2 apps, you have 2 choices:
 * put data into first sqs, first app read from first sqs and copy data into second sqs for second app (sqs should be of fifo type)
-* use kinesis data stream - this is more approprite solution, cause first solution require app to make sure that messages would be put into second queue, here no extra coding required (ordering built-in)
+* use kinesis data stream - this is more appropriate solution, cause first solution require app to make sure that messages would be put into second queue, here no extra coding required (ordering built-in)
 So if you have app that reads from same stream or consume from same stream several hours later you data streams (don't reinvent the wheel with sqs)
 
 ###### Lambda
