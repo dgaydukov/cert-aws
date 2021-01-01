@@ -440,6 +440,9 @@ Combining these 5 you can create anything from 1 min to 1 year:
 * Run job At 12.05,12.10 on 10th of every month and day should be Monday: `5,10 0 10 * 1`
 
 ###### MySql Index Design
+Cardinality - uniqueness of data values:
+* low cardinality − all values for a column must be same
+* high cardinality − all values for a column must be unique
 File stored in memory in a sequence of blocks. Each block knows where next is located (basically LinkedList structure). 
 Usually blocks go one after another, but can be scattered around - fragmentation, in this case performance is donwgraded (that's why there are a lot of tools - defragmentators that may expedite your system).
 If you search column without index, then mysql would extract all rows in table (yup since it's not columnar it would extract all table from disk), filter your column and return result. As you see - highly ineffective.
@@ -1830,7 +1833,7 @@ AntiPattern:
 * Dynamic Websites (it's better to use some programming language like java/node.js and deploy it to EC2)
 * Stateful Applications (Lambda is stateless, if you need state it's better to create app in java/node.js and deploy it ot EC2 + RDS/DynamoDb)
 Cold Start - when you first run your code aws create new execution context (download code, set up env vars, load code) and it can take from few millisec to a few sec. When you run it for second and consecutive time, there is no delay.
-By default lambda runs in no VPC (so it has internet access), if you want your lambda to talk with other services you should put it into VPC, if your lambda need internet access you have to configure nat for it.
+By default lambda runs in no VPC (so it has internet access), if you want your lambda to talk with other services you should put it into VPC, if your lambda need internet access you have to configure NAT for it.
 Lambda doesn't run `npm install`. So if you add new package you have to build it locally, create `.zip` file with your project (including `node_modules`) and upload it to aws lambda.
 Global state - lambda can run on the same container or on new container (aws shuts down inactive containers after ~20 minutes, so after this new call will run lambda on new container).
 So when lambda run on the same container global variables (those outside handler function) can be leaked between invocations.
@@ -1877,7 +1880,7 @@ AntiPattern:
 * ACID transaction requirements (if you need this it's better to use RDS instead of Hadoop)
 There are several engines you can run on top of emr:
 * Hive - data warehouse, you can write SQL-like queries to extract data from Hadoop
-* Hbase - open-source, NoSQL key/value column-oriented database built on top of HDFS
+* Hbase - open-source, NoSQL key/value column-oriented database built on top of HDFS. It integrates with Hive allowing sql-like query over Hbase tables. You can backup/restore EMR Hbase into s3. Support read-replica.
 * Presto - open-source in-memory distributed SQL query engine developed by Facebook. So it's good for ad-hoc sql analytics
 * Spark - general purpose execution framework that is able to run multiple different workloads such as ETL/ML
 Presto faster than spark cause it doesn't care about fault-tolerance. If one of the Presto worker nodes experiences a failure (say, shuts down) in most cases queries that are in progress will abort and need to be restarted.
@@ -1885,37 +1888,39 @@ Spark supports mid-query fault-tolerance and can recover from such a situation b
 Spark Streaming - solution to process/analyze data in real-time. On aws if you want to use it you have to provision: kinesis data streams + emr with spark streaming and apache zeppelin
 
 ###### Glue
-Glue - fully managed ETL (extract, transform, load) to catalog/clean/enrich/move your data. Consist of:
+Fully managed ETL (extract/transform/load) to catalog/clean/enrich/move your data. Consist of:
 * Data Catalog - central metadata repository. Consist of:
     * trigger - you can create trigger to fire on cron or when some events done. With it you can create a chain of etl jobs. Can be of 3 types:
         * scheduled - run on cron
         * conditional - based on some condition (run third job when 2 other completed)
         * on-demand - manually activate your trigger
-* ETL engine - autogenerate ETL code in python/scala for integration with apache spark
+* ETL engine - run ETL jobs on apache spark, where actual transformation happens (Job can autogenerate python/scala code to run on spark)
+For each job isolated spark env created, where job is executed (you select data source/target and pass script, and on spark your job is run)
+Job Bookmark - glue use it to keep track of processed data. When you add more data to s3, glue won't run etl for whole bucket again, but only changes that were added.
 * scheduler - handles dependency resolution/job monitoring/retries
 Glue crawlers scan various data stores you own to automatically infer schemas and partition structure and populate the Glue Data Catalog with corresponding table definitions and statistics.
 You can then directly query your data lake with Athena and Redshift Spectrum.
 AntiPattern:
 * Streaming data (Glue is batch oriented, minimum interval is 5 min, so for streaming data Kinesis is better choice)
 * NoSQL Databases (Glue doesn't support NoSQL databases as source)
-Job - glue can run ETL on s3 and load it to any other target.
-Job Bookmark - glue use it to keep track of processed data. When you add more data to s3, glue won't run etl for whole bucket again, but only changes that were added.
 
 ###### DynamoDB
-DynamoDB - fully managed, highly available out of the box(there is no such thing as multi-AZ deployment and read replica) NoSQL key-value/document database, kind of mongo, but aws proprietary solution. Stores data across 3 AZ. 
+Fully managed, highly available out-of-the-box(there is no such thing as multi-AZ deployment and read replica) NoSQL key-value/document database, kind of mongo, but aws proprietary solution. Stores data across 3 AZ. 
 It's serverless, so if you have to choose between DynamoDB/RDS if you are building serverless app - dynamoDB your best choice. NoSql terminology: row - item, cell - attribute, primary key - partition key + sort key.
 If you come from relational to NoSql you must forget:
 * normalization - this came from time when storage was expensive, right now compute is expensive so it's better to denormalize data to spend less time on computing
 * joins - you can't join table in NoSql
 * single table per entity - you have a collection of entities per table in NoSql. Table is not single object like in relational model, but a collection of heterogeneous objects, products+users+orders can be store in single NoSql table.
 NoSql tables build on distributed hash tables, so time complexity of most queries is O(1)
-One-to-many:
-* relational - authors, books (has authorId as foreign key)
-* nosql - partitionKey as one key (authorId), and sortKey (bookId) as key from second table
-Many-to-many:
-* relational- authors, books, author_book - special table to store auhorId+bookId
-* nosql - create 1 primary key with partition key + sort key and second primary key where you swap partition and sort key:
-* adjacency list - way to represent graph data (nodes and edges) in flat model. Suppose we have a bunch of people and want to represent them as friends. We can use graph representation.
+One-to-many (customers-orders, each customer has many orders, but each order has exactly 1 customer):
+* relational (2 tables) - customers, orders (has customerId as foreign key)
+* nosql (1 table) - partitionKey (customerId) and sortKey (orderId)
+Many-to-many (authros-books, each author has many books, and each book can be written by several authors):
+* relational (3 tables) - authors, books, author_book - special table to store auhorId+bookId
+* nosql (1 table) - partitionKey (authorId) and sortKey (bookId). Here duplication happens, cause same book would be duplicating for all it's authors.
+If you need another access pattern, like find all authors by book, you add another type of pk into this table where you swap partition & sort key: partitionKey (bookId) and sortKey (authorId)
+By doing this you add even more duplication, yet now you have 2 access pattern by either author or book.
+This idea of storing data called - adjacency list - way to represent graph data (nodes and edges) in flat model. Suppose we have a bunch of people and want to represent them as friends. We can use graph representation.
 But can use java, if we create `Map<String, List<String>>` where key is person and value is list of this friends. This will add some redundancy/duplication 
 (if Mike & Bob friends, then under key Mark Bob would be inside list of friends, and under kye Bob, Mark would be inside list of friends)
 Yet this duplication in space guarantees instant result, you can get list of friends of anybody within O(1) - cause we are using Map.
@@ -1936,23 +1941,20 @@ When you build NoSql schema you should:
 * design PK + GSI
 You can store many entities in the same table:
 users + profiles(one-to-one) + orders(one-to-many) + order_items (one-to-many)
-* partitionKey - USER#userId, ITEM#itemId
-* sortKey - for profile - PROFILE#profileId, for order - ORDER#orderId - it's a good practice to add prefixes to keys. + ORDER#orderId - for PK with ITEM
-So we have 2 SK with same ORDER#orderID, one - for users, another for items. To speed up access create GSI - inverted index
-and now you have partitionKey - ORDER#orderID, sortKey - USER#userID/ITEM#itemID.
+* partitionKey - `USER#userId` & `ITEM#itemId`
+* sortKey - for profile - `PROFILE#profileId`, for order - `ORDER#orderId` - it's a good practice to add prefixes to keys
+So we have 2 sortKey with same `ORDER#orderID`, one - for users, another for items. To speed up access create GSI - inverted index and now you have partitionKey - `ORDER#orderID`, sortKey - `USER#userID/ITEM#itemID`.
 If you have several address for single user, just add them as json attribute - until you have access pattern by address (like found all users by single address)
 So you store both profiles and orders in the same table, yet they have different attributes.
-Partition Key (mandatory) - it's used for key-value access pattern, should be unique value.
-Sort key (optional) - range query access pattern. Example: customerId - partitionKey, orderDate - sortKey.
+Partition Key (mandatory) - it's used for key-value access pattern, should be unique value. Sort key (optional) - range query access pattern. Example: customerId - partitionKey, orderDate - sortKey.
 So if you store only category in table, you have simple primary key = categoryName.
 If you store category+articles in single table you have composite primary key = partitionKey (categoryName) + sortKey (articleName).
 If you have composite primary key:
 * write/update/delete - must provide full key (both partition & sort keys)
 * query - can provide only partition or both
-Don't use filter expression - it's scans the whole table and filter it based on your request.
-If you need to filter on other that PK columns, create GSI for filtered columns.
+Don't use filter expression - it's scans the whole table and filter it based on your request. If you need to filter on other that PK columns, create GSI for filtered columns.
 Composite Sort Key - GSI with partitionKey stays the same, but sortKey is new attribute by which you want to filter. You can also include other attributes into this sortKey.
-For example status+date - DELIVERED#2020-05-05, and now you can filter by status and date.
+For example status+date `DELIVERED#2020-05-05`, and now you can filter by status and date.
 If you want to filter just by attribute without partitionKey. This is problem for dynamoDB, cause it designed in such way that you should narrow all queries to some partitionKey and then filter on sortKey.
 You create sparse key and use scan to search by single attribute without partitionKey.
 Data Partitioning:
@@ -1981,13 +1983,20 @@ DynamoDb just like s3 is not in vpc, so you can either:
 Although dynamoDb is proprietary solution with closed source code there are 2 options for local dev (don't use them in production, cause it only for dev purposes, api is the same, but underlying design is different, they not suitable for prod highload):
 * download aws version for developers
 * use it from localstack
-GSI (Global Secondary Index) - special read-only table created by dynamoDb to simplify search for indexed fields. Index speed up search but require more memory to store itself. You should configure separate read/write capacity for this.
+GSI (Global Secondary Index) - special read-only table created by dynamoDb to simplify search for indexed fields. Index speeds up search but require more memory to store itself. You should configure separate read/write capacity for this.
 It's a way to have DynamoDB replicate the data in your table into a new structure using a different primary key schema. This makes it easy to support additional access patterns
-GSI projection - you can choose which attributes will go to gsi:
+LSI (Local Secondary Index) - same partition as primary key, but different sort key. You can create up to 5 LSI per table. It uses same RCU as base table (comparing to GSI for which you create separate read capacity)
+LSI Projection - you can choose which attributes add to index, but every LSI should have:
+* partition key of base table
+* sortKey of one attribute (should be scalar value)
+* sortKey from base table as attribute value
+* any other attribute from base table
+As you see by default you may choose not to add any additional attributes, cause you already have sortKey from base table. So you can make a query against LSI, it would fetch partitionKey+sortKey from base table
+and return data from base table. But if you want low-latency access for specific attributes, it's better to directly put these attributes into LSI
+GSI/LSI projection - for both index you can set which attributes to include:
 * KEYS_ONLY - only partition key + sort key (this is minimal you can't create gsi without these 2 keys)
 * INCLUDE - KEYS_ONLY + any other non-key attributes that you specify
 * ALL - include all attributes from original table
-LSI (Local Secondary Index) - same partition as primary key, but different sort key. You can have one per table and create when table is created, just like primary key. It uses the same read/write capacity as table.
 Scanning - like `select * from` operation in RDS, just go over all records. Max size is 1MB, if table size above this then `LastEvaluatedKey` returned with last scanned item. For next scan you should supply this value as `ExclusiveStartKey`.
 So you can create `while loop` in java code where first time you pass `ExclusiveStartKey=null` and each subsequent step you will pass `ExclusiveStartKey=LastEvaluatedKey`.
 DynamoDb just like s3 is eventual consistent, so if you update data and read it right away you can get old value (cause items are persisted on multiple machines, and depending from what machine you read you can get stale data).
@@ -2003,24 +2012,22 @@ You can increase throughput as much as you want but decrease up to 9 times per d
 DynamoDB Streams - captures a time-ordered sequence of item-level changes in a DynamoDB table and durably stores the information for up to 24 hours.
 AWS maintains separate endpoints for DynamoDB and DynamoDB Streams. Streams can be enabled or disabled for an Amazon DynamoDB table.
 Stream records are organized into groups, also referred to as shards. With streams you can:
-* build transactional system (based on insert/update/delete records from one table do some operation in another)
+* build transactional system (based on `insert/update/delete` records from one table do some operation in another)
 * log/audit/aggregate data
-* replicate data to another regions for query purpose using DynamoDB Cross-Region Replication Library
-Streams useful for:
-* replicating
+* replicate data to another regions for query purpose using [cross-region replication Library](https://github.com/awslabs/dynamodb-cross-region-library)
+Plz note that you should use global tables for cross-region replication. Don't use this library.
 * update elasticache (so your cache would be always updated to latest state of db)
 * in case your app need to know about all updates
 Cache problems:
 * invalidation - how you guarantee that once db write happens, you update cache
 * race condition - if 2 thread update db and update cache they may update db & cache in different order (in db you would have value from thread 1 and in cache from thread 2)
 * cold start - if you reboot your server, now every request is cache miss (you have to request db)
-So dynamoDB streams can nicely solve these 3 problems. Kafka also use this concept of streams inside for replication data across nodes.
+So dynamoDB streams nicely solve these 3 problems. Kafka also use this concept of streams inside for replication data across nodes.
 Notice that relational db also has kind of streams internally for replication/indexing(when you add data your index automatically rebuilt), it just doesn't expose this stream as api.
-Cold start can be solved if you have stream, you just go to the beginning and read all items sequintially & concurrently.
+Cold start can be solved if you have stream, you just go to the beginning and read all items sequentially & concurrently.
 Streams are also useful if you want:
-* analytics - user add 2 items to a cart and then remove - final state doesn't change, but for analytics it may be useful
+* analytics - user add 2 items to a cart and then remove - final state hasn't changed, but for analytics it may be useful
 * point-in-time query
-One problem is schema evolution - solution to use avro format, and for each message include schema version
 DAX (DynamoDB Accelerator) - in-memory cache for dynamoDb, can expedite up to 10 times. The benefit is that you don't have to modify source code, you just enable cache and it works.
 Global Tables (cross-region replication) - multi-region/master db that automatically replicates across multiple regions. It's multiple replica tables (one per region) that DynamoDB treats as a single unit.
 When app write data to replica table in one region, dynamoDb propagate changes to all regions, so if one region would be unavailable your app continue to work normally.
@@ -2035,13 +2042,13 @@ So if you have write problems with db you should:
 * dynamoDB - use auto scale to scale accordingly to load
 If you have read problems:
 * RDS - add elasticache, add sharding (it would actually help in both read and write)
-* dynamoDB - dax, auto scale
-Transaction - you can use `TransactWriteItems/TransactGetItems` to run up to 25 PutItem/UpdateItem/DeleteItem/GetItem operations. During transaction items not blocked, dynamoDB supports only serializable isolation level.
+* dynamoDB - DAX, auto scale
+Transaction - you can use `TransactWriteItems/TransactGetItems` to run up to 25 PutItem/UpdateItem/DeleteItem/GetItem operations. During transaction, items not blocked, dynamoDB supports only serializable isolation level.
 There are batch operations like `BatchGetItem` (read up to 100 items at once) and `BatchWriteItem` (write up to 25 items at once). There are 2 difference between transact and batch api:
 * for transact you pay twice
 * for transact either all success or all rollbacked, for batch some may succeed, some may fail. So for batch is up to you to handle errors.
 Transaction Idempotency - you can supply `ClientRequestToken` with `TransactWriteItem`, so dynamoDB would handle this request as idempotent.
-If item modified outside of running tx, tx is cancelled & exception is thrown. Tx avaialble only within region, and not supported for global tables.
+If item modified outside of running tx, tx is cancelled & exception is thrown. Tx available only within region, and not supported for global tables.
 In tx you are priced twice for each read/write, cause dynamoDB call 2 times read/write, first - to prepare tx, second - to commit tx.
 Limitations - dynamoDB won’t let you write a query that won’t scale, that's why it has some limitations, but they all make sense:
 * max result in single Query/Scan operation shouldn't exceed 1MB. So if your query has more than 1MB output, dynamoDB returns `LastEvaluatedKey`
@@ -2050,12 +2057,10 @@ Limitations - dynamoDB won’t let you write a query that won’t scale, that's 
 If you have 1GB of data, and only 20 rows out of whole table can be filtered with such query, you have to run 1000 queries, and accumulate all rows into list.
 So first query may return 0 rows, cause it just fetch first 1MB of data, then apply your filter, and nothing was returned, cause there were no items within this 1MB that falls under filter expression.
 So you have to plan in advance you db usage pattern, in case you need filter on price, add it as sort key, or local index, or GSI.
-Single-table design - NoSql design pattern where you put all your database into single table. The main reason for using a single table in dynamoDB is to retrieve multiple, heterogenous item types using a single request
+Single-table design - NoSql design pattern where you put all your database into single table. The main reason for using a single table in dynamoDB is to retrieve multiple, heterogeneous item types using a single request
 For example you can store users/profile/orders in single table. UserId - would be primary key, profile/orders - would be sort key. There are 2 downsides of such design:
 * there is no way to add new access pattern (for example if you want to get all orders above 100$, you will need to redesign your table)
 * no easy way to export data fro analytics (dynamoDB is OLTP, designed to handle unlimited number of small transactions)
-Anti-pattern:
-* using GraphQL + dynamoDB. Reason is that graphQL using resolver, and make many queries to dynamoDB instead of single query
 Multiple table approach:
 * if you have table that actively queried during one day and then no more you have to re-create table every day
 * time series - if you know that during first day you query a lot, second - not much, and third - very little - create new table for each day, and for older table modify WCU/RCU to set it to minimum value
@@ -3011,7 +3016,7 @@ For both types, IP are private, so in order to work you have to connect your net
 Traffic flow - you can manually add dns records to your hosted zones, but it can be complex to manage them. So you can create traffic flow in visual editor and manage all your dns records from there.
 You can use versioning to quickly restore any previous version. You can manage hundreds of records with nice visual editor.
 Simple AD dns resolving (you can set-up on-premise-to-vpc connection using AD + DX/VPN):
-* simple AD provides dns resolution out of the box (you don't need to configure any dns servers manually, although you can do this) with redundant dns servers in each AZ
+* simple AD provides dns resolution out-of-the-box (you don't need to configure any dns servers manually, although you can do this) with redundant dns servers in each AZ
 * these dns forwards all dns requests to vpc internal dns server (note that for this dns name shouldn't correspond to dns of AD or be it subdomain, if they are the same simple AD won't forward dns request)
 * simple AD provides 2 private IP for dns resolution, which you add them to your on-premise dns forwarder
 * make sure SG allows dns traffic from on-premise to simple AD
@@ -3843,7 +3848,7 @@ Cloud9 provides aws lambda create/execute(locally)/deploy functions.
 
 ###### CodeStar
 CodeStar - cloud based development service that allows you to build/deploy your code in aws. You can quickly set up continuous delivery.
-You also got integration with jira out of the box. It's free, you pay for underlying resources (ec2, lambda, s3). You can use project dashboard to manage releases and see most recent activity. 
+You also got integration with jira out-of-the-box. It's free, you pay for underlying resources (ec2, lambda, s3). You can use project dashboard to manage releases and see most recent activity. 
 You can start cloud9 directly from CodeStar, and any code you commit in cloud9 automatically goes to CodeStart pipeline and deployed to ec2/beanstalk/s3
 
 ###### Rekognition
