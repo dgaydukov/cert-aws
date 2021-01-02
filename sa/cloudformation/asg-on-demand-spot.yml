@@ -93,7 +93,6 @@ Resources:
             Groups:
               - !GetAtt WebServerSG.GroupId
 
-
   ASG:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
