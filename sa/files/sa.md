@@ -854,14 +854,14 @@ Example of event for lambda
 ```
 {
     "RequestType": "Create",
-    "ServiceToken": "arn:aws:lambda:us-east-1:{ACCOUNT_ID}:function:example-CustomResourceLambda-4RWJOUFLIPGA",
+    "ServiceToken": "arn:aws:lambda:us-east-1:ACCOUNT_ID:function:example-CustomResourceLambda-4RWJOUFLIPGA",
     "ResponseURL": "https://cloudformation-custom-resource-response-useast1.s3.amazonaws.com/...",
-    "StackId": "arn:aws:cloudformation:us-east-1:{ACCOUNT_ID}:stack/example/85e457b0-1383-11eb-a18a-0e09773e6f3f",
+    "StackId": "arn:aws:cloudformation:us-east-1:ACCOUNT_ID:stack/example/85e457b0-1383-11eb-a18a-0e09773e6f3f",
     "RequestId": "5d022657-3843-4f4e-8b6b-a04ed99f49a7",
     "LogicalResourceId": "GithubWebhook",
     "ResourceType": "Custom::GithubWebhook",
     "ResourceProperties": {
-        "ServiceToken": "arn:aws:lambda:us-east-1:{ACCOUNT_ID}:function:example-CustomResourceLambda-4RWJOUFLIPGA",
+        "ServiceToken": "arn:aws:lambda:us-east-1:ACCOUNT_ID:function:example-CustomResourceLambda-4RWJOUFLIPGA",
         "Tags": [
             {
                 "Value": "example-GithubWebhook",
@@ -916,7 +916,7 @@ Below example of policy to allow principal to create ec2 with only specific role
         {
             "Effect": "Allow",
             "Action": "iam:PassRole",
-            "Resource": "arn:aws:::{ACCOUNT_ID}:role/MyInstanceRole",
+            "Resource": "arn:aws:::ACCOUNT_ID:role/MyInstanceRole",
             "Condition": {
                 "StringEquals": {"iam:PassedToService": "ec2.amazonaws.com"}
             }
@@ -943,8 +943,8 @@ Same way you can use NotAction/NotResource/NotPrincipal. For example if you want
 Of course you can create deny for all current users, but in this case once somebody add new user with `s3:*` action, he will get access.
 So instead of explicitly deny to all users you can use Deny+NotPrincipal. In this case you would deny to all users except your desired user.
 This approach is bit difficult for roles, cause role principal is defined by 2 arn:
-* role arn -              arn:aws:iam::{ACCOUNT_ID}:role/roleName
-* assumed role user arn - arn:aws:sts::{ACCOUNT_ID}:assumed-role/roleName/roleSessionName  (roleSessionName - can be changed depending who is assuming this role)
+* role arn -              arn:aws:iam::ACCOUNT_ID:role/roleName
+* assumed role user arn - arn:aws:sts::ACCOUNT_ID:assumed-role/roleName/roleSessionName  (roleSessionName - can be changed depending who is assuming this role)
 The problem is that Principal/NotPrincipal doesn't support wildcard. But you can use conditions
 ```
 Effect: Deny
@@ -1114,22 +1114,22 @@ Note that not all action support resource-level permission. So if you create a p
 ```
 Effect: Allow
 Action: [ec2:*]
-Resource: arn:aws:ec2:us-east-1:{ACCOUNT_ID}:instance/*
+Resource: arn:aws:ec2:us-east-1:ACCOUNT_ID:instance/*
 ```
 This won't work, cause `ec2:*` specified all actions, but not all ec2 actions support resource. So that's why this policy doesn't achieve desired result. Instead you should specify actions:
 ```
 Effect: Allow
 Action: [ec2:RunInstances, ec2:TerminateInstances, ec2:StopInstances, ec2:StartInstances]
-Resource: arn:aws:ec2:us-east-1:{ACCOUNT_ID}:instance/*
+Resource: arn:aws:ec2:us-east-1:ACCOUNT_ID:instance/*
 ```
 But user still can't launch new instance in us-east-1 (although he can stop/start/terminate) cause he needs permissions to key-pairs, security groups, EBS volumes, ami.
 ```
 Effect: Allow
 Action: [ec2:RunInstances]
-Resource: ["arn:aws:ec2:us-east-1:{ACCOUNT_ID}:instance/*",
-           "arn:aws:ec2:us-east-1:{ACCOUNT_ID}:key-pair/*",
-           "arn:aws:ec2:us-east-1:{ACCOUNT_ID}:security-group/*",
-           "arn:aws:ec2:us-east-1:{ACCOUNT_ID}:volume/*",
+Resource: ["arn:aws:ec2:us-east-1:ACCOUNT_ID:instance/*",
+           "arn:aws:ec2:us-east-1:ACCOUNT_ID:key-pair/*",
+           "arn:aws:ec2:us-east-1:ACCOUNT_ID:security-group/*",
+           "arn:aws:ec2:us-east-1:ACCOUNT_ID:volume/*",
            "arn:aws:ec2:us-east-1::image/ami-*"]
 ```
 This policy will allow launch new instances in us-east-1 region.
@@ -1227,11 +1227,11 @@ S3 security:
 * use versioning to preserve, retrieve, and restore every version of every object stored in your Amazon S3 bucket
 * enable mfa delete for bucket - it's part of versioning. So you can just enable versioning or enable versioning + mfa delete (you can't enable mfa delete without enable versioning).
 mfa delete can be enabled only from cli (currently no way to enable it from web console). You should use root account (so you should activate mfa first for root account) cause only the bucket owner (root account) can enable MFA Delete.
-`aws s3api put-bucket-versioning --bucket=my2fadeletebucket --versioning-configuration Status=Enabled,MFADelete=Enabled --mfa "arn:aws:iam::{ACCOUNT_ID}:mfa/root-account-mfa-device 123456" --profile=root`
+`aws s3api put-bucket-versioning --bucket=my2fadeletebucket --versioning-configuration Status=Enabled,MFADelete=Enabled --mfa "arn:aws:iam::ACCOUNT_ID:mfa/root-account-mfa-device 123456" --profile=root`
 If you use cli, don't forget to clean it after you set up mfa delete. Since mfa delete automatically enable versioning, if you just delete file it adds additional version with delete marker. If you want permanently delete file you have to delete specific version.
 You can't delete version from console, if you try you get `You can’t delete object versions because Multi-factor authentication (MFA) delete is enabled for this bucket. To modify MFA delete settings, use the AWS CLI, AWS SDK, or the Amazon S3 REST API.`. 
 If you try to delete from cli without 2fa you will get `An error occurred (AccessDenied) when calling the DeleteObject operation: Mfa Authentication must be used for this request`. 
-If you supply 2fa and run `aws s3api delete-object --bucket=my2fadeletebucket --key=dummy.pdf --version-id=hZaCTAcGEMX9tzF6MUfAq4obRq_AhWk8 --mfa="arn:aws:iam::{ACCOUNT_ID}:mfa/user2fa 547063" --profile=user2fa`
+If you supply 2fa and run `aws s3api delete-object --bucket=my2fadeletebucket --key=dummy.pdf --version-id=hZaCTAcGEMX9tzF6MUfAq4obRq_AhWk8 --mfa="arn:aws:iam::ACCOUNT_ID:mfa/user2fa 547063" --profile=user2fa`
 you will get `An error occurred (AccessDenied) when calling the DeleteObject operation: This operation may only be performed by the bucket owner`.
 So only root user can delete versions from now on.
 * use access logging to track who/which bucket/what action was executed on s3
@@ -2326,10 +2326,10 @@ You can use `AWS::Events::Rule` to catch termination event 2 minutes before aws 
     "id": "12345678-1234-1234-1234-123456789012",
     "detail-type": "EC2 Spot Instance Interruption Warning",
     "source": "aws.ec2",
-    "account": "{ACCOUNT_ID}",
+    "account": "ACCOUNT_ID",
     "time": "yyyy-mm-ddThh:mm:ssZ",
     "region": "us-east-1",
-    "resources": ["arn:aws:ec2:us-east-1:{ACCOUNT_ID}:instance/i-1234567890abcdef0"],
+    "resources": ["arn:aws:ec2:us-east-1:ACCOUNT_ID:instance/i-1234567890abcdef0"],
     "detail": {
         "instance-id": "i-1234567890abcdef0",
         "instance-action": "hibernate/stop/terminate" # one of three
@@ -2732,14 +2732,14 @@ You should store connection string/password in s3, since anybody with access to 
 4. ssh to ec2, install java, copy your jar file, and run it passing all env vars
 Quite a lot for a start. Imagine if we have a tool where you can just say that you want java app, mysql db, set env vars and upload jar file, and all infra would be built for you.
 Welcome beanstalk - aws service where you can say what you want and beanstalk will build all infrastructure for you (using CloudFormation under the hood). After successful deployment you can see your rds/ec2/elb and configure them separately.
-Beanstalk - PaaS that mange deployment, provisioning, load-balancing, auto-scaling, health monitoring. Best suited when you need quickly deploy something and don't want to learn about other aws services.
+Beanstalk - PaaS that manage deployment, provisioning, load-balancing, auto-scaling, health monitoring. Best suited when you need quickly deploy something and don't want to learn about other aws services.
 It keeps the provisioning of building blocks (EC2/RDS/ELB/Auto Scaling/CloudWatch), deployment of applications, and health monitoring abstracted from the user so they can just focus on writing code.
 You simply upload a `.war/.jar` (in case of java) file, and beanstalk run tomcat server for you and deploy your app. Yet developer has a right to manage all infrastructure provided by beanstalk.
-Keep in mind that for prod deployment it's better to use your own CloudFormation script and manage infra with it, eb is good for testing purposes, PoC.
+Keep in mind that for prod deployment it's better to use your own CloudFormation script and manage infra with it, EB is good for testing purposes, PoC.
 With EB you shouldn't worry about java installed on ec2, if you select java it would automatically install it into ec2 and use Corretto as jdk (same true for other popular env like node.js/tomcat and so on..)
 You can use EB with Docker:
 * single - you deploy docker file or built image. Use this when you want one docker per ec2 instance. If docker instance crushed/killed EB would restart it automatically.
-* multicontainer - in this case eb would manage ecs cluster for you. So you don't need to manually create ecs and decide how many nodes should be running there.
+* multicontainer - in this case eb would manage ECS cluster for you. So you don't need to manually create ECS and decide how many nodes should be running there.
 Although most popular platform are supported, if you want to use new platform you can:
 * use custom image - complete 3 steps:
     * create ec2 form one of eb ami (when create ec2 type beanstalk and choose your ami), ssh to it and do any modification, then create snapshot and ami from it
@@ -2771,7 +2771,7 @@ If you want to migrate old/unsupported db engine, you should:
 * add table mapping rules in json
 
 ###### ELB
-ELB (Elastic Load Balancing) - is a proxy that accept traffic (using listeners) from clients and route it to targets (usually EC2), so it basically distribute your traffic between different ec2 instances and holds 2 connections:
+Elastic Load Balancing - proxy that accept traffic (using listeners) from clients and route it to targets (usually EC2), so it basically distribute your traffic between different ec2 instances and holds 2 connections:
 * from client to elb
 * from elb to ec2
 There are 2 types of elb:
@@ -2780,16 +2780,16 @@ There are 2 types of elb:
 Listener - is a protocol + port for which you got incoming requests. There are 3 types of elb:
 * Application (osi level 7) - if you need to balance http/https. Also supports websocket & secure websocket
 * Network (ose level 4) - if you need to balance TCP/UDP
-* Classic - if you need to balance classic (without VPC) EC2 instance
+* Classic - if you need to balance classic (without VPC) EC2 instance. Now outdated.
 Subnets (you can specify 1 subnet per AZ):
 * alb: 2 or more subnets (so it always cross-zone)
 * nlb: 1 or more subnets
-ALB+NLB - you register target in targets group and route traffic to target groups. CLB - you register instances within LB.
-Target group can be of 3 types: ec2/container/list of IP (IP can be seated inside vpc or anywhere).
-If you enable AZ for ELB, it creates lb node in AZ, after this traffic goes to this node. The best practice to have 1 node in each AZ.
-If you have not equal number of EC2 in different AZ (let's say 2 in az1, and 8 in az2) then you should enable cross-zone balancing.
-In this case each elb will route all traffic into 10 instances, so each instances will get 10% of traffic. But if you disable cross-zone balancing, then 50% in first zone would be divided between 2 instances (so each got 25%) and 50% from az2 would be divided in 8 instances (so each got 8.25% traffic). With ALB cross-zone balancing enabled by default.
-Connection draining - makes sure that any back-end instances you have deregistered will complete requests in progress before the deregistration process starts. It's useful if you use ALB+ASG. in this case if asg decide to remove instance due to low load, elb will wait for this timeout to finish all current requests, but will not route any new requests.
+ALB+NLB - you register target in TG (targets group) and route traffic to TG. CLB - you register instances within LB. TG can be of 3 types: ec2/container/list of IP (IP can be seated inside vpc or anywhere).
+If you enable AZ for ELB, it creates lb node in AZ, after this traffic goes to this node. The best practice to have 1 node in each AZ. If you have not equal number of EC2 in different AZ (let's say 2 in az1, and 8 in az2) then you should enable cross-zone balancing.
+In this case each elb will route all traffic into 10 instances, so each instances will get 10% of traffic. 
+But if you disable cross-zone balancing, then 50% in first zone would be divided between 2 instances (so each got 25%) and 50% from az2 would be divided in 8 instances (so each got 8.25% traffic). With ALB cross-zone balancing enabled by default.
+Connection draining - makes sure that any back-end instances you have deregistered will complete requests in progress before the deregistration process starts. 
+Useful if you use ALB+ASG. in this case if asg decide to remove instance due to low load, elb will wait for this timeout to finish all current requests, but will not route any new requests.
 When timeout over, elb will forcibly close all connections. It's enabled by default, value from 0-3600, default - 300sec.
 ```
 TG:
@@ -2799,26 +2799,28 @@ TG:
     - Key: deregistration_delay.timeout_seconds
       Value: 600
 ```
-ELB (except NLB) has sticky session - you can bind user's session to specific ec2 and every time this user hit elb he goes to the same ec2. To use this send `AWSELB` cookie and elb remember to which ec2 instance to route request.
-There is no concept of sticky session on NLB, cause on level 4 there is no cookies, so no way to track connections. Yet nlb selects target group  using a flow hash algorithm. It bases the algorithm on:
+ELB (except NLB) has sticky session - you can bind user's session to specific ec2 and every time this user hits elb he goes to the same ec2. To use this send `AWSELB` cookie and elb remember to which ec2 instance to route request.
+There is no concept of sticky session on NLB, cause on level 4 there is no cookies, so no way to track connections. Yet nlb selects target group using a flow hash algorithm. It bases the algorithm on:
 * protocol
 * source IP address and source port
 * destination IP address and destination port
 * TCP sequence number
-Routes each individual TCP connection to a single target for the life of the connection. The TCP connections from a client have different source ports and sequence numbers, and can be routed to different targets.
+NLB routes each individual TCP connection to a single target for the life of the connection. The TCP connections from a client have different source ports and sequence numbers, and can be routed to different targets.
 So if you open new tab, that would mean that new port is opened, in this case nlb would see it as new connection and could route request to different ec2.
 Health Check - you can monitor health of ec2 and always redirect user to healthy ec2 (ELB doesn't kill unhealthy ec2). There are 3 types of health checks:
 * EC2  - watches for instance availability from hypervisor/networking point of view. For example, in case of a hardware problem, the check will fail. Also, if an instance was misconfigured and doesn't respond to network requests, it will be marked as faulty.
-* ELB (1 heath check inside that check port status `AWS::ElasticLoadBalancingV2::TargetGroup`) - verifies that a specified TCP port on an instance is accepting connections OR a specified web page returns 2xx code. Thus ELB health checks are a little bit smarter and verify that actual app works instead of verifying that just an instance works.
-* Custom  - If your application can't be checked by simple HTTP request and requires advanced test logic, you can implement a custom check in your code and set instance health though API
-You can set asg healthcheck by (by default for asg - healthcheck is EC2, if you set ELB - asg would monitor both ec2 & elb healthchecks, and replace instance if either one failed):
+* ELB (1 heath check inside that check port status `AWS::ElasticLoadBalancingV2::TargetGroup`) - verifies that a specified TCP port on an instance is accepting connections OR a specified web page returns 2xx code. 
+Thus ELB health checks are a little bit smarter and verify that actual app works instead of verifying that just an instance works.
+* Custom  - If your application can't be checked by simple HTTP request and requires advanced test logic, you can implement a custom check in your code and set instance health using `SetInstanceHealth` api call fro ASG.
+In case of custom check set `HealthCheckType: EC2`, so asg would monitor ec2 health itself, and check health manually and then also call `SetInstanceHealth` directly to set healthcheck
+You can set asg healthcheck (by default for asg - healthcheck is EC2, if you set ELB - asg would monitor both ec2 & elb healthchecks, and replace instance if either one failed):
 ```
 ASG:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
       HealthCheckType: ELB
 ```
-So when you use asg+elb, you would better to change `HealthCheckType` from EC2 to ELB.
+So when you use asg+elb, you would better to change `HealthCheckType` from EC2 to ELB, in this case both default ec2 check and healthcheck from TG would be used. 
 For `TargetGroup` you can configure healthcheck and choose protocol `HealthCheckProtocol`. Possible values are HTTP/HTTPS/TCP.
 If protocol of TG is HTTP(S), then you can't choose TCP healthcheck. So TCP healthcheck is mostly for NLB.
 ALB Request Routing - you can redirect user to different ec2 based on request attributes (subdomains, headers, url params..)
@@ -2831,7 +2833,7 @@ Access logs - contains clientIP/latency/request path/response - can be collected
 You can use elb with ec2 from private subnet. For this you should have public subnet within same AZ as private subnet and NAT. In this case you ec2 would be completely hidden behind elb.
 TLS Listener - used by nlb for secure connection. To use it you must:
 * deploy 1 server certificate (from ACM) - terminate the front-end connection and decrypt requests from clients, before sending decrypted data to TG
-* select security policy (TLS negotiation configuration) - combination of protocols and ciphers. Negotiate TLS connections between a client and nlb. Custom policies not supported.
+* select security policy (TLS negotiation configuration) - combination of protocols and ciphers. Negotiate TLS connections between a client and nlb. Custom policies not supported, everybody use default policy`ELBSecurityPolicy-2016-08`, although elb has a few more.
 Protocol - establish secure connection between nlb and client. Cipher - encryption algorithm. NLB doesn't support TLS renegotiation. NLB doesn't support RSA cert larger than 2048bit
 Security policy doesn't depend on protocol. You can have 10 TLS listeners with different protocols, but 1 security policy with default settings.
 Smart certificate selection - nlb support multiple certificates per tls connection:
@@ -2839,7 +2841,7 @@ Smart certificate selection - nlb support multiple certificates per tls connecti
 * after you can go to `listeners=>View/edit certificates=>add certificate` to add other certificates
 * if hostname match single cert - use this cert, otherwise - use best cert client can support
 SNI (Server Name Indication) - host multiple tls application, each with it's own (or multiple) ssl certificate behind single ELB, which would choose optimal certificate for each client. Supported only by elb.
-You can create multi-vpc elb, but if you want to route traffic to multiple vpc, better for each vpc to have single elb, and use route53 to route traffic to multiple elb.
+You can't create multi-vpc elb, but if you want to route traffic to multiple vpc, better for each vpc to have single elb, and use route53 to route traffic to multiple elb.
 Yet if you want to use single elb to multiple vpc, you should use vpc peering and for target group set `TargetType: ip` and set list of private IP addresses to `TargetDescription.Id` attribute.
 End-to-end encryption - usually we terminate ssl on elb and from there we send traffic to ec2 using http, cause anyway from elb traffic is inside vpc, so it's secured.
 But if you want, you can implement encrypted communication end-to-end. For this you need to add TargetGroup that forward traffic to ec2 using https. In this case you need some kind of nginx in your ec2 to terminate ssl there.
@@ -2852,7 +2854,7 @@ TG:
 ```
 s3 logs - you can store elb logs in s3 and analyze it later with athena - below example would store all elb logs in specified s3 bucket:
 ```
-  ELB:
+ELB:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
       LoadBalancerAttributes:
@@ -2863,15 +2865,14 @@ s3 logs - you can store elb logs in s3 and analyze it later with athena - below 
 ```
 TCP pass through (you can configure elb not to terminate ssl traffic):
 * ALB can use only HTTPS listener which terminate ssl traffic using custom certificate and pass http traffic further
-* NLB can use TCP/443 listener. In this case NLB won't terminate ssl connection but will just pass traffic further (no need to provide server cert)
-Keep in mind that by using nlb you can't use: warmup, sticky sessions, path-based routing
-Yet you can use TLS with nlb in this case you have to provide server cert and your nlb would terminate ssl
+* NLB can use TCP/443 listener. In this case NLB won't terminate ssl connection but will just pass traffic further (no need to provide server cert, just configure TCP listener for 443)
+Yet you can use TLS with nlb in this case you have to provide server cert and your nlb would terminate ssl. Keep in mind that by using nlb you can't use: warmup, sticky sessions, path-based routing.
 * classic load balancer can pass through https traffic
 Get client IP address:
 * by default ec2 would see IP address of elb, not of original user (`ServletRequest.getRemoteAddr` which return `RemoteAddr` from request)
 * for the above reason `iptables` for filtering won't work, cause they always will get one IP - of elb
 * alb: use `X-Forward-For` header to get original IP address of user
-* nlb: use proxy protocol v1 (works only on level 4) - helps identify IP of client (plz note since nlb is level 4, there is no `X-Forward-For` in request, so using proxy protocol is the ony way to get client IP)
+* nlb: use proxy protocol (works only on level 4) - helps identify IP of client (plz note since nlb is level 4, there is no `X-Forward-For` in request, so using proxy protocol is the ony way to get client IP)
 Proxy protocol adds additional information to each request with client info (ip, host, port)
 If you want to terminate ssl on elb use ALB + HTTPS listener, if you want to terminate ssl on your ec2 use NLB + TCP listener
 You can enable proxy protocol for classic LB with:
@@ -2881,12 +2882,12 @@ ClassicLB
     Properties:
         Policies:
             - InstancePorts: [ "80", "443" ]
-               PolicyName: EnableProxyProtocolPolicy
+              PolicyName: EnableProxyProtocolPolicy
 ```
 NLB use proxy protocol v2
 ```
-NLB
-    Type : AWS::ElasticLoadBalancingV2::TargetGroup
+NLB:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
         TargetGroupAttributes:
             - Key: proxy_protocol_v2.enabled
@@ -2894,23 +2895,24 @@ NLB
 ```
 2 way ssl is not supported (use api gateway if you need it), yet you can use tcp pass through for nlb/clb
 NLB is different from ALB:
-* there is no SG for nlb. If you target group is ec2, you have to enable 2 sources:
+* there is no SG for nlb. If your target group is ec2, you have to enable 2 sources:
     * rule for port 80 for source IP of your clients
     * rule for port 80 for private IP of your nlb (for health checks), or open for cidr for whole vpc or subnets range. For each subnet you associate with nlb, it add 1 nlb instance into each subnet with 1 private IP.
-* if TG type is instance nlb is transparent) - your ec2 would behave same way as client directly connects to it (although clinet IP is his real IP in this case, you can still enable proxy protocol and get IP from there)
+* if TG type is instance (nlb is transparent) - your ec2 would behave same way as client directly connects to it (although clinet IP is his real IP in this case, you can still enable proxy protocol and get IP from there)
 * if TG type is IP (nlb acts as NAT) - your ec2 would see client IP as nlb internal IP (use proxy protocol in this case to get client IP)
 Test your elb (you can run software test to imitate high-load to check your elb):
 * elb scales up/down proportionally to the load. But if load dramatically increased over short time you may get 503, yet if it steadily increasing elb can catch up
-* elb scales from 1-7 minutes. So once elb scaled it add new IP to dns response with TTL 60 sec (client expect to re-resolve dns after 60 sec)
+* elb scales from 1-7 minutes. So once elb scaled, it adds new IP to dns response with TTL 60 sec (client expect to re-resolve dns after 60 sec)
 * factor in elb dns - when test, make sure to re-resolve DNS every 60 sec to get new IP (cause otherwise elb may add more capacity, but your tests are hitting single IP)
 * factor in sticky session - when test, keep in mind that your automatic tests may hit same ec2 because of this
 
 ###### CloudWatch
-CloudWatch - monitoring service for aws resources and apps running in aws cloud. IAM permission for CloudWatch are given to a resource as a whole (so you can't give access for only some of EC2, you give either for all EC2 instances or none).
+CloudWatch - monitoring service for aws resources and apps running in aws cloud.
 You can also use CloudWatch to create alarms (for example you get 5 errors, and you want to notify developer). Alarms are integrated with SNS (so you can send email, put message to SQS and so on).
-Many aws resources (EC2, RDS, and so on) automatically send metrics to CloudWatch. You can also send your custom metrics. Metrics can't be deleted, but expire automatically.
-By default ec2 monitoring interval is 5min, but you can enable detailed monitoring (second step when you create ec2) and data would be flow every 1 min.
-In ec2 you can create alarm too (when cpu goes above 80% - stop instance). If you want to track ec2 memory/cpu usage you have to install CloudWatch agent into ec2.
+Many aws resources (EC2/RDS) automatically send metrics to CloudWatch. You can also send your custom metrics. Metrics can't be deleted, but expire automatically.
+By default ec2 monitoring interval is 5min, but you can enable detailed monitoring (second step when you create ec2) and data would be flowing every 1 min.
+In ec2 you can create alarm too (when cpu goes above 80% - stop instance). If you want to track ec2 memory usage you have to install CloudWatch agent into ec2.
+You can install agent on both ec2 & on-premise for Linux/Windows. Agent for ec2 collects additional metrics to default ec2 metrics.
 By default alarm call only ec2 actions (stop/start/terminate/recover). There are 2 ways you can add your logic (see details `sa/cloudformation/cw-alarm-lambda.yml`):
 * create alarm and call lambda through sns (cause you can't call lambda directly from alarm) - execute logic in lambda
 In this case in your lambda you should have only business logic (like add new ec2). Validation logic would be inside alarm (for example when cpu more than 80%), but you are limited for alarms (there is no alarm to validate that port return 200)
@@ -2922,14 +2924,14 @@ You can create cross-account & cross-region cw dashboard and view your resources
     * view cross-account data - just enable to view other accounts dashboard
 
 ###### KMS
-Key Management Service - a service for generating/storing/auditing keys. If you have a lot of encryption it's better to use central key management service.
+Key Management Service - service for generating/storing/auditing keys. If you have a lot of encryption it's better to use central key management service.
 You start working with KMS by creating CMK (customer master keys), or if you are using encryption from other aws resource, it would create CMK automatically for you.
 You can import only symmetric keys. But you can't export symmetric/asymmetric private key.
 KMS keys are region specific (you can't transfer them into another region), so if you create key in one region you can't get it by accessing endpoint for another region.
 CMK Rotation - automatic (once per year) change of underlying backing key without change logical resource. 
 Yet previous backing key is stored perpetually until you delete cmk, so all data encrypted with previous key can easily be decrypted. But for all new encryption new key is used.
 Data Key (limited to a region) - generated by CMK and used to encrypt data larger than 4KB (CMK can encrypt only less than 4KB) and be used outside KMS.
-Envelope encryption - you encrypt data with data key, then encrypt data key with master key (stored securely by kms).
+Envelope encryption - you encrypt data with data key (stored where you encrypted data stored), then encrypt data key with master key (stored securely by kms).
 Access to key is a combination of key policy (resource policy) + iam policy. Any explicit deny always overwrite allow. Compare to other resources to add access to kms you must add key policy (with or without iam policy).
 As other resource policy, key policy include `Principal` - who is using policy statement, and `Resource` - which is always `*` - which means this CMK. When you create CMK from:
 * cli - if you don't provide any custom policy, default is created which gives full access to root user.
@@ -2943,13 +2945,13 @@ When you use kms for every policy (for example read policy for s3) you have to a
 cross-account access - you can allow your KMS to be used in another account by adding resource policy to kms with principal as another account or you can also add cross-account role iam access
 
 ###### Route53
-Route53 - is amazon DNS service that help to transform domain name into IP address. It's called 53, cause 53 - port of DNS.
-You can buy hostname from any provider and register it within Route53, after this Route53 gives you 4 TLD (Top-Level Domain) that you put into your hostname provider, so end user will request your domain, it will got to your provider, and from there to aws. Route53 supports wildcards (subdomains).
+Route53 - amazon DNS service that help to transform domain name into IP address. Reason for a name, cause 53 - port of DNS.
+You can buy hostname from any provider and register it within Route53, after this Route53 gives you 4 TLD (Top-Level Domain) that you put into your hostname provider, so end user will request your domain, request would go to your provider, and from there to aws. Route53 supports wildcards (subdomains).
 Route53 also supports:
 * WRR (Weighted Round Robin) where you can assign weight ans divide your traffic (for example you have new feature and want only 25% of users to use it).
 * LBR (Latency Based Routing), in case you have aws resources in multiple regions, route53 will redirect users to region with lowest latency.
 With Route53 you can also have private DNS name within your VPC, and such a name would be unaccesable outside VPC.
-Heath check - a check that requested resource is available (can be used for any endpoint in the internet). DNS Failover - return result only if health check is fine.
+Heath check - a check that requested resource is available (can be used for any endpoint in the internet).
 For health checks route53 use health checkers that resides in different locations and don't communicate with one another (that's why your instance can be requested several times during specified interval)
 Then route53 check if more than 18% of checkers are success, it considers endpoint healthy, otherwise unhealthy.
 DNS responses use:
@@ -2978,7 +2980,8 @@ You can create route53 health check for dns failover (you can also choose String
 Apex domain - second level domain (example.com). All other like www.example.com, test.example.com - are third level domains
 Alias record - way route53 allows you to bind domain (both apex and any subdomain) to dns record of s3/elb/cloudfront/beanstack/api_gateway/vpc_endpoint (by default you should add IP address, but IP associated with these services can be changed due to scaling up/down)
 Alias is not the same as CNAME record. Internally route53 will substitute alias with appropriate IP address for `A` record. Of course you can take dns name of (let's say elb) and create CNAME record for this dns, and it would work the same way as alias for A record.
-But alias can be assigned to root domain, CNAME can't, only for subdomains. This is the main difference. So alias is better cause it gives IP. Alias automatically changes IP address in case it was changed in aws (suppose you have alias for elb dns, and elb ip has been changed => aws would change dns A record and propagate it to all dns servers)
+But alias can be assigned to root domain, CNAME can't, only for subdomains. This is the main difference. So alias is better cause it gives IP. 
+Alias automatically changes IP address in case it was changed in aws (suppose you have alias for elb dns, and elb ip has been changed => aws would change dns A record and propagate it to all dns servers)
 A record with Alias for elb `dig elb.aumingo.com`
 ```
 elb.aumingo.com.	60	IN	A	52.202.13.14
@@ -2996,7 +2999,7 @@ elb3.aumingo.com.	300	IN	CNAME	elb-alb-1qtyacrlf2pd7-248530498.us-east-1.elb.ama
 elb-alb-1qtyacrlf2pd7-248530498.us-east-1.elb.amazonaws.com. 59	IN A 34.194.253.144
 elb-alb-1qtyacrlf2pd7-248530498.us-east-1.elb.amazonaws.com. 59	IN A 52.202.13.14
 ```
-DNS record types
+DNS record types:
 * A - you should assign IPv4 address (blog.example.com A 3.50.51.52)
 * AAAA - maps subdomain to IPv6
 * CNAME - you can assign another subdomain (blog.example.com CNAME test.my.com). Classic example when you support both apex & www domain, `A` record for example.com pointing to the server IP address and `CNAME` record for www.example.com pointing to example.com (but not other way around, cause you can't add CNAME record to apex domain)
@@ -3013,7 +3016,7 @@ test1.example.com => test2.example.com
 test2.example.com => test3.example.com
 ```
 But sooner or later it should end with some apex domain. And since apex domain can't be CNAME we would get desired IP address. So if you could assign CNAME to apex domain that would meant that CNAME could be endless.
-FQDN (Fully Qualified Domain Name) - complete name of domain ending with dot - indicating the root, like `aws.amazon.com.`.
+FQDN (Fully Qualified Domain Name) - complete name of domain ending with dot - indicating the root, like `aws.amazon.com.`
 Name Server - translates dns into IP address using Zone Files (text file that contains mappings between dns name and IP address). They are distributed all across the world.
 Steps of DNS resolution (when you type dns name in browser):
 * check host file `/etc/hosts`
@@ -3038,7 +3041,7 @@ Simple AD dns resolving (you can set-up on-premise-to-vpc connection using AD + 
 As you see you can use simple AD, unbound, route53 resolver to resolve dns between on-premise & vpc.
 
 ###### RDS
-RDS (Relational Database Service) - aws managed service, that make it easy install/operate relational database in the cloud. It helps easily scale compute resources or storage associated with your db, simplifies replication.
+RDS (Relational Database Service) - managed service, that make it easy install/operate relational database in the cloud. It helps easily scale compute resources or storage associated with your db, simplifies replication.
 if you want to import data you have to:
 * dump data to you local machine
 * copy dump to some ec2/s3 in same vpc
@@ -3050,8 +3053,9 @@ Volume snapshot - take daily during backup window + store transaction logs every
 multi-AZ (failover) for HA:
 * primary - you main db that performs read/write
 * standby - replica db that has most recent updates from primary. You can't use it for reads, the only purpose is failover - when primary fails, your standby becomes primary, so you won't even notice failure. Replication is synchronous.
-You have no control for standby, so you can't promote it to be read replica. Since Aurora stores data across 3 AZ, if master is failed, it would automatically recreated in another AZ, so for aurora you don't need to set up stand-by replica.
-Read replica (replica db only for reading) for horizontal scaling:
+You have no control for standby, so you can't promote it to be read replica. Yet if you reboot rds, you can choose option to restart rds in new AZ.
+Since Aurora stores data across 3 AZ, if master is failed, it would automatically recreated in another AZ, so for aurora you don't need to set up stand-by replica.
+Read replica (only for reading) for horizontal scaling:
 * write to master and read from replica
 * can be cross-AZ and cross-region
 * implemented using db (mysql or other) native asynchronous replication, that's why lag can occur, comparing with multi-AZ replication (synchronous replication)
@@ -3062,39 +3066,35 @@ There are 3 ways to establish read-replica:
 * on-premise read replica - use `mysqldump` to make initial transfer and create VPN connection, so data transfer is secured
 Although [mysql supports replication over ssl](https://www.howtoforge.com/how-to-set-up-mysql-database-replication-with-ssl-encryption-on-centos-5.4), 
 [rds doesn't support this yet](https://serverfault.com/questions/816863/aws-rds-mysql-replication-with-user-with-require-ssl) so make sure if you replicate outside vpc to secure connection.
-Although you can use read replica for HA, it's recommended to use multi-AZ, cause it's synchronous and would guarantee that in case of fail, db in another AZ is most up-to-date (with read replica you can get some lag, and ended up with stale data on promoting it to master).
+Although you can use read replica for HA, it's recommended to use multi-AZ, cause it's synchronous and would guarantee that in case of fail, db in another AZ is most up-to-date (with read replica you can get some lag, and ended up with stale data when promoting it to master).
 Enhanced monitoring - allows you to view all metrics with 1 sec granularity. Get current database `SELECT DATABASE() FROM DUAL;`.
 RDS Proxy - database proxy that helps:
 * pooling & sharing db connections (useful for serverless, when you constantly open and close connections)
 * reduce db failover time for 66%
 * enforce IAM access to db
-When you reboot you can option to restart rds in new AZ
 There are 3 types of groups:
 * Subnet group - a list of VPC subnets (you should have at least 2 subnets in 2 different AZ) where rds would create your db.
 * PG (Parameter Group) - a list of db config values that can be applied to 1 or many rds instances (for example you can increase a number of connections to rds here). You can't modify default PG (that would be created when you create db instance). If you want custom params add them to new pg and associate it with db.
-* OP (Option group) - a list of features that are available for db instance. By default empty op is assigned when you create db, you can't modify it, but you can create new op - add options, and assign it to db.
+* OG (Option group) - a list of features that are available for db instance. By default empty OG is assigned when you create db, you can't modify it, but you can create new OG - add options, and assign it to db.
     There are 2 types of options:
-    * persistent - can't be removed from an op while DB instances are associated with this op
-    * permanent - can never be removed from 
+    * persistent - can't be removed from an OG while DB instances are associated with this OG
+    * permanent - can never be removed from OG
     There are 2 options available for mysql (for other engines other options available):
     * MariaDB Audit Plugin - records db activity like users logging or queries
     * MySQL memcached - enables apps to use InnoDB tables in a manner similar to NoSQL key-value data stores
-You can enable encryption when you create db, but once created you can't enable it. So if you create unencrypted db and want to turn on encryption you have to take snapshot encrypt it and create new encrypted db from it, then remove old db.
+You can set encryption only on creating, once created you can set it to use encryption, also if you created encrypted you can disable it.
+So if you create unencrypted db and want to turn on encryption you have to take snapshot encrypt it and create new encrypted db from it, then remove old db.
 If encryption is enabled you can't disable it after db creation, yet you can create unencrypted db. Same holds true for read replica. For encrypted db only encrypted read replica is possible (there is no way to have encrypted read-replica for unencrypted db or vice versa).
 Not all ec2 types [support encryption](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Overview.Encryption.html#Overview.Encryption.Availability)
-IAM db auth - you can add db user and use iam user to authenticate to your db. You still have your initial username/password and can you them to access db, but you can also use temporary tokens generated by `aws rds generate-db-auth-token` command to get token and to access your db using this token (token would be valid for 15 min).
+IAM db auth - you can add db user and use iam user to authenticate to your db. You still have your initial username/password and can use them to access db, but you can also use temporary tokens 
+generated by `aws rds generate-db-auth-token` command to get token and to access your db using this token (token would be valid for 15 min).
 On-premise to rds data migration:
 * copy dump to s3 and from s3 import into rds (you can also use ec2, but create new ec2 for this purpose in to wise, yet this would work: copy dump to ec2 within same vpc as rds, go to ec2, connect from there to rds, and pump data into rds)
 * use DMS for more complex scenario
-You can create encrypted rds only during creation time. If you created unencrypted db and want to encrypt it you should:
-* create db snapshot
-* copy snapshot
-* encrypt copied snapshot
-* recreate encrypted db from encrypted snapshot
-If you have problems with writes and need more capacity you have 2 options:
+If you have problems with writes and need more capacity you have 3 options:
 * use sqs queue to offload writes, if you need to continue to use your current db
 * switch to dynamoDB (if you don't need relational model)
-Sharding (horizontal partitioning/scaling) - split data into smaller subsets and distribute them across a number of physically separated db servers (shards).
+* use sharding (horizontal partitioning/scaling) - split data into smaller subsets and distribute them across a number of physically separated db servers (shards).
 You can take a look here [mysql sharding example](https://github.com/dgaydukov/cert-spring5/blob/master/files/spring5.md#mysql-sharding) with java/spring.
 Share-nothing model - each shard has same hardware and db engine configuration, but they don't know about each other. So there is no single point of failure, if one shard is down, no other shards affected.
 Disadvantage - because data now separated between shards, you have to re-design your query approach. Because of this sharding is not best solution for OLAP.
@@ -3106,7 +3106,7 @@ If you think that sharding is looks like NoSql you are right, and if you got lim
 Storage autoscaling - when you create db you can enable it. Once enabled it would automatically add more storage capacity when free space would be less than 10%. It would be incremented in chunks of 5GB each, until it reach max auto scale capacity.
 `IS NULL / IS NOT NULL` - use it when you want to check if column null or not null. Comparison operators like `<>` or `!=` won't work when you compare with null, cause null is absence of value.
 In SQL, anything you evaluate/compute with `NULL` results into `UNKNOWN`, that's why if you are using `select * from my_column != null` you will get 0 results, although you have many rows where `my_column` not null.
-Read replica vs elasticache - they both solve same problem but for different purposes:
+Don't confuse (they both solve same problem but for different purposes):
 * read replica - when your data constantly changing
 * elasticache - since it's a cache if data constantly changing you have to constantly clear the cache - which basically remove advantages of cache
 Security group:
@@ -3206,7 +3206,7 @@ mysql -u ssl_user -p'password' -h {RDS_ENDPOINT} -D mydb --ssl-ca=rds-ca-2019-ro
 ```
 IAM auth - you can access db not with username/password but by using iam permission (use `sa/cloudformation/rds-multi-az.yml` to test it out):
 * by default it disabled
-* you should explicitly enable it by setting `EnableIAMDatabaseAuthentication: true` in cf template (you can also enable it from cli)
+* you should explicitly enable it by setting `EnableIAMDatabaseAuthentication: true` in CF template (you can also enable it from cli)
 * it can only work over ssl (it won't work without secure connection)
 * You first create user then role with policy to this user:
 ```
@@ -3231,7 +3231,7 @@ aws rds describe-db-instances --query "DBInstances[*].[DBInstanceIdentifier,DbiR
 Materialized view:
 * simple - just a wrapper on top of query
 * materiazlied - temporary table
-Oracle RAC (Real Application Cluster) - shared-everything db cluster technology from Oracle, allows single db (a set of data files) to be concurrently accessed many db server instances.
+Oracle RAC (Real Application Cluster) - shared-everything db cluster technology from Oracle, allows single db (a set of data files) to be concurrently accessed by many db server instances.
 Currently RAC is not supported by RDS, but you can deploy it in ec2. In this case for backup you have to create a script to create/store ebs snapshots.
 [Aurora can be used as managed service instead of Oracle RAC](https://aws.amazon.com/blogs/database/amazon-aurora-as-an-alternative-to-oracle-rac)
 External replication (you can make both RDS & Aurora to replicate to external):
@@ -3254,37 +3254,37 @@ For rds on vmware you can create only 1 read replica and only in the same region
 You can also backup to s3 & create read replica in aws.
 
 ###### SQS
-Payload vs attributes:
-* payload - body usually json, can be encrypted
-* attributes - key/value pair, always unencrypted.
-So when you decide where to put data keep encryption in mind.
 SQS (Simple Queue Service) - managed service that provide asynchronous decoupling and publisher/subscriber (queue) model. There are 2 types:
 * standard - ordering is not guaranteed, no limit to number of messages (you should implement custom protection against duplicates)
 * FIFO (first in, first out) - ordering is guaranteed, limit - 300 messages per second. There a few concept specific to this queue:
     * you have to provide deduplicationID (used for deduplication of sent messages) & groupID (specifies that a message belongs to a specific message group, group messages always processed one by one) with each message you send
-    * Exactly-once processing - if you send message with same deduplicationID within 5 min deduplication interval (it's fixed, you can't change it), message won't be received by queue. You can either set-up content-based deduplication (use hash of contect to calculate deduplicationID) or send deduplicationID manually
+    * Exactly-once processing - if you send message with same deduplicationID within 5 min deduplication interval (it's fixed, you can't change it), message won't be received by queue. You can either set-up content-based deduplication (use hash of content to calculate deduplicationID) or send deduplicationID manually
     * Receive request attempt ID - used for deduplication of ReceiveMessage calls
     * Sequence number - assigned to each messages by sqs
 But you can also use standard queue (unordered) but place order field into each message, and by this you imitate order.
 It guarantee at-least-once delivery. you can use Amazon SQS Java Messaging Library that implements the JMS 1.1 specification and uses Amazon SQS as the JMS provider.
 DLQ (Dead letter queue) - a special queue that receives messages from other queue after some unsuccessful attempt to process it. Used to isolate messages that can't be processed for later analysis.
 When you create a queue you can specify dlq (it should be the same type, for standard - standard dlq, for fifo - fifo dlq) with max retry. So after your queue consume message 3 times (and you max retry is 3) and not delete it, it would automatically moved to dlq.
-You can get time-in-queue (time how long message has been in queue) by subtracting SentTimestamp attribute from current time. In anonymous access SenderId - IP address of sender (otherwise accountId).
+You can get time-in-queue (time how long message has been in queue) by subtracting `SentTimestamp` attribute from current time. In anonymous access SenderId - IP address of sender (otherwise accountId).
 When you set dlq for sqs queue, it got attribute `RedrivePolicy: {"deadLetterTargetArn":"arn:aws:sqs:us-east-1:ACCOUNT_ID:my_dlq","maxReceiveCount":"3"}`
-`SqsMessageDeletionPolicy.NO_REDRIVE` - would remove message if no redrive policy (dlq) specified. But if it specified messages won't be deleted automatically, you have to manually remove them from code. If message is not deleted several times (max retry), it would be moved to dlq.
+`SqsMessageDeletionPolicy.NO_REDRIVE` - would remove message if no redrive policy (dlq) specified. But if dlq specified, messages won't be deleted automatically, you have to manually remove them from code. If message is not deleted several times (max retry), it would be moved to dlq.
 You can read more about no_redrive policy [here](https://github.com/dgaydukov/cert-spring5/blob/master/files/spring5.md#aws-sqs-and-no_redrive-deletion-policy) with example in java/spring.
+Payload vs attributes:
+* payload - body usually json, can be encrypted
+* attributes - key/value pair, always unencrypted.
+So when you decide where to put data keep encryption in mind.
 If queue is empty:
 * short polling (default) - returns immediately with no results. Only possible way if single thread poll multiple queues, in this case long polling for one empty queue would block other queues, but it generally bad design.
 * long polling - wait till message got into queue, or polling timeout (by default 20 sec) expires (save SQS cost, cause reduce number of empty receives). It's better to always use this type of polling.
 Retention period - how long message stays in queue until removed by sqs. 60 seconds - 14 days, default - 4 days.
 Visibility Timeout (0 sec - 12 hours, default - 30 sec) - once you app consume a message it becomes invisible to others. But until your app explicitly delete message, it won't be deleted.
+If your app would process message longer then visibility timeout, then message again become visible and can be taken by other process.
 For fifo if message in visibility timeout, no other consumer can get second massage with same groupId. So we need to wait until message processed, after any consumer can process other messages of this group. So you got order but no guarantee who is going to process next message (can be any consumer).
 You can get twice same message if:
 * received message is not deleted during `VisibilityTimeout` (time during which you should handle message and delete it from queue), you can [read more](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-visibility-timeout.html#changing-message-visibility-timeout)
 * `DeleteMessage` operation doesn't delete it on all nodes (since sqs is distributed system it may happen that one node was unavailable for short time and didn't get delete message, then it will deliver message again) - very rare
 You can solve double-delivery problem by making processing request idempotent (no matter how many times it called you always return same result). Generally idempotency solve a lot of problem in distributed systems.
 SQS is not replace for message broker like Rabbit/Kafka cause it doesn't support a lot of functionality that message brokers support like routing or message priorities. So it's incorrect to compare sqs to kafka, just like compare DynamoDB to MySQL.
-DLQ (dead-letter queue) - queue with messages that failed to processed after n retries (otherwise some messages would retry forever, but you can specify param, so after 10 retry message goes to this queue, and not tried to retry again).
 Each message has 3 unique attributes:
 * QueueURL - url of sqs queue
 * MessageId - unique id generated by sqs after you send message to queue
@@ -3301,7 +3301,7 @@ Each message has 3 unique attributes:
     ]
 }
 ```
-Although you can use iam to control access to sqs, it's better to use access control. Give access to another account.
+Although you can use iam to control access to sqs, it's better to use sqs resource policy. Give access to another account.
 ```
 {   
    "Version": "2012-10-17",
@@ -3309,20 +3309,20 @@ Although you can use iam to control access to sqs, it's better to use access con
       "Effect": "Allow",           
       "Principal": {
          "AWS": [
-            "111122223333"
+            "111111111111"
          ]
       },
       "Action": [
          "sqs:SendMessage",
          "sqs:ReceiveMessage"
       ], 
-      "Resource": "arn:aws:sqs:us-east-2:444455556666:queue2"  
+      "Resource": "arn:aws:sqs:us-east-2:ACCOUNT_ID:my_queue"  
    }]
 }
 ```
-You can send messages:
+You can send messages with size up to:
 * 256KB - normal sqs message
-* up to 2GB - using java library, [message is stored in s3](https://aws.amazon.com/about-aws/whats-new/2015/10/now-send-payloads-up-to-2gb-with-amazon-sqs)
+* 2GB - using java library, [message is stored in s3](https://aws.amazon.com/about-aws/whats-new/2015/10/now-send-payloads-up-to-2gb-with-amazon-sqs). Under-the-hood it use s3 to store messages, and in sqs stored only link to s3 object
 Metric to use in auto scaling group (each sqs queue sends metrics to CW every 5 min):
 * `ApproximateAgeOfOldestMessage` - age of the oldest message in queue. Useful when you have time bound for each message to handle.
 * `ApproximateNumberOfMessagesVisible` - current queue length. Useful when you want to auto scale based on number of messages in queue
@@ -3335,7 +3335,7 @@ Batching - ability to send/receive batch of up to 10 messages:
 You can have multiple queues running at the same time. For example:
 * high priority queue with on-demand instances
 * low priority queue with spot instances
-There are 2 types of delay (when you send message to queue you can specify Delivery delay of message):
+There are 2 types of delay (when you send message to queue you can specify delivery delay of message):
 * queue delay (up to 15 min) - time before all messages become visible
 * message delay (up to 15 min, not supported by FIFO queue) - using message timer (let you specify an initial invisibility period for a message added to a queue)
 So you can set message delay either for whole queue or for individual messages
@@ -3351,19 +3351,17 @@ AGW - managed api service that makes it easy to publish/manage api at any scale.
 * monitoring (integration with CloudWatch can set up some alarms)
 * all endpoints are HTTPS, you can't create unsecure http
 * send both websocket & http calls
-You can also use AGW with openApi to quickly generate api endpoints and underlying models. 
-Stage - like a tag, allows your api have multiple versions, like dev stage - myapi.com/dev/users.
-Don't use stages for different environments, but instead use different aws accounts for different env.
-Real use case for stages is if you need to support different versions of api for prod at the same time.
+You can also use AGW with openApi to quickly generate api endpoints and underlying models. Stage - like a tag, allows your api have multiple versions, like dev stage - myapi.com/dev/users.
+Don't use stages for different environments, use different CF stacks, use case for stages is if you need to support different versions of api for prod at the same time.
+Stage variable - key-value pairs that you can define for each stage, that you can use it to customize AGW. AGW calls are supported by CloudFront, so your api is highly available.
 You can add documentation to your api and expose it as swagger file. AGW can generate client-side SSL certificate, and you backend can get public key, so it can verify that requests are coming from AGW.
-AGW calls are supported by CloudFront, so your api is highly available.
 CORS (Cross-origin resource sharing) - request made to another domain/subdomain of the same domain/port/protocol. Take a look [here](https://github.com/dgaydukov/cert-spring5/blob/master/files/spring5.md#cors) with java/spring.
 There are 2 types:
 * simple - you should add `Access-Control-Allow-Origin` header in response. Request simple if:
     * it's GET/HEAD/POST, for POST it should include `Origin` header in request
     * content type is `text/plain`/`multipart/form-data`/`application/x-www-form-urlencoded`
     * there is no custom headers
-* non-simple. CORS protocol require browser to send pre-flight OPTIONS request (it must have 3 headers: Origin/Access-Control-Request-Method/Access-Control-Request-Headers) for all non-simple cors requests.
+* non-simple. CORS protocol require browser to send pre-flight `OPTIONS` request (it must have 3 headers: `Origin/Access-Control-Request-Method/Access-Control-Request-Headers`) for all non-simple cors requests.
 To support cors, api should response to this pre-flight request with 3 headers: 
 * `Access-Control-Allow-Methods` - methods which are allow to be executed
 * `Access-Control-Allow-Headers` - indicate which HTTP headers can be used during the actual request
@@ -3376,17 +3374,17 @@ There are 3 types of AGW:
 There are 5 integration types:
 * lambda - 2 modes:
     * proxy - AGW wrap original request with some metadata, but don't modify response
-    * direct integration - AGW modify request/response based on VTL (velocity template language) written by user.
+    * direct integration - AGW modify request/response based on VTL (velocity template language) written by user
 * http - connect to any http(s) endpoints
 * mock - response without backend service (mostly used for cors options request)
 * aws service - connect to over 100 aws services
-* Vpc Link - connect AGW to any resource inside private vpc
+* VPC Link - connect AGW to any resource inside private vpc
 Resource policy - just like iam policy you can specify on the AGW level who can access which api based on:
 * aws account
 * IP range (you can use waf to blacklist by IP, cause to apply these rule you have to deploy agw)
 * vpc or vpc endpoints
 Http vs Rest api:
-* rest api (AWS::ApiGateway)- old version, currently offers more features and full control over API requests and responses. Consists of 3 parts:
+* rest api (AWS::ApiGateway) - old version, currently offers more features and full control over API requests and responses. Consists of 3 parts:
     * integration - lambda, http backend or any aws service - 2 types:
         * custom - if you want to throw errors you should add mapping to integration response and codes (400/500) to method response. Otherwise agw would return 200 even for errors
         * proxy - you should send response codes from lambda
@@ -3429,7 +3427,7 @@ Http vs Rest api:
             Usage plan - set throttling/limits based on api key (so you can have different users with different keys with different usage plans).
             Auth check runs before api key check. You can use both of them or only 1.
         * method request - use it to validate request. You should do validation on this step, even before your api reach your lambda, if you validate on lambda you pay for it (even if validation failed and much of lambda not executed).
-        AWS::ApiGateway::RequestValidator (set what you want to validate requestparam/body or both), Method.RequestParameters(validate headers/querystrings) + Method.RequestModels (validate body)
+        `AWS::ApiGateway::RequestValidator` (set what you want to validate request param/body or both), Method.RequestParameters(validate headers/querystrings) + Method.RequestModels (validate body)
         * integration request - here you can transform request using VTL before sending it to integration.
         pass through behavior - how api gateway handle request for `Content-type` that not defined in `Integration.RequestTemplates`:
         * NEVER - if no match, never proceed request to integration. `curl -H 'Content-type: text/xml' -H 'user-id: 1' --data '{"name":"jack","age":30}' {API_URL}/custom?status=1 -v` => `415 {"message": "Unsupported Media Type"}`.
@@ -3443,8 +3441,7 @@ Http vs Rest api:
         * proxy integration - pass intact request to awsService/lambda/httpBackend without using VTL, so you skip integration request altogether and pass your request to integration as it is
     * response flow - logic after integration responds:
         * integration response - reverse of integration request. Here you take message from integration and modify it.
-        If you are using proxy integration, both integration request/response are not used.
-        If you are using mock integration, here you should define body, response status and headers you want to return.
+        If you are using proxy integration, both integration request/response are not used. If you are using mock integration, here you should define body, response status and headers you want to return.
         You can use VTL, add `IntegrationResponses.ResponseTemplates` to define `Content-type` for which you can write VTL template, that would transform response from integration
         * method response - here you can modify response from integration response. You must set `MethodResponses` with at least 1 `StatusCode`.
         If you set headers in `IntegrationResponses.ResponseParameters`, you have to add headers with any value (usually false - idea is to put something) to `MethodResponses.ResponseParameters`
@@ -3463,7 +3460,7 @@ Below is 2 examples to set up ssl server with client cert validation:
 * [spring boot](https://www.baeldung.com/x-509-authentication-in-spring-security)
 REST API error mapping - you can map exceptions from lambda to your api:
 * first add desired code to method integration (like 422)
-* second add integration response with lambda error regex and select code from method integration
+* second add integration response with lambda error regex and select code from method integration based on exception name
 
 ###### Cognito
 Cognito - managed user service that add user sing-in/sign-up/management email/phone verification/2FA logic. There are 2 pools:
@@ -3474,13 +3471,12 @@ Cognito also support SAML or OpenID Connect, social identity providers (such as 
 * Identity Pool - temporary credentials to access aws services. If your users don't need to access aws resources, you don't need identity pool, user pool would be enough.
 You can use users from User Pool or Federated Pool (Facebook, Google) as users to whom give temporary credentials.
 You pay for MAU (monthly active users) - user who within a month made some identity operation signIn/singUp/tokenRefresh/passwordChange.
-Free tier - 50k MAU per month. You can call `AssumeRole` to get temporary credentials.
-So you can singin to user_pool but you can use user_pool id token to get aws credentials from identity_pool
+Free tier - 50k MAU per month. You can call `AssumeRole` to get temporary credentials. So you can singin to user_pool but you can use user_pool id token to get aws credentials from identity_pool.
 There are 3 types of cognito tokens (with accord to OpenID):
 * id token - jwt token that has personal user info (name, email, phone). So you shouldn't use it outside your backend, cause it includes sensitive info. Usually id token = access token + user's personal details.
 * access token - jwt token that includes user's access rights. You can use it outside your backend to get access to other services. Live of id/access token is limited, usually to 1 hour, and that's why you should use refresh token to prolong it.
 * refresh token - use it to retrieve new ID and access tokens
-Example creating users from cli:
+Example creating users from cli (first run `sa/cloudformation/cognito-iam.yml` as CF stack):
 ```
 # create user
 aws cognito-idp sign-up --client-id={USER_POOL_CLIENT_ID} --username=john.doe@gmail.com --password=P@1ssword --user-attributes Name="email",Value="john.doe@gmail.com" Name="name",Value="John Doe"
@@ -3517,14 +3513,13 @@ Pipeline execution - can be started in 2 ways:
 * manual - you start it manually from console/cli
 * automatic - start it based on some event:
     * CloudWatch Events (CodeCommit/S3/ECR) - default when you create pipeline from console with CodeCommit/S3/ECR as source
-    * periodic checks (CodeCommit/S3/GitHub) - default when you create pipeline from cli with CodeCommit/S3/GitHub as source.
-    Not recommended. If you create from cli, remove periodic checks by setting `PollForSourceChanges=false`. Use either CloudWatch events or webhooks.
+    * periodic checks (CodeCommit/S3/GitHub) - default when you create pipeline from cli with CodeCommit/S3/GitHub as source. Not recommended. If you create from cli, remove periodic checks by setting `PollForSourceChanges=false`. Use either CloudWatch events or webhooks.
     * webhooks (GitHub) - default when you create pipeline from console with github as source
 
 ###### Storage Gateway
 Storage Gateway - hybrid storage that connects on-premises storage with cloud storage. The main idea is that you still use your on-premise storage (so don't lose that investment) and use cloud at the same time.
 The basic idea is that you can manage aws cloud storage the same way (by using same protocols) as you are using your on-premise storage. There are 3 types:
-* File - store & retrieve files in S3 using NFS(Network File System)/SMB(Server Message Block) (these objects can also be directly accessed from S3). You app read/write files using storage gateways as file server, which in turn translate it into S3 read/write requests.
+* File - store & retrieve files in S3 using NFS(Network File System)/SMB(Server Message Block) - these objects can also be directly accessed from S3. You app read/write files using storage gateways as file server, which in turn translate it into S3 read/write requests.
 You should have only storage gateway to be able to modify s3, otherwise if you overwrite file added by gateway, you would get unpredictable behavior when gateway try to read it.
 File storage gateway (just like efs but only for s3, but you mount it the same way as efs) use local disk for 2 purposes: 
     * save uploaded files there and asynchronously upload them to s3
@@ -3544,8 +3539,8 @@ Storage Gateway optimize data transfer to cloud by using:
 * upload/bandwidth management
 * multi-part upload (in case of S3)
 Storage gateway available as:
-* virtual server (software) - you install it in your on-premise
-* hardware appliance - you but it and use in your on-premise
+* virtual server (software) - you install it on your on-premise machines
+* hardware appliance - special PC pre-loaded with aws software, that you order and just plug in
 
 ###### ECS
 ECS (Elastic Container Service) - docker container management service to run apps on a managed cluster of Amazon EC2 instances. It eliminate the need to operate container management infra (like kubernetes). There are 2 ways to create cluster:
@@ -3554,10 +3549,10 @@ ECS (Elastic Container Service) - docker container management service to run app
 Cluster is just a VPC, subnets (by default 2), group of ec2 instances (in case of Fargate it manages instances by itself)
 After you've created cluster you add tasks (task definition) - it just a docker containers that would run on one of your ec2 machines.
 There are several network modes:
-* awsvpc - every task get ENI with private ip address, just like any ec2 instance
+* awsvpc - every task get ENI with private IP, just like any ec2 instance
 * bridge - docker's default network type. All containers connected to bridge can communicate with each other
 * host - container is exposed to host (if you docker has port 80, this port would be accessible from host)
-[ECS Container Agent](https://github.com/aws/amazon-ecs-agent) - special software that included in ecs ami (specially built for ecs) for ec2, that help ec2 to communicate with ecs cluster.
+[ECS Container Agent](https://github.com/aws/amazon-ecs-agent) - special software agent (like `kubelet` for EKS) that included in ecs ami (specially built for ecs) for ec2, that help ec2 to communicate with ecs cluster.
 You can install it into your own ec2, and by doing this to be able to connect your running ec2 to ecs cluster.
 Launch type - type of infra on which your tasks/services hosted:
 * fargate (self-managed) - run containerized applications without the need to provision/manage the backend infra
@@ -3567,15 +3562,16 @@ Auto Scaling:
 * use App Auto Scaling to scale out/in your ecs based on CloudWatch events
 
 ###### EKS
-EKS (Elastic Kubernetes Service, also called ECS (Elastic Container Service) for Kubernetes) - manages service that runs kubernetes cluster (so you don't need to deploy it from scratch).
+EKS (Elastic Kubernetes Service, also called ECS for Kubernetes) - manages service that runs kubernetes cluster (so you don't need to deploy it from scratch):
 * provisions/manages Kubernetes control plane and worker nodes for you
 * runs 3 master nodes in 3 AZ for HA
 * detect & replace unhealthy masters and patch/update kuber version
 eks cluster consists of 2 vpc:
-* eks-managed vpc - where kuber control plane (control plane nodes that run the kuber software, such as `etcd` and the kuber API server) resides
-* customer-managed vpc - vpc created by you, where nodes resides
+* eks-managed vpc (created by eks) - where kuber control plane (control plane nodes that run the kuber software, such as `etcd` and the kuber API server) resides
+* customer-managed vpc (created by you) - where nodes resides
 Docker - is a tool to quickly create and manage containers (like create/stop/start/destroy). But if you have many containers and they all should interact with each other you need some system to manage all of this.
-Kubernetes - orchestration tool, helps to manage a group of containers. On container level kuber can use docker or any other container tool. Cluster - working deployment of kuber, consists of 2 parts:
+This system is called orchestration engine, examples (from most simple to most advanced): docker compose, docker swarm, mesos, kubernetes
+Kubernetes - helps to manage a group of containers. On container level kuber can use docker or any other container tool. Cluster - working deployment of kuber, consists of 2 parts:
 * control plane - components that control cluster + cluster's state & configuration:
     * kube-apiserver - REST API webserver to communicate with control plane. You can use kubectl/kubeadm cli tools to send commands to it or send REST requests directly.
     * kube-scheduler - schedules pod to appropriate compute nodes
@@ -3588,15 +3584,15 @@ Kubernetes - orchestration tool, helps to manage a group of containers. On conta
     * pod - single container or series of tightly coupled containers
     * kubelet - tiny app installed on each compute node to take commands from control plane
     * kube-proxy - handle network communication
-kubectl vs kubelet
+Don't confuse:
 * kubectl - cli tool to talk with control plane (under the hood it generate REST API calls and send them to control plane)
 * kubelet - app running in each compute node, that manages it and take calls from control plane
 EKS Control plane:
-* runs a single tenant kuber control plane for each cluster, control plane infrastructure is not shared across clusters or aws accounts. 
-* runs in aws account (not yours) and provide API endpoints to you, yet compute nodes are running in your vpc.
-* uses vpc network policies to restrict traffic between control plane components to within a single cluster (so clusters can't reach other clusters).
+* run a single tenant kuber control plane for each cluster, control plane infrastructure is not shared across clusters or aws accounts. 
+* run in aws account (not yours) and provide API endpoints to you, yet compute nodes are running in your vpc.
+* use vpc network policies to restrict traffic between control plane components to within a single cluster (so clusters can't reach other clusters).
 * put eni (called Requester-managed network interfaces) into your vpc, so control plane can communicate with compute nodes
-* consists of at least two API server nodes and three etcd nodes that run across three Availability Zones within a Region.
+* consists of at least two API server nodes and three etcd nodes that run across three AZ within a Region.
 There are 4 ways you can create eks cluster:
 * use aws console - good way to learn, not good for prod
 * use CloudFormation template - best case for prod
@@ -3604,9 +3600,9 @@ There are 4 ways you can create eks cluster:
     * create iam role for eks cluster
     * create vpc (with subnets, RT, SG)
     * create cluster `aws eks create-cluster --name=prod --role-arn={EKS_CLUSTER_ROLE} --resources-vpc-config subnetIds=subnet-6782e71e,subnet-e7e761ac,securityGroupIds=sg-6979fe18`
-    * choose how you would provision compute nodes (using nodegroup or fargate). Suppose you choose nodegroup
-    * create role for nodegroup
-    * create nodegroup `aws eks create-nodegroup --cluster-name=prod --node-role={EC2_ROLE} --nodegroup-name=my --subnets subnetIds=subnet-6782e71e,subnet-e7e761ac`
+    * choose how you would provision compute nodes (using nodegroup or fargate). If you choose nodegroup:
+        * create role for nodegroup
+        * create nodegroup `aws eks create-nodegroup --cluster-name=prod --node-role={EC2_ROLE} --nodegroup-name=my --subnets subnetIds=subnet-6782e71e,subnet-e7e761ac`
 * use `eksctl` cli - it hides all the complexity of `eks` command and allows you to create cluster with single command `eksctl create cluster` (it also add a lot of stuff like tagging subnets)
 To auto-scale cluster you can:
 * deploy [Cluster Autoscaler](https://github.com/kubernetes/autoscaler/tree/master/cluster-autoscaler)
@@ -3618,7 +3614,7 @@ Cluster endpoint access:
 * private - cluster api accessible from within vpc and compute nodes access cluster vpc-to-vpc (traffic stays within aws network)
 * public and private - cluster api accessible from public internet but compute nodes access cluster vpc-to-vpc
 CNI (Container Network Interface) - allows the pod to have same IP address as ec2. Consists of 2 parts:
-* L-IPAM daemon - create secondaray network interface and attach it to ec2. When number of pods exceeds number of IP for eni, assign another eni.
+* L-IPAM daemon - create secondary network interface and attach it to ec2. When number of pods exceeds number of IP for eni, assign another eni.
 Different instance type support different number of secondary private IP (m5.large instance type supports three network interfaces and ten private IP addresses for each network interface - totally 30 private IP addresses).
 * [CNI plug-in](https://github.com/aws/amazon-vpc-cni-k8s/blob/master/docs/cni-proposal.md) - assign same IP to pod
 SNAT (source network address translation) - allows pod to communicate with outside world using ec2 public IP.
@@ -3629,7 +3625,7 @@ You should use it when you don't want to manually provision your EC2 instances. 
 For eks fargate every pod is single ec2 with SG.
 
 ###### ElastiCache
-ElastiCache - manages service that runs Memcached/Redis server nodes in cloud. It automates common administrative tasks required to operate a distributed in-memory key-value environment, consists of:
+Managed service that runs Memcached/Redis server nodes in cloud. It automates common administrative tasks required to operate a distributed in-memory key-value environment, consists of:
 * node - smallest building block - network-attached RAM
 * shard (node group) - primary node and zero or more read-replicas
 * cluster (replication group) - group of shards
@@ -3639,22 +3635,25 @@ Memcached:
 * stores objects as blobs, usually you put serialized result of db query
 * new cluster (vertical scaling) starts empty
 Redis:
-* cluster consists of up to 15 shards (each shard is 1 primary and up to 5 replica nodes), so totally 15*6 = 90 nodes. So if you need data replication you should use redis. Replication is supported by only redis.
+* cluster consists of up to 15 shards (each shard is 1 primary and up to 5 replica nodes), so totally 15*6 = 90 nodes. So if you need data replication you should use redis. Replication is supported only by redis.
 * support persisting in-memory data to disk
 * supports blob/list/set/array as data types.
 * can also sort/rank data (used for leaderboard)
 * new cluster can be initialized from snapshot
-Redis security - when you create redis cluster you can enable 2 types of security:
+Redis security - when you create redis cluster you can enable 2 types of security (memcached doesn't support encryption):
 * encryption at-rest - you specify cmk to encrypt data while at rest
 * encryption in-transit - you specify Redis AUTH Token (16-128 chars) that you will use for every request to redis
 Caching strategies:
 * Lazy loading - populate cache on-demand (first hit - request data from db, all subsequent reads - take directly from cache).
-For this to work you should set TTL (time to live) to ensure that you always have last data (so if you ttl - 1 month, data would be stored in cache for 1 month, although they have been updated in underlying db after 2 minutes).
+For this to work you should set TTL (time to live) to ensure that you always have latest data (so if you ttl - 1 month, data would be stored in cache for 1 month, although they have been updated in underlying db after 2 minutes).
 * Write through - whenever update happened you first update cache and then db (or first update dy and then async update of cache)
 Downside if cache is not big enough, when new data arrived, LRU (least recently used) data is evicted from cache
 Cache is implemented as key-value pair. So if you want to store leaderboard in cache you have to store sha256 of query as key and result of query as string value.
 With cluster you distribute load across nodes/shards(in case of redis), it also protection against failure. If you have one node and it failed, your cache is failed, but if you have cluster of 10 nodes, and one node is failed, only 10% of cache is failed.
-Redis cli examples (to get url open cluster and get primary node endpoint, don't use cluster endpoint):
+All redis calls are blocking & sequential, cause redis is [single-threaded](https://redis.io/topics/latency). There are 2 types of cli:
+* standard - you wait for every command
+* asynchronous - use callback modes, due to network issues, requests send after can received response first
+Redis cli (almost all calls are blocking) examples (to get url open cluster and get primary node endpoint, don't use cluster endpoint):
 ```
 # send ping to verify connection
 redis-cli -h {REDIS_URL} ping
@@ -3667,13 +3666,14 @@ SET mykey myvalue EX 5
 KEYS *
 ```
 There are 3 types of redis cluster in cf:
-* AWS::ElastiCache::CacheCluster - create redis cluster with 1 node
-* AWS::ElastiCache::ReplicationGroup - create redis cluster with replication (you can still have only 1 primary node, but usually 1 primary and many replicas)
-* AWS::ElastiCache::GlobalReplicationGroup - global replication cluster (not supported, `An error occurred (ValidationError) when calling the UpdateStack operation: Template format error: Unrecognized resource types: [AWS::ElastiCache::GlobalReplicationGroup]`)
+* `AWS::ElastiCache::CacheCluster` - create redis cluster with 1 node
+* `AWS::ElastiCache::ReplicationGroup` - create redis cluster with replication (you can still have only 1 primary node, but usually 1 primary and many replicas)
+* `AWS::ElastiCache::GlobalReplicationGroup` - global replication cluster (not supported, `An error occurred (ValidationError) when calling the UpdateStack operation: Template format error: Unrecognized resource types: [AWS::ElastiCache::GlobalReplicationGroup]`)
 
 ###### Systems Manager
 SM - tool that helps you to manage your aws resources and automate some tasks on them.
-When you create ec2 with SM agent role (this will give SM permission to interact with ec2), and later manage your ec2 from SM console (without need to connecting to instance with ssh), includes:
+SSM Agent - special software installed on ami (by default installed on most aws provided ami) with which SM can manage your ec2.
+When you create ec2 with SM role (this will allow agent running on ec2 to talk with SM), and later manage your ec2 from SM console (without need to connecting to instance with ssh), includes:
 * document (json/yaml configuration as code) - allows you to set a series of actions to be performed on ec2. You can create your own documents or use provided by default, including collecting inventory/metrics, installing apps and so on.
 * OpsCenter - place where ops team can view/resolve ops issues. It aggregates issues by creating OpsItems. On average OpsCenter reduce mean time resolution by 50%.
 * Explorer - interactive dashboard
@@ -3682,15 +3682,15 @@ When you create ec2 with SM agent role (this will give SM permission to interact
 * Inventory - information about software installed on ec2 collected by SM (including: apps, files, network configs, updates an so on...)
 * Automation - you can automate most common tasks for a group of aws resources
 you can also update/patch your ami:
-* Run Command - easy way to manage your ec2 instances without ssh/bastion. All actions made here are recorded by CloudTrail, so you can easily trace what happened
-* Session Manager - browser cli that allow to interact with ec2 without ssh/bastion/opening inbound ports. 
+* run command - easy way to manage your ec2 instances without ssh/bastion. All actions made here are recorded by CloudTrail, so you can easily trace what happened
+* session manager - browser cli that allow to interact with ec2 without ssh/bastion/opening inbound ports. 
 It improves security, cause it doesn't require you to open inbound ssh port (22) to talk with ec2. You also don't need to operate bastion host.
 For this to work you should assign a role to ec2 with policy `AmazonEC2RoleforSSM`. Internally ssh manager just ssh you as `ssm-user` with root privilege.
 
 ###### Config
-Config - manages service that provides aws resources inventory, config history, change notification. When you turn it on it create config item for each resource.
+Managed service that provides aws resources inventory, config history, change notification. When you turn it on, it creates config item for each resource.
 It provides detailed view of the configuration of AWS resources in your AWS account (how the resources are related and how they were configured in the past so that you can see how the configurations and relationships change over time).
-It integrated with cloudTrail, and record CloudTrailID for any resource change. Config Item - point-in-time record of aws resource, that include metadata, attributes, relationships, current configuration, and related events
+It integrated with cloudTrail, and record `CloudTrailID` for any resource change. Config Item - point-in-time record of aws resource, that include metadata, attributes, relationships, current configuration, and related events
 Config Rule - desired configuration of resource that is evaluated against actual change (and report in case of mismatch). Conformance Pack - collection of config rules. There are 2 types of rules:
 * managed - use one of many aws predefined rules to build your rule on top of it
 * custom - you create rule from scratch and write your lambda that would be invoked by your rule to evaluate resource
@@ -3698,11 +3698,12 @@ CloudTrail - list of all api calls (cli & CF templates in the end are transforme
 
 ###### Aurora
 Aurora - mysql/postgres compatible (most app that works with mysql/postgres would switch with no problem to aurora) aws database solution. 
-It's serverless - cause you can set-up min & max capacity and aurora would scale up/down based on load. You can also set up pause if aurora idle for specified time (like turn off if it's idle for more than 5 min). It's ideal for saving money in dev env, but don't use it in prod, cause wake up can be up to 30 sec.
+Although MariaDB was designed to be compatible with MySql, you can't migrate it to Aurora.
+It's serverless - cause you can set-up min & max capacity and aurora would scale up/down based on load. You can also set up pause if aurora idle for specified time (like turn off if it's idle for more than 5 min). 
+It's ideal for saving money in dev env, but don't use it in prod, cause wake up can be up to 30 sec. You can also manually stop RDS.
 Yet some features of mysql/postgres are not supported in aurora (like MyISAM storage engine). It runs 5x faster than mysql and 3x faster than postgres. And cost 1/10 of similar solution.
 It replicates 6 copies of itself in at least 3 AZ (2 copies in each az) - so it's highly available. Backups and failover are done automatically. Self-healing storage - blocks are constantly checked and restored.
-So although MariaDB was designed to be compatible with MySql, you can't migrate it to Aurora.
-You have 2 options to migrate to aurora
+You have 2 options to migrate to aurora:
 * use `mysqldump/pg_dump`, export data from mysql/postgres, and import it into aurora
 * use RDS DB Snapshot migration
 Min storage is 10GB, incrementing by 10GB up to 64TB.
@@ -3712,9 +3713,9 @@ There are 2 types of replica:
 Parallel Query - ability to distribute computational load across multiple instances.
 You can call lambda from function & stored procedures for MySql Aurora:
 * add iam role to allow db cluster to access lambda
-* configure cluster to allow outbound connections to Lambda. This depends from your network config:
+* configure cluster to allow outbound connections to Lambda. This depends on your network config:
     * public cluster - it can access lambda through the internet - so no additional config required
-    * private cluster - you have to add NAT gateway or lambda vpc endpoint so your cluster in private subnet can access lambda
+    * private cluster - you have to add NAT gateway or lambda vpc endpoint, so your cluster in private subnet can access lambda
 You can also use s3 form MySql Aurora and you have to configure access to s3 same way as for lambda.
 Backtracking - rewind db to specified time (acts like a backup, if you do some destructive operation you can rewind db to previous state):
 * target backtrack window - amount of time you want to be able to backtrack your DB cluster (you can set 24 hours - you can rewind db during whole day)
@@ -3727,19 +3728,18 @@ Aurora serverlsess:
 * please note that both standard & serverless aurora support only MySql/Postgres. MariaDB (fork of MySql) is unsupported, there is separate RDS type for this.
 * cluster volume always encrypted (you can choose encryption key, but you can't disable encryption)
 * use cases: new apps, infrequently used apps, variable/unpredictable workloads, multi-tenant apps
-* it doesn't support: cloning, global database, multi-master cluster, replicas, iam db access, backtracking
 * accessible only from VPC (have no public IP). If you create lambda in same subnet as db you can access db from lambda
 * scaling point - time when aurora can start scaling, if not found within 5 min, value of `ForceApplyCapacityChange` timeout used. In this case if you have running transaction you can get error: `ERROR 1105 (HY000): The last transaction was aborted due to Seamless Scaling. Please retry.`
 * data api - special api to run query, use it outside vpc to access db
+* doesn't support: cloning, global database, multi-master cluster, replicas, iam db access, backtracking
 Aurora global:
 * spans multiple regions (one master region with both read/write and up to 5 replica regions with only read), enable low-latency global reads and disaster recovery
 * cross-region replication is fast, usually less than 1 sec
-* it doesn't support: serverless, backtracking
+* doesn't support: serverless, backtracking
 
 ###### CloudTrail
 CT - service that logs activity of your aws account (who made request, what params were passed, when and so on..). It's useful for compliance, when you need to ensure that only certain rules have ever been applied.
-On average event appear in CT after 15 min after api call was made.
-There are 3 types of logs
+On average event appear in CT after 15 min after api call was made. There are 3 types of logs:
 * management events - api calls to modify aws resources (create ec2/s3 and so on...)
 * data events - api calls to modify actual data (s3 get/put/delete object + lambda calls)
 * insights events - CT use ML (Machine Learning) to determine any anomaly (like spike in some api calls) and notify you.
@@ -4079,10 +4079,10 @@ So of course you can reinvent the wheel, but it's better to use ready solutions 
 ###### Data Pipeline
 DP - ELT tool that simplify data movement/processing in aws, integrates with on-premise and cloud-based storage systems.
 You can transfer data between RDS/S3/EMR/DynamoDB. Pipeline - runs activities (common tasks) on data nodes. Data node - location where pipeline reads data or where it writes data.
-Example of DP (you can schedule time when to run, like once a day):
+Example of Activity (work to be done), you can schedule time when to run, like once a day:
 * export of dynamoDB to s3 & export from s3 to dynamoDB (DP would launch transient EMR cluster on each run to execute export)
 * just run transient EMR cluster
-* rds to s3 export, s3 to rds export, rds to redshift, s3 to redshift (DP would launch ec2 on each run to execute export)
+* rds to s3 export, s3 to rds export, rds to redshift (`RedshiftCopyActivity`), s3 to redshift (DP would launch ec2 on each run to execute export)
 Don't confuse:
 * data pipeline - for automated batch jobs, without human interaction (like run bash script every day at 12)
 * step functions or SWF - when you need human interaction
