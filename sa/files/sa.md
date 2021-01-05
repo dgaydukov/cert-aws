@@ -2397,6 +2397,11 @@ There are 3 ways to use ids/ips:
 * install it on each ec2 running in vpc
 * install it on proxy/NAT and forward all traffic through this proxy/NAT
 * set up security VPC with ec2 with agents installed, and peer this vpc with your vpc, and accept traffic only from security VPC (this is good if you have thousands ec2 in your main vpc, so instead of installing agent on all of them, it's better to use second vpc)
+EC2 BYOIP (Bring your own IP) - although when you create ec2 in public subnet, aws would assign public IP or you can assign elastic IP, you can bring your own IP range to aws:
+* the most specific range you can bring is IPv4 - /24, IPv6 - /48, you can bring each address range at single region at a time, max you can bring 5 ranges for both IPv4/v6 per region
+* you can't share IP range with other accounts using RAM, aws would check IP range history, and if it has poor reputation, aws can reject it
+* first you prove that you won IP range, then add it to aws by `provision-byoip-cidr` and after `advertise-byoip-cidr`. So you first provision and then advertise it
+* [aws byoip](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-byoip.html)
 
 ###### Athena
 Athena is an interactive query service that makes it easy to analyze data in Amazon S3 using standard SQL. It uses presto under the hood. Presto - good solution if you need to connect to multiple data sources.
@@ -3739,7 +3744,7 @@ Aurora global:
 
 ###### CloudTrail
 CT - service that logs activity of your aws account (who made request, what params were passed, when and so on..). It's useful for compliance, when you need to ensure that only certain rules have ever been applied.
-On average event appear in CT after 15 min after api call was made. There are 3 types of logs:
+There are 3 types of logs:
 * management events - api calls to modify aws resources (create ec2/s3 and so on...)
 * data events - api calls to modify actual data (s3 get/put/delete object + lambda calls)
 * insights events - CT use ML (Machine Learning) to determine any anomaly (like spike in some api calls) and notify you.
@@ -3817,27 +3822,27 @@ You get `Multi-Region trail must include global service events.`. So you should 
 
 ###### Certificate Manager
 ACM (Amazon Certificate Manager) - service that allows you to create/deploy public/private SSL/TLS certificates.
-ACM removes the time-consuming manual process of purchasing, uploading, and renewing SSL/TLS certificates.
-There are 2 types of certificate
+ACM removes the time-consuming manual process of purchasing/uploading/renewing SSL/TLS certificates.
+There are 2 types of certificate:
 * public - issued by public CA, trusted by all browser by default. 
-* private - issued by private CA. You can create your own private CA to manage all your private certificates. There are 3 modes to work
+* private - issued by private CA. You can create your own private CA to manage all your private certificates. There are 3 modes to work:
     * you can delegate management to ACM
     * you can manually distribute certificates to other services (like ec2), but ACM still renew your private certificates
     * you have complete control
 ACM Private CA (Certificate Authority) - managed by aws private CA where you can create your private certificates.
-Private CA handles the issuance, validation, and revocation of private certificates within a private network, compose of 2 
+Private CA handles the issuance/validation/revocation of private certificates within a private network, compose of 2:
 * private certificate
 * CRL (Certificate Revocation List) - resources can check this list, that private certificate is valid one
-Difference between public/private CA
-* public - validate certificates in Internet. Can be used only with ELB/CloudFront/BeanStalk/API Gateway.
-* private - validate certificates in private network. Can be used with any aws service (ec2).
+Don't confuse:
+* public CA - validate certificates in Internet. Can be used only with ELB/CloudFront/BeanStalk/API Gateway.
+* private CA - validate certificates in private network. Can be used with any aws service (ec2).
 Public certificate should have valid dns name, but private can have any desired name.
 Self-signed certificate - certificate generated manually without CA (so no way to check if it's revoked or valid).
 You can create certificate with multiple domain names or wildcard domain name (*.example.com).
-Since public certificates proves domain identity, Amazon must verify that you own domain before issuing certificate. You can also use email validation.
-DNS Validation - you modify your CNAME by adding some randomly generated token by ACM, that's how you prove that you own domain.
-If you want to automatically renew your cert you shouldn't remove CNAME token, otherwise in order to renew you would have to run dns validation again.
-Email validation - amazon sends email to the owner of domain that it obtains from whois service.
+Since public certificates proves domain identity, Amazon must verify that you own domain before issuing certificate. Aws use 2 types of validation:
+* dns - you modify your CNAME by adding some randomly generated token by ACM, that's how you prove that you own domain.
+If you want to automatically renew your cert you shouldn't remove CNAME token, otherwise in order to renew you would have to run dns validation again
+* email - amazon sends email to the owner of domain that it obtains from whois service
 For successful issuing of public certificate DNS CAA should be empty or include one of: amazon.com/amazontrust.com/awstrust.com/amazonaws.com
 Public certs are free, but private CA - 400$ per month. You also pay for each private cert.
 ACM internally use KMS (`aws/acm` key that generated first time you request ACM):
@@ -3853,10 +3858,9 @@ IAM certificate:
 * don't confuse server cert with user signing cert `UploadSigningCertificate` - you upload cert for specified user, and this user can make X.509 signed requests
 
 ###### Cloud9
-Cloud9 - cloud based IDE (integrated development environment) where you can run and execute your code. It basically a separate ec2 where you can install programs, write/build code, and work just like with your laptop.
+Cloud based IDE (integrated development environment) where you can run and execute your code. It basically a separate ec2 where you can install programs, write/build code, and work just like with your laptop.
 So it basically IDE + linux. AWS CLI is preconfigured there. It's free but you pay for compute & storage, ec2+ebs. You can also connect cloud9 to on-premises server, in this case it's free.
-When you close cloud9, after 30 min it automatically stops ec2. If you open again it restarts it.
-Cloud9 provides aws lambda create/execute(locally)/deploy functions.
+When you close cloud9, after 30 min it automatically stops ec2. If you open again it restarts it. Cloud9 provides aws lambda create/execute(locally)/deploy functions.
 
 ###### CodeStar
 CodeStar - cloud based development service that allows you to build/deploy your code in aws. You can quickly set up continuous delivery.
@@ -3864,12 +3868,12 @@ You also got integration with jira out-of-the-box. It's free, you pay for underl
 You can start cloud9 directly from CodeStar, and any code you commit in cloud9 automatically goes to CodeStart pipeline and deployed to ec2/beanstalk/s3
 
 ###### Rekognition
-Rekognition - managed service that allows you to add powerful visual analysis to your app
+Rekognition - managed service that allows you to add powerful visual analysis to your app:
 * image - you can search/verify millions of images quickly (detects objects/scene/faces, search & compare faces, recognize texts or celebrities)
 * video - you can extract motion pics from video/streams and analyse them (detect activity or inappropriate content, understand moving of people)
 Rekognition using deep learning algos to determine image/video patterns. It is pre-trained for image and video recognition tasks (so you don't have to be ML expert to use it).
 You can specify conditions (discard results with low confidence score) under which image would go for human moderation.
-Terminology
+Terminology:
 * label - object/concept found in image based on description (for example, human/face/sun and so on..)
 * confidence score - number 0-100 that indicates the probability that prediction is correct
 Use following api to detect:
@@ -3884,12 +3888,12 @@ If object is person, operation doesn't provide same level of facial details as `
 * `DetectText` - detect & convert text into machine-readable from image (can detect up to 50 words per image). Use `MinConfidence` (0.5-1) to set confidence level (text below this level won't be included into result).
 Note that for all detect calls `DetectFaces/CompareFaces/DetectLabels/RecognizeCelebrities` you must pass:
 * base64-encoded image bytes or reference to s3
-* if you call from cli, image bytes is not supported, image must be png/jpeg file
+* if you call from cli, image bytes is not supported, image must be png/jpeg file (cause cli convert your image file into bytes)
 You can create/delete/list collections using `CreateCollection/DeleteCollection/DescribeCollection/ListCollections`. You can store faces in collection.
 For video processing you can use:
 * `StartFaceDetection/StartLabelDetection/StartCelebrityRecognition` - async operations that return jobId (when job is completed you would be notified by SNS). You have to pass video stored in s3.
 * `GetFaceDetection/GetLabelDetection/GetCelebrityDetection` - use jobId from above operation to get results
-Face recognition from video:
+real-time face recognition:
 * upload video to kinesis video using `PutMedia`
 * crete stream in rekognition using `CreateStreamProcessor` and provide 4 params:
     * input - kinesis video stream
@@ -3899,11 +3903,10 @@ Face recognition from video:
 Once created it will start automatically monitor kinesis video stream and consume videos for face recognition. Once you finish processing you can call `StopStreamProcessor` to stop or delete with `DeleteStreamProcessor`.
 
 ###### Global Accelerator
-GA allows you to create 2 static anycast IP addresses and routing users to nearest server to them.
-You can create 2 ec2 from 2 regions and create GA for it. When user try to access it by IP he would be routed to the nearest region.
-You can use [speed tool](https://speedtest.globalaccelerator.aws/) to see how GA would speed up routing. Apart from this GA can also allow traffic control (how much traffic direct to a particular region).
-GA also has healthchecks, so in case one region become unhealed all requests would be routed to nearest healthy location.
-Even if you are using single region, GA can still help you, cause it will route traffic to nearest aws region to user, and from there request would go through aws global network (which is faster than through the internet) to region with your ec2.
+GA allows you to create 2 static anycast IP addresses and routing users to nearest server to them. You can create 2 ec2 from 2 regions and create GA for it. When user try to access it by IP he would be routed to the nearest region.
+You can use [speed tool](https://speedtest.globalaccelerator.aws) to see how GA would speed up routing. Apart from this GA can also allow traffic control (how much traffic direct to a particular region).
+GA also has healthchecks, so in case one region failed, all requests would be routed to nearest healthy location.
+Even if you are using single region, GA can still help you, cause it will route traffic to nearest aws region to user, and from there request would go through aws global network to region with your ec2 (which is faster than through the internet).
 ELB provides load balancing within 1 region, GA provides traffic management across multiple Regions. So if you have all your load in one region ELB would be enough, no need to use GA, but if you have global distribution of services
 across multiple regions, than definitely you have to use GA. In this case you can have several ELB for each region, and they are set as targets for GA.
 CloudFront duplicates your data across different edge locations, but GA only route your request to nearest location to you.
@@ -3920,9 +3923,17 @@ aws CloudFormation create-stack --stack-name=ga --template-body=file://sa/cloudf
 ```
 Now you can access them using GA IP address, by using it you would be routed to the closest region. Now you can also terminate instance in closest region, and by doing this GA IP would be routed to second region.
 Healthchecks are already built into endpoints, so you don't need to explicitly define them.
+GA BYOIP (Bring your own IP):
+* just like for ec2, you can bring your IP address to GA. Yet you can't use IP range from one aws service in another. So if you want to use your range for both ec2 & GA, you have to add 2 different ranges to these 2 services
+* range size & clean history rules are same as for EC2 BYOIP
+* aws recommends bring 2 ranges, so you can assign 2 IP from 2 different ranges. If you just assign 1 IP, GA would assign second from it's pool
+* first provision `globalaccelerator provision-byoip-cidr`, then advertise `globalaccelerator advertise-byoip-cidr`
+Traffic flow management:
+* traffic dial - limit percentage of traffic to particular endpoint group. You limit only traffic already redirected by GA, not total listener traffic (if you set dial for 50, then in case GA sends 100 requests, only 50 would pass, other 50 would go to other endpoints)
+* weight (1-255) - proportion of traffic GA directs to endpoint. GA calculates weight for all endpoints, and based on this direct traffic for all endpoints. By default each endpoint weight is 128, so equal % of traffic directed to each endpoint
 
 ###### FSx
-FSx - file system for windows and lustre. File system is accessible from inside aws. If you want to access it from on-premises you have to use DX/VPN.
+File system for windows and lustre. File system is accessible from inside aws. If you want to access it from on-premises you have to use DX/VPN.
 Lustre - distributed file system for cluster computing (portmanteau word derived from Linux and cluster).
 Generally FSx is cheaper than EFS (cause EFS provides 100% durability with multi-AZ deployment). FSx Lustre on average more faster then EFS
 FSx for Windows - fully managed, highly reliable, and scalable file storage using SMB protocol. File Share - specific folder inside file system.
@@ -3931,17 +3942,16 @@ By default FSx replicates data in single AZ for durability, but you can create M
 Lustre - open source high-performance file system (good for HPC, video processing, financial modeling, genome sequencing), it provides two deployment options:
 * scratch - temporary storage and shorter-term processing of data. Data is not replicated and does not persist if a file server fails
 * persistent - long-term storage (data automatically replicated within single AZ)
-You can access FSx lustre from
-* linux (install the open-source Lustre client on that instance)
-Minimum size for Lustre is 1.2TB
-Lustre has integration with s3 so you can access objects from s3 as files
+You can access FSx lustre from:
+* linux - install the open-source Lustre client on that instance. Minimum size for Lustre is 1.2TB. Lustre has integration with s3 so you can access objects from s3 as files
+* windows - use Map Network Drive functionality to map a drive letter on your compute instance to your FSx
 
 ###### VPN
 On the high level vpn server is just bastion server but for end users. Bastion server is for developers/administrators, you explicitly access it though ssh, and from there you access all internal resources.
-With vpn server everything the same, only difference - connecting is hide before some user-friendly program, like [openvpn client](https://openvpn.net/download-open-vpn), but once connected, end user has all the same access to all internal resources. 
+With vpn server everything the same, only difference - connecting is hidden under some user-friendly program, like [openvpn client](https://openvpn.net/download-open-vpn), but once connected, end user has all the same access to all internal resources. 
 When you access resources in both cases it looks like you are accessing them from inside vpc, and thus you can add SG rule to allow not all public IP addresses (`0.0.0.0/0`) but only CIDR addresses of vpn server allocated CIDR block, or from bastion server internal IP.
 Don't confuse ssl vs IPsec connection type (they differ in a way how they encrypt data-in-transit):
-* SSL VPN (used by aws client vpn) - operates on transport layer and encrypt data sent between 2 processes identified by port number
+* SSL VPN (used by aws client vpn which use 443 port) - operates on transport layer and encrypt data sent between 2 processes identified by port number
 * IPsec VPN (used by Site-to-Site vpn) - operates on network layer and encrypt data sent between hosts identified by IP
 AWS VPN consists of 3 services:
 * AWS Client VPN - connect users to aws vpc or on-premises network
@@ -3952,19 +3962,16 @@ Redundant site-to-site vpn - create 2 customer gateways (with 2 separate devices
     * use separate customer gateway for each site and assign unique BGP ASN (Autonomous System Number) for each
     * each site should have non-overlapping IP range (VGW acts as hub and re-advertise these ranges to other sites, so they communicate with each other)
     * create site-to-site vpn for each site but with same virtual gateway (many CGW to single VGW)
-Both of them using IPSec protocol (encrypt all IP packets of data before sending over the internet and decrypt them back on receiving).
 Note that IPSec operates on network layer of osi, so it provide protection/encryption for data in transit, yet source/destination may not be aware of IPSec, so it doesn't provide end-to-end protection.
 VPG (virtual private gateway) terminate IPSec connection and from there on traffic goes unencrypted.
 Customer Gateway - to configure vpn, you have to create customer gateway in your on-premise, and then you have to notify aws about this. So from aws side it's just a way to notify aws about your customer gateway (you just supply IP of your real customer gateway).
 Client VPN endpoint - allows end users to access aws network over TLS. Target network (vpc subnet) - network that you associate with VPN endpoint, so end users can access it.
 You create vpn endpoint, associate it with target network and distribute vpn config file with end users. End user download openVpn and using your config connect to vpc.
-When you create client vpn you can enable split-tunnel.
-There are 3 ways for authentication for client vpn
+When you create client vpn you can enable split-tunnel. There are 3 ways for authentication for client vpn
 * AWS Directory Service - your users in AD can just use vpn and be automatically authenticated cause they use AD
 * Certificate-based authentication
 * Federated Authentication using SAML-2.0
-You can connect vpc to on-premise using Hardware VPN connection via the virtual private gateway.
-There are 2 types of Site-to-Site VPN connections
+You can connect vpc to on-premise using Hardware VPN connection via the virtual private gateway. There are 2 types of Site-to-Site VPN connections
 * statically routed VPN connection 
 * dynamically-routed VPN connection
 Aws supports Phase 1 and Phase 2 of Diffie-Hellman groups.
@@ -3998,63 +4005,63 @@ After you can ping private ec2 from your local machine
 
 ###### Directory Service
 DS (Directory Service) - hierarchical structure to store/search/manipulate objects, so users can locate resources no matter where they are stored.
-In software engineering, a directory is a map between names and values. It allows the lookup of named values, similar to a dictionary.
-DS - is a standard, AD - implementation of DS by microsoft.
+In software engineering, a directory is a map between names and values. It allows the lookup of named values, similar to a dictionary. DS - is a standard, AD - implementation of DS by microsoft.
 AD (Active Directory) - microsoft DS that additionally provides SSO/LDAP so user can have roles/authentication to access resources, it stores users/computers/printers in company's network and provides access/roles to users.
-AD provides centralize authorization and authentication to network resources, it also stores network resources and users information like computer, printers, users, users groups, organizational units, passwords information.
+AD provides centralize authorization and authentication to network resources, it also stores network resources and users information like computer/printers/users/users groups/organizational units/passwords information.
 LDAP (Lightweight Directory Access Protocol, port 389, don't confuse with RDP - 3389) is an application protocol for querying and modifying items in directory service providers like AD.
-Objects in AD grouped into domains. Tree - collection of one or more domains. Forest - collection of trees that share common global catalog.
-Domain Controller - windows server that runs AD.
-AWS DS - managed service replicated across multiple AZ. There are 3 types of aws ds
+Objects in AD grouped into domains. Tree - collection of one or more domains. Forest - collection of trees that share common global catalog. Domain Controller - windows server that runs AD.
+AWS DS - managed service replicated across multiple AZ. There are 3 types of aws DS:
 * AWS Managed Microsoft AD - microsoft AD completely deployed in cloud and managed there
 Trust Relationship - you can build it between aws microsoft AD and your on-premise microsoft AD, and store your users/passwords in your on-premise AD
-but use aws microsoft AD to access aws services based on users from on-premises AD. 
-So you can use it as either standalone AD or as trust relationship to on-premise AD.
-* deployed in 2 AZ
-* connected to VPC
-* backups automatically taken once per day
-* EBS by default encrypted
-* failed domain controllers automatically replaced in the same AZ using the same IP address
-* simple AD - Linux-Samba AD deployed & managed in the cloud
-you can singIn to aws management console with simple AD account
-it doesn't support trust relationship, schema extension, multi-factor auth.
+but use aws microsoft AD to access aws services based on users from on-premises AD. So you can use it as either standalone AD or as trust relationship to on-premise AD.
+    * deployed in 2 AZ
+    * connected to VPC
+    * backups automatically taken once per day
+    * EBS by default encrypted
+    * failed domain controllers automatically replaced in the same AZ using the same IP address
+* simple AD - Linux-Samba AD deployed & managed in the cloud. you can singIn to aws management console with simple AD account. it doesn't support trust relationship, schema extension, multi-factor auth.
 * AD Connector - connector to redirect all request to your on-premises AD. So it basically directory gateway that forward requests to on-premise AD.
 
 ###### Wavelength
 Wavelength combines 5G networks with aws compute/storage services. You should use it when you want your aws services to be accessed from mobile devices with low latency.
 Wavelength Zone - aws infra (compute/storage) deployed directly to telecom provider's datacenter so traffic reach aws infra without leaving provider network.
 Carrier gateway - provides connection between subnet in Wavelength zone and telecom carrier (provider). So it provides NAT service from subnet IP range to provider's IP range.
-Local Zone - aws solution where aws services are located locally near your end-users providing low latency.
-Outpost - aws rack with compute/memory devices that you install on-premises and run it through aws management console.
+Local Zone - aws solution where aws services are located locally near your end-users providing low latency. Outpost - aws rack with compute/memory devices that you install on-premises and run it through aws management console.
 
 ###### SSO
 SSO (Single Sing On) - aws service that allows central access to multiple aws accounts. You can use it as identity store or as connector to your existing identity stores (like microsoft AD).
-To work with sso you should create aws organization (sso won't work without organization created). With sso you can access:
+To work with sso you should create aws organization (sso won't work without organization created). Sso create a directory where you can store/manage your users (you can also connect sso directory with your AD). With sso you can access:
 * multiple aws accounts (using aws organizations)
 * SAML-enabled cloud applications (Salesforce/Office365)
 * custom-built apps
+So if you have org with multiple accounts and you want to give your users access:
+* create users in one account and add cross-account roles with suitable permissions in another
+* create sso and manage users there:
+    * add users directly to sso directory (you don't create iam users)
+    * create permission sets
+    * assign user/group to account & permission set
+    * user can login to aws console
 Cognito is not supported IdP for sso. You can enable 2FA for SSO users:
 * use mobile app with TOTP (time-based one time passcode)
 * send TOTP to email address - don't use this option if users use sso to access their email - you got chicken & egg problem. To access email they first need to access sso for which they should provide code that was sent to email
 2FA auth methods:
 * disabled - 2FA is disabled for all users
 * always-on - 2FA always enabled for all users
-* context-aware - default mode, sso analyze sign-in context (browser, location, and devices) to determine if previously trusted context is used. If yes not 2fa code required, otherwise user must use new 2fa code.
-sso user permission are set by permission set (kind of managed policy for sso), so based on this decided which action user is allowed to do in aws. 
-Just like with iam user your sso user can access both aws management console and aws cli.
+* context-aware - default mode, sso analyze sign-in context browser/location/device, to determine if previously trusted context is used. If yes not 2fa code required, otherwise user must use new 2fa code.
+sso user permission are set by permission set (kind of managed policy for sso), so based on this decided which action user is allowed to do in aws. Just like with iam user your sso user can access both aws management console and aws cli.
 If you need access to third-party apps you can add applications to your sso under `application` menu. Just configure app and your user would be able to sign in into it.
-Permission set - level of access that users/groups has to aws account, stored in sso and provisioned as IAM roles. User can have multiple sets.
-You can configure 2 permission sets:
-* Session Duration - time for which user can be logged in for aws, 1(default) - 12hours. After specified time user automatically logged out
+Permission set - level of access that users/groups has to aws account, stored in sso and provisioned as IAM roles with trust policies to assume them by users. User can have multiple sets.
+You can customize permission set props:
+* session duration - time for which user can be logged in for aws, 1(default) - 12hours. After specified time user automatically logged out
+* relay state - choose where to redirect use once he logged-in to aws console
 
 ###### OpsWorks
-OpsWorks - config management service that provides managed instances of Chef/Puppet which help automate server configuration/deployment/management. There are 3 solutions:
+Config management service that provides managed instances of Chef/Puppet which help automate server configuration/deployment/management. There are 3 solutions:
 * OpsWorks Stacks - manages apps and servers in aws and on-premises, you model your app as stack containing different layers (elb, rds, ec2)
 You app would usually have 1 stack and many layers. Also if your app use java & python, it can be better to divide it into 2 layers
 * OpsWorks for Chef Automate - fully managed Chef server and automation tools for ci/cd. You can migrate to it from Stacks, but you would need to rewrite some recipes, but most recipes would work without any change
 * OpsWorks for Puppet Enterprise - managed Puppet Enterprise server and automation tools for ci/cd (including orchestration/provisioning/deploying services in ec2)
-You run Chef recipes using Chef Solo to automate package installation/deployment/management of your stack.
-So it helps you provision/manage your app in aws using Chef solo installed in one of ec2. 
+You run Chef recipes using Chef Solo to automate package installation/deployment/management of your stack. So it helps you provision/manage your app in aws using Chef solo installed in one of ec2. 
 Difference with other platform:
 * stacks - config management platform (using Chef to automate deployment/management, has less service coverage, just the most basic like vpc/iam/ec2/elb/cloudWatch). Best practice to have separate stack for each env (dev/prod).
 * beanstalk - app management platform (you just upload code and beanstalk configure everything else use it's own CF templates)
@@ -4069,8 +4076,7 @@ You can use cf template to create stack:
 Simple Workflow Service - coordinate work (tasks) across distributed apps. With SWF you don't need to use messaging system, cause tasks works as messages.
 SWF offers rich SDK for quick development. To coordinate tasks, you write a program that gets the latest state of each task from Amazon SWF and uses it to initiate subsequent tasks.
 Task - any invocation within app (code execution, web-server call, human action), they processed by workers, that take tasks, execute it and return result back.
-Decider i-s a program that controls the coordination of tasks (ordering/concurrency/scheduling).
-You can build your own coordination system, but you should take care that
+Decider is a program that controls the coordination of tasks (ordering/concurrency/scheduling). You can build your own coordination system, but you should take care that:
 * tasks may fail, timeout, require restarts
 * tracking and visualizing tasks can be challenging
 * you must ensure that some tasks assigned only once, and tracked all the way down
@@ -4088,15 +4094,13 @@ Don't confuse:
 * step functions or SWF - when you need human interaction
 
 ###### ElasticSearch & CloudSearch
-ES - open source search service, it's usually a part of ELK stack
+ES - open source search service, it's usually a part of ELK stack. You store data on ebs that attached to ES nodes.
 CS - search service like ElasticSearch, but aws proprietary development. With cs you can search txt/json/pdf/html/cvs/xls documents (so you can use it to search for scanned pdf documents too).
-You should store your data in s3 and then use CS to search this textual data.
-ES has 2 types of nodes
+You should store your data in s3 and then use CS to search this textual data. CS can use s3/DynamoDB, ES - only ebs.
+ES has 2 types of nodes:
 * data nodes - nodes that upload data to ebs and search data
 * master nodes - increase cluster stability by performing cluster management tasks. For prod you should use 3 master nodes.
-CS vs ES
-* CS can use s3/DynamoDB, ES - only ebs
-ELK stack consists of 3 parts
+ELK stack consists of 3 parts:
 * ElasticSearch - log searching
 * LogStash - log collection from ec2 to ElasticSearch cluster
 * Kibana - data visualization tool (visualize data from ElasticSearch)
@@ -4104,21 +4108,20 @@ Fluentd vs LogStash:
 * has internal in-memory system, so no need for additional tools like redis / internal queue limited to 20 events, so it needs redis to work normally
 * uses standard built-in parsers (JSON, regex, csv) / use external plugins to parse log
 * Logs are directly shipped from STDOUT without requiring an extra log file / need extra plugin to extract logs from docker
-Above comparison shows that for kuber it's better to use Fluentd, due to its built-in Docker logging driver and parser
+* for kuber it's better to use Fluentd, due to its built-in Docker logging driver and parser
 
 ###### SageMaker
-It's managed service, running JN, that provides ability to build, train, and deploy ML models quickly.
+It's managed service, running JN, that provides ability to build, train, and deploy ML models quickly. SageMaker has 15 built-in ML algorithms, but you can also use your own.
 JN (Jupyter Notebook) - interactive computing environment, single document where you can run code, display the output, and also add explanations, formulas, charts.
-SageMaker has 15 built-in ML algorithms, but you can also use your own.
 
 ###### Lake Formation
-DL (Data Lake) - scalable central repository of large quantities and varieties of data, both structured and unstructured. There are a few steps
+DL (Data Lake) - scalable central repository of large quantities and varieties of data, both structured and unstructured. There are 2 steps:
 * ingesting and cataloging data from a variety of sources
 * data is enriched, combined, and cleaned before analysis
 You can use dms to convert db into s3 and replace read replica with data lake. But if you have many updates you should use Redshift/Hive
 LF (Lake Formation) - integrated data lake service where you ingest/clean/catalog/transform/secure your data and make it available for analysis and ML.
 LF provides you single console to ingest you data and then use other aws services like ML/EMR/RedShift to transform and query your data.
-FindMatches ML Transform - solves 2 problems
+FindMatches ML Transform - solves 2 problems:
 * Data Deduplication - identify conceptually the same data using fuzzy logic (it's easy remove duplicates when you have some key like productSKU, but if not you should employ some logic to do this)
 * Record Linkage - join 2 databases using fuzzy join (again it's easy to join by some key, but if you don't have such a key you should employ some logic to do this)
 LF discover all available sources s3/RDS/on-premise db/CloudTrail, ingest it and transform into s3 in data formats for optimized performance and cost.
@@ -4131,13 +4134,10 @@ Hadoop Data Formats:
 ###### Application Discovery Service
 ADS collects and presents data about running apps and help understand the configuration, usage, and behavior of them for migration purposes. 
 With data collected by this service you can perform a TCO (Total Cost of Ownership) and calculate is it reasonable to migrate to cloud.
-There are 2 types of operation mode
-* agent-based - install the Application Discovery Agent on servers and virtual machines (VMs) to collect data
-Agent captures system configuration/performance/running processes/details of the network connections between systems
-Agent uses HTTPS/TLS to transmit data to the ADS
-Agent can be operated in an offline test mode that writes data to a local file so customers can review collected data before enabling online mode
-* agent-less - VMware customers collect VM configuration and performance profiles without deploying the AWS Application Discovery Agent on each host
-You need to install AgentLess Connector as OVA (Open Virtual Appliance) package on VMware vCenter.
+There are 2 types of operation mode:
+* agent-based - install the Application Discovery Agent on servers and virtual machines (VMs) to collect data. Agent captures system configuration/performance/running processes/details of the network connections between systems. 
+Agent uses HTTPS/TLS to transmit data to the ADS. Agent can be operated in an offline test mode that writes data to a local file so customers can review collected data before enabling online mode.
+* agent-less - VMware customers collect VM configuration and performance profiles without deploying agent on each host. You need to install AgentLess Connector as OVA (Open Virtual Appliance) package on VMware vCenter.
 
 ###### Artifact
 Artifact - portal that provides customers with ability to download AWS security and compliance documents, such as AWS ISO certifications, Payment Card Industry (PCI), and System and Organization Control (SOC) reports.
@@ -4149,16 +4149,13 @@ Connector - pre-configured FreeBSD virtual machine that you install in your on-p
 SMS schedule/coordinate/track incremental replication of many on-premise instances, so helping you to make large-scale server migrations.
 
 ###### Resource Access Manager
-RAM - helps securely share your resources across AWS accounts or within your Organization. Shared resources can't be re-shared.
-To share resources, you create a Resource Share, give it a name, add one or more of your resources to it, and grant access to other AWS accounts.
-Account iam policy & scp applied to shared resource same way they are applied to provisioned resource in that account.
-There are 2 types of sharing:
+RAM - helps securely share your resources across AWS accounts or within your Organization. Shared resources can't be re-shared. To share resources, you create a Resource Share, give it a name, add one or more of your resources to it, and grant access to other AWS accounts.
+Account iam policy & scp applied to shared resource same way they are applied to provisioned resource in that account. There are 2 types of sharing:
 * sharing with organization - share resource with whole organization or with OU. For this to work master account should enable resource sharing within organization. If it's not done you can't share resources with organization, but you can still use individual sharing.
 * individual sharing - share resource with individual account
 
 ###### DataSync
-DataSync - online data transfer service that simplifies/automates/accelerates copying large amounts of data to and from s3/efs/FSx over the internet/DX.
-How it works:
+DataSync - online data transfer service that simplifies/automates/accelerates copying large amounts of data to and from s3/efs/FSx over the internet/DX. How it works:
 * uses a purpose-built network protocol and scale-out architecture to accelerate transfer to and from AWS.
 * automatically scales and handles moving files and objects, scheduling data transfers, monitoring the progress of transfers, encryption, verification of data transfers, and notifying customers of any issues
 If you want to migrate on-premise data to aws you should:
