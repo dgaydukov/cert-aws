@@ -2758,8 +2758,7 @@ Although most popular platform are supported, if you want to use new platform yo
 Database Migration Service - used for easy migration between different db (like from MySql to DynamoDB), and also for data replication. Use it to migrate any supported db into s3 using `csv/parquet` format.
 There are 2 types of conversion:
 * engine conversion - homogeneous, when source and target - same db (for example both are mysql)
-* SCT (Schema Conversion Tool) - heterogeneous, for converting between existing schemas. It's a separate software that you install in on-premise or ec2 and run.
-So you download it and verify checksum, install jdbc drives for 2 databases
+* SCT (Schema Conversion Tool) - heterogeneous, for converting between existing schemas. It's a separate software that you install in on-premise or ec2 and run. So you download it and verify checksum, install jdbc drives for 2 databases. 
 To run migration you need:
 * create replication instance - instance that would run migration (download from source, transform, upload to destination). Use multi-AZ deployment, in this case if during middle of migration your replication instance failed for some reason, migration would continue with failover instance. 
 Otherwise there is a risk that migration would be half-completed. You should put replication instance into the same vpc as your source or target, but you can use different vpc and connect them with vpc peering.
@@ -3264,7 +3263,11 @@ SQS (Simple Queue Service) - managed service that provide asynchronous decouplin
 * FIFO (first in, first out) - ordering is guaranteed, limit - 300 messages per second. There a few concept specific to this queue:
     * you have to provide deduplicationID (used for deduplication of sent messages) & groupID (specifies that a message belongs to a specific message group, group messages always processed one by one) with each message you send
     * Exactly-once processing - if you send message with same deduplicationID within 5 min deduplication interval (it's fixed, you can't change it), message won't be received by queue. You can either set-up content-based deduplication (use hash of content to calculate deduplicationID) or send deduplicationID manually
-    * Receive request attempt ID - used for deduplication of ReceiveMessage calls
+    * ReceiveRequestAttemptId - used for deduplication of `ReceiveMessage` calls. If you don't provide it, sqs generate unique one. If you call `ReceiveMessage` and network issue happened, message won't be visible during visibility timeout.
+    Yet if you make another call with same `ReceiveRequestAttemptId` you can get same set of messages. Valid only within 5 min of call. So if you have big visibility timeout, and use spot instances:
+        * spot instances may terminate before finish job
+        * if spot terminate, your message won't be visible until visibility timeout ends
+        * you can use CloudWatch to monitor calls, and if you get failed `ReceiveMessage` or detect terminating spot instance, you can extract `ReceiveRequestAttemptId`, and call `ReceiveMessage` with same attemptId from another machine
     * Sequence number - assigned to each messages by sqs
 But you can also use standard queue (unordered) but place order field into each message, and by this you imitate order.
 It guarantee at-least-once delivery. you can use Amazon SQS Java Messaging Library that implements the JMS 1.1 specification and uses Amazon SQS as the JMS provider.
@@ -3866,6 +3869,10 @@ When you close cloud9, after 30 min it automatically stops ec2. If you open agai
 CodeStar - cloud based development service that allows you to build/deploy your code in aws. You can quickly set up continuous delivery.
 You also got integration with jira out-of-the-box. It's free, you pay for underlying resources (ec2, lambda, s3). You can use project dashboard to manage releases and see most recent activity. 
 You can start cloud9 directly from CodeStar, and any code you commit in cloud9 automatically goes to CodeStart pipeline and deployed to ec2/beanstalk/s3
+Don't confuse:
+* CodePipeline - running your own CI/CD pipeline with CodeBuild/CodeDeploy/CodeCommit
+* CodeStar - provisions all the necessary services required for a full development pipeline like CodePipeline/CodeBuild/CodeDeploy/CodeCommit
+Although you can create CF template with all ci/cd tools, it's better to use CodeStar for this purpose
 
 ###### Rekognition
 Rekognition - managed service that allows you to add powerful visual analysis to your app:
@@ -4027,6 +4034,7 @@ Wavelength combines 5G networks with aws compute/storage services. You should us
 Wavelength Zone - aws infra (compute/storage) deployed directly to telecom provider's datacenter so traffic reach aws infra without leaving provider network.
 Carrier gateway - provides connection between subnet in Wavelength zone and telecom carrier (provider). So it provides NAT service from subnet IP range to provider's IP range.
 Local Zone - aws solution where aws services are located locally near your end-users providing low latency. Outpost - aws rack with compute/memory devices that you install on-premises and run it through aws management console.
+Local gateway - logical router that allows communication between outpost and on-premise network.
 
 ###### SSO
 SSO (Single Sing On) - aws service that allows central access to multiple aws accounts. You can use it as identity store or as connector to your existing identity stores (like microsoft AD).
@@ -4163,6 +4171,7 @@ If you want to migrate on-premise data to aws you should:
 * schedule subsequent incremental transfers of changing data until the final cut-over from on-premises to AWS
 During migration DataSync:
 * includes encryption and integrity validation to help make sure your data arrives securely, intact, and ready to use
+You can turn off integrity check for initial transfer if data in source are constantly changing - this would expedite initial sync, and then turn it on after finish initial transfer.
 * can schedule your migration to run during off-hours, limit network bandwidth to offload network
 * can preserve metadata between storage systems that have similar metadata structures
 * can use filters to include/exclude specific set of files
@@ -4172,17 +4181,20 @@ During migration DataSync:
 * you can monitor transfer progress in CloudWatch (how many files and total volume)
 * ensure file transfer even if some interruption (like network problem). In this case DataSync will resume file transfer and complete it after failed attempt
 * use DX + vpc endpoint so data transfer happens inside vpc and doesn't go outside aws network
-To transfer data you should do 3 things
+To transfer data you should do 3 things:
 * Deploy a DataSync agent in on-premise VM. Agent can be installed on ec2 by using AMI.
 * Create a data transfer task
 * start transfer
 When you transfer data from s3 to some destination, DataSync first retrieve all files, so for Standard-IA/One-Zone-IA retrieval incur additional fees.
-When to use it:
+Don't confuse:
+* Data Pipeline (analytics, emr cluster is running to perform transfer) - transfer data between s3/dynamoDB/RDS/RedShift
+* DMS (db migration, ec2 is running to perform migration) - transfer one type of db (either cloud or on-premise) into another
+* DataSync (data transfer, only agent on your on-premise machine running to perform transfer) - transfer on-premise files into cloud
+Don't confuse:
 * storage gateway: use datasync to quickly migrate data to s3 and storage gateway to retain access to s3 data from on-premise
 * snowball: key difference from snow family is that datasync - online transfer, white snowball - for offline
 * S3 TA: if your app already integrated with s3 it's better to use s3 TA, otherwise (or if you have other than s3 destination) use datasync
 * Transfer Family: if you have FTP/SFTP it's better to use TF, otherwise use datasync
-You can turn off integrity check for initial transfer if data in source are constantly changing - this would expedite initial sync, and then turn it on after finish initial transfer.
 
 ###### Transfer Family
 TF - 3 services for transfer from on-premise into s3:
@@ -4192,15 +4204,14 @@ Control channel is open until terminated or inactivity timeout, the data channel
 * SFTP (SSH FTP) - network protocol for secure transfer of data over the internet, required single channel for commands and data. It's newer than FTPS so it's better to use it for new projects.
 If you want any of these protocols and want to move data to aws you have to host and manage your own file transfer service, so TF solve this problem by providing managed file transfer service.
 After creating TF you get:
-* always-on server endpoint enabled for FTP/SFTP/FTPS. Endpoint can be accessible from within vpc or from public internet.
-FTP endpoint will only be available inside vpc cause it's not secure. If you need internet facing endpoint choose FTPS/SFTP.
+* always-on server endpoint enabled for FTP/SFTP/FTPS. Endpoint can be accessible from within vpc or from public internet. FTP endpoint will only be available inside vpc cause it's not secure. If you need internet facing endpoint choose FTPS/SFTP.
 You can also create single endpoint that supports multiple protocols (yet if one of the supported protocol FTP - endpoint would be accessible only within vpc).
 * set up users by integrating with microsoft AD, LDAP, any custom identity provider
 * assign IAM role to provide access to s3 bucket
 
 ###### SNS
 Simple Notification Service - allows you to send notification to sqs/email/http/sms/lambda/mobilePush. It uses pub-sub model, so notification is pushed to consumer, no need for polling.
-Message Filtering - allows to subscriber create a filter and receive not all messages from sns, but only subset that conforms to filter.
+Message Filtering - allows subscriber to create a filter and receive not all messages from sns, but only subset that conforms to filter.
 There are 2 types of emails:
 * json-email - in case emails are processing by some api, then whole email body would be json
 * email - in case emails are processing by end users, who view them in their mail client (with html, links and so on)
@@ -4211,20 +4222,18 @@ Subscription registration - topic must confirm subscription before starting to g
 * sqs - sns sends challenge message containing a token, you should call `/ConfirmSubscription` api to confirm you have access to sqs queue
 SNS is durable storage, it stores message across several AZ before confirming message receipt.
 Destination retry - if http destination unavailable you can configure retry numbers. For lambda/sqs retry is forever, you can be sure that message would be delivered there.
-Just like sqs, sns may occasionally deliver message trice due to distributed nature, so try to design your subscribers to be idempotent.
+Just like sqs, sns may occasionally deliver message twice due to distributed nature, so try to design your subscribers to be idempotent.
 If subscriber unavailable for specified retry number (for example http method was removed from your api), message would be discarded.
 There are 2 types of sms:
 * transactional - sms would be delivered over routes with the highest delivery reliability (otp or pin code)
 * promotional - sent over routes that have a reasonable delivery reliability, but cheaper than transactional
-Multiple size of sms is 140 chars, if size exceeds this, sns split message into several messages.
-Mobile push notification can be sent to mobile devices where your app is installed and user allowed push notification.
+Size of sms is 140 chars, if size exceeds this, sns split message into several messages. Mobile push notification can be sent to mobile devices where your app is installed and user allowed push notification.
 Direct addressing - you can push notification to single subscriber instead of pushing to all subscribers.
 SNS vs SQS:
-* sns - push based, consumer don't need to poll data, data would be pushed to them
-You can use fanout - push single messages into multiple subscribers (push 1 message to 5 sqs queues).
-To implement fanout with pure sqs you would need to write complex sync logic (so polling queue should check if all other queue read this message, and only in this case remove message from fanout queue using dynamoDB - as you see a lot of work).
+* sns - push based, consumer don't need to poll data, data would be pushed to them. You can use fanout - push single messages into multiple subscribers (push 1 message to 5 sqs queues).
+To implement fanout with pure sqs you would need to write complex sync logic (app that polls queue should check if all other queue read this message, and only in this case remove message from fanout queue using dynamoDB - as you see a lot of work).
 * sqs - poll based, once message in queue, consumer need to poll it, handle and remove from queue
-SNS vs SES for email sending - although both can be used to send emails, there are some differences
+Don't confuse:
 * sns - for sending emails for developers in case some failures
     * body limit - 8KB, so you can't send attachments
     * to receive emails user must be subscribed to email topic
@@ -4239,51 +4248,48 @@ AppSync- allows developers to manage/synchronize mobile app data across devices,
 It supports Android/iOS/JavaScript. You can use open source clients to connect to AppSync GraphQL endpoint to fetch/save data. You can use dynamoDB/ElasticSearch/Lambda as data sources for AppSync.
 
 ###### Service Catalog
-SC helps IT administrators & devops create/manage aws resources to end users. So you can control which users have access to which products.
+SC helps IT administrators & devops create/manage aws resources to end users. So you can control which users have access to which products. 
 So end users only need IAM role to access SC itself, and from there they can create aws resources that are allowed in SC for them.
 You can manage all aws resources manually and create access policy to each user for each resources. But can create SC with a set of aws resources and add access to it to user. 
-And this user will get access to all resources inside SC. You create portfolio add products and gran users permissions to chosen portfolio.
-End users have simple portal where they can discover allowed services (products) and launch them.
-Portfolio - collection of products. Product - cloudFormation template with a list of aws resources. Users then can launch any product in portfolio.
+And this user will get access to all resources inside SC. You create portfolio add products and grant users permissions to chosen portfolio.
+End users have simple portal where they can discover allowed services (products) and launch them. Product has versioning, so end users can choose new version or update their stack to new version.
+Portfolio - collection of products. Product - cloudFormation template with a list of aws resources. Users then can launch any product in portfolio. 
 You can share portfolio with other aws accounts. By using cloudFormation params you can customize user experience (for example end users can choose what type of ec2 instance to run).
-Product has versioning, so end users can choose new version or update their stack to new version.
 
 ###### Inspector 
-It's automated security assessment service that test the network accessibility of your ec2 and apps running on them.
-Plz note that it designed to ec2 only, so you can't use it to perform security assessment of API gateway, lambda and so on.
+It's automated security assessment service that test the network accessibility of your ec2 and apps running on them. Plz note that it designed to ec2 only, so you can't use it to perform security assessment of API gateway, lambda and so on.
 You install agent on your OS, and it collects data and send it to inspector for analyzing. Assessment template - configuration based on which inspector validates your system.
 
 ###### Neptune
-It's fully-manages graph database (not relational) service optimized for storing billions of relationships and querying the graph with milliseconds latency. 
-It's ACID compliant with immediate consistency. It's uses operational technology (lifecycle management, encryption-at-rest with KMS) shared with RDS.
-It replicates all data 6 times across 3 AZ (neptune divide your storage on 10GB chunk and replicate each chunk 6 times).
-Automated backups enabled by default. You can take manual snapshot any time. You can restore snapshot only into new database.
-You can also share snapshot with other aws accounts. It runs inside vpc so you can use NACL/SG to secure neptune instance.
-It's best suited for: recommendation engines, fraud detection, knowledge graphs. 
-It support 2 types of graph (buy you can use both types of query language at the same time):
+Fully-manages graph database (not relational) service optimized for storing billions of relationships and querying the graph with milliseconds latency:
+* ACID compliant with immediate consistency
+* uses operational technology (lifecycle management, encryption-at-rest with KMS) shared with RDS
+* replicates all data 6 times across 3 AZ (neptune divide your storage on 10GB chunk and replicate each chunk 6 times).
+* runs inside vpc so you can use NACL/SG to secure neptune instance
+Automated backups enabled by default. You can take manual snapshot any time. You can restore snapshot only into new database. You can also share snapshot with other aws accounts.
+It's best suited for: recommendation engines, fraud detection, knowledge graphs. Supports 2 types of graph (you can use both types of query language at the same time):
 * Property Graph - which use Apache TinkerPop Gremlin graph traversal language - neptune provides Gremlin Websocket Server
 * RDF (Resource Description Framework) - which use SPARQL (declarative query language, looks like sql) neptune provides SPARQL 1.1 Protocol REST endpoint
-Gremlin - imperative/declarative graph traversal language. TinkerPop/Gremlin to graph db - the same as jdbc/sql for relational db.
+Gremlin - imperative/declarative graph traversal language. TinkerPop/Gremlin to graph db - the same as jdbc/sql for relational db. 
 Cluster - one or more db instances + cluster volume. Made up of 2 types of instances:
 * primary - support read/write, does all data modification in cluster volume
 * replica - connected to the same volume and does only read operations. Neptune uses Multi-AZ, so in fail, read replica would be promoted to primary.
-There is always 1 master and up to 15 read replica (yet you can read from master too). Each instance using the same storage but evaluate query independantly.
-Replication lag is < 10ms. Automatic Failover time = 60sec to promote read replica into master. If you don't have read replica, in case of failover neptune will create new master, cause underlying srorage persists.
+There is always 1 master and up to 15 read replica (yet you can read from master too). Each instance using the same storage but evaluate query independently.
+Replication lag is < 10ms. Automatic Failover time = 60sec to promote read replica into master. If you don't have read replica, in case of failover neptune will create new master, cause underlying storage persists.
 Yet it will take some time, so if you want fast failover it's better to have at least 1 read replica and send read query there from time-to-time to keep it warm.
 It stores all data in special format `Subject/Predicate/Object/Graph` - so basically 4 column tables. Indexes are built automatically.
 
 ###### Greengrass
-It allows your devices process the data they generate locally, while still taking advantage of AWS services when an internet connection is available.
-You can use programming language and then install this software on Raspberry Pi.
+Allows your devices process the data they generate locally, while still taking advantage of AWS services when an internet connection is available. You can use programming language and then install this software on Raspberry Pi.
 So you can have aws lambda, wrap it into greengrass and then ship it ot IoT device. Of course if device in offline mode, and lambda use dynamoDB, calls would fail.
 Local Resource - buses/peripherals that are physically present on the device. You can also build ML model with SageMaker Nero and then install into device.
 
 ###### WAF & Shield
 3 security services joined under single tab in aws:
 * waf (web application firewall) - you add rules that allow/deny/count web requests based on conditions that you define. Conditions are: HTTP header/body, URL string, SQL injection, XSS (for example you can block specific user-agents).
-Underlying service send request to waf, waf validate it based on rules you defined and instruct you service to block/allow request to proceed. It's integrated with CloudFront/ALB/Api Gateway.
+Underlying service send request to waf, waf validate it based on rules you defined and instruct your service to block/allow request to proceed. It's integrated with CloudFront/ALB/Api Gateway.
 Rate-Base Rule - allows you to set a number of allowed request per IP address during predefined time (100 requests per 5 min - once this IP send 101 request, it would be blocked, until 5 min period ends, and new starts).
-Managed Rule - default rules that automatically updated by AWS Marketplace security Sellers, protects against common known issues.
+Managed Rule - default rules that automatically updated by AWS Marketplace security Sellers, protects against common known issues. 
 In case of rule fail you can configure CloudFront to show error page. Rules take a minute to propagate worldwide. It inspects both HTTP/HTTPS traffic.
 * shield - provides protection against DDoS (Distributed Denial of Service) attack. There are 2 types of this service:
     * standard - free, activated by default for all accounts. Protect all aws infra (layer 3 and 4) against most common attacks like SYN/UDP floods or reflection attacks.
@@ -4295,30 +4301,24 @@ WAF sandwich (see `sa/files/images/waf-sandwich.png`) - concept where instead of
 In this case you have elb -> custom waf with asg -> elb -> ec2 with app. So basically you put your custom waf ec2 into ASG and between 2 elb.
 
 ###### Trusted Advisor
-It reviews your account and makes recommendations for saving money, improving system performance, closing security gaps.
-It includes a list of checks in the categories of cost optimization, security, fault tolerance, performance, service limits.
-If you turn it on you will got weekly email notifications regarding what can be improved (you can exclude resources on which you don't want to get notified).
-So basically if you want improve performance/efficiency you should use trusted advisor + CloudWatch.
+Reviews your account and makes recommendations for saving money, improving system performance, closing security gaps. It includes a list of checks in the categories of cost optimization, security, fault tolerance, performance, service limits.
+If you turn it on you will got weekly email notifications regarding what can be improved (you can exclude resources on which you don't want to get notified). So basically if you want improve performance/efficiency you should use trusted advisor + CloudWatch.
 
 ###### CloudHSM
-CloudHSM (Hardware Security Module) - dedicated HSM instances within aws cloud. You can securely generate/store/manage cryptographic keys.
-HSM provides secure key storage and cryptographic operations within a tamper-resistant hardware device.
-Cluster - contains multiple devices across AZ/subnet in single region. You can't create single device, only cluster with 1 or more devices.
-Since devices created in sunbets you need to have vpc in order to use CloudHSM. Daily backups are automatically taken and stored in s3 (bucket must be in the same region as cluster).
-All backups encrypted with 2 types of keys:
+Dedicated HSM instance within aws cloud. You can securely generate/store/manage cryptographic keys. HSM (Hardware Security Module) provides secure key storage and cryptographic operations within a tamper-resistant hardware device.
+Cluster - contains multiple devices across AZ/subnet in single region. You can't create single device, only cluster with 1 or more devices. Since devices created in sunbets you need to have vpc in order to use CloudHSM. 
+Daily backups are automatically taken and stored in s3 (bucket must be in the same region as cluster). All backups encrypted with 2 types of keys:
 * EBK (ephemeral backup key) - generated inside HSM when backup is taken. Used to encrypt backup. Encrypted backup include encrypted EBK.
 * PBK (persistent backup key) - used by HSM to encrypt EBK. Generated based on 2 other keys:
     * MKBK (manufacturer key backup key) - permanently embedded in the HSM hardware by manufacturer
-    * AKBK (AWS key backup key) - installed in the HSM during intitial setup by aws CloudHSM.
-You can use with database or with nginx to off-load ssl. Best practice to sync all keys at least in 2 devices in separate AZ.
-It's built with physical and logical tamper-protection, so it trigger key deletion (zeroization) in case of breach.
+    * AKBK (AWS key backup key) - installed in the HSM during initial setup by aws CloudHSM.
+You can use with database or with nginx to off-load ssl. Best practice to sync all keys at least in 2 devices in separate AZ. It's built with physical and logical tamper-protection, so it trigger key deletion (zeroization) in case of breach.
 
 ###### Polly
-It turns text into lifelike speech. You can supply polly with either simple text or SSML format.
-Pronunciation lexicon - enable you to customize pronunciation of words. You can create/store lexicon in region (so if you want to use one lexicon in 2 regions, you have to create second lexicon in second region and copy first).
-Lexicon is written using xml-like language of PLS (Pronunciation Lexicon Specification) W3C recommendation.
-You can apply up to 5 lexicons to single text. If more that 1 lexicon contains the same grapheme, first applied would be used. So if you want at different texts use different grapheme you should change lexicon order.
-Below is grapheme example:
+It turns text into lifelike speech. You can supply polly with either simple text or SSML format. Pronunciation lexicon - enable you to customize pronunciation of words. 
+You can create/store lexicon in region (so if you want to use one lexicon in 2 regions, you have to create second lexicon in second region and copy first).
+Lexicon is written using xml-like language of PLS (Pronunciation Lexicon Specification) W3C recommendation. You can apply up to 5 lexicons to single text. 
+If more that 1 lexicon contains the same grapheme, first applied would be used. So if you want at different texts use different grapheme you should change lexicon order. Below is grapheme example:
 ```
 <lexicon>
   <lexeme> 
@@ -4327,8 +4327,7 @@ Below is grapheme example:
   </lexeme>
 </lexicon>
 ```
-SSML (Speech Synthesis Markup Language) - xml-like language to define text to be pronounced by polly.
-There are several reserved chars in ssml like `"&'<>`. Main tag is `<speak/>`, you should put your text inside it.
+SSML (Speech Synthesis Markup Language) - xml-like language to define text to be pronounced by polly. There are several reserved chars in ssml like `"&'<>`. Main tag is `<speak/>`, you should put your text inside it.
 To emphasize you can use `<emphasis>` tag with `value` attr:
 * strong - increase the volume and slow the speaking rate so that the speech is louder and slower
 * moderate - same as strong but less strong
@@ -4343,10 +4342,10 @@ Example of using ssml:
 ###### MQ
 MQ (Message queue) - managed Apache ActiveMQ message broker. It stores data in EFS and provides HA. It provides both push-based and poll-based messaging model.
 Selector (like filter in sns) - can filter messages for different consumers. Exclusive consumer - all messages from queue goes to single consumer.
-Message group - all messages with same JMSXGroupID header goes to same consumer. There are 2 types of delivery mode:
+Message group - all messages with same `JMSXGroupID` header goes to same consumer. There are 2 types of delivery mode:
 * persistent - message broker should persist message on disk before deliver it to consumer
 * non-persistent - stored in RAM
-MQ vs SQS:
+Don't confuse:
 * sqs - simple queue with post/poll options only
 * mq - complex solution with message routing, fanouts, distribution lists, that supports AMQP/JMS protocols
 
@@ -4365,15 +4364,13 @@ key concepts:
 ###### WorkDocs
 It's managed/secure storage & share service with strong administrative controls. Users can comment on files, send them to others, upload new versions.
 You can use wd from web browser or install special app for ios/android/desktop. By default all uploaded files are private, but users can share their file with other users.
-Users use directory credentials to access wd. If you already have active directory you can integrate it, otherwise wd will create new directory for you in the cloud.
-You can mound your drive to WorkSpaces and have access to all your document from there.
-Users don't need aws account, yet wd admin need aws account. To remove user form wd you have to remove user from directory.
-There are 4 roles in wd:
+Users use directory credentials to access wd. If you already have AD you can integrate it, otherwise wd will create new directory for you in the cloud.
+You can mount your drive to WorkSpaces and have access to all your document from there. Users don't need aws account, yet wd admin need aws account. 
+To remove user form wd you have to remove user from directory. There are 4 roles in wd:
 * admin (paid) - has administrative permissions for wd including user & settings management
 * power user (paid) - can be given special set of permission by admin
-* user (paid) - can save files and collaborate with others
+* user (paid) - can save files and collaborate with others. Power user and just user called managed users
 * guest user (unpaid) - can only view files
-Power user and just user called managed users.
 Admin can set following permissions:
 * public share - who can create publicly shared links: no one / only power users / all managed users
 * external invitee - who can invite external users to wd: no one / only power users / all managed users
@@ -4383,29 +4380,26 @@ It's managed/secure cloud desktop. Don't confuse with cloud9 which is web IDE, w
 Users can use their browser or special desktop client to user ws. To authenticate they should use directory service. If you have directory you can integrate it with ws, otherwise ws would create new directory for you.
 
 ###### Batch
-It's a set of batch management tools that allows to run hundreds of thousands of batch computing jobs on AWS. Resources are dynamically provisioned.
+Set of batch management tools that allows to run hundreds of thousands of batch computing jobs on AWS. Resources are dynamically provisioned.
 It handles job execution and compute resource management and you can concentrate on code. It's best suited for: deep learning, genomics analysis, image processing, media transcoding, bash scripting.
 You simply submit jobs to batch and it provision ec2 or spot fleet and run your jobs there. Job Definition - specify params, env vars, RAM & CPU number requirements.
-It uses ecs to execute containerized jobs, so ecs agent should be installed on ec2 (you can use ecs ami or create your own).
-When you create your own ami, it should include:
+It uses ecs to execute containerized jobs, so ecs agent should be installed on ec2 (you can use ecs ami or create your own). When you create your own ami, it should include:
 * linux of latest version
 * docker daemon running
 * ECS container agent
 * awslogs log driver with `ECS_AVAILABLE_LOGGING_DRIVERS` env var
 You don't need:
-* provision ASG, cause batch handling underlying instances
+* provision asg, cause batch handling underlying instances
 * provision sqs, cause batch use job queue
 
 ###### DocumentDB
-It's fully managed, mongo-compatible document database service. You can store/query json data.
-MongoDB-compatible - means your current apps that using mongo, can be easily migrated to DocumentDB (which implements Apache 2.0 open source MongoDB 3.6 API).
-You can easily migrate your mongo to DocumentDB with DMS. It replicates each chunk of data 6 times across 3 AZ.
-Read - 8KB, write - 4KB. If you write 1 KB it counts as single IO. Yet concurrent write operations with size less than 4kb, are batched to reduce cost.
-min size - 10GB, max - 64TB. It automatically grows by 10GB chunks. Automated backups are enabled by default.
+It's fully managed, mongo-compatible document database service. You can store/query json data. MongoDB-compatible - means your current apps that using mongo, can be easily migrated to DocumentDB (which implements Apache 2.0 open source MongoDB 3.6 API).
+You can easily migrate your mongo to DocumentDB with DMS. It replicates each chunk of data 6 times across 3 AZ. Read - 8KB, write - 4KB. If you write 1 KB it counts as single IO. 
+Yet concurrent write operations with size less than 4kb, are batched to reduce cost. min size - 10GB, max - 64TB. It automatically grows by 10GB chunks. Automated backups are enabled by default.
 Cluster can scale up to 1M reads per sec with up to 15 read replicas (read replica use same underlying storage updated by master). It doesn't support cross region replica (all replicas in same region only).
 
 ###### Keyspaces
-It's managed Apache Cassandra-compatible (you can run Cassandra workloads using the same Cassandra Query Language (CQL)) database service. 
+It's managed Apache Cassandra-compatible database service, you can run Cassandra workloads using the same CQL (Cassandra Query Language). 
 
 ###### Cloud Development Kit
 CDK - open-source software development framework for writing cloud infra as code using c#/java/python/typescript. Under the hood cdk compiles code into CloudFormation template and run it in aws.
@@ -4447,22 +4441,22 @@ Yet for [each CloudFormation template they have separate dependency](https://mvn
     <version>1.66.0</version>
 </dependency>
 ```
-To build json file from your java code, run `cdk synth > template.yml`. This will create 2 files. in cdk.out - JSON, and template.yml - YAML.
-CDK vs SAM vs CloudFormation:
+To build json/yml file from your java code, run `cdk synth > template.yml`. This will create 2 files. in cdk.out - JSON, and template.yml - YAML.
+Don't confuse:
 * CDK - write templates using programming language
 * SAM - limited CDK only for serverless
 * CloudFormation - write templates using YAML/JSON
 My conclusion it's better to use native CloudFormation YAML template then generated one. Even though it's nice to write java code, you have more control with native template.
 
 ###### EventBridge
-It's a service that can deliver aws/custom events to any aws service. There are 2 types of events:
+Managed service that can deliver aws/custom events to any aws service. There are 2 types of events:
 * event pattern - aws/custom service will send event to eventBridge, which would resend it to target
 * schedule - call target (aws service) on some schedule
 It's built upon CloudWatch events, uses the same api, but extends it into custom events. But you can still build event-driven solution based on CloudWatch events.
 There are over 90 services that act as source, and 15 services that can be a target.
 Schema Registry - collection of schemas. Schema - json structure of event (with all fields and types and possible values, like phone number - 10 digits).
-Cross-account event - you can configure event that it generated in one account and sent into another.
-EventBridge vs SNS
+Cross-account event - you can configure event that generated in one account and sent into another.
+Don't confuse:
 * eventBrdige - body - only json, target - 15 services, native integration with many third-party services (like zendesk)
 * sns - kind of limited version of EventBridge, body - any format, target - 6 services
 
@@ -4478,21 +4472,20 @@ Each blockchain has unique identifier `ResourceID.MemberID.NetworkID.managedbloc
 Yet this link is private, so members should have vpc and use vpc privatelink to access blockchain endpoint.
 
 ###### GuardDuty
-It's thread management tools that helps to protect aws accounts/workloads/data by analyzing data from cloudTrail/vpc flowLogs/dns logs using ML.
-It's regional service, so all collected data is aggregated/analyzed within region. It doesn't store any data, once data is analyzed it discarded.
-threat intelligence - list of malicious IP addresses maintained by aws and third-party partners.
+Threat management tools that helps to protect aws accounts/workloads/data by analyzing data from cloudTrail/vpc flowLogs/dns logs using ML. It's regional service, so all collected data is aggregated/analyzed within region. 
+It doesn't store any data, once data is analyzed it discarded. threat intelligence - list of malicious IP addresses maintained by aws and third-party partners.
 
 ###### Secrets Manager
 SM allows you to rotate/manage/retrieve db credentials, API keys, and other secrets throughout their lifecycle. You can encrypt secrets at rest using kms (you can choose your own, otherwise SM create new kms for you).
 To retrieve secrets, you simply replace secrets in plain text in your app with code to pull in those secrets programmatically using the Secrets Manager APIs.
-You use iam to control which users/roles have access to which stores. SM can store json, so you can store any text up to 64KB.
+You use iam to control which users/roles have access to which stores. SM can store json, so you can store any text up to 64KB. 
 Key rotation for RDS/DocumentDB/RedShift supported out-of-the-box. You can add key rotation to oracle on ec2 by modifying sample lambda.
 You can configure cw events to be notified when SM rotate credentials. SM never store plaintext secrets to any persistent layer.
 This can be ideal for lambda evn vars, cause they are shown in lambda console. Moreover you can use lambda in private subnet without internet access and still be able to access SM with privatelink (create vpc endpoint for SM).
 
 ###### Quantum Ledger Database
 QLDB - ledger database with cryptographically verifiable history of all changes made to your app data (quantum has nothing to do with quantum computing, here it means indivisible state change)
-Traditional db allow to overwrite/delete data, so devs use audit tables. While this may work it put stress on devs to guarantee that audit table works correctly.
+Traditional db allow to overwrite/delete data, so developers use audit tables. While this may work, it put stress on developers to guarantee that audit table works correctly.
 For QLDB data written to append-only journal, providing the developer with full data lineage. So it can work as secure/crypto-proof substitute for audit tables.
 Notice that QLDB is neither blockcahin nor distributed ledger. It's purpose-built database to store all changes to system.
 So it offers history/immutability/verifiability combined with scalability and ease of use of a fully managed AWS database.
@@ -4500,7 +4493,7 @@ To connect and work with QLDB you have to use [AWS-provided QLDB driver](https:/
 In the core of QLDB, replication, DynamoDB Streams, kafka, version control lay simple concept called log - append-only storage of all events happened.
 
 ###### AppStream 2.0
-Fully managed non-persistent app & desktop streaming service that provides instant access to desktop applications from anywhere.
+Fully managed non-persistent app & desktop streaming service that provides instant access to desktop applications from anywhere. SAP - one of best candidates to be deployed on this platform.
 Simplifies app management, improves security, reduces costs by moving a company’s app from their users physical devices to the AWS Cloud.
 aws streaming protocol (NICE DCV) provides responsive & fluid performance that is almost indistinguishable from a natively installed app
 NICE DCV is a proprietary protocol used to stream high-quality, application video over varying network conditions (video and audio encoded using standard H.264 over HTTPS)
@@ -4512,13 +4505,13 @@ There are 2 modes:
 * desktop - user will see desktop of underlying OS on which app is run
 You can centrally manage versions, so users don't need to patch their apps. You can use tags to identify all resources used by a particular department, project, application, vendor, or use case
 To start streaming you need to create AppStream 2.0 stack (fleet of AppStream 2.0 instances that executes and streams applications to end users)
-If you want to stream your app you should create image using Image Builder. If you want appstream 2.0 communiate with on-premise create vpc and connect it to on-premise using DX/VPN.
+If you want to stream your app you should create image using Image Builder. If you want AppStream 2.0 communicate with on-premise, create vpc and connect it to on-premise using DX/VPN.
+You can copy AppStream 2.0 image to another region, or share it with other aws accounts.
 You app should be compatible with Windows Server 2012/2016/2019 (these OS currently supported by AppStream 2.0). If you need to support any dependency (like .NET framework) just add them to image.
 You can choose fleet instance type during creating, you can also change it after creation, just stop fleet, change type, start fleet. 
 You can also choose graphic GPU instance types if your app require GPU processing (like Adobe Premiere Pro, Autodesk Revit, and Siemens NX)
 You can customize your users' Amazon AppStream 2.0 experience with your logo, color, text, and help links in the application catalog page.
 You can enable persistent apps, so user can save all their settings, these info is stored in s3 bucket under your account (data in encrypted using s3 keys).
-You can copy AppStream 2.0 image to another region, or share it with other aws accounts.
 There are 2 types of fleet (you should specify it on creation and can't change type afterwards):
 * always-on - always running even if user disconnected, best if user need immediate access
 * on-demand - run only when user connect to app and use it, best if user can wait up to 2 min so app can start
@@ -4538,7 +4531,6 @@ There are 3 ways to authenticate users:
 * built-in user management - manage your users in the AppStream 2.0 management console from the User Pool tab
 * custom identity
 * federated access using SAML 2.0 (for this type you can enable MFA) - use your own AD
-SAP - one of best candidates to be deployed on this platform.
 
 ###### License Manager
 LM - tool to help manage licenses (you can track licenses based on vCPU, physical cores, sockets, number of ec2):
@@ -4548,15 +4540,12 @@ LM - tool to help manage licenses (you can track licenses based on vCPU, physica
 LM supports: ec2/rds/marketPlace/Systems manager. It also integrated with organizations, so you can control licenses for all organizations centrally. You can also manage BYOL(bring your own license) with LM.
 Automated discovery - specify rules and product info (name of software, publisher, version) and based on this LM will detect if specified software used.
 Resource inventory - lm uses Systems Manager inventory to track on-premises instances, by default inventory keeps info for 30 days. So even if your on-premise instance is not pingable LM still will count it as active.
-To be more accurate general advice is to manually deregister instance from SM inventory once you shut it down on-premise.
+To be more accurate, general advice is to manually deregister instance from SM inventory once you shut it down on-premise.
 
 ###### Elastic Transcoder
-ET - highly scalable & cost effective tool to convert/transcode video/audio from source format into pc/smartphone/tablet format.
-You create pipeline, specify input & output s3 bucket, and also s3 bucket for thumbnail. Then create a job on pipeline, that would transcode files.
-In job you can specify start/end time, so you can convert not whole file but only part of it, and you would be charged for this part only.
-Pipeline acts like a queue for jobs, and process jobs in order they were added, but it can also process them simultaneously.
-Preset - template with settings that transcoder apply while running jobs (codec or video resolution). You can use existing presets or create your own.
-You can use SNS to notify of job start/complete/warn/error.
+ET - highly scalable & cost effective tool to convert/transcode video/audio from source format into pc/smartphone/tablet format. You create pipeline, specify input & output s3 bucket, and also s3 bucket for thumbnail. Then create a job on pipeline, that would transcode files.
+In job you can specify start/end time, so you can convert not whole file but only part of it, and you would be charged for this part only. Pipeline acts like a queue for jobs, and process jobs in order they were added, but it can also process them in parallel.
+Preset - template with settings that transcoder apply while running jobs (codec or video resolution). You can use existing presets or create your own. You can use SNS to notify of job start/complete/warn/error.
 
 ###### Elemental Media
 This family include following products:
@@ -4572,7 +4561,7 @@ You create a flow to connect source with dest and choose:
 * transport protocol 
 * type of encryption
 * destinations
-Flow returns ingest endpoint where you send videos as a single unicast transport stream
+Flow returns ingest endpoint where you send videos as a single unicast transport stream. 
 MediaConvert - file-based video processing service for format/compress offline content to delivery to tv/devices.
 File-based video transcoding - process video to reduce size, change format, compress. It's preferred over Elastic Transcoder, since it's major product and soon more features would be added to it, that won't be availabe in Transcoder.
 MediaLive - cloud-based live video encoding service & broadcast for delivery of high-quality live video streams. Video providers can deliver video streams to their audience.
@@ -4593,6 +4582,6 @@ This is where you pay your bills, aws automatically charged credit card that you
 * receive alerts if costs exceed some threshold
 * simplify multi-org bill management
 Cost Allocation Tags (by default all these tags deactivated) - there are 2 types:
-* AWS-generated cost allocation tags - first you have to activate tags (by default 13 deactivated tags). After aws generate csv report based on active tags
-* User-Defined Cost Allocation Tags - tags that you add to your resources. After you add tag, you can activate it from console.
+* AWS-generated - first you have to activate tags (by default 13 deactivated tags). After aws generate csv report based on active tags
+* User-Defined - tags that you add to your resources. After you add tag, you can activate it from console.
 Once tag is activated it can be seen from csv usage report. If you have multi-org, and want to get tag-based report, you have to activate tags only from master account
