@@ -1,0 +1,64 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+# create sqs fifo + lambda + trigger to call lambda when new message go into sqs (event source mapping)
+
+Resources:
+  EventQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub ${AWS::StackName}-EventQueue.fifo
+      FifoQueue: true
+
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-LambdaRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: AllowCreateLogGroupAndPutLogsPolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                  - "logs:DescribeLogStreams"
+                  - "sqs:ReceiveMessage"
+                  - "sqs:DeleteMessage"
+                  - "sqs:GetQueueAttributes"
+                Resource: "*"
+  SimpleLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-SimpleLambda
+      Description: Log input data and echo
+      Role: !GetAtt LambdaRole.Arn
+      Runtime: nodejs12.x
+      Timeout: 10
+      Handler: index.handler
+      Code:
+        ZipFile: |
+          exports.handler = async (event, context, cb) => {
+              // wait for 1 sec to imitate execution
+              await new Promise(r => setTimeout(r, 1000));
+              console.log(JSON.stringify(event, null, 2));
+              cb(null, event);
+          }
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-Info
+  SqsLambdaTrigger:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      EventSourceArn: !GetAtt EventQueue.Arn
+      FunctionName: !GetAtt SimpleLambda.Arn

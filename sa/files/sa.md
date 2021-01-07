@@ -1825,9 +1825,13 @@ If you have need to store data durable with ordering and data should be read wit
 So if you have app that reads from same stream or consume from same stream several hours later you data streams (don't reinvent the wheel with sqs)
 
 ###### Lambda
-Lambda - piece of code that can be executed without any server env (just write code in python/javascript and it will run).
-Lambda can be directly triggered by AWS services such as s3/DynamoDB/Kinesis Streams/SNS/CloudWatch
+Lambda - piece of code that can be executed without any server env (just write code in python/javascript and it will run). Lambda can be directly triggered by AWS services such as s3/DynamoDB/Kinesis Streams/SNS/CloudWatch
 Lambda are billed per request, so it's better for some small simple tasks. If you have highload with 10m hits per day, run simple ec2 is cheaper.
+When you create lambda you have to provide `role_arn`, the role which lambda assume and use to execute (default permissions include CloudWatch log creation).
+When you create lambda you can specify:
+* `Runtime` (default `nodejs12.x`) - which programing runtime (java/python/go/nodejs/ruby/dotnetcore) to use. You can also build your own runtime with `provided/provided.al2` which create Amazon Linux & Amazon Linux 2 ami.
+You custom runtime may run shell script, language included in Amazon Linux or compiled binary
+* `Timeout` (1-900 sec, default 3 sec) - max time of function execution. Once timeout over, lambda stop running your code and throw an error `Response:{"errorMessage": "2021-01-07T07:55:11.512Z 12e1e1ab-7d43-4dcc-90b4-0489274b6ecf Task timed out after 3.00 seconds"}`
 AntiPattern:
 * Long Running Applications (Lambda max time is 900sec (15 min). If you need some long running jobs you should consider EC2)
 * Dynamic Websites (it's better to use some programming language like java/node.js and deploy it to EC2)
@@ -1851,6 +1855,18 @@ There are few ways to store state:
 * dynamoDB/s3
 * lambda tags - since you can have up to 50 tags per resource, you can store some state in tags
 * global variable (not recommended) - if you run your lambda every minute, technically it should be executed in same container, so your global variable should persist
+`DeadLetterConfig` - you can configure sqs/sns to act as dead-letter queue, where all your failed events would go (when you call lambda you pass some payload - event, it can executed successfully or failed, in case you want to collect all failed events for later processing you can use DLQ)
+`AWS::Lambda::EventInvokeConfig` - configure max retry and destination for both fail/success events (usually you would want to put all failed events into DLQ for further processing)
+Invocation:
+* synchronous - if you call lambda from console you wait until lambda executed and return result `aws lambda invoke --function-name=sqs-InfoLambda --payload='{"user":"Jack"}' response.json`
+You will always get `StatusCode: 200`, even if lambda throw an error, yet in this case you will get `FunctionError: Unhandled`, but still 200.
+If lambda can't run the function for some reason you will get immediate error (if you pass invalid json as payload you will got `An error occurred (InvalidRequestContentException) when calling the Invoke operation: Could not parse request body into json: Could not parse payload into json: Unrecognized token 'abc'`)
+* asynchronous - lambda queue event for processing and return response. For async calls, lambda handles retry and can execute callback on destination
+`aws lambda invoke --function-name=sqs-InfoLambda --invocation-type=Event --payload='{"user":"Jack"}' response.json`. You get response immediately, yet `response.json` would be empty, you pass it to be consistent with sync call
+* trigger - resource that calls your lambda (for both cases you would see invocation as trigger under sqs console):
+    * event source mapping (`AWS::Lambda::EventSourceMapping`) - you can configure trigger as event source for sqs/sns/kinesis/MSK/dynamoDB streams (take a look at `sa/cloudformation/sqs-lambda.yml`)
+    Both sqs standard & fifo support as event source for lambda.
+    * direct invocation (`AWS::ApiGatewayV2::Integration`) - in this case you create invocation from other aws service like api gateway, and you also need to add permissions
 
 ###### Step Functions
 Step Functions - visual tool that allows you to build complex logic based on lambda and EC2 calls. They can also help overcome lambda max 900sec execution time, by joining several lambdas into one execution flow.
