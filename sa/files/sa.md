@@ -1865,7 +1865,8 @@ If lambda can't run the function for some reason you will get immediate error (i
 `aws lambda invoke --function-name=sqs-InfoLambda --invocation-type=Event --payload='{"user":"Jack"}' response.json`. You get response immediately, yet `response.json` would be empty, you pass it to be consistent with sync call
 * trigger - resource that calls your lambda (for both cases you would see invocation as trigger under sqs console):
     * event source mapping (`AWS::Lambda::EventSourceMapping`) - you can configure trigger as event source for sqs/sns/kinesis/MSK/dynamoDB streams (take a look at `sa/cloudformation/sqs-lambda.yml`)
-    Both sqs standard & fifo support as event source for lambda.
+    Both sqs standard & fifo support as event source for lambda. `BatchSize` - size of how many messages send to lambda, default 10, max standard sqs - 10k, fifo - 10
+    With batch only 1 lambda is called to process all 10 messages. For fifo lambda scaled concurrently based on number of messageGroupId
     * direct invocation (`AWS::ApiGatewayV2::Integration`) - in this case you create invocation from other aws service like api gateway, and you also need to add permissions
 
 ###### Step Functions
@@ -2942,6 +2943,7 @@ You can create cross-account & cross-region cw dashboard and view your resources
     * share data - create role `CloudWatch-CrossAccountSharingRole` with access to this account cw panel (if you use console it would create cf template which you must run)
     * share organization list - create a role to allow other accounts list accounts inside your org (`organizations:ListAccounts` and `organizations:ListAccountsForParent`)
     * view cross-account data - just enable to view other accounts dashboard
+`ScheduleExpression` - you can specify to call some lambda every 1 min or more (cron expression)
 
 ###### KMS
 Key Management Service - service for generating/storing/auditing keys. If you have a lot of encryption it's better to use central key management service.
@@ -3284,6 +3286,7 @@ SQS (Simple Queue Service) - managed service that provide asynchronous decouplin
         * spot instances may terminate before finish job
         * if spot terminate, your message won't be visible until visibility timeout ends
         * you can use CloudWatch to monitor calls, and if you get failed `ReceiveMessage` or detect terminating spot instance, you can extract `ReceiveRequestAttemptId`, and call `ReceiveMessage` with same attemptId from another machine
+        * you won't see attemptId in response, yet if you call with same attemptId you got same messages `aws sqs receive-message --queue-url=https://sqs.us-east-1.amazonaws.com/530313143429/test.fifo --max-number-of-messages=10 --receive-request-attempt-id=123 --attribute-names=All`
     * Sequence number - assigned to each messages by sqs
 But you can also use standard queue (unordered) but place order field into each message, and by this you imitate order.
 It guarantee at-least-once delivery. you can use Amazon SQS Java Messaging Library that implements the JMS 1.1 specification and uses Amazon SQS as the JMS provider.
@@ -3838,7 +3841,21 @@ In this case trail would remain in the region in which it was created, and all i
 * Remove GSE `aws cloudtrail update-trail --name=multiRegionTrail --no-include-global-service-events`
 * Change back to multi-region `aws cloudtrail update-trail --name=multiRegionTrail --is-multi-region-trail`
 You get `Multi-Region trail must include global service events.`. So you should do both `aws cloudtrail update-trail --name=multiRegionTrail --is-multi-region-trail --include-global-service-events`. So You can't remove GSE from multi-region trail.
-
+cross-account role audit (to check who made cross-account request you have to access both cloudTrail logs):
+* if your dev account assume role in prod account and call `DeleteBucket` in prod
+* in prod cloudTrail log you will see that `userIdentity` with `type: AssumedRole` and with specific `accessKeyId` called delete bucket api, yet you can't see which user exactly did it
+* in dev cloudTrail log you can see which user called operation `AssumeRole`. Since many users can call this api, to distinguish you may use `accessKeyId`
+So there are 2 ways to find out which iam user called delete bucket api:
+* [Find iam user using accessKeyId](https://aws.amazon.com/blogs/security/how-to-audit-cross-account-roles-using-aws-cloudtrail-and-amazon-cloudwatch-events)
+    * in prod account you extract `accessKeyId` from `userIdentity` for `DeleteBucket` call
+    * in dev account you extract `accessKeyId` from `responseElementscredentials` (this is important cause in dev account inside `userIdentity` there is another accessKeyId of iam user), and `userName` from `userIdentity` for `AssumeRole` call
+    * then you compare `accessKeyId` from both dev & prod cloudTrail logs. If they are the same, then this userName from dev account called your `DeleteBucket` api
+* [Find iam user using sharedEventID](https://aws.amazon.com/blogs/security/aws-cloudtrail-now-tracks-cross-account-activity-to-its-origin)
+    * in prod account you extract `accessKeyId` from `userIdentity` for `DeleteBucket` call
+    * in prod account you extract `sharedEventID` from `AssumeRole` call using `userIdentity` from previous step
+    * in dev account you extract `userName` from `userIdentity` for `AssumeRole` with same `sharedEventID` as from previous step
+    * `sharedEventID` - unique GUID generated for cross-account api calls (AssumeRole/use kms key) that send CloudTrail logs to 2 accounts, by which you can link 2 log entries
+    
 ###### Certificate Manager
 ACM (Amazon Certificate Manager) - service that allows you to create/deploy public/private SSL/TLS certificates.
 ACM removes the time-consuming manual process of purchasing/uploading/renewing SSL/TLS certificates.
@@ -4376,6 +4393,12 @@ key concepts:
 * agent - can be installed into ec2 and collect logs there to send them to x-ray for analysis
 * sampling - you can collect info only about small set of requests to be cost-effective (so if you want to test x-ray with cost-optimized you must sampling at low rate)
 * filter expression - can be used to filter all requests from x-ray
+* segment - json with original request and all subsequents call to AWS/HTTP_API/SQL your app made to serve this request (each ec2 send data about their work as segments)
+* trace - collect segments generated by single request 
+* group - you can filter traces into groups using filter expression
+You can record additional info about request with:
+* annotations - key-value pairs with string/number/boolean values, indexed with filter expressions. Use it if you want to group traces
+* metadata - key-value pairs of any type, not indexed with filter expressions. Use when you want to store data, but not search.
 
 ###### WorkDocs
 It's managed/secure storage & share service with strong administrative controls. Users can comment on files, send them to others, upload new versions.
@@ -4407,6 +4430,10 @@ It uses ecs to execute containerized jobs, so ecs agent should be installed on e
 You don't need:
 * provision asg, cause batch handling underlying instances
 * provision sqs, cause batch use job queue
+Batch job may be stuck in `RUNNABLE` due to:
+* ec2 limit -  if you have many ec2 already running and run batch job, batch can't launch new ec2 due to this limit. So your jobs would wait until batch can launch new ec2
+* insufficient resources - your job require more cpu/memory than underlying ec2 has
+* no internet access - batch launch ecs resources inside vpc and they need to communicate with ECS service. So you should either have public IP, NAT or ECS service vpc endpoint
 
 ###### DocumentDB
 It's fully managed, mongo-compatible document database service. You can store/query json data. MongoDB-compatible - means your current apps that using mongo, can be easily migrated to DocumentDB (which implements Apache 2.0 open source MongoDB 3.6 API).
