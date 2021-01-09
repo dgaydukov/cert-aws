@@ -1,0 +1,118 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+# create ec2 + role for s3 access. ssh to ec2 and call `aws s3 ls`
+# aws credentials for role stored inside instance metadata, cli/sdk automatically fetch it. You can also manually fetch them.
+# TOKEN=`curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600"` && curl -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/iam/security-credentials/role-Ec2Role
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.100.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value:  !Sub ${AWS::StackName}-MyVpc
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    DependsOn: VPC
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-IGW
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.100.2.0/24
+      AvailabilityZone: us-east-1a
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-Public
+  PublicRT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-Public-RT
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: !Ref PublicRT
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+  PublicSubnetRTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref PublicRT
+
+  SshSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref VPC
+      GroupDescription: Enable SSH access from anywhere
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-SshSG
+  PublicInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-09d95fab7fff3776c
+      KeyName: mykey
+      IamInstanceProfile: !Ref InstanceProfile
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: 0
+          SubnetId: !Ref PublicSubnet
+          GroupSet:
+            - !GetAtt SshSG.GroupId
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 8
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-PublicInstance
+
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref Ec2Role
+  Ec2Role:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-Ec2Role
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: !Sub ${AWS::StackName}-s3_full_access
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "s3:*"
+                Resource: "*"

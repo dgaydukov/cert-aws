@@ -1,90 +1,28 @@
 AWSTemplateFormatVersion: 2010-09-09
 
-# create lambda + DLQ for failed messages (you should call lambda async in order for failed messages got into DLQ, if you call it sync, you would get error, so no reason to put such message into DLQ)
-# create sqs fifo + lambda + trigger to call lambda when new message go into sqs (event source mapping)
+# create lambda + 2 sqs queue (one for failed events, another for successful events) + second lambda that automatically triggers from queue of success events
+# lambda put events into queue only in case of async call. If you call it sync then you can response, no point to put response into queue
+
+# bad call, check it in dead letter queue:    aws lambda invoke --function-name=sqs-namecheck --invocation-type=Event --payload='{"user":"Jack"}' response.json
+# good call, check it in another lambda logs: aws lambda invoke --function-name=sqs-namecheck --invocation-type=Event --payload='{"user":"Mike"}' response.json
+
+# !important => for trigger (event source mapping) both fifo & standard queue supported, but for async destination - only standard
+# !important => trigger lambda automatically removes messages from queue if it returns 200
 
 Resources:
-
-  EventQueue:
+  DLQ:
     Type: AWS::SQS::Queue
     Properties:
-      QueueName: !Sub ${AWS::StackName}-EventQueue
-
-    LambdaRole:
-      Type: AWS::IAM::Role
-      Properties:
-        RoleName: !Sub ${AWS::StackName}-LambdaRole
-        AssumeRolePolicyDocument:
-          Version: 2012-10-17
-          Statement:
-            - Effect: Allow
-              Principal:
-                Service:
-                  - lambda.amazonaws.com
-              Action:
-                - sts:AssumeRole
-        Policies:
-          - PolicyName: AllowCreateLogGroupAndPutLogsPolicy
-            PolicyDocument:
-              Version: 2012-10-17
-              Statement:
-                - Effect: Allow
-                  Action:
-                    - "logs:CreateLogGroup"
-                    - "logs:CreateLogStream"
-                    - "logs:PutLogEvents"
-                    - "logs:DescribeLogStreams"
-                    - "sqs:SendMessage"
-                  Resource: "*"
-    SimpleLambda:
-      Type: AWS::Lambda::Function
-      Properties:
-        FunctionName: !Sub ${AWS::StackName}-SimpleLambda
-        Description: Log input data and echo
-        Role: !GetAtt LambdaRole.Arn
-        Runtime: nodejs12.x
-        Timeout: 10
-        Handler: index.handler
-        Code:
-          ZipFile: |
-            exports.handler = async (event, context, cb) => {
-                // wait for 1 sec to imitate execution
-                await new Promise(r => setTimeout(r, 1000));
-                console.log(JSON.stringify(event, null, 2));
-                cb("oops", event);
-            }
-        Tags:
-          - Key: Name
-            Value: !Sub ${AWS::StackName}-Info
-    LambdaVersion:
-      Type: AWS::Lambda::Version
-      Properties:
-        FunctionName: !Ref SimpleLambda
-    InvokeConfig:
-      Type: AWS::Lambda::EventInvokeConfig
-      Properties:
-        DestinationConfig:
-          OnFailure:
-            Destination: !GetAtt EventQueue.Arn
-          OnSuccess:
-            Destination: !GetAtt EventQueue.Arn
-        FunctionName: !Ref SimpleLambda
-        MaximumEventAgeInSeconds: 300
-        MaximumRetryAttempts: 1
-        Qualifier: $LATEST
-
-
-
-  EventQueue:
+      QueueName: !Sub ${AWS::StackName}-DLQ
+  CheckedNamesQueue:
     Type: AWS::SQS::Queue
     Properties:
-      QueueName: !Sub ${AWS::StackName}-EventQueue.fifo
-      FifoQueue: true
+      QueueName: !Sub ${AWS::StackName}-CheckedNamesQueue
 
-  LambdaRole:
+  NameCheckLambdaRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Sub ${AWS::StackName}-LambdaRole
+      RoleName: !Sub ${AWS::StackName}-NameCheckLambdaRole
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -95,26 +33,62 @@ Resources:
             Action:
               - sts:AssumeRole
       Policies:
-        - PolicyName: AllowCreateLogGroupAndPutLogsPolicy
+        - PolicyName: AllowSendMessage
           PolicyDocument:
             Version: 2012-10-17
             Statement:
               - Effect: Allow
                 Action:
-                  - "logs:CreateLogGroup"
-                  - "logs:CreateLogStream"
-                  - "logs:PutLogEvents"
-                  - "logs:DescribeLogStreams"
+                  - "sqs:SendMessage"
+                Resource: "*"
+  NameConcatLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-NameConcatLambdaRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: AllowReceiveAndDeleteMessages
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
                   - "sqs:ReceiveMessage"
                   - "sqs:DeleteMessage"
                   - "sqs:GetQueueAttributes"
                 Resource: "*"
-  SimpleLambda:
+  LogPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub ${AWS::StackName}-LogPolicy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - "logs:CreateLogGroup"
+              - "logs:CreateLogStream"
+              - "logs:PutLogEvents"
+              - "logs:DescribeLogStreams"
+            Resource: "*"
+      Roles:
+        - !Ref NameCheckLambdaRole
+        - !Ref NameConcatLambdaRole
+
+  NameCheckLambda:
     Type: AWS::Lambda::Function
     Properties:
-      FunctionName: !Sub ${AWS::StackName}-SimpleLambda
-      Description: Log input data and echo
-      Role: !GetAtt LambdaRole.Arn
+      FunctionName: !Sub ${AWS::StackName}-namecheck
+      Description: Validate names
+      Role: !GetAtt NameCheckLambdaRole.Arn
       Runtime: nodejs12.x
       Timeout: 10
       Handler: index.handler
@@ -124,13 +98,42 @@ Resources:
               // wait for 1 sec to imitate execution
               await new Promise(r => setTimeout(r, 1000));
               console.log(JSON.stringify(event, null, 2));
+              if (event.user === "Jack"){
+                cb("bad name", event);
+              } else {
+                cb(null, event);
+              }
+          }
+  InvokeConfig:
+    Type: AWS::Lambda::EventInvokeConfig
+    Properties:
+      DestinationConfig:
+        OnFailure:
+          Destination: !GetAtt DLQ.Arn
+        OnSuccess:
+          Destination: !GetAtt CheckedNamesQueue.Arn
+      FunctionName: !Ref NameCheckLambda
+      MaximumEventAgeInSeconds: 300
+      MaximumRetryAttempts: 1
+      Qualifier: $LATEST
+
+  NameConcatLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-NameConcatLambda
+      Description: Concatenate names
+      Role: !GetAtt NameConcatLambdaRole.Arn
+      Runtime: nodejs12.x
+      Timeout: 10
+      Handler: index.handler
+      Code:
+        ZipFile: |
+          exports.handler = async (event, context, cb) => {
+              console.log(JSON.stringify(event, null, 2));
               cb(null, event);
           }
-      Tags:
-        - Key: Name
-          Value: !Sub ${AWS::StackName}-Info
   SqsLambdaTrigger:
     Type: AWS::Lambda::EventSourceMapping
     Properties:
-      EventSourceArn: !GetAtt EventQueue.Arn
-      FunctionName: !GetAtt SimpleLambda.Arn
+      EventSourceArn: !GetAtt CheckedNamesQueue.Arn
+      FunctionName: !GetAtt NameConcatLambda.Arn

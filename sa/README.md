@@ -15,6 +15,7 @@ Here is my experience of taking 2 certifications, both associate & professional:
 * [Free SAP questions](https://www.examtopics.com/exams/amazon/aws-certified-solutions-architect-professional)
 
 ### TODO
+https://www.youtube.com/watch?v=UpeV4OqB6Us
 aws reinvent CodeStar
 https://sleek.com/hk/resources/offshore-companys-guide-to-tax-exemption-in-hong-kong (offshore company, no tax)
 https://en.wikipedia.org/wiki/The_Picture_of_Dorian_Gray
@@ -67,6 +68,7 @@ https://github.com/real-logic/aeron/tree/master/aeron-cluster
 * Deploy spring app using opsworks stacks
 * Try maximum automate site-to-site vpn cloudformation template (try to extract somehow all IP addresses and PSK secret string and put it into ec2 userdata for VpnServer)
 * Install ec2 with openswan and use it as personal vpn server
+* create glue workflow `AWS::Glue::Workflow` and call aws batch when etl complete
 * migrate rds to s3 using glue etl (https://aws.amazon.com/blogs/database/how-to-extract-transform-and-load-data-for-analytic-processing-using-aws-glue-part-2)
 * Try Athena & Aws Glue with cloudformation/cloudtrail-s3.yml (combine all json files into one. Find who put object into s3)
 * athena federated query (from multiple sources). ELT using athena federated (read from multiple sources and store in s3)

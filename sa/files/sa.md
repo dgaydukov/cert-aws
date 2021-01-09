@@ -890,6 +890,10 @@ There are 3 types of permission:
 * group - collection of permissions that you can assign. Used to define users. One user can belong to multiple groups. It's a best practice to use group even if you have one user in it.
 * role - collection of permissions for specific aws service (for example ec2 can connect to s3 without any secret key) or other iam entity (user/role can assume role).
 EC2 role access - you can add (for example bucket write access) role to ec2 instance. Instance Profile - container for an IAM role that you can use to pass role information to an EC2.
+ec2 stores temporary credentials in instance metadata, when you use aws cli/sdk it would automatically fetch temporary credentials from instance metadata. 
+Yet if you want to call aws api outside cli/sdk you have to manually fetch credentials and make a call (`sa/cloudformation/ec2-role.yml`). This security credentials are temporary and ec2 rotate them automatically, new credentials available for 5 min before expiration of old.
+ec2 can assume 1 role at a tile, so `AWS::IAM::InstanceProfile` has `Roles` where you should provide list of roles, you can actually add only 1 role, if you add 2 syncatically it would be correct, but when CF template would run you would get error: `Roles has too many elements. The limit is 1`.
+You can run `TOKEN=`curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600"` && curl -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/iam/security-credentials/role-Ec2Role` where `role-Ec2Role` - your role name
 IAM user - `who am I` & `what can I do`. But role is just `what can I do`. So for ec2 to use role it should become type of iam instance, that's why we create instance profile.
 When you create ec2 role from console, instance profile automatically created with same name. But if you are using CLI/CloudFormation you have to manually create it `AWS::IAM::InstanceProfile` and assign it to ec2 using `IamInstanceProfile`.
 Entity can assume only 1 role at a time, so if user is assigned to 2 groups he would get all permissions from 2 groups at the same time, but if he assigned 2 roles, he can use only one at a time (by assuming one role)
@@ -1920,6 +1924,11 @@ You can then directly query your data lake with Athena and Redshift Spectrum.
 AntiPattern:
 * Streaming data (Glue is batch oriented, minimum interval is 5 min, so for streaming data Kinesis is better choice)
 * NoSQL Databases (Glue doesn't support NoSQL databases as source)
+Don't confuse:
+* glue - managed ETL
+* emr - same as glue but you have more control of underlying hadoop cluster
+Workflow - set of related jobs/crawlers/triggers in glue that execute as single entity. You can design complex multi-job ETL activity.
+During run of each component workflow record execution/status and provide overview for you. Event triggered inside workflow can be fired by job/crawlers to start job/crawler
 
 ###### DynamoDB
 Fully managed, highly available out-of-the-box(there is no such thing as multi-AZ deployment and read replica) NoSQL key-value/document database, kind of mongo, but aws proprietary solution. Stores data across 3 AZ. 
@@ -2919,8 +2928,9 @@ NLB is different from ALB:
 * there is no SG for nlb. If your target group is ec2, you have to enable 2 sources:
     * rule for port 80 for source IP of your clients
     * rule for port 80 for private IP of your nlb (for health checks), or open for cidr for whole vpc or subnets range. For each subnet you associate with nlb, it add 1 nlb instance into each subnet with 1 private IP.
-* if TG type is instance (nlb is transparent) - your ec2 would behave same way as client directly connects to it (although clinet IP is his real IP in this case, you can still enable proxy protocol and get IP from there)
+* if TG type is instance (nlb is transparent) - your ec2 would behave same way as client directly connects to it (although client IP is his real IP in this case, you can still enable proxy protocol and get IP from there)
 * if TG type is IP (nlb acts as NAT) - your ec2 would see client IP as nlb internal IP (use proxy protocol in this case to get client IP)
+* target type `lambda` only supported by ALB, not for NLB
 Test your elb (you can run software test to imitate high-load to check your elb):
 * elb scales up/down proportionally to the load. But if load dramatically increased over short time you may get 503, yet if it steadily increasing elb can catch up
 * elb scales from 1-7 minutes. So once elb scaled, it adds new IP to dns response with TTL 60 sec (client expect to re-resolve dns after 60 sec)
@@ -4112,6 +4122,13 @@ You can use cf template to create stack:
 * use cf template to create VPC/Route53/Nat/Bastion and so on (but not ec2, they are created inside opsWorks)
 * use `AWS::OpsWorks::Stack` create stack and `AWS::OpsWorks::App` to create java app (or any other programming language)
 * use `AWS::OpsWorks::Instance` to create instances (don't use `AWS::EC2::Instance`)
+Auto healing (you can enable at layer level):
+* by default OpsWorks agent send info from every instance about it health. If for 5 mins no info, then OpsWorks assumes that instance failed
+* if auto healing enabled:
+    * ebs - stop & start ec2 once it consider it failed
+    * instance store volume - stop, delete data on root volume, create new ec2 with same host name, config, reattach all previously attached ebs volumes, assign new public/private IP or elastic IP if old ec2 used it
+* after ec2 healed - notify all other instances about change
+* if enabled - if you stop ec2 from ec2 console - OpsWorks would auto heal it (so stop it only from OpsWorks stack console/cli)
 
 ###### SWF
 Simple Workflow Service - coordinate work (tasks) across distributed apps. With SWF you don't need to use messaging system, cause tasks works as messages.
@@ -4628,3 +4645,12 @@ Cost Allocation Tags (by default all these tags deactivated) - there are 2 types
 * AWS-generated - first you have to activate tags (by default 13 deactivated tags). After aws generate csv report based on active tags
 * User-Defined - tags that you add to your resources. After you add tag, you can activate it from console.
 Once tag is activated it can be seen from csv usage report. If you have multi-org, and want to get tag-based report, you have to activate tags only from master account
+Budget report - you can configure sending your reports to a list of email for daily/monthly/weekly for all your created budgets
+CUR (Cost and Usage Reports) - after you set it up, billing data would be delivered to s3 bucket. You can receive hourly/daily/monthly report of usage.
+After set up, you will receive monthly report + daily updates to your s3 bucket. For s3 you should modify resource policy by adding `s3:PutObject` for `billingreports.amazonaws.com` service.
+Member account of org can create his report, yet org master account can create SCP to deny `cur:PutReportDefinition`, in this case no member account can create reports.
+You can upload cur to redshift & quicksight to analyze cost & usage. CUR provides `RedshiftCommands.sql` file to upload cost & usage to redshift. 
+CUR saved in s3 using:
+* redshift/quicksight or without any integration - gzip/scv
+* athena - parquet
+As you see format would be either csv or parquet, not json.
