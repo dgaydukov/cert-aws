@@ -1236,8 +1236,21 @@ If you use cli, don't forget to clean it after you set up mfa delete. Since mfa 
 You can't delete version from console, if you try you get `You can’t delete object versions because Multi-factor authentication (MFA) delete is enabled for this bucket. To modify MFA delete settings, use the AWS CLI, AWS SDK, or the Amazon S3 REST API.`. 
 If you try to delete from cli without 2fa you will get `An error occurred (AccessDenied) when calling the DeleteObject operation: Mfa Authentication must be used for this request`. 
 If you supply 2fa and run `aws s3api delete-object --bucket=my2fadeletebucket --key=dummy.pdf --version-id=hZaCTAcGEMX9tzF6MUfAq4obRq_AhWk8 --mfa="arn:aws:iam::ACCOUNT_ID:mfa/user2fa 547063" --profile=user2fa`
-you will get `An error occurred (AccessDenied) when calling the DeleteObject operation: This operation may only be performed by the bucket owner`.
-So only root user can delete versions from now on.
+you will get `An error occurred (AccessDenied) when calling the DeleteObject operation: This operation may only be performed by the bucket owner`. So only root user can delete versions from now on.
+Bucket can be in 1 of 3 state:
+* unversioned (the default)
+* versioning-enabled - once you enable versioning, you can't disable it, you can only suspend and bucket would be in versioning-suspended status.
+Once you enable versioning existing objects get version `null`.
+* versioning-suspended - for each put `null` version is added for object, if you add second time object with same name, it just overwrite object with `null` version
+Example of file upload/remove for different stage:
+* unversioned: - upload - file1/file2 (no versions, if we remove object we actually remove object)
+* enable versioning: upload - file3. Now file1/file2 - versionID - null, file3 - `8Vj9YCaBwERBxRv2SmwuwE12P3HVUv8o`
+Reupload file1/file3 and delete file2. Now all files has 2 versions:
+    * file1 - null & current
+    * file2 - null & delete marker
+    * file3 - `8Vj9YCaBwERBxRv2SmwuwE12P3HVUv8o` & current
+* suspend versioning. Reupload file1 -  some versionId & null as current version. You can delete only object whose version is null. If you delete object with some other versionID - delete marker with `null` versionID is added
+So the key is if you change state of s3 bucket, existing objects not changed, what changes - how s3 treat put/get/delete operations.
 * use access logging to track who/which bucket/what action was executed on s3
 Although s3 is object-based storage, you can easily emulate OS by creating objects like `path1/path2/file1`
 S3/S3_IA/Glacier - replicate data across 3 AZ go guarantee data won't be lost in case of emergency.
@@ -1399,7 +1412,7 @@ Bucket key for kms:
     * you can activate bucket key for kms - kms would create bucket level key, that would be used to generate data key for actual encryption
     * bucket level key used for time-limited period, reducing the need to call kms api
 * sse-c - encrypt/decrypt with customer key - you have to provide key for every request get/put and s3 manage encryption (when you put object s3 encrypt it using provided key, when you get object - s3 decrypt object with your key from request). You have to use https + cli/sdk.
-You provide key in [headers for each request](https://docs.aws.amazon.com/AmazonS3/latest/dev/ServerSideEncryptionCustomerKeysSSEUsingRESTAPI.html), when you use cli/sdk it's automatically done.
+You provide key in [headers for each request](https://docs.aws.amazon.com/AmazonS3/latest/dev/ServerSideEncryptionCustomerKeysSSEUsingRESTAPI.html), when you use cli/sdk you pass `--sse-customer-key` and it automatically transform it into required header.
 So when you have a requirement that customer want to manage key with sse, you have to use this this option. In this case s3 manages encryption/decryption but you manage keys.
 You can force user to upload only encrypted files by adding following resource policy:
 ```
@@ -1579,7 +1592,10 @@ raid 5 & raid 6 - are not recommended to use with ebs, cause they would decrease
 If you have 2 io1 500GB with 4000 IOPS you can:
 * raid 0 - 1000GB with 8000 IOPS & 1000 MB/s
 * raid 1 - 500GB with 4000 IOPS & 500 MB/s
-RAID snapshot - use ebs multi-volume snapshot for it. Take a look at `sa/cloudformation/ec2-ebs-raid.yml` for raid details.
+RAID snapshot - use ebs multi-volume snapshot for it (take a look at `sa/cloudformation/ec2-ebs-raid.yml`).
+Synchronous block level replication - you can use with raid and replicate data into same ec2 in another AZ or even region for HA using third-party tools like GlusterFS.
+This useful if you need no data loss. Cause snapshots take at interval, so even if you have 10 min snapshots, you can still lose some data within this 10 min.
+Snapshots - works async, point-in-time snapshot - created immediately, yet it take some time to transfer data into s3.
 Most AMI (Amazon Machine Images) are backed by Amazon EBS, and use an EBS volume to boot EC2 instances. You can attach multiple EBS to single EC2, but single EBS can only be attached to 1 EC2 at the same time.
 EBS allows to create point-in-time snapshots (backup) and store them in s3. You can make snapshot available to other aws accounts so they can create ec2 from it.
 Snapshots are stored in amazon s3 bucket (not in your bucket, so you don't have full control of it, you can't go to bucket and download snapshot) yet you can:
@@ -2621,7 +2637,10 @@ service ipsec restart
     * dx - private connection between on-premise and aws region. Use it if you need high bandwidth.
     * vpn - IPSec connection over the Internet between on-premise and vpc. It's slower than dx since it use public internet. But secure/cheaper & can be setup very quickly. 
 You can use vpn above dx, but it's redundant, cause dx is already secured. Best practice to configure vpn as failover for dx (in case it failed).
-LAG (Link Aggregation Groups) - ability to order multiple direct connect ports and manage them as single larger connection (max number is 4 ports, port types should be the same, all 1GB, or all 10GB). LAG connections operate in Active/Active mode.
+LAG (Link Aggregation Groups) - ability to order multiple direct connect ports and manage them as single larger connection. LAG connections operate in Active/Active mode. There are a few limitations:
+* max number is 4 ports (so you can't create lag with more than 4 DX)
+* port types should be the same, all 1GB, or all 10GB
+* all connections must terminate at the same DX endpoint (basically use DX from same region, endpoint - url to talk with aws like `directconnect.us-east-2.amazonaws.com` one per region)
 DXG (Direct Connect Gateway):
 * by default you can connect 1 vpc to your on-premise using DX + VIF to aws service like s3 or vpc
 If you use private VIF you have to choose either VPG or DXG. So without DXG you can connect only 1 vpc to your DX. But if you use DXG you can connect multiple vpc.
