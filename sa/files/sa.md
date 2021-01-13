@@ -882,7 +882,7 @@ All resources can have several generic attributes:
 * DependsOn - resource would be created after specified resources
 * Metadata - associate some metadata with resource
 * UpdatePolicy & UpdateReplacePolicy - what to do in case of stack update
-Built-in function - intrinsic CF function like `GetAtt/Join/Select/GetAZs` for better work with CF templates (see `sa/cloudformation/template.yml`)
+Built-in function - intrinsic CF function like `GetAtt/Join/Select/GetAZs` for better work with CF templates (see `sa/cloudformation/template.yml`). You can use them only in specific part of template: props/outputs/metadata/updatePolicyAttributes
 Stack policy:
 * by default all update actions for all resources allowed, so anybody with iam permission to update stack can overwrite any resource
 * you can setup stack policy to deny update actions for specified resources (like prod db)
@@ -1364,7 +1364,8 @@ To use TA your app should use (you can also use standard endpoints to access s3,
 * `.s3-accelerate.dualstack.amazonaws.com` - endpoint to user over IPv6. 
 So use TA if you have geographically distributed customers or you constantly moves GB/TB of data across continents. If you file less than 1GB you should use CloudFront Accelerated upload, otherwise use TA.
 If you need to transfer large amount of data from single space, SnowBall can be a good option, cause TA is mostly for many users from different locations.
-TA doesn't cache data in edge location, so if you want low latency then it's better to use plain cf distribution, cause in this case all files would be cached in all edge locations.
+TA doesn't cache data in edge location, so if you want low latency access then it's better to use plain cf distribution, cause in this case all files would be cached in all edge locations.
+So for fast uploading - use TA for fast downloading - use CloudFront. If you need both at the same time - use both (TA + cf distribution).
 You can use [comparison tool](http://s3-accelerate-speedtest.s3-accelerate.amazonaws.com/en/accelerate-speed-comparsion.html) to compare general upload speed for TA across different regions (what speed increase you can get for each region if you use TA).
 Replication - automatic & asynchronous copy of data between 2 s3 buckets, can be within same account or between different aws accounts. There are 2 types:
 * SRR (Same-Region replication)
@@ -1715,9 +1716,16 @@ There are a few limitations compared to ebs:
 * differ from EBS cause it's directly attach to machine (ebs connected via network), so it provides lowest latency
 * by default disk is unencrypted, and compare to ebs you can't set up encryption. If you need it you have to implement either disk-level encryption or file-system-level encryption
 * you can't backup instance store same way you can back up ebs. You have to ssh to machine and copy data from instance store to ebs using `rsync`
+If you have ec2 with ebs + ephemeral, if you try to create ami from ec2 console, only ebs would be shown. If you go to volumes to create snapshot - only ebs would be shown.
 * you can't create snapshot/image from instance store. You have to ssh to machine and manually create ami using Amazon EC2 AMI tools
 for instance store you create manifest & files, build it into bundle, and upload bundle to s3, register AMI from s3. When you run this ami, aws fetch bundle from s3 and create ec2 from this bundle
 for ebs you can create snapshot for volume, and then image from snapshot. You can also create image directly from ec2 console.
+There are 2 types of ami:
+* ebs backed - if you use ebs backed - your root would always be ebs. Although you can choose ec2 with instance store - you can add instance store only as second non-root volume.
+* instance store backed - when you launch new ec2 you have to search `instance store`, choose community ami and there would be a lot of ami with type `instance store`.
+With this type only ec2 with instance store supported. You also can't add additional ebs volumes, only what instance support (if instance support 2 instance store - you create ec2 with 2 ephemeral volumes)
+You can't stop this instance, if you try to stop it from console you will got `The instance 'i-0f3072e29bb001403' does not have an 'ebs' root device type and cannot be stopped`.
+You also can't create image or snapshot. If you need it you have to ssh to ec2 and manually create snapshot/ami.
 
 ###### CloudFront
 CloudFront is a CDN (content delivery/distribution network) - that speed up the distribution of your data using edge locations.
@@ -2474,6 +2482,9 @@ EC2 BYOIP (Bring your own IP) - although when you create ec2 in public subnet, a
 * you can't share IP range with other accounts using RAM, aws would check IP range history, and if it has poor reputation, aws can reject it
 * first you prove that you won IP range, then add it to aws by `provision-byoip-cidr` and after `advertise-byoip-cidr`. So you first provision and then advertise it
 * [aws byoip](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-byoip.html)
+EC2 Instance Connect - command line tool to ssh to your ec2 using iam permission (so you can ssh either with ssh key or with iam permission)
+Under-the-hood Instance Connect API pushes a one-time-use SSH public key to the instance metadata where it remains for 60 seconds, you should have iam policy (`ec2-instance-connect:SendSSHPublicKey`) to allow push public SSH key
+On the ec2 where instance connect installed, ssh daemon search for public key in instance metadata. On the client side you can use `mssh` command to connect to ec2 or you can use it to publish your public key and connect using `ssh` utility.
 
 ###### Athena
 Athena is an interactive query service that makes it easy to analyze data in Amazon S3 using standard SQL. It uses presto under the hood. Presto - good solution if you need to connect to multiple data sources.
@@ -3733,6 +3744,8 @@ Memcached:
 * cluster consists of up to 20 nodes, keys are distributed across nodes. If one node failed, data is lost. So memcached is best if you have data in db and just need a cache layer, and losing cache is not critical.
 * stores objects as blobs, usually you put serialized result of db query
 * new cluster (vertical scaling) starts empty
+* since there is no replication, if node fails all data in it is lost. So you need to provision several nodes for HA and spread your data equally between nodes.
+* for HA you have to either deploy single cluster with 2 nodes in each AZ, or deploy 2 cluster with single node for each AZ
 Redis:
 * cluster consists of up to 15 shards (each shard is 1 primary and up to 5 replica nodes), so totally 15*6 = 90 nodes. So if you need data replication you should use redis. Replication is supported only by redis.
 * support persisting in-memory data to disk
@@ -4067,8 +4080,8 @@ Don't confuse ssl vs IPsec connection type (they differ in a way how they encryp
 * IPsec VPN (used by Site-to-Site vpn) - operates on network layer and encrypt data sent between hosts identified by IP
 AWS VPN consists of 3 services:
 * AWS Client VPN - connect users to aws vpc or on-premises network
-* AWS Site-to-Site VPN (has 2 tunnels for redundancy) - connect your on-premises network with vpc
-Redundant site-to-site vpn - create 2 customer gateways (with 2 separate devices in on-premise) and 2 vpn to single virtual private gateway.
+* AWS site-to-site VPN (has 2 tunnels for redundancy) - connect your on-premises network with vpc. Each site-to-site vpn using 2 vpn tunnels which you can use simultaneously for HA.
+Redundant site-to-site vpn - create 2 customer gateways (with 2 separate devices in on-premise) and 2 site-to-site vpn to single VPG.
 * CloudHub - allows multiple sites (that all connected to your vpc) to communicate with each other (they already can communicate with vpc using site-to-site vpn). To establish it you must:
     * use single VPG and multiple customer gateway for each site and assign unique BGP ASN (Autonomous System Number) for each
     * each site should have non-overlapping IP range (VPG acts as hub and re-advertise these ranges to other sites, so they communicate with each other)
@@ -4107,13 +4120,11 @@ openssl genrsa -out client.key 1024
 openssl req -key client.key -new -out client.req
 openssl x509 -req -in client.req -CA ca.pem -CAkey privkey.pem -CAserial serial.srl -out client.pem
 ```
-Then upload them and use `CloudFormation/advanced-networking/client-vpn.yml` update params as server/client ACM ID.
-Download config and add 
+Then upload them and use `CloudFormation/advanced-networking/client-vpn.yml` update params as server/client ACM ID. Download config and add:
 * `<cert></cert>` - certificate from client.pem file
 * `<key></key>` - private key from client.key file
 Remove `remote-cert-tls server` from `*.ovpn` file, otherwise you got `ERROR: Certificate does not have key usage extension`
-After run `sudo openvpn --config ~/Downloads/downloaded-client-config.ovpn`
-After you can ping private ec2 from your local machine
+After run `sudo openvpn --config ~/Downloads/downloaded-client-config.ovpn`. Then you can ping private ec2 from your local machine.
 
 ###### Directory Service
 DS (Directory Service) - hierarchical structure to store/search/manipulate objects, so users can locate resources no matter where they are stored.
@@ -4123,9 +4134,8 @@ AD provides centralize authorization and authentication to network resources, it
 LDAP (Lightweight Directory Access Protocol, port 389, don't confuse with RDP - 3389) is an application protocol for querying and modifying items in directory service providers like AD.
 Objects in AD grouped into domains. Tree - collection of one or more domains. Forest - collection of trees that share common global catalog. Domain Controller - windows server that runs AD.
 AWS DS - managed service replicated across multiple AZ. There are 3 types of aws DS:
-* AWS Managed Microsoft AD - microsoft AD completely deployed in cloud and managed there
-Trust Relationship - you can build it between aws microsoft AD and your on-premise microsoft AD, and store your users/passwords in your on-premise AD
-but use aws microsoft AD to access aws services based on users from on-premises AD. So you can use it as either standalone AD or as trust relationship to on-premise AD.
+* AWS Managed Microsoft AD - microsoft AD completely deployed in cloud and managed there. Trust Relationship - you can build it between aws microsoft AD and your on-premise microsoft AD, and store your users/passwords in your on-premise AD.
+But use aws microsoft AD to access aws services based on users from on-premises AD. So you can use it as either standalone AD or as trust relationship to on-premise AD.
     * deployed in 2 AZ
     * connected to VPC
     * backups automatically taken once per day
@@ -4133,6 +4143,12 @@ but use aws microsoft AD to access aws services based on users from on-premises 
     * failed domain controllers automatically replaced in the same AZ using the same IP address
 * simple AD - Linux-Samba AD deployed & managed in the cloud. you can singIn to aws management console with simple AD account. it doesn't support trust relationship, schema extension, multi-factor auth.
 * AD Connector - connector to redirect all request to your on-premises AD. So it basically directory gateway that forward requests to on-premise AD.
+Connect on-premises AD with aws:
+* create vpc with 2 public subnet in 2 AZ with NAT gateway in each, and 2 private subnet with domain controller (Windows Server 2019 AMI) replicating from on-premises AD + vpn/CGW/VPG to connect on-premises to AD
+Once you create 2 windows server you promote them into domain controller in the on-premises AD forest. In this case your ec2 get low-latency access to AD through domain controllers, and since you have 2 AZ you build HA system.
+* using AD connector - use it for secure aws integration with your on-premises AD (sing-in to console/workSpaces/workDocs). It can't work with you custom apps. If you want custom apps to use AD use first approach with domain controllers.
+Under-the-hood it's dual AZ proxy that connects aws services to on-premises AD. It forward sign-in requests to your AD for authentication and provide ability for aws services to query AD for data.
+Since it's just a proxy, connector doesn't store/cache user credentials & details. You have to provide a pair of DNS IP, connector use it to locate nearest domain controller.
 
 ###### Wavelength
 Wavelength combines 5G networks with aws compute/storage services. You should use it when you want your aws services to be accessed from mobile devices with low latency.
