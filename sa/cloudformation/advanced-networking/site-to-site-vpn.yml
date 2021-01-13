@@ -5,6 +5,7 @@ AWSTemplateFormatVersion: 2010-09-09
 # create vpn connection with customer gateway (on-premise network) and vpc gateway (vpc)
 # connect to vpnServer => ssh to onPremisePrivateEc2 => ssh to vpcPrivateEc2 => ssh back to onPremisePrivateEc2 -- that would mean we can connect from on-premise to vpc and vice versa
 
+# !important => we use static routing for site-to-site vpn
 # !important => we should disable source/destination check for vpn server so we could use it as proxy (just like nat instance) and route traffic from onPremisePrivateEc2 to vpcPrivateEc2 through vpnServer
 # !important => you have to download vpn configuration and manually update data there (check in sa.md under site-to-site vpn section)
 

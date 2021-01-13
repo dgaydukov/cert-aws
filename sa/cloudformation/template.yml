@@ -1,5 +1,7 @@
 AWSTemplateFormatVersion: 2010-09-09
 
+# passing empty string to !GetAZs - same as passing !Ref "AWS::Region", you can also pass any other region
+
 Description: >
   Metadata - special tag for any resource to specify additional info about resource
   Parameters - special block where you define params that can be passed to cli
@@ -27,6 +29,14 @@ Mappings:
       ami: ami-09d95fab7fff3776c
 
 Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.100.0.0/16
+      Tags:
+        - Key: Name
+          Value: !Join [", ", !GetAZs ""]
+
   DevInstance:
     Condition: Dev
     Type: AWS::EC2::Instance
@@ -40,7 +50,7 @@ Resources:
             VolumeSize: 8
       Tags:
         - Key: Name
-          Value: !Join [ "-", [ !Sub ${AWS::StackName}-${Env}, !FindInMap [RegionMap, !Ref "AWS::Region", name] ] ]
+          Value: !Join ["-", [!Ref "AWS::StackName", !Ref Env, !FindInMap [RegionMap, !Ref "AWS::Region", name]]]
   ProdInstance:
     Condition: Prod
     Type: AWS::EC2::Instance

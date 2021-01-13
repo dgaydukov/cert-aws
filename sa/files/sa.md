@@ -637,8 +637,7 @@ It's based on BGP and AS. With unicast path would lead to one destination, no ma
 * `geocast` - delivery of information to a group of destinations in a network identified by their geographical locations
 Routing protocol:
 * EGP (External Gateway Protocol) - based on tree-like (hierarchical) topologies. As internet grows EGP become inefficient to find the quickest route, so new protocol was developed
-* BGP (Border Gateway Protocol) - makes internet to work.
-It works like GPS (the best route is determined by different factors, such as traffic congestion, roads temporarily closed for maintenance, etc).
+* BGP (Border Gateway Protocol) - makes internet to work. It works like GPS (the best route is determined by different factors, such as traffic congestion, roads temporarily closed for maintenance, etc).
 BGP is designed to exchange routing and reachability information between AS on the Internet.
 AS (Autonomous System) architecture (represented by unique number called an ASN). Each AS controls a collection of connected routing prefixes, representing a range of IP addresses. It then determines the routing policy inside the network.
 
@@ -883,6 +882,32 @@ All resources can have several generic attributes:
 * DependsOn - resource would be created after specified resources
 * Metadata - associate some metadata with resource
 * UpdatePolicy & UpdateReplacePolicy - what to do in case of stack update
+Built-in function - intrinsic CF function like `GetAtt/Join/Select/GetAZs` for better work with CF templates (see `sa/cloudformation/template.yml`)
+Stack policy:
+* by default all update actions for all resources allowed, so anybody with iam permission to update stack can overwrite any resource
+* you can setup stack policy to deny update actions for specified resources (like prod db)
+* once you setup stack policy - all updates denied by default, so you have to add explicit allow 
+* applied only during stack update, use it only as fail-save with combination with iam
+* `principal` element is required (just like for any other resource policy), but supports only the wild card (*)
+* Below example to allow all updates except production DB (`Update` can be either `Modify/Replace/Delete`, yet we use wildcard for short form)
+```
+{
+  "Statement" : [
+    {
+      "Effect" : "Allow",
+      "Action" : "Update:*",
+      "Principal": "*",
+      "Resource" : "*"
+    },
+    {
+      "Effect" : "Deny",
+      "Action" : "Update:*",
+      "Principal": "*",
+      "Resource" : "LogicalResourceId/ProdDb"
+    }
+  ]
+}
+```
 
 ###### IAM
 There are 3 types of permission:
@@ -892,7 +917,7 @@ There are 3 types of permission:
 EC2 role access - you can add (for example bucket write access) role to ec2 instance. Instance Profile - container for an IAM role that you can use to pass role information to an EC2.
 ec2 stores temporary credentials in instance metadata, when you use aws cli/sdk it would automatically fetch temporary credentials from instance metadata. 
 Yet if you want to call aws api outside cli/sdk you have to manually fetch credentials and make a call (`sa/cloudformation/ec2-role.yml`). This security credentials are temporary and ec2 rotate them automatically, new credentials available for 5 min before expiration of old.
-ec2 can assume 1 role at a tile, so `AWS::IAM::InstanceProfile` has `Roles` where you should provide list of roles, you can actually add only 1 role, if you add 2 syncatically it would be correct, but when CF template would run you would get error: `Roles has too many elements. The limit is 1`.
+ec2 can assume 1 role at a tile, so `AWS::IAM::InstanceProfile` has `Roles` where you should provide list of roles, you can actually add only 1 role, if you add 2 - syntactically it would be correct, but when CF template would run you would get error: `Roles has too many elements. The limit is 1`.
 You can run `TOKEN=`curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600"` && curl -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/iam/security-credentials/role-Ec2Role` where `role-Ec2Role` - your role name
 IAM user - `who am I` & `what can I do`. But role is just `what can I do`. So for ec2 to use role it should become type of iam instance, that's why we create instance profile.
 When you create ec2 role from console, instance profile automatically created with same name. But if you are using CLI/CloudFormation you have to manually create it `AWS::IAM::InstanceProfile` and assign it to ec2 using `IamInstanceProfile`.
@@ -1059,8 +1084,8 @@ Examples:
 * Allow/`"Condition":{"Bool":{"aws:MultiFactorAuthPresent":"true"}}` - true if user used 2FA
 * Deny /`"Condition":{"BoolIfExists":{"aws:MultiFactorAuthPresent":"false"}}` - true if user not used 2FA
 because for short-term without 2FA value=false -> false=false => true, for long-term without 2FA value=null -> immediately return true
-* Allow/`"Condition":{"Null":{"aws:MultiFactorAuthAge":"false"}}` - null check if condition key is present. true - key doesn't exist. false - key present and not null.
-* Deny /`"Condition":{"Null":{"aws:MultiFactorAuthAge":true}}` - true if 2FA not present. Null evaluates to true if key value is null.
+* Allow/`"Condition":{"Null":{"aws:MultiFactorAuthAge":"false"}}` - null check if condition key is present. true - key doesn't exist. false - key present and not null. This condition allows actions only if condition key is present.
+* Deny /`"Condition":{"Null":{"aws:MultiFactorAuthAge":true}}` - true if 2FA not present. Null evaluates to true if key value is null. This condition deny actions if condition key is not present.
 Anti-pattern:
 * Allow/`"Condition":{"Null":{"aws:MultiFactorAuthPresent":"false"}}` true if request made with temp-credentials (even without 2FA), false for all long-term credentials
 * Deny /`"Condition":{"Bool":{"aws:MultiFactorAuthPresent":"false"}}` true if use not used 2FA with short-term credentials, false with long-term (users would be able to access resources without 2FA with just simple long-term credentials)
@@ -1069,6 +1094,10 @@ because for short-term without 2FA value=false -> false=false => true, for long-
 Please notice that although 2FA required to login to console, if you are using cli/sdk and you just add access policy without 2FA condition, you can access these resources without 2FA.
 To avoid this, it's better not to assign access policy to user/group, but instead assign them to role, and add `{"Bool": {"aws:MultiFactorAuthPresent": "true"}}` condition to role.
 In this case you have single point of entry - role with 2FA.
+Multiple conditions - if you define multiple conditions, they are evaluated with `AND`. If you have several values for single condition, they are evaluated with `OR`.
+`key1: [A, B], key2: C` - this condition evaluates to true only if key1 either A or B, and key2 is C. This works fine if your key is single value. But what if your key is array and you want to add condition:
+* ForAllValues - if every value match condition, `ForAllValues:StringEquals: {key: [A, B, C]}` - evaluates to true if every value of key match a list of `[A, B, C]`. So if key is `[A, B]` then condition is true.
+* ForAnyValue - if at least one value match condition, `ForAnyValue:StringEquals: {key: [A, B, C]}` - true if any value from key match a list. So if key is `[A, X]` - since A is match, condtition is true.
 Don't confuse:
 * long-term credentials - your aws accessId/accessKey that you generate for iam user. They always stay the same
 * short-term credentials - aws accessId/accessKey/sessionToken - that generated by api `get-session-token/sts-assume-role` and valid for certain duration like 1 hour
@@ -1112,7 +1141,7 @@ There are 6 policy types:
 So they don't actually give these permissions but merely state that this identity can potentially have up to these permission.
 So the actual permission are calculated as intersection of permission policy & permission boundary. Whenever you create new iam identity (user/group/role) you can add actual permissions and permission boundaries.
 Don't confuse:
-* resource-based policy - separate policy, added directly to resource and using `Principal` attribute to denote who can access this policy
+* resource-based policy - separate policy, added directly to resource (like s3) and using `Principal` attribute to denote who can access this policy
 * resource-level permission - `Resource` attribute for identity-based policy, indicates to which particular resources to apply this policy (not relevant to resource-based cause it's applied to specified resource already)
 Note that not all action support resource-level permission. So if you create a policy to allow users to launch ec2 in specific region
 ```
@@ -1152,7 +1181,7 @@ Condition key - a key that can be used in condition block:
 * service-specific key - started with prefix based on service like `iam:` or `sts:`. [Full list of service-specific condition keys](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_actions-resources-contextkeys.html#context_keys_table)
 ABAC (attribute-based access control) - policy conditions basically allows you to create access control based on attributes.
 Policy version - required if you are using variables (like `${aws:username}`. If you leave version, variables are treated like literal values.
-Custom identity broker - you can generate URL that lets users who sign in to your corporate portal, access the AWS Management Console.
+Custom identity broker - you can generate URL that lets users who sign in to your corporate portal, access the AWS Management Console. 
 If your organization use IdP compatible with SAML (like AD) you don't need to write any code, just enable SAML access to management console.
 To get aws console url you should:
 * validate that user is authenticated within your system
@@ -1169,9 +1198,9 @@ To get aws console url you should:
     * GetFederationToken - returns intersection of user permission and passed policy. `DurationSeconds` - specify time from 15 min - 36 hours
     `aws sts get-federation-token --name=bob --policy='{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":"s3:*","Resource":["*"]}]}'`
     * GetSessionToken - returns a set of temporary credentials to an existing IAM user (duration 15min - 36h, default - 12h). Basically same as `GetFederationToken`, but you don't supply policy and get all permission available for calling user.
-* call federation endpoint and supply the temporary credentials to request a sign-in token 
-You got json from previous step: `{"sessionId":"", "sessionKey":"", "sessionToken":""}`, so encode it to url to get URL_ENCODED_SESSION
-send request to: `https://signin.aws.amazon.com/federation?Action=getSigninToken&SessionDuration=1800&Session={URL_ENCODED_SESSION}`
+* call federation endpoint and supply the temporary credentials to request a sign-in token:
+    * you got json from previous step: `{"sessionId":"", "sessionKey":"", "sessionToken":""}`, so encode it to url to get URL_ENCODED_SESSION
+    * send request to: `https://signin.aws.amazon.com/federation?Action=getSigninToken&SessionDuration=1800&Session={URL_ENCODED_SESSION}`
 * construct console sign-in url and return it to user
 You can use [java example](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_enable-console-custom-url.html#STSConsoleLink_programJava) to get sing-in url
 `DecodeAuthorizationMessage` (sts api call) - in case api call return 403, some api may returned encoded message, it's encoded cause it may have some private info. So to decode you have to use this api, and have permission to use this api.
@@ -2118,6 +2147,7 @@ Cross-region restore - you can recover point-in-time table to another region.
 Security:
 * data-in-rest encryption supported for both dynamoDB & DAX
 * data-in-transit encryption supported by HTTPS protocol. You can enable vpc endpoint to access dynamoDB from inside VPC only
+There is no concept of database in dynamoDB, you just create tables and work with them (usually 1 table per whole application). Table name should be unique within single region (you can have 2 table with same name in different regions).
 
 ###### RedShift
 Database vs Data Warehouse:
@@ -2524,7 +2554,8 @@ Amazon VPC consists of:
 * RT (Route table) - set of rules (routes) to determine where network traffic from your VPC is directed. Single RT can be associated with multiple subnets, but single subnet can be associated to one RT only.
 When you create vpc, default RT is created and all subnets by default assigned to this RT, yet if you go to this RT you will see that subnets are not explicitly associated with it.
 That is because this RT - is default. If you create new RT and associate subnet with it, or implicitly associate default RT with subnet, you will see that RT has this association.
-Every RT has routes with 2 fields (if you want to get to such destination go to this target).
+Every RT has routes with 2 fields (if you want to get to such destination go to this target). By default every RT has single route with destination=CIDR & target=local, you can't remove it, so all subnets inside RT can communicate with each other.
+Yet you have to make sure that NACL & SG rules allows ec2 in different subnets to communicate with each other.
 * IGW (Internet Gateway) - entry point between your VPC and Internet. It allows EC2 in VPC directly access Internet. You can use public IP or elastic IP(won't change after stop/start) to both communicate with Internet and receive requests from outside web-servers.
 * NAT Gateway - Network address resolution service in private subnet to access the Internet. Instances from private subnets use NAT gateway to access Internet. Nat allows outbound communication, but doesn't allows machines on the Internet to access instances inside VPC.
 Since Nat GateWay created per AZ for HA it's suggested to create it in every AZ where you have instances. In this case single AZ failure will not block internet access from other private networks. 
@@ -2600,9 +2631,17 @@ You create TGW and then just attach VPC/VPN configurations and add route tables.
 Connect vpc to on-premise network (2 ways):
 * site-to-site VPN. Route propagation allows a VPG to automatically propagate routes to the route tables - so you don't need to manually update RT (works for both static & dynamic routing)
 After running `CloudFormation/advanced-networking/site-to-site-vpn.yml` you will have to manually go to site-to-site vpn and download configuration (select openswan as router).
-There are 2 types of routing:
-* dynamic - if you customer gateway supports BGP 
-* static - if customer gateway doesn't support BGP
+Route propagation rules:
+* by default aws use most specific routes to forward traffic
+* if propagated route from site-to-site vpn or DX overlap with local route, local route take precedence, even if propagated route is more specific
+Don't confuse (customer gateway routing):
+* dynamic - if your customer gateway supports BGP, you you have to provide unique BGP ASN)
+* static - if customer gateway doesn't support BGP, you don't provide any BGP ASN, default number of 65000 is assigned
+Actually in both cases you provide BGP ASN (take a look at `sa/cloudformation/advanced-networking/site-to-site-vpn.yml`), only difference that when you create it from aws console, for static, default number is provided.
+Yet for vpn connection you have to explicitly set `StaticRoutesOnly: false` and provide customer gateway with dynamic routing, or false & CGW with static routing.
+Don't confuse (site-to-site vpn routing):
+* dynamic - use if your customer gateway supports BGP. You don't need static routing, cause your device uses BGP to advertise it routes to VPG
+* static - if customer gateway doesn't support BGP, you have to manually enter routes (static IP) that would be communicated to your VPG
 Then update values from here (left, right, and last line for `/etc/ipsec.d/aws.secrets`). After you will be able to ping ec2 in private vpc
 ```
 # left - on-premise, right - aws vpc side
@@ -2688,7 +2727,7 @@ Let's consider s3 example (you would have to modify 2 policy):
       "Resource": ["arn:aws:s3:::my_bucket", "arn:aws:s3:::my_bucket/*"]
     }
   ]
-}	
+}
 ```
 * s3 resource policy - allow access from endpoint policy only by specifying condition. So basically it would be deny policy to everything if request not from endpoint
 ```
@@ -2706,7 +2745,7 @@ Let's consider s3 example (you would have to modify 2 policy):
       }
     }
   ]
-}	
+}
 ```
 You can also use condition based on vpc like `"StringNotEquals": {"aws:sourceVpc": "vpc-123"}`
 Keep in mind that you can't allow/deny based on sourceIP condition, cause from now on your bucket accessed not from ec2, but from endpoint and sourceIP would be IP of endpoint
@@ -2743,18 +2782,17 @@ There are 2 options:
 * domain-name-servers=AmazonProvidedDNS - Route 53 Resolver server that resides in reserved instance +2 (for example 10.100.0.0/16 CIRD - dhcp server on 10.100.0.2)
 * domain-name=your_domain_name
 If you create ec2, 2 dns host names would be assigned:
-* public -  ec2-{ec2_IP}.compute-1.amazonaws.com
+* public - ec2-{ec2_IP}.compute-1.amazonaws.com
 * private - ip-{ec2_IP}.{your_domain_name}
 If you want to use DX/VPN for vpc-to-on-premises communication you have to:
 * configure route53 entry to access by internal IP
 * add route53 resolver to resolve to forward query over DX
 Overlay Multicast - method of building IP level multicast across a network fabric supporting unicast IP routing, such as VPC (kernel replicate packets to all subscribers, so if you stream 10 pps (packet-per-second) to 10 subscriber, totally 100 pps would be required).
 Multicast - network capability that allows one-to-many distribution of data, you transmit network packets to subscribers that typically reside within a MG (multicast group).
-MG can have zero or more subscribers, who can join or leave MG. Usually multicast implemented in physical networks using hardware replication along a distribution tree.
+MG can have zero or more subscribers, who can join or leave MG. Usually multicast implemented in physical networks using hardware replication along a distribution tree. AWS provides multicast support for Transit Gateway since 2019.
 So if you need multicast in aws you have to:
 * create eni
 * create overlay network multicast
-AWS provides multicast support for Transit Gateway since 2019.
 Migrate vpc to IPv6:
 * your vpc can work in dualstack for either IPv4/IPv6 or both
 * v4 and v6 are independent channel from each other
@@ -2772,6 +2810,7 @@ Migrate vpc to IPv6:
     * update RT (for public subnet - add a route for IPv6 to IGW, for private subnet - create EIGW and add route for IPv6 to it)
     * update SG (include a rule for IPv6 traffic for specified ports)
     * assign IPv6 address to each ec2 from your CIDR block
+If you have running/stopped ec2 or active eni you can't delete subnet or vpc in which it's running. So you have to terminate ec2, only then you can delete subnet/vpc.
 
 ###### Elastic Beanstalk
 Imagine you have spring boot app that use mysql and you want to deploy it to aws, what you have to do:
@@ -3517,6 +3556,10 @@ Below is 2 examples to set up ssl server with client cert validation:
 REST API error mapping - you can map exceptions from lambda to your api:
 * first add desired code to method integration (like 422)
 * second add integration response with lambda error regex and select code from method integration based on exception name
+Max [execution timeout 30 sec](https://docs.aws.amazon.com/apigateway/latest/developerguide/limits.html), and you can't change it. So if you have some long-running lambda or http backend, you have to use async approach:
+* you send initial request, server generate someID and responds immediately
+* server run your task in background
+* you start polling server to check if background task completed by someID
 
 ###### Cognito
 Cognito - managed user service that add user sing-in/sign-up/management email/phone verification/2FA logic. There are 2 pools:
@@ -4027,13 +4070,13 @@ AWS VPN consists of 3 services:
 * AWS Site-to-Site VPN (has 2 tunnels for redundancy) - connect your on-premises network with vpc
 Redundant site-to-site vpn - create 2 customer gateways (with 2 separate devices in on-premise) and 2 vpn to single virtual private gateway.
 * CloudHub - allows multiple sites (that all connected to your vpc) to communicate with each other (they already can communicate with vpc using site-to-site vpn). To establish it you must:
-    * use single VGW
-    * use separate customer gateway for each site and assign unique BGP ASN (Autonomous System Number) for each
-    * each site should have non-overlapping IP range (VGW acts as hub and re-advertise these ranges to other sites, so they communicate with each other)
-    * create site-to-site vpn for each site but with same virtual gateway (many CGW to single VGW)
+    * use single VPG and multiple customer gateway for each site and assign unique BGP ASN (Autonomous System Number) for each
+    * each site should have non-overlapping IP range (VPG acts as hub and re-advertise these ranges to other sites, so they communicate with each other)
+    * create site-to-site vpn for each site but with same virtual gateway (many CGW to single VPG)
 Note that IPSec operates on network layer of osi, so it provide protection/encryption for data in transit, yet source/destination may not be aware of IPSec, so it doesn't provide end-to-end protection.
 VPG (virtual private gateway) terminate IPSec connection and from there on traffic goes unencrypted.
-Customer Gateway - to configure vpn, you have to create customer gateway in your on-premise, and then you have to notify aws about this. So from aws side it's just a way to notify aws about your customer gateway (you just supply IP of your real customer gateway).
+CGW (Customer Gateway) - to configure vpn, you have to create customer gateway in your on-premise, and then you have to notify aws about this. So from aws side it's just a way to notify aws about your customer gateway.
+You have to supply static IP of your real customer gateway, if CGW behind NAT, you can use IP address of NAT. For dynamic routing - you have to provide BGP ASN, for static - it provided by default.
 Client VPN endpoint - allows end users to access aws network over TLS. Target network (vpc subnet) - network that you associate with VPN endpoint, so end users can access it.
 You create vpn endpoint, associate it with target network and distribute vpn config file with end users. End user download openVpn and using your config connect to vpc.
 When you create client vpn you can enable split-tunnel. There are 3 ways for authentication for client vpn
