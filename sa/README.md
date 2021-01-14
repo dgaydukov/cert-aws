@@ -15,6 +15,7 @@ Here is my experience of taking 2 certifications, both associate & professional:
 * [Free SAP questions](https://www.examtopics.com/exams/amazon/aws-certified-solutions-architect-professional)
 
 ### TODO
+https://coingeek.com/bittrex-to-delist-privacy-coins-monero-zcash-and-dash
 https://www.youtube.com/watch?v=UpeV4OqB6Us
 aws reinvent CodeStar
 https://sleek.com/hk/resources/offshore-companys-guide-to-tax-exemption-in-hong-kong (offshore company, no tax)
@@ -65,7 +66,7 @@ https://github.com/real-logic/aeron/tree/master/aeron-cluster
 * ecs + elb with dynamic port mapping (sa/cloudformation/ecs-elb.yml) + add fargate launch type
 * eks + elb with elb path routing to route to eks nodeport
 * Deploy spring app into ECS and EKS and compare the difference (try fargate too). Try auto scaling in eks/ecs
-* Deploy spring app using opsworks stacks
+* Deploy spring app using opsworks stacks (take a look at https://docs.aws.amazon.com/opsworks/latest/userguide/gettingstarted-linux.html). Try to run 2 ec2 and update their ami without affecting performance
 * Try maximum automate site-to-site vpn cloudformation template (try to extract somehow all IP addresses and PSK secret string and put it into ec2 userdata for VpnServer)
 * Install ec2 with openswan and use it as personal vpn server
 * create glue workflow `AWS::Glue::Workflow` and call aws batch when etl complete
