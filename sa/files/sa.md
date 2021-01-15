@@ -1512,6 +1512,23 @@ You can download whole file from s3, open and parse yourself using java sdk. But
 * s3 - `s3api select-object-content --expression="select * from table t where t.country=usa"`, run sql on JSON/CSV/Parquet file (you should pass both `input/output-serialization` and specify one of 3 formats)
 * glacier - `s3api restore-object --restore-request=request.json` where you put sql into json file - this is in case you recover data from glacier
 You can also use `glacier initiate-job` and specify sql under `--job-parameters.SelectParameters.Expression={your_sql}`.
+Access restriction - you can restrict access to objects in your bucket to specific website, using `referrer` key in condition. In this case only `mysite.com` can access your bucket.
+```
+{
+  "Version":"2012-10-17",
+  "Statement":[
+    {
+      "Effect":"Allow",
+      "Principal":"*",
+      "Action":["s3:GetObject"],
+      "Resource":"arn:aws:s3:::mybucket/*",
+      "Condition":{
+        "StringLike":{"aws:Referer":["http://mysite.com/*""]}
+      }
+    }
+  ]
+}
+```
 
 ###### Glacier
 Glacier - low-cost tape-drive storage value with $0.007 per gigabyte per month. Used to store backups that you don't need frequently.
@@ -2166,7 +2183,7 @@ Database vs Data Warehouse:
 Redshift support both:
 * ODBC (Open Database Connectivity) - introduced by Microsoft in 1992, platform dependent - only for windows, procedural as most of the code in C/C++
 * JDBC (Java Database Connectivity) - introduced by SUN in 1997, platform-independent, purely object-oriented driver
-RedShift - relational (based on industry-standard PostgreSQL) data warehouse, fully-managed, petabyte-scale, massively parallel.
+RedShift - relational (based on industry-standard PostgreSQL) data warehouse, fully-managed, petabyte-scale, massively parallel. You can create cluster with minimum 1 node & 160GB storage.
 It delivers fast query and I/O performance for virtually any size dataset by using columnar storage technology while parallelizing and distributing queries across multiple nodes.
 It's fully transactional but implements only serializable isolation level (just like dynamoDB). So if you have big workflow that do lot's of modification, wrap it into transaction, cause otherwise redshift will use new transaction for every change.
 Columnar storage more faster for aggregation operations. If you need to do sum/average in row storage you have to scan all pages to get result, it's a lot of IO, but with columnar you get single IO to get whole column.
@@ -2203,7 +2220,7 @@ Migration:
 * lift-and-shift - is a bad practice cause performance depends on distkey/sortkey/dataCompression and when you just move you current warehouse without redesigning tables you won't get query performance.
 * best practice - to denormalize data if you migrate from heavily normalized database.
 Table design important upfront, cause for mysql/aurora you can create table and when you query pattern changes you just add index, but there is no indexes in redshift
-Changing distkey/sortkey will require table rebuilding. Primary/Foreign/Unique keys are not enforced, so you can add duplicating entry into primary key, yet some query patterns can benefit from these constraints, so if you can enforce them from your app it's better to do so.
+Changing `distkey/sortkey` will require table rebuilding. Primary/Foreign/Unique keys are not enforced, so you can add duplicating entry into primary key, yet some query patterns can benefit from these constraints, so if you can enforce them from your app it's better to do so.
 You can insert data by single/bulk insert - bad practice cause you will use leader node for this. So you can use `copy` command to load data directly into slices.
 `COPY` - load data into redshift, best performance when you specify source as s3 bucket, automatically compress data before insertion. Best practice to use as many input files as slices in the cluster (if you use single file - single slice would copy all other would sit idle)
 Optimal file size 1MB-1GB. If file size too small - lots of time is overhead to request file from s3, if too large - then you may get 99% uploaded and then failed.
@@ -2503,6 +2520,7 @@ Because you pay for each query based on the amount of scanned data, you can redu
 * data partition - reduce amount of scanned data for each query. Athena uses hive for partitioning. You can partition by any key, good practice to partition based on date/location.
 You specify partition in WHERE clause, so athena scan only this single partition instead of whole bucket. It can also help avoid errors, cause if data not partitioned and you run query against whole bucket you may get exceptions.
 * use workgroups - you can separate users/apps and set limits on amount of data each query or the entire workgroup can process, and to track costs. Use iam policy to control access to it.
+launch more like this - settings from aws console that allows you to launch same ec2 in the same AZ (it just copy all params like type/vpc/subnet/SG/storage and prepopulate wizard with this params, you can just create same ec2 or change some params in wizard and create different ec2).
 
 ###### Organizations
 Org - service that allows to tie several accounts to master account and centrally manage them (billing, services, policies), so it basically collection of AWS accounts that you can organize into a hierarchy and manage centrally.
@@ -3386,6 +3404,7 @@ SQS (Simple Queue Service) - managed service that provide asynchronous decouplin
 But you can also use standard queue (unordered) but place order field into each message, and by this you imitate order.
 It guarantee at-least-once delivery. you can use Amazon SQS Java Messaging Library that implements the JMS 1.1 specification and uses Amazon SQS as the JMS provider.
 DLQ (Dead letter queue) - a special queue that receives messages from other queue after some unsuccessful attempt to process it. Used to isolate messages that can't be processed for later analysis.
+Type of original queue & DLQ should match (so if original queue is standard, then DLQ can only be standard, it can't be fifo).
 When you create a queue you can specify dlq (it should be the same type, for standard - standard dlq, for fifo - fifo dlq) with max retry. So after your queue consume message 3 times (and you max retry is 3) and not delete it, it would automatically moved to dlq.
 You can get time-in-queue (time how long message has been in queue) by subtracting `SentTimestamp` attribute from current time. In anonymous access SenderId - IP address of sender (otherwise accountId).
 When you set dlq for sqs queue, it got attribute `RedrivePolicy: {"deadLetterTargetArn":"arn:aws:sqs:us-east-1:ACCOUNT_ID:my_dlq","maxReceiveCount":"3"}`
@@ -3400,7 +3419,11 @@ If queue is empty:
 * long polling - wait till message got into queue, or polling timeout (by default 20 sec) expires (save SQS cost, cause reduce number of empty receives). It's better to always use this type of polling.
 Retention period - how long message stays in queue until removed by sqs. 60 seconds - 14 days, default - 4 days.
 Visibility Timeout (0 sec - 12 hours, default - 30 sec) - once you app consume a message it becomes invisible to others. But until your app explicitly delete message, it won't be deleted.
+So once timeout over, hidden message become visible to other consumers. So if timeout is 0, message always would be visible for all consumers, until somebody removes it.
 If your app would process message longer then visibility timeout, then message again become visible and can be taken by other process.
+You can manually change it (using sdk or cli):
+* if exception happened - you can manually reset it to 0, so it would immediately visible to other consumers
+* if some messages require longer processing - you can set timeout high ony for this specified messages
 For fifo if message in visibility timeout, no other consumer can get second massage with same groupId. So we need to wait until message processed, after any consumer can process other messages of this group. So you got order but no guarantee who is going to process next message (can be any consumer).
 You can get twice same message if:
 * received message is not deleted during `VisibilityTimeout` (time during which you should handle message and delete it from queue), you can [read more](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-visibility-timeout.html#changing-message-visibility-timeout)
@@ -3744,11 +3767,17 @@ CNI (Container Network Interface) - allows the pod to have same IP address as ec
 Different instance type support different number of secondary private IP (m5.large instance type supports three network interfaces and ten private IP addresses for each network interface - totally 30 private IP addresses).
 * [CNI plug-in](https://github.com/aws/amazon-vpc-cni-k8s/blob/master/docs/cni-proposal.md) - assign same IP to pod
 SNAT (source network address translation) - allows pod to communicate with outside world using ec2 public IP.
+Prerequisites to run eks:
+* you need to have iam role to assign it to eks cluster. One of role's permission `route53:AssociateVPCWithHostedZone` to enable cluster endpoint private access.
+Another example of such permission is in `sa/cloudformation/hosted-zone.yml`, since we run template from master it already included, but under-the-hood when you link vpc to private hosted zone you need this permission
+* you need to have vpc with at least 2 subnets across 2 AZ
 
 ###### Fargate
 Fargate is serverless compute engine for containers running in ECS/EKS, it removes the need to provision and manage servers. It's not a separate product, you should use it with either ecs/eks, otherwise there is no point in it.
 You should use it when you don't want to manually provision your EC2 instances. If you need greater control over EC2 (for security or customization), it's better to avoid using it, and instead manually provision EC2 instances.
-For eks fargate every pod is single ec2 with SG.
+For eks:
+* you create fargate profile and declare which pods you want to run on fargate. If pod matches multiple profiles, eks selecte profile at random
+* fargate every pod is single ec2 with SG
 
 ###### ElastiCache
 Managed service that runs Memcached/Redis server nodes in cloud. It automates common administrative tasks required to operate a distributed in-memory key-value environment, consists of:
