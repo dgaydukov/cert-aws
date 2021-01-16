@@ -1,0 +1,48 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+# ssh to machine, cat data.txt, and run curl command 3 times each time passing unique id, after this stack creation would be complete
+# !important => UniqueId - should be unique value for each call. So if your count - 3 times, you have to call curl 3 times with each time pass unique value to UniqueId
+
+Resources:
+  WaitHandle:
+    Type: AWS::CloudFormation::WaitConditionHandle
+  WaitCondition:
+    Type: AWS::CloudFormation::WaitCondition
+    Properties:
+      Handle: !Ref WaitHandle
+      Timeout: 1800
+      Count: 3
+
+  SshSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH access from anywhere
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-SshSG
+  MyInstance3:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-09d95fab7fff3776c
+      KeyName: mykey
+      UserData:
+        Fn::Base64:
+          !Sub |
+          #!/usr/bin/env bash
+          BODY='{"Status":"SUCCESS","Reason":"Configuration Complete","UniqueId":"id-123","Data":"Application has completed configuration."}'
+          echo "curl -X PUT -H 'Content-Type:' --data-binary '$BODY' '${WaitHandle}'" > /home/ec2-user/data.txt
+      SecurityGroupIds:
+        - !GetAtt SshSG.GroupId
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 8
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyInstance

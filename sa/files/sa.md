@@ -908,6 +908,14 @@ Stack policy:
   ]
 }
 ```
+Don't confuse (see `sa/cloudformation/wait-condition.yml`):
+* WaitCondition (`AWS::CloudFormation::WaitCondition`) - resource wait for some external resource (created outside current CF) to finish and only then mark resource status as complete.
+CF waits until WaitCondition get required number of signals or timeout is over. You use `DependsOn` attr to specify that wait condition created after some resource, and another recourse depends on wait condition.
+`AWS::CloudFormation::WaitConditionHandle` - has no props, but return pre-signed url. You use this url (send HTTP request to it) to notify your handle that outside resource is created.
+You can also use `signal-resource` cli to complete condition. In this case you don't even need WaitConditionHandle.
+* CreationPolicy (only applied to AutoScalingGroup/Instance/WaitCondition) - resource waits for signal from `cfn-signal` utility that installed on ec2. Use it in case you want CF to mark resource creation complete only after some script would finish execution in `userdata`.
+You add it to one of three above resource, and then use `/opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource Instance --region ${AWS::Region}` to signal that CF can complete with resource creation
+So you can use WaitCondition with either WaitConditionHandle (in this case you have to curl it's url) or with CreationPolicy (in this case you have to call `cfn-signal` cli utility)
 
 ###### IAM
 There are 3 types of permission:
@@ -3409,6 +3417,16 @@ When you create a queue you can specify dlq (it should be the same type, for sta
 You can get time-in-queue (time how long message has been in queue) by subtracting `SentTimestamp` attribute from current time. In anonymous access SenderId - IP address of sender (otherwise accountId).
 When you set dlq for sqs queue, it got attribute `RedrivePolicy: {"deadLetterTargetArn":"arn:aws:sqs:us-east-1:ACCOUNT_ID:my_dlq","maxReceiveCount":"3"}`
 `SqsMessageDeletionPolicy.NO_REDRIVE` - would remove message if no redrive policy (dlq) specified. But if dlq specified, messages won't be deleted automatically, you have to manually remove them from code. If message is not deleted several times (max retry), it would be moved to dlq.
+You can specify redrive policy (DLQ) with
+```
+MyQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+        QueueName: !Sub ${AWS::StackName}-MyQueue
+        RedrivePolicy:
+            deadLetterTargetArn: !Ref DLQ
+            maxReceiveCount: 3
+```
 You can read more about no_redrive policy [here](https://github.com/dgaydukov/cert-spring5/blob/master/files/spring5.md#aws-sqs-and-no_redrive-deletion-policy) with example in java/spring.
 Payload vs attributes:
 * payload - body usually json, can be encrypted
@@ -4769,6 +4787,18 @@ It can be choose as output destination for MediaLive. It provides read-after-wri
 Don't confuse:
 * MediaLive - broadcast-grade live video encoding service for streaming video to end-users
 * Kinesis Video - securely stream video from connected devices to aws for further real-time/batch-driven analysis ML, video playback, analytics. So you can use it to build machine-vision apps for smart home/city
+Don't confuse 2 on-demand solution:
+* old: s3 (storage) + elastic transcoder (video processing) + cloudFront (delivery)
+    transcoder convert video into the size/resolution/format needed by a particular video player or mobile device, so it takes original files from s3, convert and store back to s3
+    since cloudFront cache content in edge, customer customers experience uninterrupted video playback with minimal delays due to buffering
+    You have 2 choice of delivery:
+    * deliver whole video first and play - simple CF distribution with s3 as origin, user fetch whole video, then view it
+    * stream video by chunks - use new family of video streaming protocols HLS/HDS, fetch content a few seconds before it needs. Use transcoder to convert video to HLS, this will split video into short segments + create manifest file. Player use manifest to fetch & play segments.
+    Live streaming - ec2 that runs streaming server with HLS/HDS used as origin for CF distribution
+* new way: s3 + MediaConvert + CloudFront
+Don't confuse:
+* on-demand streaming: s3 + transcoder or mediaConvert + CloudFront
+* live streaming: ec2 with streaming server + CloudFront
 
 ###### Billing and Cost Management
 This is where you pay your bills, aws automatically charged credit card that you used on sign-up. You can:
