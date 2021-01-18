@@ -915,7 +915,10 @@ CF waits until WaitCondition get required number of signals or timeout is over. 
 You can also use `signal-resource` cli to complete condition. In this case you don't even need WaitConditionHandle.
 * CreationPolicy (only applied to AutoScalingGroup/Instance/WaitCondition) - resource waits for signal from `cfn-signal` utility that installed on ec2. Use it in case you want CF to mark resource creation complete only after some script would finish execution in `userdata`.
 You add it to one of three above resource, and then use `/opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource Instance --region ${AWS::Region}` to signal that CF can complete with resource creation
-So you can use WaitCondition with either WaitConditionHandle (in this case you have to curl it's url) or with CreationPolicy (in this case you have to call `cfn-signal` cli utility)
+So you can use WaitCondition:
+* without anything, just call it directly using `signal-resource` api
+* with `WaitConditionHandle` (in this case you have to curl it's url), keep in mind that for each update if you need new wait you have to create new `WaitConditionHandle`, cause old already passed timeout
+* with `CreationPolicy` (in this case you have to call `cfn-signal` cli utility)
 
 ###### IAM
 There are 3 types of permission:
@@ -927,7 +930,7 @@ EC2 role access - you can add (for example bucket write access) role to ec2 inst
 ec2 stores temporary credentials in instance metadata, when you use aws cli/sdk it would automatically fetch temporary credentials from instance metadata. 
 Yet if you want to call aws api outside cli/sdk you have to manually fetch credentials and make a call (`sa/cloudformation/ec2-role.yml`). This security credentials are temporary and ec2 rotate them automatically, new credentials available for 5 min before expiration of old.
 ec2 can assume 1 role at a tile, so `AWS::IAM::InstanceProfile` has `Roles` where you should provide list of roles, you can actually add only 1 role, if you add 2 - syntactically it would be correct, but when CF template would run you would get error: `Roles has too many elements. The limit is 1`.
-You can run `TOKEN=`curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600"` && curl -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/iam/security-credentials/role-Ec2Role` where `role-Ec2Role` - your role name
+You can run ```TOKEN=`curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600"` && curl -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/iam/security-credentials/role-Ec2Role``` where `role-Ec2Role` - your role name
 IAM user - `who am I` & `what can I do`. But role is just `what can I do`. So for ec2 to use role it should become type of iam instance, that's why we create instance profile.
 When you create ec2 role from console, instance profile automatically created with same name. But if you are using CLI/CloudFormation you have to manually create it `AWS::IAM::InstanceProfile` and assign it to ec2 using `IamInstanceProfile`.
 Entity can assume only 1 role at a time, so if user is assigned to 2 groups he would get all permissions from 2 groups at the same time, but if he assigned 2 roles, he can use only one at a time (by assuming one role)
@@ -1121,8 +1124,13 @@ Permission evaluation:
 Federation - process to move authentication/authorization into third party to handle, so you get token from user which you verify against third party provider.
 Identity federation - grant to external identities ability to secure access aws (both management console & API) without creating iam users. External identities can be of 3 types (2 created from iam console by adding identity provider, 1 from cognito):
 * SAML - corporate IdP (microsoft AD, aws AD). ADFS (Active Directory Federation Services) - used to connect AD to iam using SAML protocol. When you create role choose SAML type.
-* OpenId Connect - web IdP (cognito, facebook, google or any other openId connect). When you create role choose web identity type.
-* cognito IdP - use cogntio identity to get temporary aws credentials (you don't need to identity provider through iam console). When create role choose web identity type and select cognito as IdP
+* OpenId Connect - public web IdP (Facebook/Google/Amazon/Cognito supported out-of-the boxy). When you create role choose web identity type.
+* cognito IdP - use cogntio identity to get temporary aws credentials. When create role choose web identity type and select cognito as IdP
+If you want to use SAML or other OpenID providers (those except 4 default) you have to add IdP to iam first, using `create-saml-provider/create-open-id-connect-provider`
+So if you need federated access:
+* if you have public web IdP like Facebook/Google/SalesForce - use role with openId connect (supported out-of-the-box by aws)
+* if you have corporate saml IdP like microsoft AD - use role with saml connect (supported out-of-the-box by aws)
+* if your corporate IdP is not saml based - use custom identity broker to fetch aws console url (you need to write code to get console access)
 FU (Federated user) - user of such external identity who can access aws services but don't have corresponding iam user (so it managed outside aws iam)
 FU can access aws management console in 2 ways
 * programmatically request security credentials and put them into sign-in request to the AWS
@@ -1130,10 +1138,10 @@ FU can access aws management console in 2 ways
 But both allows federated user to access the console without having to sign in with a user name and password
 FU assume iam role and can access aws resources based on this role. Access is intersection of 2 policies (one passed within request + another from iam role).
 So FU request access with some policy attached and his iam role also has some policy they intersect and this is his policy inside aws.
-Principal - IAM identity (user/group/role) that can interact with aws
-* can be permanent/temporary
-* can be represented by human/application
-* can be root user / iam user / role
+Principal - IAM identity (user/group/role) that can interact with aws, can be:
+* permanent/temporary
+* represented by human/application
+* root user / iam user / role
 Policy - json file with permission which you attach to IAM identity or aws resource (some resources can have it's own access policy, like s3 bucket policy - where you can define which user which action should take).
 Resource policy - policy for single resource like s3 bucket policy or SQS access control
 Main difference between identity and resource policy is that identity policy doesn't have `Principal` attribute, cause you link it to some iam identity which would be it's principal.
@@ -1537,6 +1545,7 @@ Access restriction - you can restrict access to objects in your bucket to specif
   ]
 }
 ```
+If you have single image (2kx2K pixels) split into number of tiles (40x40), bad practice is to store one big picture - increase size of tiles to max size - in this case you reduce number of `GET` requests to s3 bucket and save costs.
 
 ###### Glacier
 Glacier - low-cost tape-drive storage value with $0.007 per gigabyte per month. Used to store backups that you don't need frequently.
@@ -2720,11 +2729,12 @@ LAG (Link Aggregation Groups) - ability to order multiple direct connect ports a
 * port types should be the same, all 1GB, or all 10GB
 * all connections must terminate at the same DX endpoint (basically use DX from same region, endpoint - url to talk with aws like `directconnect.us-east-2.amazonaws.com` one per region)
 DXG (Direct Connect Gateway):
-* by default you can connect 1 vpc to your on-premise using DX + VIF to aws service like s3 or vpc
+* by default you can connect 1 vpc to your on-premise using DX + VIF to aws service like s3 (public VIF) or vpc (private VIF)
 If you use private VIF you have to choose either VPG or DXG. So without DXG you can connect only 1 vpc to your DX. But if you use DXG you can connect multiple vpc.
 * so you can create DXG and associate it with multiple VPG (vpg itself should be associated with vpc first) - by doing this you basically associate single DXG with multiple vpc (can be different region/account)
 Then you create private VIF and associate it not with single VPG but with DXG - so you have single DX that can be connected to multiple vpc cross-region & cross-account
 * multi-account DXG allows to associate up to 10 VPC (from different accounts) or up to 3 Transit Gateway.
+Since both GXG & VPG attached to vpc, you have access to all AZ within region with single DX.
 Direct Connect and DXG support both 1500 and 9001 MTU (you can also modify it if you need). DX VIF - you have to create one of the following VIF to start using dx:
 * private - access private instances inside vpc using their private IP (here you connect your DX to either DXG or VPG)
 * public - access public aws services (like s3) using their public IP
@@ -4284,7 +4294,7 @@ If you want to change ami for all your ec2 without compromise performance:
 
 ###### SWF
 Simple Workflow Service - coordinate work (tasks) across distributed apps. With SWF you don't need to use messaging system, cause tasks works as messages.
-SWF offers rich SDK for quick development. To coordinate tasks, you write a program that gets the latest state of each task from Amazon SWF and uses it to initiate subsequent tasks.
+SWF offers rich SDK for quick development. To coordinate tasks, you write a program that gets the latest state of each task from SWF and uses it to initiate subsequent tasks.
 Task - any invocation within app (code execution, web-server call, human action), they processed by workers, that take tasks, execute it and return result back.
 Decider is a program that controls the coordination of tasks (ordering/concurrency/scheduling). You can build your own coordination system, but you should take care that:
 * tasks may fail, timeout, require restarts
@@ -4431,7 +4441,7 @@ There are 2 types of sms:
 * promotional - sent over routes that have a reasonable delivery reliability, but cheaper than transactional
 Size of sms is 140 chars, if size exceeds this, sns split message into several messages. Mobile push notification can be sent to mobile devices where your app is installed and user allowed push notification.
 Direct addressing - you can push notification to single subscriber instead of pushing to all subscribers.
-SNS vs SQS:
+Don't confuse:
 * sns - push based, consumer don't need to poll data, data would be pushed to them. You can use fanout - push single messages into multiple subscribers (push 1 message to 5 sqs queues).
 To implement fanout with pure sqs you would need to write complex sync logic (app that polls queue should check if all other queue read this message, and only in this case remove message from fanout queue using dynamoDB - as you see a lot of work).
 * sqs - poll based, once message in queue, consumer need to poll it, handle and remove from queue
@@ -4669,7 +4679,7 @@ There are over 90 services that act as source, and 15 services that can be a tar
 Schema Registry - collection of schemas. Schema - json structure of event (with all fields and types and possible values, like phone number - 10 digits).
 Cross-account event - you can configure event that generated in one account and sent into another.
 Don't confuse:
-* eventBrdige - body - only json, target - 15 services, native integration with many third-party services (like zendesk)
+* EventBridge - body - only json, target - 15 services, native integration with many third-party services (like zendesk)
 * sns - kind of limited version of EventBridge, body - any format, target - 6 services
 
 ###### Managed Blockchain
@@ -4705,7 +4715,7 @@ To connect and work with QLDB you have to use [AWS-provided QLDB driver](https:/
 In the core of QLDB, replication, DynamoDB Streams, kafka, version control lay simple concept called log - append-only storage of all events happened.
 
 ###### AppStream 2.0
-Fully managed non-persistent app & desktop streaming service that provides instant access to desktop applications from anywhere. SAP - one of best candidates to be deployed on this platform.
+Fully managed non-persistent app & desktop streaming service that provides instant access to desktop applications from anywhere, SAP - one of best candidates to be deployed on this platform.
 Simplifies app management, improves security, reduces costs by moving a company’s app from their users physical devices to the AWS Cloud.
 aws streaming protocol (NICE DCV) provides responsive & fluid performance that is almost indistinguishable from a natively installed app
 NICE DCV is a proprietary protocol used to stream high-quality, application video over varying network conditions (video and audio encoded using standard H.264 over HTTPS)
@@ -4717,7 +4727,7 @@ There are 2 modes:
 * desktop - user will see desktop of underlying OS on which app is run
 You can centrally manage versions, so users don't need to patch their apps. You can use tags to identify all resources used by a particular department, project, application, vendor, or use case
 To start streaming you need to create AppStream 2.0 stack (fleet of AppStream 2.0 instances that executes and streams applications to end users)
-If you want to stream your app you should create image using Image Builder. If you want AppStream 2.0 communicate with on-premise, create vpc and connect it to on-premise using DX/VPN.
+If you want to stream your app you should create image using Image Builder (go to aws AppStream 2.0 console and Launch an AppStream 2.0 Image Builder). If you want AppStream 2.0 communicate with on-premise, create vpc and connect it to on-premise using DX/VPN.
 You can copy AppStream 2.0 image to another region, or share it with other aws accounts.
 You app should be compatible with Windows Server 2012/2016/2019 (these OS currently supported by AppStream 2.0). If you need to support any dependency (like .NET framework) just add them to image.
 You can choose fleet instance type during creating, you can also change it after creation, just stop fleet, change type, start fleet. 
@@ -4768,7 +4778,7 @@ This family include following products:
 * MediaStore
 * MediaTailor
 * Interactive Video Service & Kinesis Video Streams - part of media, but not part of Elemental package
-MediaConnect - reliable/secure transport service for live video (takes video from one source and send to securely sends to one/more destinations).
+MediaConnect - reliable/secure transport service for live video (takes video from one source and securely sends to one/more destinations).
 You create a flow to connect source with dest and choose:
 * transport protocol 
 * type of encryption
@@ -4785,20 +4795,22 @@ You can use CloudFront with MediaPackage to distribute content, but can also use
 MediaStore - media origin and storage service for delivery live streaming video with low latency. It maintains replicated cache after each update so you get low latency & predictable performance.
 It can be choose as output destination for MediaLive. It provides read-after-write and read-after-update consistency. Here is example of streaming solution in aws `sa/files/images/medialive-mediastore-solution.png`
 Don't confuse:
+* MediaStore - specialized storage for live video, provides low latency, strong consistency, caching
+* s3 - general storage service, use for on-demand video
+Don't confuse:
 * MediaLive - broadcast-grade live video encoding service for streaming video to end-users
 * Kinesis Video - securely stream video from connected devices to aws for further real-time/batch-driven analysis ML, video playback, analytics. So you can use it to build machine-vision apps for smart home/city
 Don't confuse 2 on-demand solution:
 * old: s3 (storage) + elastic transcoder (video processing) + cloudFront (delivery)
     transcoder convert video into the size/resolution/format needed by a particular video player or mobile device, so it takes original files from s3, convert and store back to s3
-    since cloudFront cache content in edge, customer customers experience uninterrupted video playback with minimal delays due to buffering
+    since cloudFront cache content in edge, customer experience uninterrupted video playback with minimal delays due to buffering
     You have 2 choice of delivery:
     * deliver whole video first and play - simple CF distribution with s3 as origin, user fetch whole video, then view it
     * stream video by chunks - use new family of video streaming protocols HLS/HDS, fetch content a few seconds before it needs. Use transcoder to convert video to HLS, this will split video into short segments + create manifest file. Player use manifest to fetch & play segments.
-    Live streaming - ec2 that runs streaming server with HLS/HDS used as origin for CF distribution
 * new way: s3 + MediaConvert + CloudFront
 Don't confuse:
 * on-demand streaming: s3 + transcoder or mediaConvert + CloudFront
-* live streaming: ec2 with streaming server + CloudFront
+* live streaming: ec2 that runs streaming server with HLS/HDS used as origin for CF distribution
 
 ###### Billing and Cost Management
 This is where you pay your bills, aws automatically charged credit card that you used on sign-up. You can:
