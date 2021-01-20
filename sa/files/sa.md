@@ -1654,14 +1654,23 @@ So if you run without tls you would get `mount.nfs4: Operation not permitted`
 ###### EBS
 EBS (Elastic Block Storage) - simple block storage for EC2. After EBS is attached to EC2 you can format it with desired file system.
 It automatically replicated within AZ to provide higher durability (yet if AZ failed it would be unaccessible). This replication is to protect against aws component failure, if you want to protect against human failure you have to use RAID.
+Under the hood ebs use raid 1 for redundancy, that's how it replicated within single AZ.
 RAID (Redundant Array of Inexpensive/Independent Disks) - data storage virtualization technology that combines multiple physical disks into one or more logical units for the purposes of data redundancy and performance improvement.
 RAID is accomplished at software level, so you can use any configuration as long as it supported by OS. There are 2 main types:
 * raid 0 (stripe multiple volumes together) - I/O performance is more important than fault-tolerance (can be good for database, cause fault tolerance is achieved by read-replicas)
+Downside - if 1 volume broken, you lose all your data (so take constantly snapshots, best practice to stop writing when taking snapshot to avoid data corruption).
 * raid 1 (mirror your data for extra redundancy) - fault tolerance is more important than I/O performance
 raid 5 & raid 6 - are not recommended to use with ebs, cause they would decrease performance by 20-30% compared to raid 0.
+Nested RAID (hybrid RAID) - you can also combine 2 or more RAID at the same time (for example combine raid 0 + raid 1):
+* RAID 01 (RAID 0+1) - mirror of stripes, so basically you have 2 raid 0. In this case you get both high speed + replication
+* RAID 10 (RAID 1+0) - stripe of mirrors, opposite to raid 01, so it raid 0 of mirrors. In this case every disk inside raid 0 is double disk (1 main + 1 mirror)
+* RAID 100 (RAID 10+0) - stripe of raid 10
 If you have 2 io1 500GB with 4000 IOPS you can:
 * raid 0 - 1000GB with 8000 IOPS & 1000 MB/s
 * raid 1 - 500GB with 4000 IOPS & 500 MB/s
+Don't confuse:
+* ebs - raid 1 & raid 10 - mostly unneeded
+* instance store volume - raid 1 & raid 10 can be a good choice
 RAID snapshot - use ebs multi-volume snapshot for it (take a look at `sa/cloudformation/ec2-ebs-raid.yml`).
 Synchronous block level replication - you can use with raid and replicate data into same ec2 in another AZ or even region for HA using third-party tools like GlusterFS.
 This useful if you need no data loss. Cause snapshots take at interval, so even if you have 10 min snapshots, you can still lose some data within this 10 min.
@@ -2527,6 +2536,10 @@ EC2 BYOIP (Bring your own IP) - although when you create ec2 in public subnet, a
 EC2 Instance Connect - command line tool to ssh to your ec2 using iam permission (so you can ssh either with ssh key or with iam permission)
 Under-the-hood Instance Connect API pushes a one-time-use SSH public key to the instance metadata where it remains for 60 seconds, you should have iam policy (`ec2-instance-connect:SendSSHPublicKey`) to allow push public SSH key
 On the ec2 where instance connect installed, ssh daemon search for public key in instance metadata. On the client side you can use `mssh` command to connect to ec2 or you can use it to publish your public key and connect using `ssh` utility.
+EBS-optimized instance - add dedicated throughput between ec2 & ebs, and improve performance for ebs volume (not all instances support it). In CF you can set `EbsOptimized: true` to enable ebs optimized ec2.
+Each ebs-optimized instance has [IOPS limit](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-optimized.html). So even if you use RAID 0, once you achieve IOPS limit, your RAID 0 can't add more IOPS.
+So when you create RAID 0, make sure you do not create an array that exceeds the available bandwidth of your EC2 instance, cause once you reach limit you can't add more IOPS.
+When you use RAID 0 you should use instance with most bandwidth with ebs, so choose either ebs-optimized or 10GB network connection ec2.
 
 ###### Athena
 Athena is an interactive query service that makes it easy to analyze data in Amazon S3 using standard SQL. It uses presto under the hood. Presto - good solution if you need to connect to multiple data sources.
@@ -3131,6 +3144,11 @@ but instances with lower capacity would 100% occupied, while larger would be onl
 In this scenario you would need to manually distribute the load, like 30% to to smaller instances, and 70% to 2 larger instances:
 * create 2 elb each for separate instance type
 * create weighted routing policy and send 30% (set weight=30) to elb with smaller instance type and 70% (set weight=70) to elb with larger instance type
+Complex routing - you can use combination of several routing policies, creating complex policy (you can use alias to route one routing policy into another):
+* suppose you have 2 ec2 in 2 regions, and you want first using latency routing, and then inside region weighted routing
+* first you create weighted routing policy and route them to ec2 based on weight
+* second you create latency routing policy and route it using alias to weighted routing policy
+* so when you create complex routing policy - you start from bottom to top, reason is that top routing policy would need to set alias as down routing policy, that's why down routing policy need to be created first
 Hosted zone - route53 concept of domain. For each of your domain you have 1 hosted zone where you can have records. There are 2 types:
 * public - available through the internet
 * private - available inside vpc
@@ -3138,6 +3156,7 @@ Records set - subdomains of your hosted zone. You can easily route any record se
 You can create route53 health check for dns failover (you can also choose String matching and not just ensure that response is 200 http status, but check actual content of response)
 Apex domain - second level domain (example.com). All other like www.example.com, test.example.com - are third level domains
 Alias record - way route53 allows you to bind domain (both apex and any subdomain) to dns record of s3/elb/cloudfront/beanstack/api_gateway/vpc_endpoint (by default you should add IP address, but IP associated with these services can be changed due to scaling up/down)
+Alias can route your record entry into several aws service including other routing policy (so you can combine several routing policies into one complex using aliases).
 Alias is not the same as CNAME record. Internally route53 will substitute alias with appropriate IP address for `A` record. Of course you can take dns name of (let's say elb) and create CNAME record for this dns, and it would work the same way as alias for A record.
 But alias can be assigned to root domain, CNAME can't, only for subdomains. This is the main difference. So alias is better cause it gives IP. 
 Alias automatically changes IP address in case it was changed in aws (suppose you have alias for elb dns, and elb ip has been changed => aws would change dns A record and propagate it to all dns servers)
@@ -4521,6 +4540,18 @@ In this case you have elb -> custom waf with asg -> elb -> ec2 with app. So basi
 ###### Trusted Advisor
 Reviews your account and makes recommendations for saving money, improving system performance, closing security gaps. It includes a list of checks in the categories of cost optimization, security, fault tolerance, performance, service limits.
 If you turn it on you will got weekly email notifications regarding what can be improved (you can exclude resources on which you don't want to get notified). So basically if you want improve performance/efficiency you should use trusted advisor + CloudWatch.
+There are 5 areas:
+* cost optimization - quickest way to analyze which resources are idle and can be safely removed. You can also use CUR (or check bills tab from aws budgets), but in this case you have to dig into report and manually analyze which resource you are not actively using.
+Keep in mind that cost explorer doesn't state much about usage, it just shows how much you paid for previous month and totally for each aws service.
+* performance
+* security
+* fault tolerance
+* service limits
+There are 4 support plans you can use (you must be logged in as root in order to update support plan):
+* basic (free)
+* developer (paid) - 7 core checks
+* business (paid) - full set of checks
+* enterprise (paid) - full set of checks + Designated Technical Account Manager
 
 ###### CloudHSM
 Dedicated HSM instance within aws cloud. You can securely generate/store/manage cryptographic keys. HSM (Hardware Security Module) provides secure key storage and cryptographic operations within a tamper-resistant hardware device.

@@ -11,8 +11,7 @@ Resources:
   MyStackSet:
     Type: AWS::CloudFormation::StackSet
     Properties:
-      StackSetName: mystack
-      AdministrationRoleARN: arn:aws:iam::530313143429:role/AWSCloudFormationStackSetAdministrationRole
+      StackSetName: !Sub ${AWS::StackName}-MyStackSet
       PermissionModel: SELF_MANAGED
       StackInstancesGroup:
         - Regions:
