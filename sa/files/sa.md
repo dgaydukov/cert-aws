@@ -128,6 +128,7 @@
 * 3.82 [Elastic Transcoder](#elastic-transcoder)
 * 3.83 [Elemental Media](#elemental-media)
 * 3.84 [Billing and Cost Management](#billing-and-cost-management)
+* 3.85 [Backup](#backup)
 
 
 
@@ -989,8 +990,8 @@ Same way you can use NotAction/NotResource/NotPrincipal. For example if you want
 Of course you can create deny for all current users, but in this case once somebody add new user with `s3:*` action, he will get access.
 So instead of explicitly deny to all users you can use Deny+NotPrincipal. In this case you would deny to all users except your desired user.
 This approach is bit difficult for roles, cause role principal is defined by 2 arn:
-* role arn -              arn:aws:iam::ACCOUNT_ID:role/roleName
-* assumed role user arn - arn:aws:sts::ACCOUNT_ID:assumed-role/roleName/roleSessionName  (roleSessionName - can be changed depending who is assuming this role)
+* role arn -              `arn:aws:iam::ACCOUNT_ID:role/roleName`
+* assumed role user arn - `arn:aws:sts::ACCOUNT_ID:assumed-role/roleName/roleSessionName` (roleSessionName - can be changed depending who is assuming this role)
 The problem is that Principal/NotPrincipal doesn't support wildcard. But you can use conditions
 ```
 Effect: Deny
@@ -1171,7 +1172,8 @@ Effect: Allow
 Action: [ec2:*]
 Resource: arn:aws:ec2:us-east-1:ACCOUNT_ID:instance/*
 ```
-This won't work, cause `ec2:*` specified all actions, but not all ec2 actions support resource. So that's why this policy doesn't achieve desired result. Instead you should specify actions:
+This won't work, cause `ec2:*` specified all actions, but not all ec2 actions support resource, while you can use a number of different resources for RunInstances, DescribeInstances ONLY supports `*`.
+So that's why this policy doesn't achieve desired result. Instead you should specify actions:
 ```
 Effect: Allow
 Action: [ec2:RunInstances, ec2:TerminateInstances, ec2:StopInstances, ec2:StartInstances]
@@ -1231,6 +1233,56 @@ Cross-account ec2 role (ec2 from accountA can assume role from accountB, take a 
 * create cross-account role in accountB (`sts:AssumeRole` for aws account)
 * create instance profile in accountA (if using aws console it would be created automatically, when you assign role to ec2)
 * go to ec2 (it would already have role from accountA) and configure aws to assume role from accountB, now your ec2 can access accountB resources
+Policy variables - if you don't know exact value when you write policy you can use variable in `Condition/Resource`. If aws can't resolve variable, entire statement is evaluated to false (if you want to evaluate variable only if it present in request use `IfExists...` construction).
+If you want to use policy variables, you must include version into your policy (latest version that support variables - `2012-10-17`, previous versions doesn't support it). 
+Below is example to list buckets only with prefix of username, and get objects only from bucket that named same as user. So variables add more elasticity.
+```
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": ["s3:ListBucket"],
+      "Effect": "Allow",
+      "Resource": ["arn:aws:s3:::mybucket"],
+      "Condition": {"StringLike": {"s3:prefix": ["${aws:username}/*"]}}
+    },
+    {
+      "Action": ["s3:GetObject"],
+      "Effect": "Allow",
+      "Resource": ["arn:aws:s3:::mybucket/${aws:username}/*"]
+    }
+  ]
+}
+```
+You can also use tag variables `"Resource": ["arn:aws:s3:::bucket/${aws:PrincipalTag/department}"]` - bucket name should be tag `department` of calling iam user/role.
+Below policy allows to stop ec2 only if ec2 tag `department` correspond to iam user/role tag `department` which call StopInstances:
+```
+{
+    "Effect": "Allow",
+    "Action": ["ec2:StopInstances"],
+    "Resource": "*",
+    "Condition": {
+        "StringEquals": {
+            "ec2:ResourceTag/department": "${aws:PrincipalTag/department}"
+        }
+    }
+}
+```
+Don't confuse:
+* `aws:PrincipalTag` - tag that exists on principal who make api call (iam user/role)
+* `{service}:ResourceTag` - tag that exist on resource (for example tag of ec2)
+For rds you can use:
+* rds:ResourceTag/Owner
+* rds:db-tag/Owner. You can also use tags for [other resources inside rds](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_examples_rds_tag-owner.html)
+    * `rds:og-tag/Owner` - option group
+    * `rds:pg-tag/Owner` - parameter group
+    * `rds:secgrp-tag/Owner` - security group
+    * `rds:snapshot-tag/Owner` - snapshot
+    * `rds:subgrp-tag/Owner` - db subnet group
+    * `rds:es-tag/Owner` - event subscription
+Don't confuse:
+* Version policy - `Version` attribute for a policy
+* policy versioning - when you modify policy (or aws modify it managed policy), aws doesn't overwrite policy, but instead update it version. So you can always rollback to previous policy
 
 ###### S3
 S3 (Simple Storage Service) used for:
@@ -3062,6 +3114,14 @@ Test your elb (you can run software test to imitate high-load to check your elb)
 * elb scales from 1-7 minutes. So once elb scaled, it adds new IP to dns response with TTL 60 sec (client expect to re-resolve dns after 60 sec)
 * factor in elb dns - when test, make sure to re-resolve DNS every 60 sec to get new IP (cause otherwise elb may add more capacity, but your tests are hitting single IP)
 * factor in sticky session - when test, keep in mind that your automatic tests may hit same ec2 because of this
+Don't confuse (for CLB only):
+* http/https listener - elb modify header, adding `X-Forwarded-For` with client IP
+* tcp/tls listener - elb doesn't modify headers. If you don't want elb to decrypt request and just pass through you can use TCP listener on port 443
+With CLB you can add public key to load balancer, so your backend instance can check authencity, that request came exactly from load balancer. Use `create-load-balancer-policy/set-load-balancer-policies-for-backend-server` commands.
+TCP_UDP - if you want to support both TCP & UDP on the same port for nlb, use this listener.
+Don't confuse:
+* front-end connection - connection between client & ELB
+* back-end connection - connection between ELB & your backend instances (like ec2)
 
 ###### CloudWatch
 CloudWatch - monitoring service for aws resources and apps running in aws cloud.
@@ -4295,6 +4355,7 @@ Difference with other platform:
 * cloudFormation - infra management platform. If you need to provision a lot of resources use CloudFormation, if you have something like LAMP stack use beanstalk
 Cookbook - collection of recipes stored in S3/Git. You can recipes manually or when OpsWorks fire one of 5 lifecycle events: setup/configure/deploy/undeploy/shutdown
 Stack - collection of ec2 & related aws resources (like rds or elastic IP) that have common purpose & you want to manage them together.
+Stack can have different linux versions on different instances, but you can't mix linux & windows instances in the same stack.
 You can use cf template to create stack:
 * use cf template to create VPC/Route53/Nat/Bastion and so on (but not ec2, they are created inside opsWorks)
 * use `AWS::OpsWorks::Stack` create stack and `AWS::OpsWorks::App` to create java app (or any other programming language)
@@ -4313,9 +4374,13 @@ There are 2 ways you can balance your load automatically (both can automatically
 * time-based instance - scale in/out number of ec2 based ons ome time pattern (like scheduled scaling for ASG)
 * load-based instance - scale in/out number of ec2 based on total load (add more when average cpu > 80%, remove when < 50%, like target/step policy for ASG). Metric averages across all instances.
 You can also use ec2 created directly from ec2 console/cli or on-premises instances. You have register such instance within opsWorks and install agent to such instance. After you can manage them same way as native opsWorks instances.
-If you want to change ami for all your ec2 without compromise performance:
+AMI update (if you want to change ami for all your ec2 without compromise performance):
 * create identical stack with ec2 from new ami
-* then use blue-green deployment to switch DNS from old stack to new stack, remove old stack 
+* then use blue-green deployment to switch DNS from old stack to new stack, delete old stack
+Security update (if you want to apply recent security updates to your running instances):
+* by default opsWorks automatically install latest updates during setup, but after instance is running you have to install it yourself. You have 2 choices:
+    * create & start new instance (it would already have all latest updates), delete old instance
+    * for linux you can run `Update Dependencies` which would install latest security patches & update dependencies
 
 ###### SWF
 Simple Workflow Service - coordinate work (tasks) across distributed apps. With SWF you don't need to use messaging system, cause tasks works as messages.
@@ -4867,3 +4932,18 @@ CUR saved in s3 using:
 * redshift/quicksight or without any integration - gzip/scv
 * athena - parquet
 As you see format would be either csv or parquet, not json.
+
+###### Backup
+Aws backup - data storage service (like s3 or storage gateway) specifically designed to store backups. It's centralized backup storage where you can manage backup policy/strategy and add security to all your backups.
+It supports backups offered by ebs/efs/rds/aurora/dynamoDB/FSx/storage gateway, note that redshift & ec2 instance store is not supported by aws backup, redshift - use their backup capability, ec2 instance store - backup is not supported, you must manually backup it into ebs.
+s3 is also not supported by aws backup, cause it doesn't need backup. Yet s3 provides cross-region replication in case you want DR.
+It provides ability to set retention & lifecycle policy centrally. Backup plan - policy that defines how frequently backup your resource and for how long to retain it.
+It integrated with storage gateway, so you can take on-premises backup. Backups created by aws services (ebs/rds) are accessed by aws backup and vice versa, backups created by aws backup - accessed by source service.
+Don't confuse (these 2 are independent from each other):
+* DLM - simple way to manage lifecycle of ebs, use it when you want automate creation/retention/deletion of ebs snapshot
+* aws backup - use it if you want to manage all backups (including ebs) from single place
+Backup vault - logical container where you store your backups. Backup lifecycle - transition of your backups between warm tier (backed by s3) to cold tier (backed by Glacier).
+Encryption:
+* services that has backup built on top of aws backup (like EFS) - encrypted in-transit & at-rest independently from source service
+* services with existing backup capabilities (like EBS) - using source service encryption capabilities
+Backup support cross-region/account backups. You can use both IAM & resource-based (in this case you have to set principal) policies to secure your backup vault.
