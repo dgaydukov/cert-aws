@@ -1938,6 +1938,14 @@ File compression:
 * if you use custom origin, you can configure it to compress files, if cf get file with `Content-Encoding` set, then it won't compress it second time and just pass it
 * to activate it set `Compress Objects Automatically` to `yes` (it turned off by default). Also activate compress in cache policy, take a look at `sa/cloudformation/cf-cache-policy.yml`
 * cf compress files using gzip/brotli formats, if viewer support both cf would use brotli
+Cache expiration (by default 24 hours) - you can control how long data stays in CF distribution, before CF makes new request to origin:
+* for static content - set high TTL, in this case you improve performance and reduce load to your origin
+* for dynamic content - set low TTL. If you need to invalidate cache as soon as data change in origin:
+    * set TTL to 0 - best approach
+    * use `InvalidateCache` api - more expensive approach
+There are 2 ways you can set cache expire:
+* configure Minimum/Maximum/Default TTL when you create distribution
+* set `Cache-Control max-age, Cache-Control s-maxage, Expires` headers - this would overwrite distribution TTL settings
 
 ###### Kinesis
 It is a platform for streaming data/media on AWS, making it easy to load and analyze streaming data.
@@ -2533,9 +2541,9 @@ There are 2 ways to create ASG in CF:
     * ecs
     * dynamoDB (table & GSI)
     * aurora replicas
-ASG troubleshoot:
-* more than 1 policy triggered by single event => asg launch policy with the greater impact (if one policy add 2 ec2 and another 4, then 4 ec2 would be added)
-* scale-out and scale-in triggered by single event => case scale-out wins
+Troubleshooting:
+* more than 1 policy triggered by single event - asg launch policy with the greater impact (if one policy add 2 ec2 and another 4, then 4 ec2 would be added)
+* scale-out and scale-in triggered by single event - scale-out wins
 Note that by itself auto scaling doesn't improve latency: if you need low latency look at elasticache/read replica/cloudfront.
 Hibernation (suspend-to-disk) - like OS sleep command, temporary store RAM in ebs volume, and restore RAM from ebs on wake-up (ebs volume must be large enough to store RAM and be encrypted). When wake-up happens:
 * ram is restored from ebs
@@ -3956,6 +3964,10 @@ you can also update/patch your ami:
 * session manager - browser cli that allow to interact with ec2 without ssh/bastion/opening inbound ports. 
 It improves security, cause it doesn't require you to open inbound ssh port (22) to talk with ec2. You also don't need to operate bastion host.
 For this to work you should assign a role to ec2 with policy `AmazonEC2RoleforSSM`. Internally ssh manager just ssh you as `ssm-user` with root privilege.
+SM is mostly free (running commands or patch manager), yet some are paid services: on-premise instance management, advanced parameter store, system manager automation
+If you want to schedule, there are 2 options:
+* state manager - run scripts on linux/windows, patch instances with software/security updates
+* maintenance window - you define window for disruptive actions like patching, updating drivers. You can use it also for s3/sqs/kms
 
 ###### Config
 Managed service that provides aws resources inventory, config history, change notification. When you turn it on, it creates config item for each resource.
@@ -4343,8 +4355,13 @@ You can customize permission set props:
 ###### OpsWorks
 Config management service that provides managed instances of Chef/Puppet which help automate server configuration/deployment/management. There are 3 solutions:
 * OpsWorks Stacks - manages apps and servers in aws and on-premises using chef, you model your app as stack containing different layers (elb, rds, ec2). 
-You app would usually have 1 stack and many layers. Also if your app use java & python, it can be better to divide it into 2 layers
-Layer use chef recipes to install packages & deploying apps.
+You app would usually have 1 stack and many layers. Also if your app use java & python, it can be better to divide it into 2 layers. 
+Layer use chef recipes to install packages & deploying apps. There are several layers:
+    * ELB layer - instead of creating layer & adding instances to it, you create ELB from console/cli, and attach it to existing layer, and elb would start to distribute traffic between ec2 inside layer
+    You use `attach-elastic-load-balancer` api to attach existing ELB to layer. When you attach/detach ELB, opsWorks trigger `configure` lifecycle event
+    * RDS layer - create RDS separately, use `register-rds-db-instance` to add rds to stack. Associate rds layer to App, so it would share connection info with it.
+    * ECS Cluster layer - create ecs cluster outside opsworks, then add cluster to stack with `register-ecs-cluster`
+    * Custom layer - you can create custom layer with custom recipe
 * OpsWorks for Chef Automate - fully managed Chef server and automation tools for ci/cd. You can migrate to it from Stacks, but you would need to rewrite some recipes, but most recipes would work without any change
 * OpsWorks for Puppet Enterprise - managed Puppet Enterprise server and automation tools for ci/cd (including orchestration/provisioning/deploying services in ec2)
 Chef using pure ruby DSL to write recipes. Puppet using ruby DSL or its own declarative language to write puppet manifests.
@@ -4381,6 +4398,11 @@ Security update (if you want to apply recent security updates to your running in
 * by default opsWorks automatically install latest updates during setup, but after instance is running you have to install it yourself. You have 2 choices:
     * create & start new instance (it would already have all latest updates), delete old instance
     * for linux you can run `Update Dependencies` which would install latest security patches & update dependencies
+Troubleshooting:
+* You can't manage previously managed ec2 and getting: `Aws::CharlieInstanceService::Errors::UnrecognizedClientException - The security token included in the request is invalid.`. There are 3 possible reasons:
+    * iam user/role associated with ec2 was removed
+    * edit volume while instance was stopped
+    * add ec2 to elb outside of opsworks - in this case opsworks consider such instance as unknown and delete
 
 ###### SWF
 Simple Workflow Service - coordinate work (tasks) across distributed apps. With SWF you don't need to use messaging system, cause tasks works as messages.
