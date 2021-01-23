@@ -1946,6 +1946,10 @@ Cache expiration (by default 24 hours) - you can control how long data stays in 
 There are 2 ways you can set cache expire:
 * configure Minimum/Maximum/Default TTL when you create distribution
 * set `Cache-Control max-age, Cache-Control s-maxage, Expires` headers - this would overwrite distribution TTL settings
+Troubleshooting:
+* 502 (bad gateway) - CF can't connect to origin server:
+    * for match viewer policy domain name in SSL should correspond to origin domain name
+    * SSL on origin is expired/invalid/self-signed
 
 ###### Kinesis
 It is a platform for streaming data/media on AWS, making it easy to load and analyze streaming data.
@@ -2070,6 +2074,7 @@ There are several engines you can run on top of emr:
 Presto faster than spark cause it doesn't care about fault-tolerance. If one of the Presto worker nodes experiences a failure (say, shuts down) in most cases queries that are in progress will abort and need to be restarted.
 Spark supports mid-query fault-tolerance and can recover from such a situation but in order to do that, it needs to do some extra bookkeeping and essentially "plan for failure". That overhead results in slower performance when your cluster does not experience any faults.
 Spark Streaming - solution to process/analyze data in real-time. On aws if you want to use it you have to provision: kinesis data streams + emr with spark streaming and apache zeppelin
+You can create security configuration (`AWS::EMR::SecurityConfiguration`) where you can enable both data-in-rest (available for both EBS & EMRFS on S3) & data-in-transit encryption, and then assign this config to cluster.
 
 ###### Glue
 Fully managed ETL (extract/transform/load) to catalog/clean/enrich/move your data. Consist of:
@@ -2222,6 +2227,10 @@ DAX (DynamoDB Accelerator) - in-memory cache for dynamoDb, can expedite up to 10
 Global Tables (cross-region replication) - multi-region/master db that automatically replicates across multiple regions. It's multiple replica tables (one per region) that DynamoDB treats as a single unit.
 When app write data to replica table in one region, dynamoDb propagate changes to all regions, so if one region would be unavailable your app continue to work normally.
 Multi-master replication ensures that updates propagate to all regions and that data eventually consistent.
+Don't confuse (2 billing options):
+* provisioned capacity - you can separate capacity for read & write. You can also set AutoScaling (again separately for read & write) to add more capacity when number or read/writes goes beyond certain point
+* on-demand read/write capacity - you can set elastic capacity based on your load for read & write. You can't set it only for read and for write provisioned or vice versa. Indexes also using on-demand capacity, so you don't have to specify it.
+So you can say that there are 3 modes: provisioned/AutoScaling/on-demand
 AutoScaling - ability to change write/read throughput according to current load:
 * you can set write/read throughput, but it's hard to predict exact values in advance, moreover your load maybe changing
 * automatically applied to table/GSI created from console
@@ -2600,6 +2609,7 @@ EBS-optimized instance - add dedicated throughput between ec2 & ebs, and improve
 Each ebs-optimized instance has [IOPS limit](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-optimized.html). So even if you use RAID 0, once you achieve IOPS limit, your RAID 0 can't add more IOPS.
 So when you create RAID 0, make sure you do not create an array that exceeds the available bandwidth of your EC2 instance, cause once you reach limit you can't add more IOPS.
 When you use RAID 0 you should use instance with most bandwidth with ebs, so choose either ebs-optimized or 10GB network connection ec2.
+Max memory limit is 24TB - purpose built ec2 for SAP db.
 
 ###### Athena
 Athena is an interactive query service that makes it easy to analyze data in Amazon S3 using standard SQL. It uses presto under the hood. Presto - good solution if you need to connect to multiple data sources.
@@ -2661,6 +2671,10 @@ The tool will evaluate your workload and provide an improvement plan with a prio
 Virtual private cloud - cloud private network, like internal network in on-premises. You can have some servers inside and they won't be accessible outside of vpc.
 You have complete control over your virtual networking environment, including selection of your own IP ranges, creation of subnets, and configuration of route tables and network gateways.
 By default every account has default VPC (and default subnet for each AZ), so if you don't create any other, and create EC2 directly, default VPC would be used.
+You can use vpc wizard to quickly create:
+* single vpc with public subnet
+* vpc + public & private subnet + NAT gateway with elastic IP
+* vpc + public & private subnet + VPN
 Amazon VPC consists of:
 * VPC - private network, logically isolated from other networks in aws cloud. Can span across multiple AZ. Instances in different AZ charged $0.01 per GB for data transfer. Size should be /28 - /16 (so from 16-65535, actual size would be -5 from each subnet)
 * Subnet - private sub-network inside VPC. Can reside only within single AZ. For each subnet 5 IP are automatically taken. 4 from the start + last.
@@ -2890,7 +2904,7 @@ EC2 Tenancy - you can set it for individual ec2:
 * subnet layer - NACL decide which traffic to allow
 * ec2 layer - SG
 PG (Placement group) - create ec2 in underlying hardware in such a way as to avoid correlated failures:
-* cluster - packs instances close together inside AZ (good when you need high speed node-to-node communication, used in HPC apps). t2.micro can't be placed into cluster PG
+* cluster - packs instances close together inside AZ (good when you need high speed node-to-node communication, used in HPC apps). t2.micro can't be placed into cluster PG. Also you can't span it into several AZ, it should be only within same AZ.
 Capacity error - if you have instances in your PG and try to launch one more you may get this error. The problem is that underlying hardware has no capacity for one more instance.
 Solution - to stop & start all ec2 (in single launch request, cause if you launch 4 and then 1 you can again get same error), in this case, your PG can be moved to hardware with larger underlying capacity.
 * partition (up to 7 per AZ) - spread instances between different hardware partitions (so group of instances inside one partition don't share any hardware with group of instances from another partition)
@@ -3205,6 +3219,7 @@ Routing policy:
 * Latency - redirect traffic to the region that provides the lowest latency.
 * Multivalue answer - simple routing policy + healthcheck. You can set up to 8 instances, and if first become unavailable traffic goes to random one out of other 7.
 Route53 gives different answers to different DNS resolvers. If a web server becomes unavailable after a resolver caches a response, client software can try another IP address in the response.
+You can use it to create a link to many rds read replica, so your app would have single dns record to access all read-replicas.
 * Weighted - 90% of traffic to one ec2, 10 to second. Ideal for blue-green deployment (so you can route 10% for new version, see how it works, and then route all requests to new version and 0 to old).
 Weight - int value from 0 (no traffic) to 255. Percentage calculated by weightNumber/totalWeight.
 This can be useful if you have 2 `t2.nano` and then also add 2 `c5.xlarge` and use single elb. In this case load would be proportionally distributed between all 4 instances,
@@ -3228,6 +3243,16 @@ Alias can route your record entry into several aws service including other routi
 Alias is not the same as CNAME record. Internally route53 will substitute alias with appropriate IP address for `A` record. Of course you can take dns name of (let's say elb) and create CNAME record for this dns, and it would work the same way as alias for A record.
 But alias can be assigned to root domain, CNAME can't, only for subdomains. This is the main difference. So alias is better cause it gives IP. 
 Alias automatically changes IP address in case it was changed in aws (suppose you have alias for elb dns, and elb ip has been changed => aws would change dns A record and propagate it to all dns servers)
+If you want to use alias health check you have to set `Evaluate target health` to yes in aws console, or you can use CF record:
+```
+AliasDnsRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      AliasTarget:
+        EvaluateTargetHealth: true
+```
+In this case dns record would use health check of alias. It would be useful if you have latency records pointed to weighted dns record. If you turn of this check, even if all ec2 within one region failed, latency would still point weighted dns (so users from that region would see broken ec2).
+This option is unavailable if alias: CF distribution, s3
 A record with Alias for elb `dig elb.aumingo.com`
 ```
 elb.aumingo.com.	60	IN	A	52.202.13.14
