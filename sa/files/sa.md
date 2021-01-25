@@ -256,6 +256,8 @@ You can ssh to ec2 and run `modinfo ena` if you see response your ENI is ENA. Wh
     * best suited for HPC/ML. HPC applications - a group of ec2 instances that perform some high load logic. They are written using MPI (Message Passing Interface) and require fast communication between instances
     * OS-bypass traffic is limited to a single subnet. In other words, EFA traffic cannot be sent from one subnet to another. Normal IP traffic from the EFA can be sent from one subnet to another
     * although not required, it's recommended to place EFA instances into cluster PG
+SR-IOV (single root I/O virtualization, used by enhanced networking to provide high-performance networking on supported instance types) - method of device virtualization that provides higher I/O performance and lower CPU utilization.
+Using it we can access NIC directly, freeing virtualization layer. It increases speed by emulating vNIC and visualize network adapter on physical host. So if you reach instance bandwidth with raid 0 you can try to use SR-IOW.
 
 ###### Shared Responsibility
 AWS use concept of shared responsibility:
@@ -1720,6 +1722,8 @@ Nested RAID (hybrid RAID) - you can also combine 2 or more RAID at the same time
 If you have 2 io1 500GB with 4000 IOPS you can:
 * raid 0 - 1000GB with 8000 IOPS & 1000 MB/s
 * raid 1 - 500GB with 4000 IOPS & 500 MB/s
+DBRD (Distributed Replicated Block Device) - distributed replicated storage system for linux - free software for HA clusters implemented as kernel driver.
+DBRD asynchronous replication - in case of forced failover some data may be lost due to async mode. If you require HA without data loss - use sync replication.
 Don't confuse:
 * ebs - raid 1 & raid 10 - mostly unneeded
 * instance store volume - raid 1 & raid 10 can be a good choice
@@ -2817,6 +2821,10 @@ service ipsec restart
     * dx - private connection between on-premise and aws region. Use it if you need high bandwidth.
     * vpn - IPSec connection over the Internet between on-premise and vpc. It's slower than dx since it use public internet. But secure/cheaper & can be setup very quickly. 
 You can use vpn above dx, but it's redundant, cause dx is already secured. Best practice to configure vpn as failover for dx (in case it failed).
+There are 2 types of DX:
+* dedicated - physical Ethernet connection associated with a single customer, you can create it from console/cli
+* hosted - physical Ethernet connection that an AWS Direct Connect Partner provisions on behalf of a customer, you can create by contacting a partner
+For hosted connection you can create only 1 VIF at a time. So if you want to use several VIF (like public & private) you need dedicated connection or several hosted connections.
 LAG (Link Aggregation Groups) - ability to order multiple direct connect ports and manage them as single larger connection. LAG connections operate in Active/Active mode. There are a few limitations:
 * max number is 4 ports (so you can't create lag with more than 4 DX)
 * port types should be the same, all 1GB, or all 10GB
@@ -2827,10 +2835,10 @@ If you use private VIF you have to choose either VPG or DXG. So without DXG you 
 * so you can create DXG and associate it with multiple VPG (vpg itself should be associated with vpc first) - by doing this you basically associate single DXG with multiple vpc (can be different region/account)
 Then you create private VIF and associate it not with single VPG but with DXG - so you have single DX that can be connected to multiple vpc cross-region & cross-account
 * multi-account DXG allows to associate up to 10 VPC (from different accounts) or up to 3 Transit Gateway.
-Since both GXG & VPG attached to vpc, you have access to all AZ within region with single DX.
-Direct Connect and DXG support both 1500 and 9001 MTU (you can also modify it if you need). DX VIF - you have to create one of the following VIF to start using dx:
-* private - access private instances inside vpc using their private IP (here you connect your DX to either DXG or VPG)
-* public - access public aws services (like s3) using their public IP
+Since both GXG & VPG attached to vpc, you have access to all AZ within region with single DX. Direct Connect and DXG support both 1500 and 9001 MTU (you can also modify it if you need). 
+VIF (virtual interface) - you have to create one of the following VIF to start using dx:
+* private - access private instances inside vpc using their private IP (here you connect your DX to either DXG or VPG). You can't use vpc endpoint + private VIF, cause vpc endpoint connection can't extend outside vpc. If you want to access s3 with DX, create private VIF.
+* public - access public aws services (like s3) using their public IP. Although name is public, the traffic between s3 & on-premises routes inside DX, so in this regard you can call it private traffic.
 * transit - access vpc Transit Gateway associated with dx
 When you establish DX/VPN make sure that your vpc has no IP range conflict with on-premises network. All private IP addresses on both network should be unique (just the same rule as for vpc peering)
 Don't confuse 3 links:
@@ -3521,8 +3529,10 @@ MyISAM vs InnoDB:
 * inndodb: both row-level & table-level locking, support transactions, foreign keys, relationship constraints
 RDS on VMware - manage private on-premise database with rds using rds connector (software appliance for VMware vSphere env)
 For both rds & rds on vmware you can create read replica but you should enable automatic backup (with retention period greater than 0).
-For rds on vmware you can create only 1 read replica and only in the same region. Rds on vmware support DX, but doesn't support aurora.
-You can also backup to s3 & create read replica in aws.
+For rds on vmware you can create only 1 read replica and only in the same region. Rds on vmware support DX, but doesn't support aurora. You can also backup to s3 & create read replica in aws.
+If you need load balancing:
+* rds - use private hosted zone with multivalue answer. There is no way to add rds to ELB
+* db on ec2 - use ALB (in this case you can also add WAF to prevent sql injections)
 
 ###### SQS
 SQS (Simple Queue Service) - managed service that provide asynchronous decoupling and publisher/subscriber (queue) model. There are 2 types:
@@ -4636,7 +4646,8 @@ Local Resource - buses/peripherals that are physically present on the device. Yo
 ###### WAF & Shield
 3 security services joined under single tab in aws:
 * waf (web application firewall) - you add rules that allow/deny/count web requests based on conditions that you define. Conditions are: HTTP header/body, URL string, SQL injection, XSS (for example you can block specific user-agents).
-Underlying service send request to waf, waf validate it based on rules you defined and instruct your service to block/allow request to proceed. It's integrated with CloudFront/ALB/Api Gateway.
+Underlying service send request to waf, waf validate it based on rules you defined and instruct your service to block/allow request to proceed. It's integrated with CloudFront/ALB/Api Gateway/AppSync.
+You create Web ACL (Access Control List), specify resource, and add rules. Plz note only ALB can be specified, there is no way to add WAF above NLB, cause NLB works on level 4.
 Rate-Base Rule - allows you to set a number of allowed request per IP address during predefined time (100 requests per 5 min - once this IP send 101 request, it would be blocked, until 5 min period ends, and new starts).
 Managed Rule - default rules that automatically updated by AWS Marketplace security Sellers, protects against common known issues. 
 In case of rule fail you can configure CloudFront to show error page. Rules take a minute to propagate worldwide. It inspects both HTTP/HTTPS traffic.
