@@ -807,6 +807,7 @@ It's aws solution to IAC. There are 2 concepts:
 * stack - template deployed to cloud (you can run commands like describe/list/create/update stack). If you create/update stack and errors occur all changes would be rolled back and you can be notified by SNS
 SAM (Serverless Application Model) - framework to build serverless apps, provide a shorthand syntax to write IAC using yaml templates. Later it anyway transformed into CF full template, so you can just learn CF and stick with it.
 [sam local](https://github.com/aws/aws-sam-cli) - cli tool to test lambda locally, simulate s3/dynamoDB/kinesis/sns, it uses built-in CodeBuild/CodeDeploy to build and deploy app to cloud.
+SAM templates are similar to CF, yet it starts from `Serverless`, like `AWS::Serverless::Api/AWS::Serverless::Function/AWS::Serverless::SimpleTable`
 Supported formats are JSON/YAML. Resource naming is supported not for all product, this is due to possible naming conflicts (when you update template, some resources would be recreated, but if names are not updated error would happen).
 To assign real name, you use stack + logical name, this ensures unique names. You can add deletion policy (for example you delete stack and want to preserve s3 buckets and take RDS snapshot).
 CF Registry - managed service that lets you register, use, and discover AWS and third party resource providers. You can use conditions inside templates (for example create ec2 based on input params).
@@ -2214,6 +2215,7 @@ Stream records are organized into groups, also referred to as shards. With strea
 * build transactional system (based on `insert/update/delete` records from one table do some operation in another)
 * log/audit/aggregate data
 * replicate data to another regions for query purpose using [cross-region replication Library](https://github.com/awslabs/dynamodb-cross-region-library)
+If you need search capabilities you can use Streams + lambda + ElasticSearch. When new record is added, streams would fire a lambda, which would add a record + index to elasticSearch.
 Plz note that you should use global tables for cross-region replication. Don't use this library.
 * update elasticache (so your cache would be always updated to latest state of db)
 * in case your app need to know about all updates
@@ -2234,7 +2236,7 @@ Multi-master replication ensures that updates propagate to all regions and that 
 Don't confuse (2 billing options):
 * provisioned capacity - you can separate capacity for read & write. You can also set AutoScaling (again separately for read & write) to add more capacity when number or read/writes goes beyond certain point
 * on-demand read/write capacity - you can set elastic capacity based on your load for read & write. You can't set it only for read and for write provisioned or vice versa. Indexes also using on-demand capacity, so you don't have to specify it.
-So you can say that there are 3 modes: provisioned/AutoScaling/on-demand
+So you can say that there are 3 modes: provisioned/AutoScaling/on-demand. If you don't know the load use on-demand. If you know the load, and have pattern (like 25% increase during weekdays) use provisioned + autoScaling capacity.
 AutoScaling - ability to change write/read throughput according to current load:
 * you can set write/read throughput, but it's hard to predict exact values in advance, moreover your load maybe changing
 * automatically applied to table/GSI created from console
@@ -2482,7 +2484,15 @@ Scaling process (2 default are `Launch/Terminate`):
 * HealthCheck - check health status and mark instance unhealthy
 * ReplaceUnhealthy - terminate instances marked unhealthy and create new 
 * ScheduledActions - perform scheduling scaling
-You can suspend/resume any of this scaling policy using `SuspendProcesses/ResumeProcesses`.
+You can suspend/resume any of this scaling policy using `SuspendProcesses/ResumeProcesses`. Yet if you need to troubleshoot/update ec2, move it into `standBy` state.
+Instance scale-in protection - you can protect single instance or all ec2 in ASG from scale-in:
+* add protection to whole ASG when you create it `aws autoscaling create-auto-scaling-group --auto-scaling-group-name=my --new-instances-protected-from-scale-in`
+* add protection to single instance inside ASG `aws autoscaling set-instance-protection --auto-scaling-group-name=my --instance-ids=i-123 --protected-from-scale-in`
+Keep in mind that protection doesn't work:
+* manual termination of ec2 from console/cli
+* healthcheck replacement of ec2
+* spot ec2 termination
+You can temporary remove (move to `standBy` state) ec2 from ASG, troubleshoot/update it and return it back `aws autoscaling enter-standby --auto-scaling-group-name=my --instance-ids=i-123 --should-decrement-desired-capacity` (we decrement desired capacity so ASG won't launch new ec2)
 Administrative suspension - aws would terminate launch attempts if asg failed to launch instance for 24 hours. You can also set suspension to (launch/terminate). In this case asg won't try to attempt to launch/terminate instances (if you suspend termination, spot instances would be terminated anyway)
 Don't confuse:
 * LC (launch configuration, old version) - immutable (you can create one LC and if you want to add change you have to add second LC). Only basic ec2 settings are supported.
@@ -2567,8 +2577,12 @@ If instance takes long time to bootstrap you can pre-warm it:
 * bring it to desired state
 * hibernate it until you need it
 You are not charged for hibernated instance in stop state, but you are charged for ebs/elasticIP. If you have custom AMI, you should first enable hibernation for it, by installing `ec2-hibinit-agent`.
-You can't hibernate instance in ASG/ECS, instance root volume store (only with ebs store, cause instance root volume would be flushed when instances moved to stop state), more than 150GB RAM or for more than 60 days. 
-If you try to hibernate instance in ASG, it will mark it as unhealthy (cause from asg perspective instance is stopped), terminate it and launch new replacement.
+Limitation of hibernation - you can't use it:
+* instance in ASG/ECS. If you try to hibernate instance in ASG, it will mark it as unhealthy (cause from asg perspective instance is stopped), terminate it and launch new replacement
+* instance root volume store (only with ebs store, cause instance root volume would be flushed when instances moved to stop state), more than 150GB RAM or for more than 60 days. 
+* unencrypted ebs (it should be encrypted to protect sensitive content of RAM). Yet you can run unencrypted ami and enable hibernation if ebs is encrypted.
+* MacOS ami (only windows & linux ami support hibernation)
+* you can't enable hibernation on already running ec2. You have to enable it when you launch ec2
 There are 2 types of fleet:
 * spot - list of spot ec2 instances you can request
 * ec2 - list of spot/on-demand/reserved instances you can request
@@ -2614,6 +2628,14 @@ Each ebs-optimized instance has [IOPS limit](https://docs.aws.amazon.com/AWSEC2/
 So when you create RAID 0, make sure you do not create an array that exceeds the available bandwidth of your EC2 instance, cause once you reach limit you can't add more IOPS.
 When you use RAID 0 you should use instance with most bandwidth with ebs, so choose either ebs-optimized or 10GB network connection ec2.
 Max memory limit is 24TB - purpose built ec2 for SAP db.
+There are 3 services to configure Windows instance (not linux):
+* Ec2Config - when you stop/start ec2, perform tasks on instance like:
+    * change drive letter for any attached EBS
+    * set random & encrypted password for admin account
+    * generate & install host cert used for RDP
+    * execute passed Userdata
+* Ec2Launch (replaced Ec2Config)
+* Ec2Launch v2 (replaced Ec2Launch)
 
 ###### Athena
 Athena is an interactive query service that makes it easy to analyze data in Amazon S3 using standard SQL. It uses presto under the hood. Presto - good solution if you need to connect to multiple data sources.
@@ -2650,7 +2672,10 @@ It will never limit permission to internal user of current account who has permi
 * TP (Tag policy) - set of rules regarding tags (which resource should have which tags).
 Feature sets (you select it when you create organization) - how your organization manage its accounts:
 * Consolidated billing - provides only shared billing functionality (you can't define SCP/TP with this type). You can switch from consolidated billing to all by just updating org (there is no need to delete & create org).
-* all - consolidating bulling + all available features 
+* all - consolidating bulling + all available features. 
+You can switch from consolidated billing to all feature without deleting & creating org. Yet if you have invited accounts (not created from your org) switching to all feature will require all of them to accept new invitation.
+If some account reject invitation you have to either resend invitation or remove account, cause only once all accounts accept change, you can complete switch. Accounts created from your org doesn't need to accept change to all features.
+This migration is one-way, you can't switch back from all features to consolidated billing.
 If you want to give access to billing info to specific iam, 2 steps required (notice just create iam user is not enough):
 * activate iam access - Access to the Billing and Cost Management console, see `sa/files/images/activate-iam-access.png` (only root user can do this)
 * create iam user with billing access policy (action `aws-portal:ViewBilling` for read-only access)
@@ -2665,6 +2690,17 @@ RI (Reserved instances) - 2 reports:
 Add new member - there are 2 ways to add new member:
 * create account from scratch - if you remove it from org, you can make it standalone account. When you add this type of account, aws automatically create `OrganizationAccountAccessRole` with `AdministratorAccess` policy
 * add already existing account. If you are adding already existing account, it's recommended to create there cross-account role with same name as aws automatically create for new account
+Management account (previously called master account) - main account that creates org & invite other accounts or create new accounts for this org.
+SCP affect only the member accounts in your organization, it doesn't affect:
+* users/roles in the management account
+* users/roles in the accounts outside org
+* resource based policies (it affects only iam users/roles)
+If both SCP and permission boundary set & iam permission, then only intersection of all 3 works.
+SCP hierarchy:
+* it flows from root account to OU to member account
+* explicit deny always overwrites all allows
+* SCP can only filter, it never add permissions
+* at each level intersection happen between parent policy & level policy, and only those present in both are given
 
 ###### Well-Architected Tool
 Well-Architected Tool is a aws service that allows you to validate your current infrastructure against 5 pillars of well-architected framework.
@@ -4848,10 +4884,9 @@ Other members can be added later by voting process. Blockchain active as long as
 There are 2 types of members:
 * same account - just send invitation
 * other aws account - create network invitation for another account
-Aws account and creator don't own network. For any changes there should be voting process between all network members.
-Peer node - when member join network it should have at least 1 peer node which store copy of distributed ledger with all transactions.
-Each blockchain has unique identifier `ResourceID.MemberID.NetworkID.managedblockchain.AWSRegion.amazonaws.com:PortNumber`. Port depends on blockcahin framework you are using.
-Yet this link is private, so members should have vpc and use vpc privatelink to access blockchain endpoint.
+Aws account and creator don't own network. For any changes there should be voting process between all network members. Peer node - when member join network it should have at least 1 peer node which store copy of distributed ledger with all transactions.
+Each blockchain has unique identifier `ResourceID.MemberID.NetworkID.managedblockchain.AWSRegion.amazonaws.com:PortNumber`. Port depends on blockcahin framework you are using. Yet this link is private, so members should have vpc and use vpc privatelink to access blockchain endpoint.
+AWS Blockchain Templates - you can run Ethereum/Hyperledger on ECS cluster or in ec2 using docker and have full control (compare to managed blockchain where you don't have access to ec2 machines).
 
 ###### GuardDuty
 Threat management tools that helps to protect aws accounts/workloads/data by analyzing data from cloudTrail/vpc flowLogs/dns logs using ML. It's regional service, so all collected data is aggregated/analyzed within region. 
