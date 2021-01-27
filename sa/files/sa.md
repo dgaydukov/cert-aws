@@ -129,6 +129,7 @@
 * 3.83 [Elemental Media](#elemental-media)
 * 3.84 [Billing and Cost Management](#billing-and-cost-management)
 * 3.85 [Backup](#backup)
+* 3.86 [Migration Hub](#migration-hub)
 
 
 
@@ -2656,14 +2657,14 @@ You specify partition in WHERE clause, so athena scan only this single partition
 launch more like this - settings from aws console that allows you to launch same ec2 in the same AZ (it just copy all params like type/vpc/subnet/SG/storage and prepopulate wizard with this params, you can just create same ec2 or change some params in wizard and create different ec2).
 
 ###### Organizations
-Org - service that allows to tie several accounts to master account and centrally manage them (billing, services, policies), so it basically collection of AWS accounts that you can organize into a hierarchy and manage centrally.
+Org - service that allows to link several accounts to master account and centrally manage them (billing, services, policies), so it basically collection of AWS accounts that you can organize into a hierarchy and manage centrally.
 Master Account - aws account from which you create your organization. From there you can also create/invite/delete other accounts. It's charged to pay all bills by all accounts. Once chosen, you can't change master account.
 Master account can remove member account from org. Member account can also leave org. Before removing account you should:
 * enable IAM user access to billing in the member account
 * account has the information required for it to operate as a standalone account
 Plz note that master account can't leave org. If master wants to leave you have to delete org.
 To leave org you need iam access policy: `organizations:DescribeOrganization/organizations:LeaveOrganization`
-As long as you have organization and your account - master account, it can't accept invitation to join other org. If you want it to become member account, you have to delete your organization first.
+As long as you have organization and your account - master account, it can't accept invitation to join other org. If you want it to become member account, you have to delete your organization first and then accept invitation of other org.
 OU (Organization Unit) - group of accounts under one name, can be used to build hierarchical structure. Account can be a member of only 1 organization/OU at a time. OU can be a member of only 1 OU at a time:
 * move account between 2 OU or between root & OU
 * when you create OU you should specify parent OU or root account
@@ -2717,6 +2718,7 @@ Invitations :
 * if user didn't receive invitation email for any reason, you have to cancel invitation & send it again (there is no option to resend)
 Organization activity - tab in iam console, where you can see which org which services are using. You can use this to improve SCP by finding what services are not deny by SCP yet never used by users.
 You can use cli `enerate-organizations-access-report` & `get-organizations-access-report` to get access report from cli.
+By default when you create org with all features, SCP disabled. You should explicitly enable it from aws console/cli. Once you enable, default `FullAWSAccess` SCP applied to root that allow all actions on all resources.
 
 ###### Well-Architected Tool
 Well-Architected Tool is a aws service that allows you to validate your current infrastructure against 5 pillars of well-architected framework.
@@ -5057,3 +5059,6 @@ Encryption:
 * services that has backup built on top of aws backup (like EFS) - encrypted in-transit & at-rest independently from source service
 * services with existing backup capabilities (like EBS) - using source service encryption capabilities
 Backup support cross-region/account backups. You can use both IAM & resource-based (in this case you have to set principal) policies to secure your backup vault.
+
+###### Migration Hub
+MH provides rich web experience to migrate on-premise IT resources to aws. You can view/group existing resources & track migration progress.
