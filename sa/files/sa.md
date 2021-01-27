@@ -1286,6 +1286,7 @@ For rds you can use:
 Don't confuse:
 * Version policy - `Version` attribute for a policy
 * policy versioning - when you modify policy (or aws modify it managed policy), aws doesn't overwrite policy, but instead update it version. So you can always rollback to previous policy
+Credential report (`aws iam get-credential-report`) - you can generate & download report with all account users with status/password/access_key/MFA. You can generate new report every 4 hours (if you request report, aws check if it was generated within last 4 hours, if yes return old, if no creates new).
 
 ###### S3
 S3 (Simple Storage Service) used for:
@@ -1860,8 +1861,8 @@ Security:
 * end-to-end https - you can configure so users talk to CF with https and CF talk with origin server also with https, so you have end-to-end data-in-transit security
 * field level encryption - encrypt user's upload data at the edge location and transfer these encrypted data to your origin. Origin server can use private key to decrypt data. 
 For it you must create keypair using `openssl`, then upload public key to cf using console/cli. And add private key to you origin server.
-Lambda Edge - lambda functions that allows you to override behavior of request/response to your cf edge locations. You can solve common tasks like only cognito authenticated user can view content or visitor prioritization on a website.
-You create single lambda in 1 region, and associate it with cf distribution. After this all global requests are handled by this lambda. There are 4 types of lambda edge:
+Lambda@Edge (supports only node.js/python) - lambda functions that allows you to override behavior of request/response to your cf edge locations. You can solve common tasks like only cognito authenticated user can view content or visitor prioritization on a website.
+You create single lambda in 1 region, and associate it with cf distribution. After this all global requests are handled by this lambda. These functions can't access resources inside vpc. There are 4 types of lambda edge:
 * viewer request - when CF receive request from user
 * origin request - before CF forward request to origin server
 * origin response - when CF receive response from origin server
@@ -2663,9 +2664,16 @@ Master account can remove member account from org. Member account can also leave
 Plz note that master account can't leave org. If master wants to leave you have to delete org.
 To leave org you need iam access policy: `organizations:DescribeOrganization/organizations:LeaveOrganization`
 As long as you have organization and your account - master account, it can't accept invitation to join other org. If you want it to become member account, you have to delete your organization first.
-OU (Organization Unit) - group of accounts under one name, can be used to build hierarchical structure. Account can be a member of only 1 organization/OU at a time. OU can be a member of only 1 OU at a time.
+OU (Organization Unit) - group of accounts under one name, can be used to build hierarchical structure. Account can be a member of only 1 organization/OU at a time. OU can be a member of only 1 OU at a time:
+* move account between 2 OU or between root & OU
+* when you create OU you should specify parent OU or root account
+* you can't move OU to another parent. If you want to do this you have to:
+    * create new OU under new parent
+    * move all accounts from old OU to new OU
+    * remove old OU
+* you can't delete OU if there are children OU or accounts there
 Typical use case is to have 2 accounts (dev + prod) to separate concerns, but to manage them from single one. There are 2 types of policies:
-* SCP (Service Control Policy) - policy you can apply to a group of aws accounts, defines service actions (like run EC2 instance), it follows the same rules as IAM policies.
+* SCP (Service Control Policy) - policy you can apply to a group of aws accounts, defines service actions (like run EC2 instance), it follows the same rules as IAM policies. Keep in mind that master account is not affected to SCP.
 You can attach a policy to the root/OU/account. SCP limits IAM permissions (if you create SCP to block ec2 creation for all accounts, even root user form child account won't be able to launch any ec2 except for t2.micro)
 Order of execution - most restrictive policies take precedence. It never grant permission, they work like permission boundary - defining max set of permission accounts in organization can have.
 It will never limit permission to internal user of current account who has permission to access resources (for these purposes you have to use permission boundary).
@@ -2690,17 +2698,25 @@ RI (Reserved instances) - 2 reports:
 Add new member - there are 2 ways to add new member:
 * create account from scratch - if you remove it from org, you can make it standalone account. When you add this type of account, aws automatically create `OrganizationAccountAccessRole` with `AdministratorAccess` policy
 * add already existing account. If you are adding already existing account, it's recommended to create there cross-account role with same name as aws automatically create for new account
-Management account (previously called master account) - main account that creates org & invite other accounts or create new accounts for this org.
+Don't confuse:
+* management account (previously called master account) - main account that creates org & invite other accounts or create new accounts for this org
+* root - parent for all accounts (including master account) & all OU 
 SCP affect only the member accounts in your organization, it doesn't affect:
 * users/roles in the management account
 * users/roles in the accounts outside org
 * resource based policies (it affects only iam users/roles)
 If both SCP and permission boundary set & iam permission, then only intersection of all 3 works.
 SCP hierarchy:
-* it flows from root account to OU to member account
+* it flows from root account to OU to member account. So if root has full permission, you don't need to attach SCP to child OU with full permission, cause it will already inheret it from root.
 * explicit deny always overwrites all allows
 * SCP can only filter, it never add permissions
 * at each level intersection happen between parent policy & level policy, and only those present in both are given
+Invitations :
+* you (any user with proper iam permissions) can send up to 20 invitations per day - only pending invitations are count, if 5 were accepted immediately, you can send 5 more
+* invitation expire after 15 days - you should resend it if you want account to join
+* if user didn't receive invitation email for any reason, you have to cancel invitation & send it again (there is no option to resend)
+Organization activity - tab in iam console, where you can see which org which services are using. You can use this to improve SCP by finding what services are not deny by SCP yet never used by users.
+You can use cli `enerate-organizations-access-report` & `get-organizations-access-report` to get access report from cli.
 
 ###### Well-Architected Tool
 Well-Architected Tool is a aws service that allows you to validate your current infrastructure against 5 pillars of well-architected framework.
@@ -2718,11 +2734,11 @@ You can use vpc wizard to quickly create:
 Amazon VPC consists of:
 * VPC - private network, logically isolated from other networks in aws cloud. Can span across multiple AZ. Instances in different AZ charged $0.01 per GB for data transfer. Size should be /28 - /16 (so from 16-65535, actual size would be -5 from each subnet)
 * Subnet - private sub-network inside VPC. Can reside only within single AZ. For each subnet 5 IP are automatically taken. 4 from the start + last.
-    * 1 - network address
-    * 2 - vpc router
-    * 3 - dns server
-    * 4 - reserved for future use
-    * last - broadcast address
+    * .0 - network address
+    * .1 - vpc router
+    * .2 - dns server (reserved for future use by aws)
+    * .3 - reserved for future use by aws
+    * .255 - broadcast address
     So if you have subnet of diff size - you have to subtract 5 to get total size
     * /24 => 256-5=251
     * /28 => 16-5=11
@@ -2815,6 +2831,8 @@ After running `CloudFormation/advanced-networking/site-to-site-vpn.yml` you will
 Route propagation rules:
 * by default aws use most specific routes to forward traffic
 * if propagated route from site-to-site vpn or DX overlap with local route, local route take precedence, even if propagated route is more specific
+* you propagate specific routes for the on-premise via GBP (not default). If you propogate default route `0.0.0.0/0`, it would be ignored cause static route (for example to IGW) would take precedence
+* only VGW support route propagation, you should use specific construct `AWS::EC2::VPNGatewayRoutePropagation` to propagate routes
 Don't confuse (customer gateway routing):
 * dynamic - if your customer gateway supports BGP, you you have to provide unique BGP ASN)
 * static - if customer gateway doesn't support BGP, you don't provide any BGP ASN, default number of 65000 is assigned
@@ -3147,8 +3165,7 @@ Get client IP address:
 * for the above reason `iptables` for filtering won't work, cause they always will get one IP - of elb
 * alb: use `X-Forward-For` header to get original IP address of user
 * nlb: use proxy protocol (works only on level 4) - helps identify IP of client (plz note since nlb is level 4, there is no `X-Forward-For` in request, so using proxy protocol is the ony way to get client IP)
-Proxy protocol adds additional information to each request with client info (ip, host, port)
-If you want to terminate ssl on elb use ALB + HTTPS listener, if you want to terminate ssl on your ec2 use NLB + TCP listener
+Proxy protocol adds additional information to each request with client info (ip, host, port). If you want to terminate ssl on elb use ALB + HTTPS listener, if you want to terminate ssl on your ec2 use NLB + TCP listener
 You can enable proxy protocol for classic LB with:
 ```
 ClassicLB
@@ -3171,7 +3188,7 @@ NLB:
 NLB is different from ALB:
 * there is no SG for nlb. If your target group is ec2, you have to enable 2 sources:
     * rule for port 80 for source IP of your clients
-    * rule for port 80 for private IP of your nlb (for health checks), or open for cidr for whole vpc or subnets range. For each subnet you associate with nlb, it add 1 nlb instance into each subnet with 1 private IP.
+    * rule for port 80 for private IP of your nlb (for health checks), or open for CIDR for whole vpc or subnets range. For each subnet you associate with nlb, it add 1 nlb instance into each subnet with 1 private IP.
 * if TG type is instance (nlb is transparent) - your ec2 would behave same way as client directly connects to it (although client IP is his real IP in this case, you can still enable proxy protocol and get IP from there)
 * if TG type is IP (nlb acts as NAT) - your ec2 would see client IP as nlb internal IP (use proxy protocol in this case to get client IP)
 * target type `lambda` only supported by ALB, not for NLB

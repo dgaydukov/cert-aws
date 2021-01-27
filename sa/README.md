@@ -15,6 +15,7 @@ Here is my experience of taking 2 certifications, both associate & professional:
 * [Free SAP questions](https://www.examtopics.com/exams/amazon/aws-certified-solutions-architect-professional)
 
 ### TODO
+enable aws organization from console
 https://www.youtube.com/watch?v=-w6duQhWuVk
 https://coingeek.com/bittrex-to-delist-privacy-coins-monero-zcash-and-dash
 https://www.youtube.com/watch?v=UpeV4OqB6Us
