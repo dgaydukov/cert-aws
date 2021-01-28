@@ -2718,7 +2718,8 @@ Invitations :
 * if user didn't receive invitation email for any reason, you have to cancel invitation & send it again (there is no option to resend)
 Organization activity - tab in iam console, where you can see which org which services are using. You can use this to improve SCP by finding what services are not deny by SCP yet never used by users.
 You can use cli `enerate-organizations-access-report` & `get-organizations-access-report` to get access report from cli.
-By default when you create org with all features, SCP disabled. You should explicitly enable it from aws console/cli. Once you enable, default `FullAWSAccess` SCP applied to root that allow all actions on all resources.
+By default when you create org with all features, SCP disabled. You should explicitly enable it from aws console/cli. Once you enable, default `FullAWSAccess` SCP attached to root that allow all actions on all resources.
+You can create new SCP and attach it to any OU/account/root. You can also attach default `FullAWSAccess` to any OU/account, but this make no sense, cause since it attached to root, all other OU/accounts inheret it automatically.
 
 ###### Well-Architected Tool
 Well-Architected Tool is a aws service that allows you to validate your current infrastructure against 5 pillars of well-architected framework.
@@ -3051,6 +3052,9 @@ There are 2 types of conversion:
 * SCT (Schema Conversion Tool) - heterogeneous, for converting between existing schemas. It's a separate software that you install in on-premise or ec2 and run. So you download it and verify checksum, install jdbc drives for 2 databases. 
 To run migration you need:
 * create replication instance - instance that would run migration (download from source, transform, upload to destination). Use multi-AZ deployment, in this case if during middle of migration your replication instance failed for some reason, migration would continue with failover instance. 
+    Don't confuse:
+    * ebs of ec2 - can be unencrypted, encrypted with `kms/ebs` or with custom kms key
+    * ebs of replication instance - encrypted by default with `kms/dms` key, but you can choose your own kms. You can't create unecnrypted storage for replication instance.
 Otherwise there is a risk that migration would be half-completed. You should put replication instance into the same vpc as your source or target, but you can use different vpc and connect them with vpc peering.
 * specify source and target endpoints
 * create & monitor tasks. Here you can configure table mapping with `selection/transformation/table-settings rules` where you can do stuff like: 
@@ -4556,10 +4560,18 @@ Hadoop Data Formats:
 ###### Application Discovery Service
 ADS collects and presents data about running apps and help understand the configuration, usage, and behavior of them for migration purposes. 
 With data collected by this service you can perform a TCO (Total Cost of Ownership) and calculate is it reasonable to migrate to cloud.
-There are 2 types of operation mode:
-* agent-based - install the Application Discovery Agent on servers and virtual machines (VMs) to collect data. Agent captures system configuration/performance/running processes/details of the network connections between systems. 
+There are 3 types of operation mode:
+* Discovery Connector (agent-less) - VMware customers collect VM configuration and performance profiles without deploying agent on each host. You need to install AgentLess Connector as OVA (Open Virtual Appliance) package on VMware vCenter.
+It collects static config info: hostname, IP, MAC-address + CPU, RAM, disk I/O. It can't collect: name of hypervisor, date & time on virtual machine, info about running processes. If you need this you have to install agent on each server.
+So connector capture performance info & resource utilization of each virtual machine regadless of what OS the use, yet it can't look inside VM, so it can't see processes running on each VM. So if you need this info you can install agent on as-needed basis.
+* Discovery agent (agent-based) - install the Application Discovery Agent on servers and virtual machines (VMs) to collect data. Agent captures system configuration/performance/running processes/details of the network connections between systems. 
 Agent uses HTTPS/TLS to transmit data to the ADS. Agent can be operated in an offline test mode that writes data to a local file so customers can review collected data before enabling online mode.
-* agent-less - VMware customers collect VM configuration and performance profiles without deploying agent on each host. You need to install AgentLess Connector as OVA (Open Virtual Appliance) package on VMware vCenter.
+* Manual import - if your server os not supported by agent (so you can't install agent), and it's not Vmware (so you can't install Connector) the only option is to manually import data about your server into Migration Hub
+You should download csv template (this is only supported format, others like JSON not supported), populate it with your server info, and upload it back to Migration Hub.
+Don't confuse:
+* agent-less - only for Vmware
+* agent-based - for normal linux like centos
+You can import data form ADS to Migration Hub, and from there export data using Athena. There is no way to use athena from ADS, or use agent to send data into s3 bucket.
 
 ###### Artifact
 Artifact - portal that provides customers with ability to download AWS security and compliance documents, such as AWS ISO certifications, Payment Card Industry (PCI), and System and Organization Control (SOC) reports.
@@ -4567,8 +4579,19 @@ There are 2 types of docs: agreements (you can accept it or terminate, so 2 stat
 
 ###### Server Migration Service
 SMS - agentless service that helps migrate on-premise workload to aws, significant enhancement of ec2 VM Import. You can migrate virtual machines from VMware vSphere, Windows Hyper-V, or Microsoft Azure to aws.
-Connector - pre-configured FreeBSD virtual machine that you install in your on-premise. This connector replicate volumes into ami and transfer it into aws using TLS.
+Server Migration Connector - pre-configured FreeBSD virtual machine that you install in your on-premise. This connector replicate volumes into ami and transfer it into aws using TLS.
 SMS schedule/coordinate/track incremental replication of many on-premise instances, so helping you to make large-scale server migrations.
+VMDK (Virtual Machine Disk) - file format of containers for virtual HDD to be used in VM like Vmware/Virtualbox. 
+OVF (Open Virtualization Format) - open format for packagin/distributing software. 
+You create replication job (run from 30 min to 90 days), by the end SMS generate CF template which you can launch to create your ec2.
+Migration works in 4 steps:
+* schedule - schedule migration job (either immediately or at specified time)
+* upload - take snapshot => export VM to OVF template => upload VMDK to s3 => clean snapshot
+* convert - convert VMDK to EBS snapshot => delete VMDK from s3
+* create ami - create ami from ebs snapshot
+To migrate multiple servers you create Application and divide it into groups (group1 - db servers, group2 - file servers ...). When you create Application you can enable notification.
+First you have to deploy connector, then you can create Application & configure settings/replication jobs/launch. CF template generated as a result and launched automatically using your configures launch settings from Application.
+Since SMS create CF template, you can integrate it with Service catalog to centrally manage all imported resources, so users can choose certain products & deploy them quickly.
 
 ###### Resource Access Manager
 RAM - helps securely share your resources across AWS accounts or within your Organization. Shared resources can't be re-shared. To share resources, you create a Resource Share, give it a name, add one or more of your resources to it, and grant access to other AWS accounts.
@@ -4609,6 +4632,13 @@ Don't confuse:
 * snowball: key difference from snow family is that datasync - online transfer, white snowball - for offline
 * S3 TA: if your app already integrated with s3 it's better to use s3 TA, otherwise (or if you have other than s3 destination) use datasync
 * Transfer Family: if you have FTP/SFTP it's better to use TF, otherwise use datasync
+Snow family:
+* snowball - 50 & 80 TB storage. You create a job from aws console and snowball would ba shipped to you. On arrival you connect to your machine, download & run client, and can transfer files to it. You can move petabyte of data in 14 snowballs.
+* snowball edge - data migration & edge computing device:
+    * Storage Optimized 100TB/24vCPU - local storage & large scale data transfer
+    * Compute Optimized 52vCPU (also you can get additional GPU) - for ML & video processing in disconnected env
+    So you can order this device, run some ML job, process data locally, and ship it back to aws, & upload already processed data into s3
+* snowmobile - big car with 100PB of storage capacity
 
 ###### Transfer Family
 TF - 3 services for transfer from on-premise into s3:
@@ -4665,8 +4695,8 @@ It supports Android/iOS/JavaScript. You can use open source clients to connect t
 SC helps IT administrators & devops create/manage aws resources to end users. So you can control which users have access to which products. 
 So end users only need IAM role to access SC itself, and from there they can create aws resources that are allowed in SC for them.
 You can manage all aws resources manually and create access policy to each user for each resources. But can create SC with a set of aws resources and add access to it to user. 
-And this user will get access to all resources inside SC. You create portfolio add products and grant users permissions to chosen portfolio.
-End users have simple portal where they can discover allowed services (products) and launch them. Product has versioning, so end users can choose new version or update their stack to new version.
+And this user will get access to all resources inside SC. You create portfolio, add products and grant users permissions to chosen portfolio.
+End users have simple portal where they can discover allowed services (products) and launch them. Product has versioning, so end users can choose old version or update their stack to new version.
 Portfolio - collection of products. Product - cloudFormation template with a list of aws resources. Users then can launch any product in portfolio. 
 You can share portfolio with other aws accounts. By using cloudFormation params you can customize user experience (for example end users can choose what type of ec2 instance to run).
 
@@ -5062,3 +5092,6 @@ Backup support cross-region/account backups. You can use both IAM & resource-bas
 
 ###### Migration Hub
 MH provides rich web experience to migrate on-premise IT resources to aws. You can view/group existing resources & track migration progress.
+SMS, DMS, CloudEndure Migration integrated & automatically report status to MH. You can export data from ADS, analyze it, and import server grouped as apps.
+Home region - before start using MH you have to choose home region from setting page, where you would store discovery/planing/tracking data. Once set you can't change it, yet you can migrate into any available region.
+You can import server details from ADS where it stored in data repository in encrypted format. EC2 instance recommendations - feature of MH that can based on data of CPU, memory use suggest least expensive ec2 instance to use.
