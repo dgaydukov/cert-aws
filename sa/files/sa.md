@@ -990,7 +990,7 @@ Notaction+Allow - add access to all actions except those under Notaction. Good e
 NotAction+Deny - deny access to all actions except those under Notaction. Notice that this action doesn't give any rights on actions inside Notaction. You still should add explicit allow. 
 It only explicitly deny to all other actions except those under Notaction.
 * Deny - type of Effect
-Same way you can use NotAction/NotResource/NotPrincipal. For example if you want to limit s3 to specific users. 
+Same way you can use NotAction/NotResource/NotPrincipal (this means all except - like all principals except those listed in `NotPrincipal`). For example if you want to limit s3 to specific users. 
 Of course you can create deny for all current users, but in this case once somebody add new user with `s3:*` action, he will get access.
 So instead of explicitly deny to all users you can use Deny+NotPrincipal. In this case you would deny to all users except your desired user.
 This approach is bit difficult for roles, cause role principal is defined by 2 arn:
@@ -1136,7 +1136,13 @@ Identity federation - grant to external identities ability to secure access aws 
 * SAML - corporate IdP (microsoft AD, aws AD). ADFS (Active Directory Federation Services) - used to connect AD to iam using SAML protocol. When you create role choose SAML type.
 * OpenId Connect - public web IdP (Facebook/Google/Amazon/Cognito supported out-of-the boxy). When you create role choose web identity type.
 * cognito IdP - use cogntio identity to get temporary aws credentials. When create role choose web identity type and select cognito as IdP
-If you want to use SAML or other OpenID providers (those except 4 default) you have to add IdP to iam first, using `create-saml-provider/create-open-id-connect-provider`
+There are 4 steps to create IdP from iam console (or using `create-saml-provider/create-open-id-connect-provider`). This is for SAML, yet for OpenID steps are same:
+* Add one of 2 supported types:
+    * SAML - you have to provide xml metadata file first form your provider
+    * OpenID Connect - you have to provide url + aud
+* create iam role (it should have `sts:AssumeRoleWithSAML` trust policy)
+* configure relying party trust between your IdP and AWS - link your role to IdP
+* configure SAML assertions for the authentication response
 So if you need federated access:
 * if you have public web IdP like Facebook/Google/SalesForce - use role with openId connect (supported out-of-the-box by aws)
 * if you have corporate saml IdP like microsoft AD - use role with saml connect (supported out-of-the-box by aws)
@@ -1210,7 +1216,7 @@ Condition key - a key that can be used in condition block:
 ABAC (attribute-based access control) - policy conditions basically allows you to create access control based on attributes.
 Policy version - required if you are using variables (like `${aws:username}`. If you leave version, variables are treated like literal values.
 Custom identity broker - you can generate URL that lets users who sign in to your corporate portal, access the AWS Management Console. 
-If your organization use IdP compatible with SAML (like AD) you don't need to write any code, just enable SAML access to management console.
+If your organization use IdP compatible with SAML (like AD) or OpenID you don't need to write any code, just enable SAML/OpenID access from aws console/cli.
 To get aws console url you should:
 * validate that user is authenticated within your system
 * call one of sts api to get temporary credentials (you can call either global or regional endpoint, in case of regional - you can reduce latency, if you use sdk endpoint is determined automatically):
@@ -1736,13 +1742,24 @@ This useful if you need no data loss. Cause snapshots take at interval, so even 
 Snapshots - works async, point-in-time snapshot - created immediately, yet it take some time to transfer data into s3.
 Most AMI (Amazon Machine Images) are backed by Amazon EBS, and use an EBS volume to boot EC2 instances. You can attach multiple EBS to single EC2, but single EBS can only be attached to 1 EC2 at the same time.
 EBS allows to create point-in-time snapshots (backup) and store them in s3. You can make snapshot available to other aws accounts so they can create ec2 from it.
-Snapshots are stored in amazon s3 bucket (not in your bucket, so you don't have full control of it, you can't go to bucket and download snapshot) yet you can:
-* create & delete
-* recover
-* copy to other region
-If you copy snapshot with another CMK - complete new non-incremental copy of snapshot is created, cause volume need to be reencrypted.
+Snapshots are stored in amazon s3 bucket (not in your bucket, so you don't have full control of it, you can't go to bucket and download snapshot) yet you can: create & delete, recover, copy to other region.
+copy snapshot:
+* copy to new region - complete new non-incremental copy of snapshot is created in another region
+* copy & encrypt with new CMK - complete new non-incremental copy of snapshot is created (cause volume need to be re-encrypted)
+* copy encrypted snapshot shared with you:
+    * you need both permission to ebs snapshot & to kms key
+    * aws recommend you to re-encrypt shared snapshot with your own kms key, cause if original kms key deleted or your access revoked you can't use this ebs
+share snapshot:
+* you can make publicly available only unencrypted snapshot
+* if you share encrypted snapshot you should also share kms key (with following permissions `kms:DescribeKey/kms:CreateGrant/kms:GenerateDataKey/kms:ReEncrypt`), otherwise other party can't decrypt it
+* snapshot constrained to region where it created, to share with other region create copy first
+* aws prevents sharing snapshot encrypted with default kms key (so you don't have to share it with other). To share encrypt your snapshot with new CMK
+3 steps to use encrypted snapshot from another account:
+* share ebs snapshot
+* copy shared snapshot & re-encrypt it with different kms key
+* create ami from copied snapshot
 When you take snapshot of running ebs, it would be available immediately (there is no delay). But when you recover snapshot ebs is read immediately, but data is loaded lazily.
-IOPS vs Throughput vs Bandwidth
+Don't confuse:
 * IOPS - number of read/write operations per second, good for transactional db where we need to make lot of small writes
     * General Purpose SSD (gp2) - boot volumes, low-latency apps
     * Provisioned IOPS SSD (io1) - transactional & NoSql db
@@ -3263,7 +3280,9 @@ Don't confuse:
 * kms - shared hardware tenancy, you have your own partition inside shared with other aws customers. 
 When you create kms key you may choose key material origin:  kms (default) / external / CloudHSM (in this case you need to set up CloudHSM cluster with at least 2 nodes in 2 AZ)
 When you use kms for every policy (for example read policy for s3) you have to add `kms:Decrypt`, so s3 would have access to kms in order to decrypt data. So if you provide only s3 read without kms, s3 won't decrypt your data and you can't read it.
-cross-account access - you can allow your KMS to be used in another account by adding resource policy to kms with principal as another account or you can also add cross-account role iam access
+cross-account access - you can allow your KMS to be used in another account by adding resource policy to kms with principal as another account or you can also add cross-account role iam access:
+* in account A add principal of account B to key policy
+* in account B add permissions to access kms resource from account A
 
 ###### Route53
 Route53 - amazon DNS service that help to transform domain name into IP address. Reason for a name, cause 53 - port of DNS.
@@ -3412,14 +3431,18 @@ RDS Proxy - database proxy that helps:
 * enforce IAM access to db
 There are 3 types of groups:
 * Subnet group - a list of VPC subnets (you should have at least 2 subnets in 2 different AZ) where rds would create your db.
-* PG (Parameter Group) - a list of db config values that can be applied to 1 or many rds instances (for example you can increase a number of connections to rds here). You can't modify default PG (that would be created when you create db instance). If you want custom params add them to new pg and associate it with db.
-* OG (Option group) - a list of features that are available for db instance. By default empty OG is assigned when you create db, you can't modify it, but you can create new OG - add options, and assign it to db.
+* PG (Parameter Group) - a list of db config values (db engine configuraton) that can be applied to 1 or many rds instances (for example you can increase a number of connections to rds here). 
+You can't modify default PG (that would be created when you create db instance). If you want custom params add them to new pg and associate it with db.
+When you change dynamic param, change applied immediately, when you change static param - it would be applied after you manually reboot rds.
+* OG (Option group) - a list of features that are available for db instance. By default empty OG is assigned when you create db, you can't modify it (add options into it), but you can create new OG - add options, and assign it to db.
     There are 2 types of options:
     * persistent - can't be removed from an OG while DB instances are associated with this OG
     * permanent - can never be removed from OG
-    There are 2 options available for mysql (for other engines other options available):
+    mysql options (only 2):
     * MariaDB Audit Plugin - records db activity like users logging or queries
     * MySQL memcached - enables apps to use InnoDB tables in a manner similar to NoSQL key-value data stores
+    oracle options (many):
+    * S3_INTEGRATION - required if you want your oracle rds to read/write data from s3 + you need IAM role. So as you see just adding IAM role is not enough, you need to add this option.
 You can set encryption only on creating, once created you can set it to use encryption, also if you created encrypted you can disable it.
 So if you create unencrypted db and want to turn on encryption you have to take snapshot encrypt it and create new encrypted db from it, then remove old db.
 If encryption is enabled you can't disable it after db creation, yet you can create unencrypted db. Same holds true for read replica. For encrypted db only encrypted read replica is possible (there is no way to have encrypted read-replica for unencrypted db or vice versa).
@@ -3819,9 +3842,23 @@ Below is 2 examples to set up ssl server with client cert validation:
 * [node.js](https://docs.aws.amazon.com/apigateway/latest/developerguide/getting-started-client-side-ssl-authentication.html#certificate-validation)
 * [spring boot](https://www.baeldung.com/x-509-authentication-in-spring-security)
 REST API error mapping - you can map exceptions from lambda to your api:
-* first add desired code to method integration (like 422)
-* second add integration response with lambda error regex and select code from method integration based on exception name
-Max [execution timeout 30 sec](https://docs.aws.amazon.com/apigateway/latest/developerguide/limits.html), and you can't change it. So if you have some long-running lambda or http backend, you have to use async approach:
+* first add desired code to method response (like 422)
+* second add integration response with lambda error regex and select code from method response based on exception name
+There are 2 types of responses:
+* integration response - if your request hit integration and get response (use above error mapping)
+* gateway response - when your request is failed, in this case api gateway doesn't call integration and just return one of pre-defined integration responses.
+To customize you can change gateway response http code, headers, body. So for example for 403 missing auth token, you can change it to 404 and add custom body/headers.
+So if you want to customize custom error returned from integration - use error mapping technique from above. If you want to customize error returned even before integration called (like 403 missing auth token) - use gateway response.
+You can't create new gateway response, but you can modify any existing one using `put-gateway-response` cli.
+Max [execution timeout 30 sec](https://docs.aws.amazon.com/apigateway/latest/developerguide/limits.html), and you can't change it. Keep in mind that it's max timeout, you still can set value below from 50-29000 millisec.
+You can either uncheck `Use Default Timeout` and set value in millisec in integration request of rest api console, or using CF:
+```
+RequestAuthMethod:
+    Type: AWS::ApiGateway::Method
+    Integration:
+        TimeoutInMillis: 1000
+```
+So if you have some long-running lambda or http backend, you have to use async approach:
 * you send initial request, server generate someID and responds immediately
 * server run your task in background
 * you start polling server to check if background task completed by someID
@@ -3861,6 +3898,8 @@ aws cognito-identity get-credentials-for-identity --identity-id={IDENTITY_ID} --
 aws cognito-identity get-open-id-token --identity-id={IDENTITY_ID} --logins cognito-idp.us-east-1.amazonaws.com/{USER_POOL_ID}={ID_TOKEN}
 aws sts assume-role-with-web-identity --role-arn={ROLE_ARN} --role-session-name=temprole --web-identity-token={OPEN_ID_TOKEN}
 ```
+You can enable unauthenticated access for guest users in identity pool (by setting `AllowUnauthenticatedIdentities: true`). You also would need attach role to `unauthenticated` under `AWS::Cognito::IdentityPoolRoleAttachment`.
+After this guest users would have permission defined by that role.
 
 ###### CodePipeline(CodeCommit/CodeBuild/CodeDeploy)
 CodePipeline - aws ci/cd tool, like jenkins. There are following stages:
@@ -4239,6 +4278,7 @@ IAM certificate:
 * you should uce cli/api (currently console not supported cert upload, yet if you create ELB from there you can upload)
 * use commands `UploadServerCertificate` - upload new cert, `ListServerCertificates` - list all certs, `GetServerCertificate` - get cert by id
 * don't confuse server cert with user signing cert `UploadSigningCertificate` - you upload cert for specified user, and this user can make X.509 signed requests
+There is no way to migrate cert from IAM to ACM. There is no way to update imported certs after expire date. If you import certs, you have to take care about expire date manually.
 
 ###### Cloud9
 Cloud based IDE (integrated development environment) where you can run and execute your code. It basically a separate ec2 where you can install programs, write/build code, and work just like with your laptop.
