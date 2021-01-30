@@ -1294,6 +1294,49 @@ Don't confuse:
 * Version policy - `Version` attribute for a policy
 * policy versioning - when you modify policy (or aws modify it managed policy), aws doesn't overwrite policy, but instead update it version. So you can always rollback to previous policy
 Credential report (`aws iam get-credential-report`) - you can generate & download report with all account users with status/password/access_key/MFA. You can generate new report every 4 hours (if you request report, aws check if it was generated within last 4 hours, if yes return old, if no creates new).
+Keep in mind that if you need to ensure that some resource can be accessed only from some particular entity, it's better to add explicit deny.
+Consider example where you have private rest api and you want it to be accessed from vpc endpoint you can add
+```
+{
+    "Effect": "Allow",
+    "Principal": "*",
+    "Action": "execute-api:Invoke",
+    "Resource": [
+        "execute-api:/*"
+    ],
+    "Condition" : {
+        "StringEquals": {
+            "aws:SourceVpce": "vpce-1a2b3c4d"
+        }
+    }
+}
+```
+But this just add access from particular vpc endpoint. It doesn't block all other access. So you can create user/role with access to this api
+But if you add explicit deny to everybody except from this vpc endpoint, even if somebody else add permission they can't access api, cause explicit deny always overwrite any explicit allow
+```
+{
+    "Effect": "Allow",
+    "Principal": "*",
+    "Action": "execute-api:Invoke",
+    "Resource": [
+        "execute-api:/*"
+    ]
+},
+{
+    "Effect": "Deny",
+    "Principal": "*",
+    "Action": "execute-api:Invoke",
+    "Resource": [
+        "execute-api:/*"
+    ],
+    "Condition" : {
+        "StringNotEquals": {
+            "aws:SourceVpce": "vpce-1a2b3c4d"
+        }
+    }
+}
+```
+Same true for s3. You can create vpc endpoint policy for s3 to allow access to specific bucket + s3 bucket policy to allow access only from specified vpc or vpc endpoint.
 
 ###### S3
 S3 (Simple Storage Service) used for:
@@ -1614,6 +1657,8 @@ Access restriction - you can restrict access to objects in your bucket to specif
 }
 ```
 If you have single image (2kx2K pixels) split into number of tiles (40x40), bad practice is to store one big picture - increase size of tiles to max size - in this case you reduce number of `GET` requests to s3 bucket and save costs.
+Access Points - simplify managing data access at scale for shared datasets in S3. If you have hundreds of apps/users use your single s3 bucket, you have to add all access permission into single json and manage it there.
+This is error prone & time consuming, cause every change need to be reviewed carefully & tested. Access point - named network endpoint with separate permission. Each access point enforced customized access and work with conjunction with main bucket policy.
 
 ###### Glacier
 Glacier - low-cost tape-drive storage value with $0.007 per gigabyte per month. Used to store backups that you don't need frequently.
@@ -2024,9 +2069,13 @@ Lambda - piece of code that can be executed without any server env (just write c
 Lambda are billed per request, so it's better for some small simple tasks. If you have highload with 10m hits per day, run simple ec2 is cheaper.
 When you create lambda you have to provide `role_arn`, the role which lambda assume and use to execute (default permissions include CloudWatch log creation).
 When you create lambda you can specify:
-* `Runtime` (default `nodejs12.x`) - which programing runtime (java/python/go/nodejs/ruby/dotnetcore) to use. You can also build your own runtime with `provided/provided.al2` which create Amazon Linux & Amazon Linux 2 ami.
-You custom runtime may run shell script, language included in Amazon Linux or compiled binary
-* `Timeout` (1-900 sec, default 3 sec) - max time of function execution. Once timeout over, lambda stop running your code and throw an error `Response:{"errorMessage": "2021-01-07T07:55:11.512Z 12e1e1ab-7d43-4dcc-90b4-0489274b6ecf Task timed out after 3.00 seconds"}`
+* Runtime (default `nodejs12.x`) - which programing runtime (java/python/go/nodejs/ruby/dotnetcore) to use. You can also build your own runtime with `provided/provided.al2` which create Amazon Linux & Amazon Linux 2 ami. Custom runtime may run shell script, language included in Amazon Linux or compiled binary
+* Timeout (1-900 sec, default 3 sec) - max time of function execution. Once timeout over, lambda stop running your code and throw an error `Response:{"errorMessage":"2021-01-07T07:55:11.512Z 12e1e1ab-7d43-4dcc-90b4-0489274b6ecf Task timed out after 3.00 seconds"}`
+* Memory usage (128-10240 MB, default - 128) - you can allocate more memory if lambda does memory-intensive computing. Yet you can't manually configure cpu - it's allocated proportionally your RAM, so more memory allocation - means more cpu would be allocated.
+* Concurrency - number of request lambda can server at the same time. There are limits with up to 3k max (limits based on region from 500-3000). There are 2 types:
+    * reserved concurrency - creates a pool of requests that can only be used by its function, prevents using unreserved concurrency
+    * provisioned concurrency - initializes a requested number of execution environments so that they are prepared to respond to your function's invocations
+* DB proxy - rds proxy for your lambda that manages pool of connections and pass query to your rds. This can enable high concurrency without exhausting db connections. Once created you have to configure your lambda connect to proxy endpoint instead of rds endpoint.
 AntiPattern:
 * Long Running Applications (Lambda max time is 900sec (15 min). If you need some long running jobs you should consider EC2)
 * Dynamic Websites (it's better to use some programming language like java/node.js and deploy it to EC2)
@@ -2854,13 +2903,16 @@ Route propagation rules:
 * you propagate specific routes for the on-premise via GBP (not default). If you propogate default route `0.0.0.0/0`, it would be ignored cause static route (for example to IGW) would take precedence
 * only VGW support route propagation, you should use specific construct `AWS::EC2::VPNGatewayRoutePropagation` to propagate routes
 Don't confuse (customer gateway routing):
-* dynamic - if your customer gateway supports BGP, you you have to provide unique BGP ASN)
+* dynamic - if your customer gateway supports BGP, you you have to provide unique BGP ASN
 * static - if customer gateway doesn't support BGP, you don't provide any BGP ASN, default number of 65000 is assigned
 Actually in both cases you provide BGP ASN (take a look at `sa/cloudformation/advanced-networking/site-to-site-vpn.yml`), only difference that when you create it from aws console, for static, default number is provided.
 Yet for vpn connection you have to explicitly set `StaticRoutesOnly: false` and provide customer gateway with dynamic routing, or false & CGW with static routing.
 Don't confuse (site-to-site vpn routing):
 * dynamic - use if your customer gateway supports BGP. You don't need static routing, cause your device uses BGP to advertise it routes to VPG
 * static - if customer gateway doesn't support BGP, you have to manually enter routes (static IP) that would be communicated to your VPG
+When you create customer gateway you should specify:
+* BGP ASN if you use dynamic routing (for static from aws console default value would be set)
+* static internet-routable IP address of customer gateway device (it may also be behind NAT)
 Then update values from here (left, right, and last line for `/etc/ipsec.d/aws.secrets`). After you will be able to ping ec2 in private vpc
 ```
 # left - on-premise, right - aws vpc side
@@ -3932,8 +3984,7 @@ The size of such disk should depend upon max possible file uploaded and how much
 * Volume - provide iSCSI target, where you can create block storage and mount it to on-premise/EC2 instances.
     * cached volume (max 1024TB) - primary data in S3, frequently accessed data in on-premise.
     * stored volume (max 512TB) - primary data in on-premise, but you have snapshots in s3 (data transfer is async)
-    For both types in s3 you stored encrypted with SSE snapshot, so you can't view actual files directly from s3
-    So if you need instant access to your data, but your size above 512TB you have 2 options:
+    For both types in s3 you stored encrypted snapshot with SSE, so you can't view actual files directly from s3. If you need instant access to your data, but your size above 512TB you have 2 options:
     * use 2 stored volumes, so each below 512
     * if you need to mount it as single folder - use cached volume
 Volume Gateways compress data before that data is transferred to AWS and while stored in AWS. Although data stored in s3, you can't directly access it through s3 api
@@ -5039,13 +5090,13 @@ There are 3 ways to authenticate users:
 * federated access using SAML 2.0 (for this type you can enable MFA) - use your own AD
 
 ###### License Manager
-LM - tool to help manage licenses (you can track licenses based on vCPU, physical cores, sockets, number of ec2):
+LM - tool to help manage licenses (you can track licenses based on number of vCPU/physical cores/sockets/ec2):
 * define rule - store settings of your licence
 * enforce rule - track licence usage & compliance, by attaching rule to ami/template. Once rule attached, user can launch new ec2 without worrying if license is supported (if unsupported, ec2 won't be launched)
-* discover usage of software in aws & on-premises - lm integrated with Systems Manager allowing to manage both ec2 & on-premises. 
+* discover usage of software in aws & on-premises - LM integrated with Systems Manager allowing to manage both ec2 & on-premises. 
 LM supports: ec2/rds/marketPlace/Systems manager. It also integrated with organizations, so you can control licenses for all organizations centrally. You can also manage BYOL(bring your own license) with LM.
 Automated discovery - specify rules and product info (name of software, publisher, version) and based on this LM will detect if specified software used.
-Resource inventory - lm uses Systems Manager inventory to track on-premises instances, by default inventory keeps info for 30 days. So even if your on-premise instance is not pingable LM still will count it as active.
+Resource inventory - LM uses Systems Manager inventory to track on-premises instances, by default inventory keeps info for 30 days. So even if your on-premise instance is not pingable LM still will count it as active.
 To be more accurate, general advice is to manually deregister instance from SM inventory once you shut it down on-premise.
 
 ###### Elastic Transcoder
@@ -5055,13 +5106,17 @@ Preset - template with settings that transcoder apply while running jobs (codec 
 
 ###### Elemental Media
 This family include following products:
+* MediaLive
 * MediaConnect
 * MediaConvert
-* MediaLive
 * MediaPackage
 * MediaStore
 * MediaTailor
 * Interactive Video Service & Kinesis Video Streams - part of media, but not part of Elemental package
+MediaLive - cloud-based live video encoding service & broadcast for delivery of high-quality live video streams. Video providers can deliver video streams to their audience.
+Video encoding - compresses a video stream from high-quality video to smaller-sized versions with as little loss as possible.
+statmux (statistical multiplexing) - distribute content via traditional broadcast methods, extracts more bandwidth capacity from the network.
+You can use SG and whiltelist IP that push content to MediaLive, and iam to secure content. It supports RTP/RTMP/HLS for incoming videos.
 MediaConnect - reliable/secure transport service for live video (takes video from one source and securely sends to one/more destinations).
 You create a flow to connect source with dest and choose:
 * transport protocol 
@@ -5069,11 +5124,7 @@ You create a flow to connect source with dest and choose:
 * destinations
 Flow returns ingest endpoint where you send videos as a single unicast transport stream. 
 MediaConvert - file-based video processing service for format/compress offline content to delivery to tv/devices.
-File-based video transcoding - process video to reduce size, change format, compress. It's preferred over Elastic Transcoder, since it's major product and soon more features would be added to it, that won't be availabe in Transcoder.
-MediaLive - cloud-based live video encoding service & broadcast for delivery of high-quality live video streams. Video providers can deliver video streams to their audience.
-Video encoding - compresses a video stream from high-quality video to smaller-sized versions with little loss as possible.
-statmux (statistical multiplexing) - distribute content via traditional broadcast methods, extracts more bandwidth capacity from the network.
-You can use SG and whiltelist IP that push content to MediaLive, and iam to secure content. It supports RTP/RTMP/HLS for incoming videos.
+File-based video transcoding - process video to reduce size, change format, compress. It's preferred over Elastic Transcoder, since it's major product and soon more features would be added to it, that won't be available in Transcoder.
 MediaPackage - video origination and just-in-time packaging service for package and deliver live video streams. So it customize live video stream to format requested by viewing device.
 You can use CloudFront with MediaPackage to distribute content, but can also use any third-party CDN. It tightly integrated with MediaLive.
 MediaStore - media origin and storage service for delivery live streaming video with low latency. It maintains replicated cache after each update so you get low latency & predictable performance.
@@ -5100,10 +5151,10 @@ Don't confuse:
 This is where you pay your bills, aws automatically charged credit card that you used on sign-up. You can:
 * estimate & plan costs with free cost explorer
 * receive alerts if costs exceed some threshold
-* simplify multi-org bill management
+* simplify multi-org billing management
 Cost Allocation Tags (by default all these tags deactivated) - there are 2 types:
 * AWS-generated - first you have to activate tags (by default 13 deactivated tags). After aws generate csv report based on active tags
-* User-Defined - tags that you add to your resources. After you add tag, you can activate it from console.
+* user-defined - tags that you add to your resources. After you add tag, you can activate it from console.
 Once tag is activated it can be seen from csv usage report. If you have multi-org, and want to get tag-based report, you have to activate tags only from master account
 Budget report - you can configure sending your reports to a list of email for daily/monthly/weekly for all your created budgets
 CUR (Cost and Usage Reports) - after you set it up, billing data would be delivered to s3 bucket. You can receive hourly/daily/monthly report of usage.
@@ -5117,10 +5168,12 @@ As you see format would be either csv or parquet, not json.
 
 ###### Backup
 Aws backup - data storage service (like s3 or storage gateway) specifically designed to store backups. It's centralized backup storage where you can manage backup policy/strategy and add security to all your backups.
-It supports backups offered by ebs/efs/rds/aurora/dynamoDB/FSx/storage gateway, note that redshift & ec2 instance store is not supported by aws backup, redshift - use their backup capability, ec2 instance store - backup is not supported, you must manually backup it into ebs.
-s3 is also not supported by aws backup, cause it doesn't need backup. Yet s3 provides cross-region replication in case you want DR.
+It supports backups offered by ebs/efs/rds/aurora/dynamoDB/FSx/storage gateway, yet 3 services are not supported:
+* redshift - use their backup capability
+* ec2 instance store - backup is not supported, you must manually backup it into ebs
+* s3 - cause it doesn't need backup. s3 provides cross-region replication in case you want DR
 It provides ability to set retention & lifecycle policy centrally. Backup plan - policy that defines how frequently backup your resource and for how long to retain it.
-It integrated with storage gateway, so you can take on-premises backup. Backups created by aws services (ebs/rds) are accessed by aws backup and vice versa, backups created by aws backup - accessed by source service.
+It integrated with storage gateway, so you can take on-premises backup. Backups created by aws services (ebs/rds) are accessed by aws backup and vice versa.
 Don't confuse (these 2 are independent from each other):
 * DLM - simple way to manage lifecycle of ebs, use it when you want automate creation/retention/deletion of ebs snapshot
 * aws backup - use it if you want to manage all backups (including ebs) from single place
@@ -5134,4 +5187,4 @@ Backup support cross-region/account backups. You can use both IAM & resource-bas
 MH provides rich web experience to migrate on-premise IT resources to aws. You can view/group existing resources & track migration progress.
 SMS, DMS, CloudEndure Migration integrated & automatically report status to MH. You can export data from ADS, analyze it, and import server grouped as apps.
 Home region - before start using MH you have to choose home region from setting page, where you would store discovery/planing/tracking data. Once set you can't change it, yet you can migrate into any available region.
-You can import server details from ADS where it stored in data repository in encrypted format. EC2 instance recommendations - feature of MH that can based on data of CPU, memory use suggest least expensive ec2 instance to use.
+You can import server details from ADS where it stored in data repository in encrypted format. EC2 instance recommendations - feature of MH that can based on data of CPU & memory use suggest least expensive ec2 instance to use.
