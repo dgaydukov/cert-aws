@@ -130,6 +130,7 @@
 * 3.84 [Billing and Cost Management](#billing-and-cost-management)
 * 3.85 [Backup](#backup)
 * 3.86 [Migration Hub](#migration-hub)
+* 3.87 [WorkLink](#worklink)
 
 
 
@@ -4441,24 +4442,23 @@ Redundant site-to-site vpn - create 2 customer gateways (with 2 separate devices
     * create site-to-site vpn for each site but with same virtual gateway (many CGW to single VPG)
 Note that IPSec operates on network layer of osi, so it provide protection/encryption for data in transit, yet source/destination may not be aware of IPSec, so it doesn't provide end-to-end protection.
 VPG (virtual private gateway) terminate IPSec connection and from there on traffic goes unencrypted.
-CGW (Customer Gateway) - to configure vpn, you have to create customer gateway in your on-premise, and then you have to notify aws about this. So from aws side it's just a way to notify aws about your customer gateway.
+CGW (Customer Gateway) - to configure vpn, you have to create customer gateway in your on-premise, and then you have to notify aws about this. So from aws side it's just a way to notify aws about your customer gateway device.
 You have to supply static IP of your real customer gateway, if CGW behind NAT, you can use IP address of NAT. For dynamic routing - you have to provide BGP ASN, for static - it provided by default.
 Client VPN endpoint - allows end users to access aws network over TLS. Target network (vpc subnet) - network that you associate with VPN endpoint, so end users can access it.
 You create vpn endpoint, associate it with target network and distribute vpn config file with end users. End user download openVpn and using your config connect to vpc.
-When you create client vpn you can enable split-tunnel. There are 3 ways for authentication for client vpn
+When you create client vpn you can enable split-tunnel. There are 3 ways for authentication for client vpn:
 * AWS Directory Service - your users in AD can just use vpn and be automatically authenticated cause they use AD
 * Certificate-based authentication
 * Federated Authentication using SAML-2.0
 You can connect vpc to on-premise using Hardware VPN connection via the virtual private gateway. There are 2 types of Site-to-Site VPN connections
-* statically routed VPN connection 
+* statically routed VPN connection
 * dynamically-routed VPN connection
-Aws supports Phase 1 and Phase 2 of Diffie-Hellman groups.
+Aws supports Phase 1 and Phase 2 of Diffie-Hellman groups
 Accelerated Site-to-Site VPN - achieve faster package delivery by using not public internet but aws global network (so packet goes to closest aws region datacenter and from there goes to desired aws region inside fast aws global network).
 You can create certs. Don't forget to set Common Name (e.g. server FQDN or YOUR name) => it's domain name
 ```
-1. Generate the CA:
+1. Generate the CA (This creates two files: the CA file "ca.pem" and its private key "privkey.pem".):
 openssl req -out ca.pem -new -x509 
-(This creates two files: the CA file "ca.pem" and its private key "privkey.pem".)
 
 2. Create a serial file:
 echo "00" > serial.srl
@@ -4494,7 +4494,7 @@ But use aws microsoft AD to access aws services based on users from on-premises 
     * backups automatically taken once per day
     * EBS by default encrypted
     * failed domain controllers automatically replaced in the same AZ using the same IP address
-* simple AD - Linux-Samba AD deployed & managed in the cloud. you can singIn to aws management console with simple AD account. it doesn't support trust relationship, schema extension, multi-factor auth.
+* simple AD - Linux-Samba AD deployed & managed in the cloud. you can singIn to aws console with simple AD account. it doesn't support trust relationship, schema extension, multi-factor auth.
 * AD Connector - connector to redirect all request to your on-premises AD. So it basically directory gateway that forward requests to on-premise AD.
 Connect on-premises AD with aws:
 * create vpc with 2 public subnet in 2 AZ with NAT gateway in each, and 2 private subnet with domain controller (Windows Server 2019 AMI) replicating from on-premises AD + vpn/CGW/VPG to connect on-premises to AD
@@ -4511,8 +4511,8 @@ Local Zone - aws solution where aws services are located locally near your end-u
 Local gateway - logical router that allows communication between outpost and on-premise network.
 
 ###### SSO
-SSO (Single Sing On) - aws service that allows central access to multiple aws accounts. You can use it as identity store or as connector to your existing identity stores (like microsoft AD).
-To work with sso you should create aws organization (sso won't work without organization created). Sso create a directory where you can store/manage your users (you can also connect sso directory with your AD). With sso you can access:
+SSO (single sign-on) - aws service that allows central access to multiple aws accounts. You can use it as identity store or as connector to your existing identity stores (like microsoft AD).
+To work with sso you should create aws organization (sso won't work without organization created). SSO create a directory where you can store/manage your users (you can also connect sso directory with your AD). With sso you can access:
 * multiple aws accounts (using aws organizations)
 * SAML-enabled cloud applications (Salesforce/Office365)
 * custom-built apps
@@ -4531,7 +4531,7 @@ Cognito is not supported IdP for sso. You can enable 2FA for SSO users:
 * always-on - 2FA always enabled for all users
 * context-aware - default mode, sso analyze sign-in context browser/location/device, to determine if previously trusted context is used. If yes not 2fa code required, otherwise user must use new 2fa code.
 sso user permission are set by permission set (kind of managed policy for sso), so based on this decided which action user is allowed to do in aws. Just like with iam user your sso user can access both aws management console and aws cli.
-If you need access to third-party apps you can add applications to your sso under `application` menu. Just configure app and your user would be able to sign in into it.
+If you need access to third-party apps you can add applications to your sso under `application` tab. Just configure app and your user would be able to sign in into it.
 Permission set - level of access that users/groups has to aws account, stored in sso and provisioned as IAM roles with trust policies to assume them by users. User can have multiple sets.
 You can customize permission set props:
 * session duration - time for which user can be logged in for aws, 1(default) - 12hours. After specified time user automatically logged out
@@ -4543,7 +4543,7 @@ Config management service that provides managed instances of Chef/Puppet which h
 You app would usually have 1 stack and many layers. Also if your app use java & python, it can be better to divide it into 2 layers. 
 Layer use chef recipes to install packages & deploying apps. There are several layers:
     * ELB layer - instead of creating layer & adding instances to it, you create ELB from console/cli, and attach it to existing layer, and elb would start to distribute traffic between ec2 inside layer
-    You use `attach-elastic-load-balancer` api to attach existing ELB to layer. When you attach/detach ELB, opsWorks trigger `configure` lifecycle event
+    You use `attach-elastic-load-balancer` to attach existing ELB to layer. When you attach/detach ELB, opsWorks trigger `configure` lifecycle event
     * RDS layer - create RDS separately, use `register-rds-db-instance` to add rds to stack. Associate rds layer to App, so it would share connection info with it.
     * ECS Cluster layer - create ecs cluster outside opsworks, then add cluster to stack with `register-ecs-cluster`
     * Custom layer - you can create custom layer with custom recipe
@@ -4554,8 +4554,8 @@ You run Chef recipes using Chef Solo to automate package installation/deployment
 Difference with other platform:
 * stacks - config management platform (using Chef to automate deployment/management, has less service coverage, just the most basic like vpc/iam/ec2/elb/cloudWatch). Best practice to have separate stack for each env (dev/prod).
 * beanstalk - app management platform (you just upload code and beanstalk configure everything else use it's own CF templates)
-* cloudFormation - infra management platform. If you need to provision a lot of resources use CloudFormation, if you have something like LAMP stack use beanstalk
-Cookbook - collection of recipes stored in S3/Git. You can recipes manually or when OpsWorks fire one of 5 lifecycle events: setup/configure/deploy/undeploy/shutdown
+* cloudFormation - infra management platform. If you need to provision a lot of resources use CF, if you have something like LAMP stack use beanstalk
+Cookbook - collection of recipes stored in S3/Git. You can run recipes manually or when OpsWorks fire one of 5 lifecycle events: setup/configure/deploy/undeploy/shutdown
 Stack - collection of ec2 & related aws resources (like rds or elastic IP) that have common purpose & you want to manage them together.
 Stack can have different linux versions on different instances, but you can't mix linux & windows instances in the same stack.
 You can use cf template to create stack:
@@ -4600,7 +4600,7 @@ Decider is a program that controls the coordination of tasks (ordering/concurren
 So of course you can reinvent the wheel, but it's better to use ready solutions like SWF.
 
 ###### Data Pipeline
-DP - ELT tool that simplify data movement/processing in aws, integrates with on-premise and cloud-based storage systems.
+DP - ETL tool that simplify data movement/processing in aws, integrates with on-premise and cloud-based storage systems.
 You can transfer data between RDS/S3/EMR/DynamoDB. Pipeline - runs activities (common tasks) on data nodes. Data node - location where pipeline reads data or where it writes data.
 Example of Activity (work to be done), you can schedule time when to run, like once a day:
 * export of dynamoDB to s3 & export from s3 to dynamoDB (DP would launch transient EMR cluster on each run to execute export)
@@ -4612,7 +4612,7 @@ Don't confuse:
 
 ###### ElasticSearch & CloudSearch
 ES - open source search service, it's usually a part of ELK stack. You store data on ebs that attached to ES nodes.
-CS - search service like ElasticSearch, but aws proprietary development. With cs you can search txt/json/pdf/html/cvs/xls documents (so you can use it to search for scanned pdf documents too).
+CS - search service like ElasticSearch, but aws proprietary development. With CS you can search txt/json/pdf/html/cvs/xls documents (so you can use it to search for scanned pdf documents too).
 You should store your data in s3 and then use CS to search this textual data. CS can use s3/DynamoDB, ES - only ebs.
 ES has 2 types of nodes:
 * data nodes - nodes that upload data to ebs and search data
@@ -4635,7 +4635,7 @@ JN (Jupyter Notebook) - interactive computing environment, single document where
 DL (Data Lake) - scalable central repository of large quantities and varieties of data, both structured and unstructured. There are 2 steps:
 * ingesting and cataloging data from a variety of sources
 * data is enriched, combined, and cleaned before analysis
-You can use dms to convert db into s3 and replace read replica with data lake. But if you have many updates you should use Redshift/Hive
+You can use dms to convert db into s3 and replace read replica with data lake. You can also export RDS snapshot into s3 in parquet format. But if you have many updates you should use Redshift/Hive
 LF (Lake Formation) - integrated data lake service where you ingest/clean/catalog/transform/secure your data and make it available for analysis and ML.
 LF provides you single console to ingest you data and then use other aws services like ML/EMR/RedShift to transform and query your data.
 FindMatches ML Transform - solves 2 problems:
@@ -4654,7 +4654,7 @@ With data collected by this service you can perform a TCO (Total Cost of Ownersh
 There are 3 types of operation mode:
 * Discovery Connector (agent-less) - VMware customers collect VM configuration and performance profiles without deploying agent on each host. You need to install AgentLess Connector as OVA (Open Virtual Appliance) package on VMware vCenter.
 It collects static config info: hostname, IP, MAC-address + CPU, RAM, disk I/O. It can't collect: name of hypervisor, date & time on virtual machine, info about running processes. If you need this you have to install agent on each server.
-So connector capture performance info & resource utilization of each virtual machine regadless of what OS the use, yet it can't look inside VM, so it can't see processes running on each VM. So if you need this info you can install agent on as-needed basis.
+So connector capture performance info & resource utilization of each virtual machine regardless of what OS they use, yet it can't look inside VM, so it can't see processes running on each VM. So if you need this info you can install agent on as-needed basis.
 * Discovery agent (agent-based) - install the Application Discovery Agent on servers and virtual machines (VMs) to collect data. Agent captures system configuration/performance/running processes/details of the network connections between systems. 
 Agent uses HTTPS/TLS to transmit data to the ADS. Agent can be operated in an offline test mode that writes data to a local file so customers can review collected data before enabling online mode.
 * Manual import - if your server os not supported by agent (so you can't install agent), and it's not Vmware (so you can't install Connector) the only option is to manually import data about your server into Migration Hub
@@ -4672,8 +4672,7 @@ There are 2 types of docs: agreements (you can accept it or terminate, so 2 stat
 SMS - agentless service that helps migrate on-premise workload to aws, significant enhancement of ec2 VM Import. You can migrate virtual machines from VMware vSphere, Windows Hyper-V, or Microsoft Azure to aws.
 Server Migration Connector - pre-configured FreeBSD virtual machine that you install in your on-premise. This connector replicate volumes into ami and transfer it into aws using TLS.
 SMS schedule/coordinate/track incremental replication of many on-premise instances, so helping you to make large-scale server migrations.
-VMDK (Virtual Machine Disk) - file format of containers for virtual HDD to be used in VM like Vmware/Virtualbox. 
-OVF (Open Virtualization Format) - open format for packagin/distributing software. 
+VMDK (Virtual Machine Disk) - file format of containers for virtual HDD to be used in VM like Vmware/Virtualbox. OVF (Open Virtualization Format) - open format for packagin/distributing software. 
 You create replication job (run from 30 min to 90 days), by the end SMS generate CF template which you can launch to create your ec2.
 Migration works in 4 steps:
 * schedule - schedule migration job (either immediately or at specified time)
@@ -4688,17 +4687,18 @@ Since SMS create CF template, you can integrate it with Service catalog to centr
 RAM - helps securely share your resources across AWS accounts or within your Organization. Shared resources can't be re-shared. To share resources, you create a Resource Share, give it a name, add one or more of your resources to it, and grant access to other AWS accounts.
 Account iam policy & scp applied to shared resource same way they are applied to provisioned resource in that account. There are 2 types of sharing:
 * sharing with organization - share resource with whole organization or with OU. For this to work master account should enable resource sharing within organization. If it's not done you can't share resources with organization, but you can still use individual sharing.
+To enable sharing to to RAM console => setting, and tick `Enable sharing with AWS Organizations`. This would activate sharing for your org.
 * individual sharing - share resource with individual account
 
 ###### DataSync
-DataSync - online data transfer service that simplifies/automates/accelerates copying large amounts of data to and from s3/efs/FSx over the internet/DX. How it works:
+Online data transfer service that simplifies/automates/accelerates copying large amounts of data to and from s3/efs/FSx over the internet/DX. How it works:
 * uses a purpose-built network protocol and scale-out architecture to accelerate transfer to and from AWS.
 * automatically scales and handles moving files and objects, scheduling data transfers, monitoring the progress of transfers, encryption, verification of data transfers, and notifying customers of any issues
 If you want to migrate on-premise data to aws you should:
 * make an initial copy of your entire dataset
 * schedule subsequent incremental transfers of changing data until the final cut-over from on-premises to AWS
 During migration DataSync:
-* includes encryption and integrity validation to help make sure your data arrives securely, intact, and ready to use
+* includes encryption and integrity validation to help make sure your data arrives securely, intact, and ready to use. 
 You can turn off integrity check for initial transfer if data in source are constantly changing - this would expedite initial sync, and then turn it on after finish initial transfer.
 * can schedule your migration to run during off-hours, limit network bandwidth to offload network
 * can preserve metadata between storage systems that have similar metadata structures
@@ -4710,8 +4710,8 @@ You can turn off integrity check for initial transfer if data in source are cons
 * ensure file transfer even if some interruption (like network problem). In this case DataSync will resume file transfer and complete it after failed attempt
 * use DX + vpc endpoint so data transfer happens inside vpc and doesn't go outside aws network
 To transfer data you should do 3 things:
-* Deploy a DataSync agent in on-premise VM. Agent can be installed on ec2 by using AMI.
-* Create a data transfer task
+* deploy a DataSync agent in on-premise VM. Agent can be installed on ec2 by using AMI.
+* create a data transfer task
 * start transfer
 When you transfer data from s3 to some destination, DataSync first retrieve all files, so for Standard-IA/One-Zone-IA retrieval incur additional fees.
 Don't confuse:
@@ -4728,13 +4728,12 @@ Snow family:
 * snowball edge - data migration & edge computing device:
     * Storage Optimized 100TB/24vCPU - local storage & large scale data transfer
     * Compute Optimized 52vCPU (also you can get additional GPU) - for ML & video processing in disconnected env
-    So you can order this device, run some ML job, process data locally, and ship it back to aws, & upload already processed data into s3
+    So you can order this device, run some ML job, process data locally, and ship it back to aws, and upload already processed data into s3
 * snowmobile - big car with 100PB of storage capacity
 
 ###### Transfer Family
 TF - 3 services for transfer from on-premise into s3:
-* FTP (File Transfer Protocol) - network protocol for the transfer of data, use separate channel for control and data transfers.
-Control channel is open until terminated or inactivity timeout, the data channel is active for the duration of the transfer.
+* FTP (File Transfer Protocol) - network protocol for the transfer of data, use separate channel for control and data transfers. Control channel is open until terminated or inactivity timeout, the data channel is active for the duration of the transfer.
 * FTPS (FTP over SSL) - secure extension for FTP, allows encryption of both the control and data channel connections either concurrently or independently
 * SFTP (SSH FTP) - network protocol for secure transfer of data over the internet, required single channel for commands and data. It's newer than FTPS so it's better to use it for new projects.
 If you want any of these protocols and want to move data to aws you have to host and manage your own file transfer service, so TF solve this problem by providing managed file transfer service.
@@ -4779,8 +4778,9 @@ There are 2 ways to unsubscribe from sns emails:
 * delete subscription from sns topic (using cli or console)
 
 ###### AppSync
-AppSync- allows developers to manage/synchronize mobile app data across devices, access/modify data when mobile device in offline state, so basically your app can work in offline mode.
+Allows developers to manage/synchronize mobile app data across devices, access/modify data when mobile device in offline state, so basically your app can work in offline mode.
 It supports Android/iOS/JavaScript. You can use open source clients to connect to AppSync GraphQL endpoint to fetch/save data. You can use dynamoDB/ElasticSearch/Lambda as data sources for AppSync.
+So you upload GraphQL schema, connect it to multiple resources like db, ec2, http api. So users can do changes in online, and in offline. Once they reconnected all changes flushed to underlying sources.
 
 ###### Service Catalog
 SC helps IT administrators & devops create/manage aws resources to end users. So you can control which users have access to which products. 
@@ -4796,7 +4796,7 @@ It's automated security assessment service that test the network accessibility o
 You install agent on your OS, and it collects data and send it to inspector for analyzing. Assessment template - configuration based on which inspector validates your system.
 
 ###### Neptune
-Fully-manages graph database (not relational) service optimized for storing billions of relationships and querying the graph with milliseconds latency:
+Fully-managed graph database (not relational) service optimized for storing billions of relationships and querying the graph with milliseconds latency:
 * ACID compliant with immediate consistency
 * uses operational technology (lifecycle management, encryption-at-rest with KMS) shared with RDS
 * replicates all data 6 times across 3 AZ (neptune divide your storage on 10GB chunk and replicate each chunk 6 times).
@@ -4822,7 +4822,7 @@ Local Resource - buses/peripherals that are physically present on the device. Yo
 ###### WAF & Shield
 3 security services joined under single tab in aws:
 * waf (web application firewall) - you add rules that allow/deny/count web requests based on conditions that you define. Conditions are: HTTP header/body, URL string, SQL injection, XSS (for example you can block specific user-agents).
-Underlying service send request to waf, waf validate it based on rules you defined and instruct your service to block/allow request to proceed. It's integrated with CloudFront/ALB/Api Gateway/AppSync.
+Underlying service send request to waf, waf validate it based on rules you defined and instruct your service to block/allow request to proceed. It's integrated with CloudFront/ALB/ApiGateway/AppSync.
 You create Web ACL (Access Control List), specify resource, and add rules. Plz note only ALB can be specified, there is no way to add WAF above NLB, cause NLB works on level 4.
 Rate-Base Rule - allows you to set a number of allowed request per IP address during predefined time (100 requests per 5 min - once this IP send 101 request, it would be blocked, until 5 min period ends, and new starts).
 Managed Rule - default rules that automatically updated by AWS Marketplace security Sellers, protects against common known issues. 
@@ -4833,7 +4833,7 @@ In case of rule fail you can configure CloudFront to show error page. Rules take
 You can use shield to protect on-premise servers. For this use aws endpoint with shield in front of your on-premise server. Shield notify about attack by sending metrics to CloudWatch.
 * FM (Firewall Manager) - tool that makes it easier for you to configure your WAF rules and vpc SG across your accounts. So if you have single account no need to use FM, but if you have aws organization with many accounts
 it's better to use single tool to configure waf across all accounts, cause FM integrated with organization so have a single place to quickly respond to incidents.
-WAF sandwich (see `sa/files/images/waf-sandwich.png`) - concept where instead of aws was you use custom software with waf on ec2.
+WAF sandwich (see `sa/files/images/waf-sandwich.png`) - concept where instead of aws, you use custom software with waf on ec2.
 In this case you have elb -> custom waf with asg -> elb -> ec2 with app. So basically you put your custom waf ec2 into ASG and between 2 elb.
 
 ###### Trusted Advisor
@@ -4854,13 +4854,13 @@ There are 4 support plans you can use (you must be logged in as root in order to
 
 ###### CloudHSM
 Dedicated HSM instance within aws cloud. You can securely generate/store/manage cryptographic keys. HSM (Hardware Security Module) provides secure key storage and cryptographic operations within a tamper-resistant hardware device.
-Cluster - contains multiple devices across AZ/subnet in single region. You can't create single device, only cluster with 1 or more devices. Since devices created in sunbets you need to have vpc in order to use CloudHSM. 
+Cluster - contains multiple devices across AZ/subnet in single region. You can't create single device, only cluster with 1 or more devices. Since devices created in sunbets you need to have vpc in order to use CloudHSM.
+You can use with database or with nginx to off-load ssl. Best practice to sync all keys at least in 2 devices in separate AZ. It's built with physical and logical tamper-protection, so it trigger key deletion (zeroization) in case of breach.
 Daily backups are automatically taken and stored in s3 (bucket must be in the same region as cluster). All backups encrypted with 2 types of keys:
 * EBK (ephemeral backup key) - generated inside HSM when backup is taken. Used to encrypt backup. Encrypted backup include encrypted EBK.
 * PBK (persistent backup key) - used by HSM to encrypt EBK. Generated based on 2 other keys:
     * MKBK (manufacturer key backup key) - permanently embedded in the HSM hardware by manufacturer
     * AKBK (AWS key backup key) - installed in the HSM during initial setup by aws CloudHSM.
-You can use with database or with nginx to off-load ssl. Best practice to sync all keys at least in 2 devices in separate AZ. It's built with physical and logical tamper-protection, so it trigger key deletion (zeroization) in case of breach.
 
 ###### Polly
 It turns text into lifelike speech. You can supply polly with either simple text or SSML format. Pronunciation lexicon - enable you to customize pronunciation of words. 
@@ -4888,11 +4888,11 @@ Example of using ssml:
 ```
 
 ###### MQ
-MQ (Message queue) - managed Apache ActiveMQ message broker. It stores data in EFS and provides HA. It provides both push-based and poll-based messaging model.
+MQ (Message queue) - managed Apache ActiveMQ message broker. It stores messages in EFS for durability and provides HA. It provides both push-based and poll-based messaging model.
 Selector (like filter in sns) - can filter messages for different consumers. Exclusive consumer - all messages from queue goes to single consumer.
 Message group - all messages with same `JMSXGroupID` header goes to same consumer. There are 2 types of delivery mode:
 * persistent - message broker should persist message on disk before deliver it to consumer
-* non-persistent - stored in RAM
+* non-persistent - stored in RAM only
 Don't confuse:
 * sqs - simple queue with post/poll options only
 * mq - complex solution with message routing, fanouts, distribution lists, that supports AMQP/JMS protocols
@@ -4930,13 +4930,13 @@ Admin can set following permissions:
 * external invitee - who can invite external users to wd: no one / only power users / all managed users
 
 ###### WorkSpaces
-It's managed/secure cloud desktop. Don't confuse with cloud9 which is web IDE, where ws is complete desktop (you can install any IDE there).
-Users can use their browser or special desktop client to user ws. To authenticate they should use directory service. If you have directory you can integrate it with ws, otherwise ws would create new directory for you.
+It's managed/secure cloud desktop. Don't confuse with cloud9 which is web IDE, where ws is complete desktop (you can install any IDE there). Users can use their browser or special desktop client to user ws. To authenticate they should use directory service. 
+If you have directory you can integrate it with ws (using AD connector), otherwise ws would create new directory (either simple AD or microsoft AD) for you.
 
 ###### Batch
 Set of batch management tools that allows to run hundreds of thousands of batch computing jobs on AWS. Resources are dynamically provisioned.
 It handles job execution and compute resource management and you can concentrate on code. It's best suited for: deep learning, genomics analysis, image processing, media transcoding, bash scripting.
-You simply submit jobs to batch and it provision ec2 or spot fleet and run your jobs there. Job Definition - specify params, env vars, RAM & CPU number requirements.
+You simply submit jobs to batch and it provision ec2 or spot fleet and run your jobs there. Job Definition - specify params, env vars, RAM & CPU number.
 It uses ecs to execute containerized jobs, so ecs agent should be installed on ec2 (you can use ecs ami or create your own). When you create your own ami, it should include:
 * linux of latest version
 * docker daemon running
@@ -5019,41 +5019,39 @@ Don't confuse:
 * sns - kind of limited version of EventBridge, body - any format, target - 6 services
 
 ###### Managed Blockchain
-Blockchain network - peer-to-peer network running a decentralized blockchain framework. When you create blockchain you choose type (hyperledger/etherium) and version and create first member.
+Blockchain network - peer-to-peer network running a decentralized blockchain framework. When you create blockchain you choose type (hyperledger/etherium, only hyperledger supported so far) and version and create first member.
 Other members can be added later by voting process. Blockchain active as long as at least 1 member there, as long as this is the case nobody, even creator can't delete blockchain.
 There are 2 types of members:
 * same account - just send invitation
 * other aws account - create network invitation for another account
 Aws account and creator don't own network. For any changes there should be voting process between all network members. Peer node - when member join network it should have at least 1 peer node which store copy of distributed ledger with all transactions.
-Each blockchain has unique identifier `ResourceID.MemberID.NetworkID.managedblockchain.AWSRegion.amazonaws.com:PortNumber`. Port depends on blockcahin framework you are using. Yet this link is private, so members should have vpc and use vpc privatelink to access blockchain endpoint.
+Each blockchain has unique identifier `ResourceID.MemberID.NetworkID.managedblockchain.AWSRegion.amazonaws.com:PortNumber`. Port depends on blockcahin framework you are using. Yet this link is private, so members should have vpc and use vpc PrivateLink to access blockchain endpoint.
 AWS Blockchain Templates - you can run Ethereum/Hyperledger on ECS cluster or in ec2 using docker and have full control (compare to managed blockchain where you don't have access to ec2 machines).
 
 ###### GuardDuty
-Threat management tools that helps to protect aws accounts/workloads/data by analyzing data from cloudTrail/vpc flowLogs/dns logs using ML. It's regional service, so all collected data is aggregated/analyzed within region. 
-It doesn't store any data, once data is analyzed it discarded. threat intelligence - list of malicious IP addresses maintained by aws and third-party partners.
+Threat management tools that helps to protect aws accounts/workloads/data by analyzing data from cloudTrail/vpcFlowLogs/dnsLogs using ML. It's regional service, so all collected data is aggregated/analyzed within region. 
+It doesn't store any data, once data is analyzed it discarded. threat intelligence - list of malicious IP addresses maintained by aws and third-party partners. You should first enable GuardDuty, you can also assign admin account (it can assume 2 roles to administer your GuardDuty).
 
 ###### Secrets Manager
 SM allows you to rotate/manage/retrieve db credentials, API keys, and other secrets throughout their lifecycle. You can encrypt secrets at rest using kms (you can choose your own, otherwise SM create new kms for you).
-To retrieve secrets, you simply replace secrets in plain text in your app with code to pull in those secrets programmatically using the Secrets Manager APIs.
-You use iam to control which users/roles have access to which stores. SM can store json, so you can store any text up to 64KB. 
-Key rotation for RDS/DocumentDB/RedShift supported out-of-the-box. You can add key rotation to oracle on ec2 by modifying sample lambda.
-You can configure cw events to be notified when SM rotate credentials. SM never store plaintext secrets to any persistent layer.
-This can be ideal for lambda evn vars, cause they are shown in lambda console. Moreover you can use lambda in private subnet without internet access and still be able to access SM with privatelink (create vpc endpoint for SM).
+To retrieve secrets, you simply replace secrets in plain text in your app with code to pull in those secrets programmatically using the Secrets Manager APIs. You use iam to control which users/roles have access to which stores. SM can store json, so you can store any text up to 64KB. 
+Key rotation for RDS/DocumentDB/RedShift supported out-of-the-box. You can add key rotation to oracle on ec2 by modifying sample lambda. You can configure cw events to be notified when SM rotate credentials. SM never store plaintext secrets to any persistent layer.
+This can be ideal for lambda evn vars, cause they are shown in lambda console. Moreover you can use lambda in private subnet without internet access and still be able to access SM with PrivateLink (create vpc endpoint for SM).
 
 ###### Quantum Ledger Database
 QLDB - ledger database with cryptographically verifiable history of all changes made to your app data (quantum has nothing to do with quantum computing, here it means indivisible state change)
 Traditional db allow to overwrite/delete data, so developers use audit tables. While this may work, it put stress on developers to guarantee that audit table works correctly.
 For QLDB data written to append-only journal, providing the developer with full data lineage. So it can work as secure/crypto-proof substitute for audit tables.
-Notice that QLDB is neither blockcahin nor distributed ledger. It's purpose-built database to store all changes to system.
-So it offers history/immutability/verifiability combined with scalability and ease of use of a fully managed AWS database.
-To connect and work with QLDB you have to use [AWS-provided QLDB driver](https://docs.aws.amazon.com/qldb/latest/developerguide/getting-started-driver.html).
+Notice that QLDB is neither blockcahin nor distributed ledger. It's purpose-built database to store all changes to system. So it offers history/immutability/verifiability combined with scalability and ease of use of a fully managed AWS database.
+To connect and work with QLDB you have to use [AWS-provided QLDB driver](https://docs.aws.amazon.com/qldb/latest/developerguide/getting-started-driver.html). 
 In the core of QLDB, replication, DynamoDB Streams, kafka, version control lay simple concept called log - append-only storage of all events happened.
 
 ###### AppStream 2.0
 Fully managed non-persistent app & desktop streaming service that provides instant access to desktop applications from anywhere, SAP - one of best candidates to be deployed on this platform.
+You first create fleet and link it to vpc (fleet resides inside vpc), then create stack and link it to fleet.
 Simplifies app management, improves security, reduces costs by moving a company’s app from their users physical devices to the AWS Cloud.
 aws streaming protocol (NICE DCV) provides responsive & fluid performance that is almost indistinguishable from a natively installed app
-NICE DCV is a proprietary protocol used to stream high-quality, application video over varying network conditions (video and audio encoded using standard H.264 over HTTPS)
+NICE DCV is a proprietary protocol used to stream high-quality application video over varying network conditions (video and audio encoded using standard H.264 over HTTPS)
 Original version (no longer available) was SDK-based service where customer should write their own implementation of streaming. 
 v2.0 provides out-of-the-box desktop app streaming into HTML5-compatible web browser with no plugins required. It also allows you to access services inside vpc.
 AppStream 2.0 Windows Client - native application that is designed for users who require additional functionality not available from web browsers (four monitors, 4K monitors and USB peripherals such as 3D mice)
@@ -5188,3 +5186,18 @@ MH provides rich web experience to migrate on-premise IT resources to aws. You c
 SMS, DMS, CloudEndure Migration integrated & automatically report status to MH. You can export data from ADS, analyze it, and import server grouped as apps.
 Home region - before start using MH you have to choose home region from setting page, where you would store discovery/planing/tracking data. Once set you can't change it, yet you can migrate into any available region.
 You can import server details from ADS where it stored in data repository in encrypted format. EC2 instance recommendations - feature of MH that can based on data of CPU & memory use suggest least expensive ec2 instance to use.
+
+###### WorkLink
+Fully managed cloud service for secure one-click access for internal websites from mobile devices. One of the 4 end user computing service - each provide secure access to specific env:
+* WorkSpaces - full desktop
+* AppStream 2.0 - third-party apps
+* WorkDocs - document sharing
+* WorkLink - web content
+When user type link in web browser - WorkLink isolate & render corporate web content and sends it to client web browser. To get started:
+* select home region - where WorkLink would be deployed
+* link existing SAML provider with WorkLink
+* associate web domain that your employee needs with WorkLink
+* associate WorkLInk with VPC
+You can also render on-premises websites using DX/VPN. You can use email template to invite users to download WorkLink app. Internally it uses chromium to render content, so if your website works in chrome, it would work in WorkLink.
+During WorkLink session data isolated in cloud and securely rendered, once session is over, data is destroyed, data-in-transit secured by https.
+It streams representation (image) of web content to browsers that doesn't cache data. So it prevents browsers from caching your content. It delivers logs via kinesis streams.
