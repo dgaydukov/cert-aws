@@ -52,7 +52,35 @@ Play Framework vs google guice vs spring
 jooq vs hibernate
 hibernate second level cache (how cache system works)
 https://github.com/real-logic/aeron/tree/master/aeron-cluster
+https://www.youtube.com/watch?v=FL7_lxJbX0o (Иван Землянский — Аерон. High performance-транспорт для low latency-микросервисов)
+https://www.youtube.com/watch?v=lgyO9C9zdrg (Whats New in Spring Boot 2 4)
+https://www.kaggle.com
+https://www.youtube.com/watch?v=5wMAPUrd0ag
+https://www.youtube.com/watch?v=o6u_Od27IFw
+https://habr.com/ru/news/t/484264
 -----------------------------------------------------------------------------------------------------------------------
+add sites that helped to prepare to cert for java/spring/aws
+убрать папку со стола с бумагами
+print all certs with details & marks
+move all java stuff into data analytics
+remove security folder - have 1 for sa & security specialty
+move all security services (iam/cognito/active_directory/ACM/kms/cloudhsm/inspector/macie/guardduty/waf/config/cloudtrail/artifact/RAM/security_hub         ) into fourth content type (call them security aws services)
+add all java-low-latency tasks here and do them after security exam
+cloudhsm to offload ssl/tls
+cloudhsm encrypt oracle with transparent data encryption
+https://www.youtube.com/watch?v=-ObImxw1PmI
+we use symmetric encryption for s3 (envelope encyrption) cause it just faster than assymetric - also note that s3 doing all encryption, kms only encrypt/decrypt data key
+this is due since kms run cloudhsm, it doesn't give master key, instead other service need to send chunk of data to kms, so kms would encrypt/decrypt it. That's why kms can encrypt only up to 4KB, cause sending gigabytes to kms just unfesable
+kms runs cloudhsm behind the scene
+aws reinforce talk
+https://aws.amazon.com/macie/faq/
+cross region s3 replication for encrypted bucket
+https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_boundaries.html
+elb to ec2 end-to-end https connection
+get access to aws console/services through: iam+google vs cognito+google
+why s3 static site not encrypted (it doesn't use https)
+secrets manager for rds/redshift
+cloudformation cfn-init (call ec2 instances)
 * connect 2 vpc with privatelink (access ec2 from one vpc from another)
 * create vpc link and connect http api to ec2 in private subnet
 * create custom vpn server in ec2 and try to connect to it (do both use oepnvpn server ami and any ami (OpenVPN Access Server from marketplace which is free tier, in this case you should configure it through browser admin panel) + manually configure openvpn server)
