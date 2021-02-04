@@ -81,6 +81,10 @@ get access to aws console/services through: iam+google vs cognito+google
 why s3 static site not encrypted (it doesn't use https)
 secrets manager for rds/redshift
 cloudformation cfn-init (call ec2 instances)
+scan other wifi
+habr - articles about security
+read nmap book
+how system manager connect to ec2 (does it use ssh, what if ssh disabled? what if you disalbe any network access using iptables or firewall, will SM be able to connect)?
 * connect 2 vpc with privatelink (access ec2 from one vpc from another)
 * create vpc link and connect http api to ec2 in private subnet
 * create custom vpn server in ec2 and try to connect to it (do both use oepnvpn server ami and any ami (OpenVPN Access Server from marketplace which is free tier, in this case you should configure it through browser admin panel) + manually configure openvpn server)
