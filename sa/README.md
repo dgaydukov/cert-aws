@@ -1,32 +1,22 @@
-# AWS Solutions Architect certification
+# AWS Solutions Architect & Security Specialty certification
 
 ### Description
-Here is my experience of taking 2 certifications, both associate & professional:
+Here is my experience of taking 3 certifications:
 * [SAA-C02](https://aws.amazon.com/certification/certified-solutions-architect-associate)
 * [SAP-C01](https://aws.amazon.com/certification/certified-solutions-architect-professional)
+* [SCS-C01](https://aws.amazon.com/certification/certified-security-specialty)
+All 3 are in same document, cause security tightly related to all other services
 
 ### Contents
-* [Solutions Architect Tips](https://github.com/dgaydukov/cert-aws/blob/master/sa/files/sa.md)
+* [Solutions Architect & Security Specialty Tips](https://github.com/dgaydukov/cert-aws/blob/master/sa/files/sa.md)
 
 ### Useful Links
 * [Mock exam SAA](https://www.whizlabs.com/aws-solutions-architect-associate)
 * [Mock exam SAP](https://www.whizlabs.com/aws-solutions-architect-professional)
 * [Free SAA questions](https://www.examtopics.com/exams/amazon/aws-certified-solutions-architect-associate-saa-c02)
 * [Free SAP questions](https://www.examtopics.com/exams/amazon/aws-certified-solutions-architect-professional)
-
-# AWS Certified Cloud Security Specialty
-
-### Description
-Here is my experience of taking data security specialty exam:
-* [SCS-C01](https://aws.amazon.com/certification/certified-security-specialty)
-
-### Contents
-* [Security Tips](https://github.com/dgaydukov/cert-aws/blob/master/cs/files/cs.md)
-
-### Useful Links
 * [Mock exam DAS](https://www.whizlabs.com/aws-certified-security-specialty)
 * [Free DAS questions](https://www.examtopics.com/exams/amazon/aws-certified-security-specialty)
-
 
 ### TODO
 add all certs & all documents with passing score into single folder
