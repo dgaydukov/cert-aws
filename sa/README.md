@@ -16,7 +16,6 @@ Here is my experience of taking 2 certifications, both associate & professional:
 
 ### TODO
 add all certs & all documents with passing score into single folder
------------------------------------------------------------------------------------------------------------------------
 https://www.creditcardinsider.com/blog/what-are-the-worlds-most-exclusive-luxury-credit-cards-here-are-8
 https://docs.confluent.io/platform/current/schema-registry/index.html
 https://www.dell.com/en-us/work/shop/dell-laptops-and-notebooks/sr/laptops/64gb-ram
@@ -81,18 +80,16 @@ https://www.youtube.com/watch?v=5wMAPUrd0ag
 https://www.youtube.com/watch?v=o6u_Od27IFw
 https://habr.com/ru/news/t/484264
 -----------------------------------------------------------------------------------------------------------------------
+print sap cert
+remove security folder - have 1 for sa & security specialty
 add sites that helped to prepare to cert for java/spring/aws
-убрать папку со стола с бумагами
 print all certs with details & marks
 move all java stuff into data analytics
-remove security folder - have 1 for sa & security specialty
-move all security services (iam/cognito/active_directory/ACM/kms/cloudhsm/inspector/macie/guardduty/waf/config/cloudtrail/artifact/RAM/security_hub         ) into fourth content type (call them security aws services)
+move all security services (iam/cognito/active_directory/ACM/kms/cloudhsm/inspector/macie/guardduty/waf/config/cloudtrail/artifact/RAM/security_hub) into fourth content type (call them security aws services)
 add all java-low-latency tasks here and do them after security exam
 cloudhsm to offload ssl/tls
 cloudhsm encrypt oracle with transparent data encryption
 https://www.youtube.com/watch?v=-ObImxw1PmI
-we use symmetric encryption for s3 (envelope encyrption) cause it just faster than assymetric - also note that s3 doing all encryption, kms only encrypt/decrypt data key
-this is due since kms run cloudhsm, it doesn't give master key, instead other service need to send chunk of data to kms, so kms would encrypt/decrypt it. That's why kms can encrypt only up to 4KB, cause sending gigabytes to kms just unfesable
 kms runs cloudhsm behind the scene
 aws reinforce talk
 https://aws.amazon.com/macie/faq/
