@@ -17,6 +17,10 @@ Here is my experience of taking 2 certifications, both associate & professional:
 ### TODO
 add all certs & all documents with passing score into single folder
 -----------------------------------------------------------------------------------------------------------------------
+https://www.creditcardinsider.com/blog/what-are-the-worlds-most-exclusive-luxury-credit-cards-here-are-8
+https://docs.confluent.io/platform/current/schema-registry/index.html
+https://www.dell.com/en-us/work/shop/dell-laptops-and-notebooks/sr/laptops/64gb-ram
+java low latency logging
 https://en.wikipedia.org/wiki/The_Laundromat_(film)
 concurrentskiplistmap vs concurrenthashmap vs treemap
 https://blogs.oracle.com/javamagazine/creating-a-java-off-heap-in-memory-database

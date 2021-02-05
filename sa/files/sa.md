@@ -3283,8 +3283,7 @@ Don't confuse:
 * back-end connection - connection between ELB & your backend instances (like ec2)
 
 ###### CloudWatch
-CloudWatch - monitoring service for aws resources and apps running in aws cloud.
-You can also use CloudWatch to create alarms (for example you get 5 errors, and you want to notify developer). Alarms are integrated with SNS (so you can send email, put message to SQS and so on).
+Monitoring service for aws resources and apps running in aws cloud. You can also use CloudWatch to create alarms (for example you get 5 errors, and you want to notify developer). Alarms are integrated with SNS (so you can send email, put message to SQS and so on).
 Many aws resources (EC2/RDS) automatically send metrics to CloudWatch. You can also send your custom metrics. Metrics can't be deleted, but expire automatically.
 By default ec2 monitoring interval is 5min, but you can enable detailed monitoring (second step when you create ec2) and data would be flowing every 1 min.
 In ec2 you can create alarm too (when cpu goes above 80% - stop instance). If you want to track ec2 memory usage you have to install CloudWatch agent into ec2.
@@ -3299,6 +3298,26 @@ You can create cross-account & cross-region cw dashboard and view your resources
     * share organization list - create a role to allow other accounts list accounts inside your org (`organizations:ListAccounts` and `organizations:ListAccountsForParent`)
     * view cross-account data - just enable to view other accounts dashboard
 `ScheduleExpression` - you can specify to call some lambda every 1 min or more (cron expression)
+CloudWatch Logs - you can collect app logs into CW LG (Log Groups). The only problem is that inside LG, logs stored in files (LogStream), and files are added every few minutes. That means if you want to check logs for last week you have to go through hundreds of logs files.
+Log retention - by default indefinitely, you can also configure retention from 1 day to 10 years (after such retention period, logs would expire). There are 3 ways you can check logs:
+* manually open each file and search it in CW console
+* Athena - there is no integration between Athena & CW Logs, yet there is [Athena CW Connector](https://github.com/awslabs/aws-athena-query-federation/tree/master/athena-cloudwatch) that you can deploy as lambda and query it
+* LI (Logs Insights) - native solution of CW to search up to 20 LG. You choose LG, date interval and use sql-like query language to search logs. You can also parse your message to extract specific data.
+Below would search time/message/logStream by your text pattern (good thing LogStream is link, so you can open it from console and continue search of this particular LogStream):
+```
+fields @timestamp, @message, @logStream
+| sort @timestamp desc
+| limit 20
+| filter @message like /some_text_pattern/
+```
+I think under-the-hood both Athena & LI works the same:
+* they both price based on scanned data: [Athena](https://aws.amazon.com/athena/pricing/) - 5.00 per TB of data scanned, [LI](https://aws.amazon.com/cloudwatch/pricing/) - 0.005 USD per GB (which is 5$ per TB).
+* they both use sql-like query language: athena - pure sql, LI - custom sql-like query language
+There are several tricks you can do with CW Logs:
+* create metric using metric filter - for example fire alarm when app throw 3 times `NullPointerException`
+* export logs into s3 (kms-encrypted destination bucket is not supported)
+* stream logs into ElasticSearch/lambda/kinesis using real-time subscription with subscription filters (each LG can stream up to 2 destinations)
+* by default logs encrypted with SSE, you can also encrypt it using KMS (only symmetric kms supported). To use kms associate LG with kms key, you can't use console, you have to use cli.
 
 ###### KMS
 Key Management Service - service for generating/storing/auditing keys. If you have a lot of encryption it's better to use central key management service.
@@ -3336,6 +3355,9 @@ When you use kms for every policy (for example read policy for s3) you have to a
 cross-account access - you can allow your KMS to be used in another account by adding resource policy to kms with principal as another account or you can also add cross-account role iam access:
 * in account A add principal of account B to key policy
 * in account B add permissions to access kms resource from account A
+AWS Encryption SDK - client-side encryption library (c/java/JS/python) for easy encrypt/decrypt data using industry standards & best practices.
+Encryption Context - 
+    * CW log support kms encryption context
 
 ###### Route53
 Route53 - amazon DNS service that help to transform domain name into IP address. Reason for a name, cause 53 - port of DNS.
