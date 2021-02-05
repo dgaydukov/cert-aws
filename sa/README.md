@@ -15,6 +15,24 @@ Here is my experience of taking 2 certifications, both associate & professional:
 * [Free SAP questions](https://www.examtopics.com/exams/amazon/aws-certified-solutions-architect-professional)
 
 ### TODO
+add all certs & all documents with passing score into single folder
+-----------------------------------------------------------------------------------------------------------------------
+https://en.wikipedia.org/wiki/The_Laundromat_(film)
+concurrentskiplistmap vs concurrenthashmap vs treemap
+https://blogs.oracle.com/javamagazine/creating-a-java-off-heap-in-memory-database
+check hibernate @Version (so read+write becomes atomic, and we can use db row locking) => solve race condition
+synchronized on string java (is it anti-pattern)
+java memory model - metaspace
+move to guice for dependency injection
+dependency injection works on load time or runtime
+oracle partition
+julu/jing low latency jdk
+weakhashmap vs hashmap
+bytebuffer vs byte[]
+http://java-performance.info/hashmap-overview-jdk-fastutil-goldman-sachs-hppc-koloboke-trove-january-2015/
+https://github.com/leventov/Koloboke
+netty io (does it have lmax disruptor inside)
+chronicle queue (is it same package as chorinicle map)
 https://www.youtube.com/watch?v=-w6duQhWuVk
 https://coingeek.com/bittrex-to-delist-privacy-coins-monero-zcash-and-dash
 https://www.youtube.com/watch?v=UpeV4OqB6Us
