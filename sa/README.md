@@ -14,6 +14,20 @@ Here is my experience of taking 2 certifications, both associate & professional:
 * [Free SAA questions](https://www.examtopics.com/exams/amazon/aws-certified-solutions-architect-associate-saa-c02)
 * [Free SAP questions](https://www.examtopics.com/exams/amazon/aws-certified-solutions-architect-professional)
 
+# AWS Certified Cloud Security Specialty
+
+### Description
+Here is my experience of taking data security specialty exam:
+* [SCS-C01](https://aws.amazon.com/certification/certified-security-specialty)
+
+### Contents
+* [Security Tips](https://github.com/dgaydukov/cert-aws/blob/master/cs/files/cs.md)
+
+### Useful Links
+* [Mock exam DAS](https://www.whizlabs.com/aws-certified-security-specialty)
+* [Free DAS questions](https://www.examtopics.com/exams/amazon/aws-certified-security-specialty)
+
+
 ### TODO
 add all certs & all documents with passing score into single folder
 https://www.creditcardinsider.com/blog/what-are-the-worlds-most-exclusive-luxury-credit-cards-here-are-8
@@ -81,7 +95,6 @@ https://www.youtube.com/watch?v=o6u_Od27IFw
 https://habr.com/ru/news/t/484264
 -----------------------------------------------------------------------------------------------------------------------
 print sap cert
-remove security folder - have 1 for sa & security specialty
 add sites that helped to prepare to cert for java/spring/aws
 print all certs with details & marks
 move all java stuff into data analytics
