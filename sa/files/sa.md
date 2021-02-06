@@ -4681,8 +4681,8 @@ LF discover all available sources s3/RDS/on-premise db/CloudTrail, ingest it and
 LF also manages granular access to your s3 bucket, and can give access to it to all other data analytics services (so you have central place to manage all access).
 Hadoop Data Formats:
 * Avro - row-based data format, data schema is stored as JSON.
-* ORC - row columnar data format highly optimized for reading, writing, and processing data in Hive. Files are made of stripes of data where each stripe contains index, row data, and footer.
-* Parquet - row columnar data format, files consist of row groups, header, and footer. Specialized in efficiently storing and processing nested data types.
+* ORC - columnar data format highly optimized for reading, writing, and processing data in Hive. Files are made of stripes of data where each stripe contains index, row data, and footer.
+* Parquet - columnar data format, files consist of row groups, header, and footer. Specialized in efficiently storing and processing nested data types.
 
 ###### Application Discovery Service
 ADS collects and presents data about running apps and help understand the configuration, usage, and behavior of them for migration purposes. 

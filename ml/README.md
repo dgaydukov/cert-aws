@@ -12,3 +12,8 @@ Here is my experience of taking data machine learning specialty exam
 * [Free DAS questions](https://www.examtopics.com/exams/amazon/aws-certified-machine-learning-specialty)
 
 ### TODO
+* The Hundred-Page Machine Learning Book
+* create account in https://www.kaggle.com
+* https://www.youtube.com/watch?v=5wMAPUrd0ag (Data Science: Kaggle GRANDMASTER in 6 months)
+* https://www.youtube.com/watch?v=o6u_Od27IFw (Как выигрывать любые Data Science соревнования)
+* https://habr.com/ru/news/t/484264 (Скандал на конкурсе Kaggle)
