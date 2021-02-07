@@ -17,3 +17,4 @@ Here is my experience of taking data machine learning specialty exam
 * https://www.youtube.com/watch?v=5wMAPUrd0ag (Data Science: Kaggle GRANDMASTER in 6 months)
 * https://www.youtube.com/watch?v=o6u_Od27IFw (Как выигрывать любые Data Science соревнования)
 * https://habr.com/ru/news/t/484264 (Скандал на конкурсе Kaggle)
+* https://www.youtube.com/watch?v=PPLop4L2eGk&list=PLLssT5z_DsK-h9vYZkQkYNWcItqhlRJLN (Andrew Ng's Machine Learning Fundamentals course)

@@ -68,7 +68,14 @@ https://coingeek.com/bittrex-to-delist-privacy-coins-monero-zcash-and-dash
     * netty for low latency (how it compares to lmax/aeron)
     * chronicle queue/map (how it works inside)
 -----------------------------------------------------------------------------------------------------------------------
+dynamodb kinesis integration, dynamodb backups
+https://www.amazon.science/publications/amazon-aurora-design-considerations-for-high-throughput-cloud-native-relational-databases
+https://dl.acm.org/doi/abs/10.1145/1323293.1294281
+https://www.youtube.com/watch?v=GwEtiRZR4g4&
 https://www.youtube.com/watch?v=UpeV4OqB6Us (Cloud Migration, Application Modernization and Security for Partners)
+dynamodb on-demand vs auto-scaling (cause they both solve same problem - scale based on load)
+divide sa.md into servives (database/data alanytics/ML/other services)
+deploy aurora & call lambda from it
 aws reinvent CodeStar
 https://www.youtube.com/watch?v=-ObImxw1PmI (checkout other aws reinforce talk)
 https://habr.com/ru/post/224955 (scan wifi)
