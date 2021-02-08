@@ -37,45 +37,8 @@ https://www.creditcardinsider.com/blog/what-are-the-worlds-most-exclusive-luxury
 https://www.dell.com/en-us/work/shop/dell-laptops-and-notebooks/sr/laptops/64gb-ram
 https://coingeek.com/bittrex-to-delist-privacy-coins-monero-zcash-and-dash
 -----------------------------------------------------------------------------------------------------------------------
-* spring
-    * https://www.youtube.com/watch?v=lgyO9C9zdrg (Whats New in Spring Boot 2 4)
-    * Play Framework vs google guice vs spring
-    * jooq vs hibernate
-    * hibernate second level cache (how cache system works)
-    * spring + hibernate sharding (https://docs.jboss.org/hibernate/shards/3.0/reference/en/html_single)
-    * enable AspectJ proxy mode for the @EnableAsync and provide a weaver (so you can call `@Async` from same class)
-    * move to guice for dependency injection (check if guice good for low-latency project if we need only DI)
-    * check hibernate @Version (so read+write becomes atomic, and we can use db row locking) => solve race condition
-* kafka
-    * https://docs.confluent.io/platform/current/schema-registry/index.html
-    * kafka poll wait for specified timeout (don't return even if there are already messages)
-    * kafka cluster docker example
-* core java videos
-    * https://www.youtube.com/watch?v=CnRtbtis79U (Алексей Шипилёв — Shenandoah: сборщик мусора, который смог)
-    * https://www.youtube.com/watch?v=iGRfyhE02lA (Владимир Иванов — G1 Garbage Collector)
-    * https://www.youtube.com/watch?v=c1jVn5Sm8Uw (Алексей Шипилёв – Shenandoah GC 2.0)
-    * https://www.youtube.com/watch?v=iB2N8aqwtxc (Алексей Шипилёв — Прагматика Java Memory Model)
-    * https://www.youtube.com/watch?v=FL7_lxJbX0o (Иван Землянский — Аерон. High performance-транспорт для low latency-микросервисов)
-    * https://real-logic.co.uk/about.html (videos by Martin Thompson)
-    * https://www.infoq.com/presentations/mechanical-sympathy
-* java low latency
-    * The Art of Multiprocessor Programming (check both editions)
-    * run time DI (spring) vs compile time DI (dagger)
-    * java low latency logging (Log4j2 async use lmax disruptor inside)
-    * http://java-performance.info/hashmap-overview-jdk-fastutil-goldman-sachs-hppc-koloboke-trove-january-2015 (goldman sachs using https://github.com/leventov/Koloboke as low latency collections)
-    * check all the test for lamx disruptor to get real examples of usage (https://github.com/LMAX-Exchange/disruptor/tree/master/src/test/java/com/lmax/disruptor)
-    * aeron vs aeron-cluster
-    * netty for low latency (how it compares to lmax/aeron)
-    * chronicle queue/map (how it works inside)
------------------------------------------------------------------------------------------------------------------------
-dynamodb kinesis integration, dynamodb backups
-https://www.amazon.science/publications/amazon-aurora-design-considerations-for-high-throughput-cloud-native-relational-databases
-https://dl.acm.org/doi/abs/10.1145/1323293.1294281
-https://www.youtube.com/watch?v=GwEtiRZR4g4&
+https://www.youtube.com/watch?v=GwEtiRZR4g4 (Deep Dive on Amazon Aurora)
 https://www.youtube.com/watch?v=UpeV4OqB6Us (Cloud Migration, Application Modernization and Security for Partners)
-dynamodb on-demand vs auto-scaling (cause they both solve same problem - scale based on load)
-divide sa.md into servives (database/data alanytics/ML/other services)
-deploy aurora & call lambda from it
 aws reinvent CodeStar
 https://www.youtube.com/watch?v=-ObImxw1PmI (checkout other aws reinforce talk)
 https://habr.com/ru/post/224955 (scan wifi)
@@ -83,6 +46,12 @@ add sites that helped to prepare to cert for java/spring/aws
 move all java stuff into data analytics
 read nmap book
 move all security services (iam/cognito/active_directory/ACM/kms/cloudhsm/inspector/macie/guardduty/waf/config/cloudtrail/artifact/RAM/security_hub) into fourth content type (call them security aws services)
+divide sa.md into servives (database/data alanytics/ML/other services)
+* dynamodb kinesis integration, dynamodb backups
+* https://www.amazon.science/publications/amazon-aurora-design-considerations-for-high-throughput-cloud-native-relational-databases
+* https://dl.acm.org/doi/abs/10.1145/1323293.1294281
+* dynamodb on-demand vs auto-scaling (cause they both solve same problem - scale based on load)
+* deploy aurora & call lambda from it
 * https://aws.amazon.com/blogs/security/how-to-use-amazon-guardduty-and-aws-web-application-firewall-to-automatically-block-suspicious-hosts
 * block all ssh with waf
 * cloudhsm to offload ssl/tls
@@ -131,7 +100,8 @@ move all security services (iam/cognito/active_directory/ACM/kms/cloudhsm/inspec
 * create site-to-site vpn with 2 locations so each of this can communicate with each other using VPN CloudHub (each location is imitated by separate vpc)
 * use kinesis sdk and try java data streaming. In all example firehose consume data from data streams, but can we directly send data to it without data streams?
 * kinesis firehose real example (with cf template)
-* Github Project: add logic to `sa/cloudformation/custom-resource/handler.yml` to update `ResponseURL` (pre-sign s3 url)
-* Github Project: add resource handler to validate ACM Certificate, so you can automate `sa/cloudformation/elb-asg-route53-acm.yml` template, no more need to manually update route53 record
-* Github Project: use spot instance to handle sqs, use `AWS::Events::Rule` to catch termination notice and put message into second queue. Monitor second queue, when instance would be stopped - stop requesting new messages from queue, finish processing remaining messages and quit
-* Github Project: create asg based on sqs queue size using custom metric backlogPerInstance (https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-using-sqs-queue.html). Create same but using spot fleet instead of asg (https://aws.amazon.com/blogs/compute/dynamic-scaling-with-ec2-spot-fleet)``
+* Github Project:
+    * add logic to `sa/cloudformation/custom-resource/handler.yml` to update `ResponseURL` (pre-sign s3 url)
+    * add resource handler to validate ACM Certificate, so you can automate `sa/cloudformation/elb-asg-route53-acm.yml` template, no more need to manually update route53 record
+    * use spot instance to handle sqs, use `AWS::Events::Rule` to catch termination notice and put message into second queue. Monitor second queue, when instance would be stopped - stop requesting new messages from queue, finish processing remaining messages and quit
+    * create asg based on sqs queue size using custom metric backlogPerInstance (https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-using-sqs-queue.html). Create same but using spot fleet instead of asg (https://aws.amazon.com/blogs/compute/dynamic-scaling-with-ec2-spot-fleet)``

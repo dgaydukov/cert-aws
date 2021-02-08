@@ -12,6 +12,38 @@ Here is my experience of taking data analytics specialty exam
 * [Free DAS questions](https://www.examtopics.com/exams/amazon/aws-certified-data-analytics-specialty)
 
 ### TODO
+* spring
+    * https://www.youtube.com/watch?v=lgyO9C9zdrg (Whats New in Spring Boot 2 4)
+    * Play Framework vs google guice vs spring
+    * jooq vs hibernate
+    * hibernate second level cache (how cache system works)
+    * spring + hibernate sharding (https://docs.jboss.org/hibernate/shards/3.0/reference/en/html_single)
+    * enable AspectJ proxy mode for the @EnableAsync and provide a weaver (so you can call `@Async` from same class)
+    * move to guice for dependency injection (check if guice good for low-latency project if we need only DI)
+    * check hibernate @Version (so read+write becomes atomic, and we can use db row locking) => solve race condition
+* kafka
+    * https://docs.confluent.io/platform/current/schema-registry/index.html
+    * kafka poll wait for specified timeout (don't return even if there are already messages)
+    * kafka cluster docker example
+* core java videos
+    * https://www.youtube.com/watch?v=CnRtbtis79U (Алексей Шипилёв — Shenandoah: сборщик мусора, который смог)
+    * https://www.youtube.com/watch?v=iGRfyhE02lA (Владимир Иванов — G1 Garbage Collector)
+    * https://www.youtube.com/watch?v=c1jVn5Sm8Uw (Алексей Шипилёв – Shenandoah GC 2.0)
+    * https://www.youtube.com/watch?v=iB2N8aqwtxc (Алексей Шипилёв — Прагматика Java Memory Model)
+    * https://www.youtube.com/watch?v=FL7_lxJbX0o (Иван Землянский — Аерон. High performance-транспорт для low latency-микросервисов)
+    * https://real-logic.co.uk/about.html (videos by Martin Thompson)
+    * https://www.infoq.com/presentations/mechanical-sympathy
+    * http://www.coralblocks.com/index.php/state-of-the-art-distributed-systems-with-coralmq (sequencer architecture)
+* java low latency
+    * The Art of Multiprocessor Programming (check both editions)
+    * run time DI (spring) vs compile time DI (dagger)
+    * java low latency logging (Log4j2 async use lmax disruptor inside)
+    * http://java-performance.info/hashmap-overview-jdk-fastutil-goldman-sachs-hppc-koloboke-trove-january-2015 (goldman sachs using https://github.com/leventov/Koloboke as low latency collections)
+    * check all the test for lamx disruptor to get real examples of usage (https://github.com/LMAX-Exchange/disruptor/tree/master/src/test/java/com/lmax/disruptor)
+    * aeron vs aeron-cluster
+    * netty for low latency (how it compares to lmax/aeron)
+    * chronicle queue/map (how it works inside)
+-----------------------------------------------------------------------------------------------------------------------
 * https://javarevisited.blogspot.com/2019/04/top-10-hadoop-tutorials-for-big-data-developers.html
 * https://www.youtube.com/watch?v=7Er4oGWpmWs
 * Hadoop The Definitive Guide
