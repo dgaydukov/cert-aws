@@ -4076,6 +4076,11 @@ fields @timestamp, @message, @logStream
 I think under-the-hood both Athena & LI works the same:
 * they both price based on scanned data: [Athena](https://aws.amazon.com/athena/pricing/) - 5.00 per TB of data scanned, [LI](https://aws.amazon.com/cloudwatch/pricing/) - 0.005 USD per GB (which is 5$ per TB).
 * they both use sql-like query language: athena - pure sql, LI - custom sql-like query language
+You can also open one log group => click `Search All` in the top right => specify time range + keyword and search all log streams for specified time range.
+In the end both search all & logs insights works the same (both can search through all log streams within specified range). Logs insights goes even deeper and allows you to search across up to 20 LG at the same time (search all - only within single LG).
+You can use console/cli to achive this:
+* Logs insights - run query with `start-query` and get queryId => `get-query-results` - to get executed results by queryId (query runs up to 15 min, if it take longer it discarded)
+* Search All - run `filter-log-events`, supply LG, list of log streams (by default all log streams within log group), time range, filter pattern
 There are several tricks you can do with CW Logs:
 * create metric using metric filter - for example fire alarm when app throw 3 times `NullPointerException`
 * export logs into s3 (kms-encrypted destination bucket is not supported)
@@ -4483,6 +4488,7 @@ To customize you can change gateway response http code, headers, body. So for ex
 So if you want to customize custom error returned from integration - use error mapping technique from above. If you want to customize error returned even before integration called (like 403 missing auth token) - use gateway response.
 You can't create new gateway response, but you can modify any existing one using `put-gateway-response` cli.
 Max [execution timeout 30 sec](https://docs.aws.amazon.com/apigateway/latest/developerguide/limits.html), and you can't change it. Keep in mind that it's max timeout, you still can set value below from 50-29000 millisec.
+Max payload for api gateway - 10MB, for lambda - 6MB. If you need more you have to use custom solution by uploading to s3 and passing s3 link to api gateway request.
 You can either uncheck `Use Default Timeout` and set value in millisec in integration request of rest api console, or using CF:
 ```
 RequestAuthMethod:

@@ -3,6 +3,8 @@
 ### Description
 Here is my experience of taking data machine learning specialty exam
 * [MLS-C01](https://aws.amazon.com/certification/certified-machine-learning-specialty)
+For ML we use separate file, cause Solutions Architect (both associate & pro) don't cover ML at all. There are a few questions about Polly in associate exam and some regarding Rekognition in professional. 
+Other then that, ML is not covered by that exam, that's why we create separate folder & tips file for ML.
 
 ### Contents
 * [Machine Learning Tips](https://github.com/dgaydukov/cert-aws/blob/master/ml/files/ml.md)
