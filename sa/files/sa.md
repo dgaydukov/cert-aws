@@ -73,6 +73,7 @@
 6. [Machine Learning services](#machine-learning-services)
 * 6.1 [SageMaker](#sagemaker)
 * 6.2 [Rekognition](#rekognition)
+* 6.3 [Polly](#polly)
 7. [Other services](#other-services)
 * 3.1 [Corretto](#corretto)
 * 3.2 [CloudFormation](#CloudFormation)
@@ -117,26 +118,25 @@
 * 3.41 [SNS](#sns)
 * 3.42 [AppSync](#appsync)
 * 3.43 [Service Catalog](#service-catalog)
-* 3.64 [Greengrass](#greengrass)
-* 3.66 [Trusted Advisor](#trusted-advisor)
-* 3.68 [Polly](#polly)
-* 3.69 [MQ](#mq)
-* 3.70 [X-Ray](#x-ray)
-* 3.71 [WorkDocs](#workdocs)
-* 3.71 [WorkSpaces](#workspaces)
-* 3.72 [Batch](#batch)
-* 3.75 [Cloud Development Kit](#cloud-development-kit)
-* 3.76 [EventBridge](#eventbridge)
-* 3.76 [Managed Blockchain](#managed-blockchain)
-* 3.78 [Secrets Manager](#systems-manager)
-* 3.80 [AppStream 2.0](#appstream-20)
-* 3.81 [License Manager](#license-manager)
-* 3.82 [Elastic Transcoder](#elastic-transcoder)
-* 3.83 [Elemental Media](#elemental-media)
-* 3.84 [Billing and Cost Management](#billing-and-cost-management)
-* 3.85 [Backup](#backup)
-* 3.86 [Migration Hub](#migration-hub)
-* 3.87 [WorkLink](#worklink)
+* 3.44 [Greengrass](#greengrass)
+* 3.45 [Trusted Advisor](#trusted-advisor)
+* 3.46 [MQ](#mq)
+* 3.47 [X-Ray](#x-ray)
+* 3.48 [WorkDocs](#workdocs)
+* 3.49 [WorkSpaces](#workspaces)
+* 3.50 [Batch](#batch)
+* 3.51 [Cloud Development Kit](#cloud-development-kit)
+* 3.52 [EventBridge](#eventbridge)
+* 3.53 [Managed Blockchain](#managed-blockchain)
+* 3.54 [Secrets Manager](#systems-manager)
+* 3.55 [AppStream 2.0](#appstream-20)
+* 3.56 [License Manager](#license-manager)
+* 3.57 [Elastic Transcoder](#elastic-transcoder)
+* 3.58 [Elemental Media](#elemental-media)
+* 3.59 [Billing and Cost Management](#billing-and-cost-management)
+* 3.60 [Backup](#backup)
+* 3.61 [Migration Hub](#migration-hub)
+* 3.62 [WorkLink](#worklink)
 
 
 
@@ -2304,6 +2304,31 @@ real-time face recognition:
     * settings - `CollectionId` where you store faces to compare and `FaceMatchThreshold` (default 80%)
     * role-arn - role with permission to read/write from kinesis
 Once created it will start automatically monitor kinesis video stream and consume videos for face recognition. Once you finish processing you can call `StopStreamProcessor` to stop or delete with `DeleteStreamProcessor`.
+
+###### Polly
+It turns text into lifelike speech. You can supply polly with either simple text or SSML format. Pronunciation lexicon - enable you to customize pronunciation of words. 
+You can create/store lexicon in region (so if you want to use one lexicon in 2 regions, you have to create second lexicon in second region and copy first).
+Lexicon is written using xml-like language of PLS (Pronunciation Lexicon Specification) W3C recommendation. You can apply up to 5 lexicons to single text. 
+If more that 1 lexicon contains the same grapheme, first applied would be used. So if you want at different texts use different grapheme you should change lexicon order. Below is grapheme example:
+```
+<lexicon>
+  <lexeme> 
+    <grapheme>S3</grapheme>
+    <alias>Simple Storage Service</alias>
+  </lexeme>
+</lexicon>
+```
+SSML (Speech Synthesis Markup Language) - xml-like language to define text to be pronounced by polly. There are several reserved chars in ssml like `"&'<>`. Main tag is `<speak/>`, you should put your text inside it.
+To emphasize you can use `<emphasis>` tag with `value` attr:
+* strong - increase the volume and slow the speaking rate so that the speech is louder and slower
+* moderate - same as strong but less strong
+* reduced - decrease the volume and speed up the speaking rate. Speech is softer and faster
+Example of using ssml:
+```
+<speak>
+     I already told you I <emphasis level="strong">really like</emphasis> that person.
+</speak>
+```
 
 ### Other services
 ###### Corretto 
@@ -4983,31 +5008,6 @@ There are 4 support plans you can use (you must be logged in as root in order to
 * developer (paid) - 7 core checks
 * business (paid) - full set of checks
 * enterprise (paid) - full set of checks + Designated Technical Account Manager
-
-###### Polly
-It turns text into lifelike speech. You can supply polly with either simple text or SSML format. Pronunciation lexicon - enable you to customize pronunciation of words. 
-You can create/store lexicon in region (so if you want to use one lexicon in 2 regions, you have to create second lexicon in second region and copy first).
-Lexicon is written using xml-like language of PLS (Pronunciation Lexicon Specification) W3C recommendation. You can apply up to 5 lexicons to single text. 
-If more that 1 lexicon contains the same grapheme, first applied would be used. So if you want at different texts use different grapheme you should change lexicon order. Below is grapheme example:
-```
-<lexicon>
-  <lexeme> 
-    <grapheme>S3</grapheme>
-    <alias>Simple Storage Service</alias>
-  </lexeme>
-</lexicon>
-```
-SSML (Speech Synthesis Markup Language) - xml-like language to define text to be pronounced by polly. There are several reserved chars in ssml like `"&'<>`. Main tag is `<speak/>`, you should put your text inside it.
-To emphasize you can use `<emphasis>` tag with `value` attr:
-* strong - increase the volume and slow the speaking rate so that the speech is louder and slower
-* moderate - same as strong but less strong
-* reduced - decrease the volume and speed up the speaking rate. Speech is softer and faster
-Example of using ssml:
-```
-<speak>
-     I already told you I <emphasis level="strong">really like</emphasis> that person.
-</speak>
-```
 
 ###### MQ
 MQ (Message queue) - managed Apache ActiveMQ message broker. It stores messages in EFS for durability and provides HA. It provides both push-based and poll-based messaging model.
