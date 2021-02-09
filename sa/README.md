@@ -6,7 +6,7 @@ Here is my experience of taking 3 certifications:
 * [SAP-C01](https://aws.amazon.com/certification/certified-solutions-architect-professional)
 * [SCS-C01](https://aws.amazon.com/certification/certified-security-specialty)
 All 3 are in same document, cause security tightly related to all other services. So you can use this guide to prepare to either solutions architect exam or security specialty exam.
-Personally I would advice to go to solutions architect first (both associate & pro), cause it would give you deep understanding of how cloud works.
+Personally I would advise going to solutions architect first (both associate & pro), cause it would give you deep understanding of how cloud works.
 So my roadmap is SAA => SAP => Security. I think it would be useful to pass professional first, cause again you would have deep understanding of how cloud works under-the-hood. 
 Associate tier give you just superficial knowledge, you would just know that some services exists and what they do. Professional on the other hand will give you deep insight into each service, of what they do, and most importantly why they do it this way.
 
@@ -20,31 +20,13 @@ Associate tier give you just superficial knowledge, you would just know that som
 * [Free questions](https://www.examtopics.com/exams/amazon)
 
 ### TODO
-add all certs & all documents with passing score into single folder
-https://www.youtube.com/watch?v=YVbdd8oOwOY (Dorian Gray)
-https://www.youtube.com/watch?v=-w6duQhWuVk (Enron: The Smartest Guys in the Room)
-https://en.wikipedia.org/wiki/The_Picture_of_Dorian_Gray
-https://en.wikipedia.org/wiki/Mad_Max_Beyond_Thunderdome
-https://en.wikipedia.org/wiki/Brotherhood_of_the_Wolf
-https://en.wikipedia.org/wiki/Crying_Freeman_(film)
-https://en.wikipedia.org/wiki/Groundhog_Day_(film)
-https://en.wikipedia.org/wiki/The_Notebook (movie)
-https://en.wikipedia.org/wiki/Unsane
-https://en.wikipedia.org/wiki/500_Days_of_Summer
-https://en.wikipedia.org/wiki/The_Laundromat_(film)
-https://en.wikipedia.org/wiki/Crouching_Tiger,_Hidden_Dragon
-https://en.wikipedia.org/wiki/Crouching_Tiger,_Hidden_Dragon:_Sword_of_Destiny
-https://sleek.com/hk/resources/offshore-companys-guide-to-tax-exemption-in-hong-kong (offshore company, no tax)
-https://www.creditcardinsider.com/blog/what-are-the-worlds-most-exclusive-luxury-credit-cards-here-are-8
-https://www.dell.com/en-us/work/shop/dell-laptops-and-notebooks/sr/laptops/64gb-ram
-https://coingeek.com/bittrex-to-delist-privacy-coins-monero-zcash-and-dash
------------------------------------------------------------------------------------------------------------------------
+add sites that helped to prepare to cert for java(https://enthuware.com)/spring(https://www.certification-questions.com)/aws
+download spring cert score (add to folder)
 https://www.youtube.com/watch?v=GwEtiRZR4g4 (Deep Dive on Amazon Aurora)
 https://www.youtube.com/watch?v=UpeV4OqB6Us (Cloud Migration, Application Modernization and Security for Partners)
 aws reinvent CodeStar
 https://www.youtube.com/watch?v=-ObImxw1PmI (checkout other aws reinforce talk)
 https://habr.com/ru/post/224955 (scan wifi)
-add sites that helped to prepare to cert for java/spring/aws
 read nmap book
 * dynamodb kinesis integration, dynamodb backups
 * https://www.amazon.science/publications/amazon-aurora-design-considerations-for-high-throughput-cloud-native-relational-databases
