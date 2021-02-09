@@ -52,67 +52,71 @@
 * 3.13 [Artifact](#artifact)
 * 3.14 [Resource Access Manager](#resource-access-manager)
 4. [Database services](#database-services)
+* 4.1 [RDS](#rds)
+* 4.2 [Aurora](#aurora)
+* 4.3 [DynamoDB](#dynamodb)
+* 4.4 [ElastiCache](#elasticache)
+* 4.5 [Neptune](#neptune)
+* 4.6 [Quantum Ledger Database](#quantum-ledger-database)
+* 4.7 [DocumentDB](#documentdb)
+* 4.8 [Keyspaces](#keyspaces)
 5. [Data Analytics services](#data-analytics-services)
+* 5.1 [Athena](#athena)
+* 5.2 [RedShift](#redshift)
+* 5.3 [EMR](#emr)
+* 5.4 [ElasticSearch & CloudSearch](#ElasticSearch--cloudsearch)
+* 5.5 [Kinesis](#kinesis)
+* 5.6 [Data Pipeline](#data-pipeline)
+* 5.7 [Glue](#glue)
+* 5.8 [Lake Formation](#lake-formation)
+* 5.9 [QuickSight](#quicksight)
 6. [Machine Learning services](#machine-learning-services)
+* 6.1 [SageMaker](#sagemaker)
+* 6.2 [Rekognition](#rekognition)
 7. [Other services](#other-services)
 * 3.1 [Corretto](#corretto)
 * 3.2 [CloudFormation](#CloudFormation)
-* 3.4 [S3](#s3)
-* 3.5 [Glacier](#glacier)
-* 3.6 [EFS](#efs)
-* 3.7 [EBS](#ebs)
-* 3.8 [Instance Store](#ec2-instance-store)
-* 3.9 [CloudFront](#cloudfront)
-* 3.10 [Kinesis](#kinesis)
-* 3.10 [Lambda](#lambda)
-* 3.11 [Step Functions](#step-functions)
-* 3.12 [EMR](#emr)
-* 3.13 [Glue](#glue)
-* 3.14 [DynamoDB](#dynamodb)
-* 3.15 [QuickSight](#quicksight)
-* 3.16 [EC2](#ec2)
-* 3.17 [Athena](#athena)
-* 3.18 [Organizations](#organizations)
-* 3.19 [Well-Architected Tool](#well-architected-tool)
-* 3.20 [VPC](#vpc)
-* 3.21 [Elastic Beanstalk](#elastic-beanstalk)
-* 3.22 [DMS](#dms)
-* 3.22 [ELB](#elb)
-* 3.23 [CloudWatch](#CloudWatch)
-* 3.23 [Route53](#route53)
-* 3.24 [RDS](#rds)
-* 3.25 [SQS](#sqs)
-* 3.26 [API Gateway](#api-gateway)
-* 3.27 [CodePipeline(CodeCommit/CodeBuild/CodeDeploy)](#codepipelinecodecommitcodebuildcodedeploy)
-* 3.28 [Storage Gateway](#storage-gateway)
-* 3.29 [ECS](#ecs)
-* 3.30 [EKS](#eks)
-* 3.31 [Fargate](#fargate)
-* 3.32 [ElastiCache](#elasticache)
-* 3.33 [Systems Manager](#systems-manager)
-* 3.35 [Aurora](#aurora)
-* 3.38 [Cloud9](#cloud9)
-* 3.39 [CodeStar](#codestar)
-* 3.40 [Rekognition](#rekognition)
-* 3.41 [Global Accelerator](#global-accelerator)
-* 3.42 [FSx](#fsx)
-* 3.43 [VPN](#vpn)
-* 3.45 [Wavelength](#wavelength)
-* 3.46 [SSO](#sso)
-* 3.47 [OpsWorks](#opsworks)
-* 3.48 [SWF](#swf)
-* 3.49 [Data Pipeline](#data-pipeline)
-* 3.50 [ElasticSearch & CloudSearch](#ElasticSearch--cloudsearch)
-* 3.51 [SageMaker](#sagemaker)
-* 3.52 [Lake Formation](#lake-formation)
-* 3.53 [Application Discovery Service](#application-discovery-service)
-* 3.55 [Server Migration Service](#server-migration-service)
-* 3.57 [DataSync](#datasync)
-* 3.58 [Transfer Family](#transfer-family)
-* 3.59 [SNS](#sns)
-* 3.60 [AppSync](#appsync)
-* 3.61 [Service Catalog](#service-catalog)
-* 3.63 [Neptune](#neptune)
+* 3.3 [S3](#s3)
+* 3.4 [Glacier](#glacier)
+* 3.5 [EFS](#efs)
+* 3.6 [EBS](#ebs)
+* 3.7 [Instance Store](#ec2-instance-store)
+* 3.8 [CloudFront](#cloudfront)
+* 3.9 [Lambda](#lambda)
+* 3.10 [Step Functions](#step-functions)
+* 3.11 [EC2](#ec2)
+* 3.12 [Organizations](#organizations)
+* 3.13 [Well-Architected Tool](#well-architected-tool)
+* 3.14 [VPC](#vpc)
+* 3.15 [Elastic Beanstalk](#elastic-beanstalk)
+* 3.16 [DMS](#dms)
+* 3.17 [ELB](#elb)
+* 3.18 [CloudWatch](#CloudWatch)
+* 3.19 [Route53](#route53)
+* 3.20 [SQS](#sqs)
+* 3.21 [API Gateway](#api-gateway)
+* 3.22 [CodePipeline(CodeCommit/CodeBuild/CodeDeploy)](#codepipelinecodecommitcodebuildcodedeploy)
+* 3.23 [Storage Gateway](#storage-gateway)
+* 3.24 [ECS](#ecs)
+* 3.25 [EKS](#eks)
+* 3.26 [Fargate](#fargate)
+* 3.27 [Systems Manager](#systems-manager)
+* 3.28 [Cloud9](#cloud9)
+* 3.29 [CodeStar](#codestar)
+* 3.30 [Global Accelerator](#global-accelerator)
+* 3.31 [FSx](#fsx)
+* 3.32 [VPN](#vpn)
+* 3.33 [Wavelength](#wavelength)
+* 3.34 [SSO](#sso)
+* 3.35 [OpsWorks](#opsworks)
+* 3.36 [SWF](#swf)
+* 3.37 [Application Discovery Service](#application-discovery-service)
+* 3.38 [Server Migration Service](#server-migration-service)
+* 3.39 [DataSync](#datasync)
+* 3.40 [Transfer Family](#transfer-family)
+* 3.41 [SNS](#sns)
+* 3.42 [AppSync](#appsync)
+* 3.43 [Service Catalog](#service-catalog)
 * 3.64 [Greengrass](#greengrass)
 * 3.66 [Trusted Advisor](#trusted-advisor)
 * 3.68 [Polly](#polly)
@@ -121,13 +125,10 @@
 * 3.71 [WorkDocs](#workdocs)
 * 3.71 [WorkSpaces](#workspaces)
 * 3.72 [Batch](#batch)
-* 3.73 [DocumentDB](#documentdb)
-* 3.74 [Keyspaces](#keyspaces)
 * 3.75 [Cloud Development Kit](#cloud-development-kit)
 * 3.76 [EventBridge](#eventbridge)
 * 3.76 [Managed Blockchain](#managed-blockchain)
 * 3.78 [Secrets Manager](#systems-manager)
-* 3.79 [Quantum Ledger Database](#quantum-ledger-database)
 * 3.80 [AppStream 2.0](#appstream-20)
 * 3.81 [License Manager](#license-manager)
 * 3.82 [Elastic Transcoder](#elastic-transcoder)
@@ -797,7 +798,6 @@ There are several networking drivers that you can specify in `network_mode` prop
 * overlay - create network between instances run from different docker daemons (or between swarm and standalone docker)
 
 ### Security services
-
 ###### IAM
 There are 3 types of permission:
 * user - permission for single iam entity
@@ -1508,8 +1508,803 @@ To enable sharing to to RAM console => setting, and tick `Enable sharing with AW
 * individual sharing - share resource with individual account
 
 ### Database services
+###### RDS
+RDS (Relational Database Service) - managed service, that make it easy install/operate relational database in the cloud. It helps easily scale compute resources or storage associated with your db, simplifies replication.
+if you want to import data you have to:
+* dump data to you local machine
+* copy dump to some ec2/s3 in same vpc
+* pump data into rds from ec2/s3
+There are 2 ways to backup:
+* automatic backup - snapshots takes by RDS daily, retained for limited period (by default 7 days). First snapshot contains full db instance, subsequent - incremental taking only what has been changed.
+Volume snapshot - take daily during backup window + store transaction logs every 5 min - this allow for point-in-time recovery. If you disable automatic backup and then re-enable it, you will be able to recover point-in-time starting from the time when you re-enable automatic backup
+* manual backup - full snapshot taken by user at any time manually (recover to the time when snapshot was taken).
+multi-AZ (failover) for HA:
+* primary - you main db that performs read/write
+* standby - replica db that has most recent updates from primary. You can't use it for reads, the only purpose is failover - when primary fails, your standby becomes primary, so you won't even notice failure. Replication is synchronous.
+You have no control for standby, so you can't promote it to be read replica. Yet if you reboot rds, you can choose option to restart rds in new AZ.
+Since Aurora stores data across 3 AZ, if master is failed, it would automatically recreated in another AZ, so for aurora you don't need to set up stand-by replica.
+Read replica (only for reading) for horizontal scaling:
+* write to master and read from replica
+* can be cross-AZ and cross-region
+* implemented using db (mysql or other) native asynchronous replication, that's why lag can occur, comparing with multi-AZ replication (synchronous replication)
+* can be promoted to become master database.
+There are 3 ways to establish read-replica:
+* rds native read-replica
+* ec2 read replica - use `mysqldump` to make initial transfer
+* on-premise read replica - use `mysqldump` to make initial transfer and create VPN connection, so data transfer is secured
+Although [mysql supports replication over ssl](https://www.howtoforge.com/how-to-set-up-mysql-database-replication-with-ssl-encryption-on-centos-5.4), 
+[rds doesn't support this yet](https://serverfault.com/questions/816863/aws-rds-mysql-replication-with-user-with-require-ssl) so make sure if you replicate outside vpc to secure connection.
+Although you can use read replica for HA, it's recommended to use multi-AZ, cause it's synchronous and would guarantee that in case of fail, db in another AZ is most up-to-date (with read replica you can get some lag, and ended up with stale data when promoting it to master).
+Enhanced monitoring - allows you to view all metrics with 1 sec granularity. Get current database `SELECT DATABASE() FROM DUAL;`.
+RDS Proxy - database proxy that helps:
+* pooling & sharing db connections (useful for serverless, when you constantly open and close connections)
+* reduce db failover time for 66%
+* enforce IAM access to db
+There are 3 types of groups:
+* Subnet group - a list of VPC subnets (you should have at least 2 subnets in 2 different AZ) where rds would create your db.
+* PG (Parameter Group) - a list of db config values (db engine configuraton) that can be applied to 1 or many rds instances (for example you can increase a number of connections to rds here). 
+You can't modify default PG (that would be created when you create db instance). If you want custom params add them to new pg and associate it with db.
+When you change dynamic param, change applied immediately, when you change static param - it would be applied after you manually reboot rds.
+* OG (Option group) - a list of features that are available for db instance. By default empty OG is assigned when you create db, you can't modify it (add options into it), but you can create new OG - add options, and assign it to db.
+    There are 2 types of options:
+    * persistent - can't be removed from an OG while DB instances are associated with this OG
+    * permanent - can never be removed from OG
+    mysql options (only 2):
+    * MariaDB Audit Plugin - records db activity like users logging or queries
+    * MySQL memcached - enables apps to use InnoDB tables in a manner similar to NoSQL key-value data stores
+    oracle options (many):
+    * S3_INTEGRATION - required if you want your oracle rds to read/write data from s3 + you need IAM role. So as you see just adding IAM role is not enough, you need to add this option.
+You can set encryption only on creating, once created you can set it to use encryption, also if you created encrypted you can disable it.
+So if you create unencrypted db and want to turn on encryption you have to take snapshot encrypt it and create new encrypted db from it, then remove old db.
+If encryption is enabled you can't disable it after db creation, yet you can create unencrypted db. Same holds true for read replica. For encrypted db only encrypted read replica is possible (there is no way to have encrypted read-replica for unencrypted db or vice versa).
+Not all ec2 types [support encryption](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Overview.Encryption.html#Overview.Encryption.Availability)
+IAM db auth - you can add db user and use iam user to authenticate to your db. You still have your initial username/password and can use them to access db, but you can also use temporary tokens 
+generated by `aws rds generate-db-auth-token` command to get token and to access your db using this token (token would be valid for 15 min).
+On-premise to rds data migration:
+* copy dump to s3 and from s3 import into rds (you can also use ec2, but create new ec2 for this purpose in to wise, yet this would work: copy dump to ec2 within same vpc as rds, go to ec2, connect from there to rds, and pump data into rds)
+* use DMS for more complex scenario
+If you have problems with writes and need more capacity you have 3 options:
+* use sqs queue to offload writes, if you need to continue to use your current db
+* switch to dynamoDB (if you don't need relational model)
+* use sharding (horizontal partitioning/scaling) - split data into smaller subsets and distribute them across a number of physically separated db servers (shards).
+You can take a look here [mysql sharding example](https://github.com/dgaydukov/cert-spring5/blob/master/files/spring5.md#mysql-sharding) with java/spring.
+Share-nothing model - each shard has same hardware and db engine configuration, but they don't know about each other. So there is no single point of failure, if one shard is down, no other shards affected.
+Disadvantage - because data now separated between shards, you have to re-design your query approach. Because of this sharding is not best solution for OLAP.
+So each shard represented as separate RDS with multi-AZ failover and/or read replica. To distribute data across different shards you can use list/range/hash partitioning.
+Single table can also be partitioned by some key. Each shard contains table with partitions, app read this table from each shard and then app build mapping/routing logic in app layer like if productId in 1-100 - use shard1, otherwise use shard2.
+ReSharding - adding more shards or splitting one shards into multiple in case of scale-out or merging several shards into one in case of scale-in.
+Scale-out is pretty simple with RDS, you just create read replica, promote it to standalone db and then use 2 databases as 2 shards (since Aurora read replica use same storage you have to clone database to achieve the same).
+If you think that sharding is looks like NoSql you are right, and if you got limit with relational db and using shards, it may be the better option to use NoSql, cause with sharding you have to modify your source code to support multiple db.
+Storage autoscaling - when you create db you can enable it. Once enabled it would automatically add more storage capacity when free space would be less than 10%. It would be incremented in chunks of 5GB each, until it reach max auto scale capacity.
+`IS NULL / IS NOT NULL` - use it when you want to check if column null or not null. Comparison operators like `<>` or `!=` won't work when you compare with null, cause null is absence of value.
+In SQL, anything you evaluate/compute with `NULL` results into `UNKNOWN`, that's why if you are using `select * from my_column != null` you will get 0 results, although you have many rows where `my_column` not null.
+Don't confuse (they both solve same problem but for different purposes):
+* read replica - when your data constantly changing
+* elasticache - since it's a cache if data constantly changing you have to constantly clear the cache - which basically remove advantages of cache
+Security group:
+* `AWS::EC2::SecurityGroup` - use if your rds resides inside vpc
+* `AWS::RDS::DBSecurityGroup` - use if you are using old classic ec2 (without vpc)
+SSL connection (use `sa/cloudformation/rds-multi-az.yml` template to test it out):
+* by default ssl enabled in rds. Connect to rds and run:
+```
+MySQL [mydb]> SHOW VARIABLES LIKE '%ssl%';
++---------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Variable_name | Value                                                                                                                                                                                                                                                                                   |
++---------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| have_openssl  | YES                                                                                                                                                                                                                                                                                     |
+| have_ssl      | YES                                                                                                                                                                                                                                                                                     |
+| ssl_ca        | /rdsdbdata/rds-metadata/ca-cert.pem                                                                                                                                                                                                                                                     |
+| ssl_capath    |                                                                                                                                                                                                                                                                                         |
+| ssl_cert      | /rdsdbdata/rds-metadata/server-cert.pem                                                                                                                                                                                                                                                 |
+| ssl_cipher    | ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-SHA256:ECDHE-RSA-AES256-SHA:ECDHE-RSA-AES128-SHA:AES256-GCM-SHA384:AES128-GCM-SHA256:AES256-SHA:AES128-SHA:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA:DHE-DSS-AES128-SHA:DHE-DSS-AES256-SHA |
+| ssl_crl       |                                                                                                                                                                                                                                                                                         |
+| ssl_crlpath   |                                                                                                                                                                                                                                                                                         |
+| ssl_fips_mode | OFF                                                                                                                                                                                                                                                                                     |
+| ssl_key       | /rdsdbdata/rds-metadata/server-key.pem                                                                                                                                                                                                                                                  |
++---------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+10 rows in set (0.00 sec)
+```
+To see whether you session use ssl or not run `status` or `\s`
+```
+MySQL [mydb]> status
+--------------
+mysql  Ver 15.1 Distrib 5.5.68-MariaDB, for Linux (x86_64) using readline 5.1
+
+Connection id:		    13
+Current database:	    mydb
+Current user:		    admin@10.100.1.222
+SSL:			        Not in use
+Current pager:		    stdout
+Using outfile:		    ''
+Using delimiter:	    ;
+Server:			        MySQL
+Server version:		    8.0.20 Source distribution
+Protocol version:	    10
+Connection:		        rm19odgxd4k3dhx.cmeydtld5sy2.us-east-1.rds.amazonaws.com via TCP/IP
+Server characterset:	utf8mb4
+Db     characterset:	utf8mb4
+Client characterset:	utf8
+Conn.  characterset:	utf8
+TCP port:		        3306
+Uptime:			        16 min 40 sec
+
+Threads: 3  Questions: 9688  Slow queries: 0  Opens: 278  Flush tables: 3  Open tables: 184  Queries per second avg: 9.688
+```
+As you see `SSL: Not in use`, that means our current connection is not using ssl.
+* In order to use ssl you ust download certificate and connect using cert
+```
+wget https://s3.amazonaws.com/rds-downloads/rds-ca-2019-root.pem
+mysql -u admin -p'admin123' -h {RDS_ENDPOINT} -D mydb --ssl-ca=rds-ca-2019-root.pem
+```
+After you connect if you run status again you will see
+```
+MySQL [mydb]> \s
+--------------
+mysql  Ver 15.1 Distrib 5.5.68-MariaDB, for Linux (x86_64) using readline 5.1
+
+Connection id:		    23
+Current database:	    mydb
+Current user:		    admin@10.100.1.222
+SSL:			        Cipher in use is ECDHE-RSA-AES256-GCM-SHA384
+Current pager:		    stdout
+Using outfile:		    ''
+Using delimiter:	    ;
+Server:			        MySQL
+Server version:		    8.0.20 Source distribution
+Protocol version:	    10
+Connection:		        rm19odgxd4k3dhx.cmeydtld5sy2.us-east-1.rds.amazonaws.com via TCP/IP
+Server characterset:	utf8mb4
+Db     characterset:	utf8mb4
+Client characterset:	utf8
+Conn.  characterset:	utf8
+TCP port:		        3306
+Uptime:			        49 min 54 sec
+
+Threads: 3  Questions: 11063  Slow queries: 0  Opens: 279  Flush tables: 3  Open tables: 185  Queries per second avg: 3.695
+```
+Now you can see `SSL: Cipher in use is ECDHE-RSA-AES256-GCM-SHA384` that your connection using ssl.
+* You can require ssl for specific user:
+```
+# connect to db
+mysql -u admin -p'admin123' -h {RDS_ENDPOINT} -D mydb
+# create user with ssl required
+CREATE USER 'ssl_user'@'%' IDENTIFIED BY 'password' REQUIRE SSL;
+GRANT ALL PRIVILEGES ON mydb.* TO 'ssl_user'@'%';
+FLUSH PRIVILEGES;
+# try to connect without ssl, you will get: ERROR 1045 (28000): Access denied for user 'user3'@'10.100.1.222' (using password: YES)
+mysql -u ssl_user -p'password' -h {RDS_ENDPOINT} -D mydb --ssl-ca=rds-ca-2019-root.pem
+# now connect using ssl
+mysql -u ssl_user -p'password' -h {RDS_ENDPOINT} -D mydb --ssl-ca=rds-ca-2019-root.pem
+```
+IAM auth - you can access db not with username/password but by using iam permission (use `sa/cloudformation/rds-multi-az.yml` to test it out):
+* by default it disabled
+* you should explicitly enable it by setting `EnableIAMDatabaseAuthentication: true` in CF template (you can also enable it from cli)
+* it can only work over ssl (it won't work without secure connection)
+* You first create user then role with policy to this user:
+```
+# first create user
+CREATE USER mydbuser IDENTIFIED WITH AWSAuthenticationPlugin AS 'RDS';
+GRANT ALL PRIVILEGES ON mydb.* TO 'mydbuser'@'%';
+# get access token and connect
+TOKEN=$(aws rds generate-db-auth-token --hostname={RDS_ENDPOINT} --port=3306 --username=mydbuser --region=us-east-1)
+mysql -h {RDS_ENDPOINT} --user=mydbuser --password=$TOKEN --ssl-ca=rds-ca-2019-root.pem
+```
+If you want to build resource for role you should pass not rdsID, but `DbiResourceId`, so you can't use `Resource: !Sub arn:aws:rds-db:${AWS::Region}:${AWS::AccountId}:dbuser:${MultiAzMysqlDb}/mydbuser`.
+Below is example of fetching 2 of them. And there is no way to fetch resourceId from cf `AWS::RDS::DBInstance`, that's why we use `*`.
+```
+aws rds describe-db-instances --query "DBInstances[*].[DBInstanceIdentifier,DbiResourceId]"
+[
+    [
+        "rm19odgxd4k3dhx",
+        "db-K7WGNELFM45SMZJAJMDI7T4F2E"
+    ]
+]
+```
+Materialized view:
+* simple - just a wrapper on top of query
+* materiazlied - temporary table
+Oracle RAC (Real Application Cluster) - shared-everything db cluster technology from Oracle, allows single db (a set of data files) to be concurrently accessed by many db server instances.
+Currently RAC is not supported by RDS, but you can deploy it in ec2. In this case for backup you have to create a script to create/store ebs snapshots.
+[Aurora can be used as managed service instead of Oracle RAC](https://aws.amazon.com/blogs/database/amazon-aurora-as-an-alternative-to-oracle-rac)
+External replication (you can make both RDS & Aurora to replicate to external):
+* Aurora
+    * you can replicate aurora as source/target to external mysql db
+    * [aurora external replication](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/AuroraMySQL.Replication.MySQL.html)
+* rds (for MySql/MariaDB you can configure replication using binlog or GTID)
+    * rds mysql can have up to 5 read replicas (each read replica can also be a source for there read replica)
+    * read replica can't have engine version less than source db
+    * if you create read replica for MyISAM (no tx support) you should lock db (don't do any create/update/delete), run replication, wait until it's done and then work normally
+    * you can set up replication delay (for example to replicate all changes after 1 hour)
+    * [rds external replication](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/MySQL.Procedural.Importing.External.Repl.html)
+GTID (global transaction identifiers) - unique identifiers generated for committed MySQL transactions, mostly used to make binlog replication simpler and easier to troubleshoot.
+MyISAM vs InnoDB:
+* myisam: only full table-level locking, doesn't support tx
+* inndodb: both row-level & table-level locking, support transactions, foreign keys, relationship constraints
+RDS on VMware - manage private on-premise database with rds using rds connector (software appliance for VMware vSphere env)
+For both rds & rds on vmware you can create read replica but you should enable automatic backup (with retention period greater than 0).
+For rds on vmware you can create only 1 read replica and only in the same region. Rds on vmware support DX, but doesn't support aurora. You can also backup to s3 & create read replica in aws.
+If you need load balancing:
+* rds - use private hosted zone with multivalue answer. There is no way to add rds to ELB
+* db on ec2 - use ALB (in this case you can also add WAF to prevent sql injections)
+
+###### Aurora
+Aurora - mysql/postgres compatible (most app that works with mysql/postgres would switch with no problem to aurora) aws database solution. 
+Although MariaDB was designed to be compatible with MySql, you can't migrate it to Aurora.
+It's serverless - cause you can set-up min & max capacity and aurora would scale up/down based on load. You can also set up pause if aurora idle for specified time (like turn off if it's idle for more than 5 min). 
+It's ideal for saving money in dev env, but don't use it in prod, cause wake up can be up to 30 sec. You can also manually stop RDS.
+Yet some features of mysql/postgres are not supported in aurora (like MyISAM storage engine). It runs 5x faster than mysql and 3x faster than postgres. And cost 1/10 of similar solution.
+It replicates 6 copies of itself in at least 3 AZ (2 copies in each az) - so it's highly available. Backups and failover are done automatically. Self-healing storage - blocks are constantly checked and restored.
+You have 2 options to migrate to aurora:
+* use `mysqldump/pg_dump`, export data from mysql/postgres, and import it into aurora
+* use RDS DB Snapshot migration
+Min storage is 10GB, incrementing by 10GB up to 64TB.
+There are 2 types of replica:
+* aurora replica - aurora native same-region replica
+* mysql replica - cross-region replica based on mysql binlog
+Parallel Query - ability to distribute computational load across multiple instances.
+You can call lambda from function & stored procedures for MySql Aurora:
+* add iam role to allow db cluster to access lambda
+* configure cluster to allow outbound connections to Lambda. This depends on your network config:
+    * public cluster - it can access lambda through the internet - so no additional config required
+    * private cluster - you have to add NAT gateway or lambda vpc endpoint, so your cluster in private subnet can access lambda
+You can also use s3 form MySql Aurora and you have to configure access to s3 same way as for lambda.
+Backtracking - rewind db to specified time (acts like a backup, if you do some destructive operation you can rewind db to previous state):
+* target backtrack window - amount of time you want to be able to backtrack your DB cluster (you can set 24 hours - you can rewind db during whole day)
+* actual backtrack window - actual amount of time you can backtrack your DB cluster (if you set target to 24, but you have heavy load and there is no enough space to store all records, your actual backtrack time can be like 12h)
+Backtracking works by generating change log (called change records), and you pay hourly to store them.
+Aurora serverlsess:
+* internally it uses router fleet that supports continuous connections and distributes the workload among resources + warm resource pool that ready to be used
+* cheap version of aurora, pay only for what you use (aurora start up/down, scale up/down automatically base on your load).
+* for standard aurora you select instance type, with serverless you just select min & max ACU (aurora capacity unit) (2 - 64GB RAM), compute is scaling accordingly.
+* please note that both standard & serverless aurora support only MySql/Postgres. MariaDB (fork of MySql) is unsupported, there is separate RDS type for this.
+* cluster volume always encrypted (you can choose encryption key, but you can't disable encryption)
+* use cases: new apps, infrequently used apps, variable/unpredictable workloads, multi-tenant apps
+* accessible only from VPC (have no public IP). If you create lambda in same subnet as db you can access db from lambda
+* scaling point - time when aurora can start scaling, if not found within 5 min, value of `ForceApplyCapacityChange` timeout used. In this case if you have running transaction you can get error: `ERROR 1105 (HY000): The last transaction was aborted due to Seamless Scaling. Please retry.`
+* data api - special api to run query, use it outside vpc to access db
+* doesn't support: cloning, global database, multi-master cluster, replicas, iam db access, backtracking
+Aurora global:
+* spans multiple regions (one master region with both read/write and up to 5 replica regions with only read), enable low-latency global reads and disaster recovery
+* cross-region replication is fast, usually less than 1 sec
+* doesn't support: serverless, backtracking
+
+###### DynamoDB
+Fully managed, highly available out-of-the-box(there is no such thing as multi-AZ deployment and read replica) NoSQL key-value/document database, kind of mongo, but aws proprietary solution. Stores data across 3 AZ. 
+It's serverless, so if you have to choose between DynamoDB/RDS if you are building serverless app - dynamoDB your best choice. NoSql terminology: row - item, cell - attribute, primary key - partition key + sort key.
+If you come from relational to NoSql you must forget:
+* normalization - this came from time when storage was expensive, right now compute is expensive so it's better to denormalize data to spend less time on computing
+* joins - you can't join table in NoSql
+* single table per entity - you have a collection of entities per table in NoSql. Table is not single object like in relational model, but a collection of heterogeneous objects, products+users+orders can be store in single NoSql table.
+NoSql tables build on distributed hash tables, so time complexity of most queries is O(1)
+One-to-many (customers-orders, each customer has many orders, but each order has exactly 1 customer):
+* relational (2 tables) - customers, orders (has customerId as foreign key)
+* nosql (1 table) - partitionKey (customerId) and sortKey (orderId)
+Many-to-many (authros-books, each author has many books, and each book can be written by several authors):
+* relational (3 tables) - authors, books, author_book - special table to store auhorId+bookId
+* nosql (1 table) - partitionKey (authorId) and sortKey (bookId). Here duplication happens, cause same book would be duplicating for all it's authors.
+If you need another access pattern, like find all authors by book, you add another type of pk into this table where you swap partition & sort key: partitionKey (bookId) and sortKey (authorId)
+By doing this you add even more duplication, yet now you have 2 access pattern by either author or book.
+This idea of storing data called - adjacency list - way to represent graph data (nodes and edges) in flat model. Suppose we have a bunch of people and want to represent them as friends. We can use graph representation.
+But can use java, if we create `Map<String, List<String>>` where key is person and value is list of this friends. This will add some redundancy/duplication 
+(if Mike & Bob friends, then under key Mark Bob would be inside list of friends, and under kye Bob, Mark would be inside list of friends)
+Yet this duplication in space guarantees instant result, you can get list of friends of anybody within O(1) - cause we are using Map.
+Partition key should have a large number of distinct values relative to the number of items in the table (customerId for orders table - there are many distinct customers comparing to total number of orders).
+This is because max RCU (read capacity unit) - 3000, WCU (write capacity unit) - 1000 per partition. So if you choose wrong partition key and make a lot of request to single partition you will get `ProvisionedThroughputExceededException`.
+Keep in mind if you use java SDK, it already have retry logic within (you don't have to write retry code yourself), so your requests will eventually succeed unless your retry queue is too large to finish. In this case try to lower your request to db or enlarge RCU/WCU.
+AWS SDK generally provide retry logic for most calls and also exponential backoff (use progressively longer waits between retries for consecutive error responses - 1,2,4,8,16 seconds after each failed retry)
+That's why you should have equal distribution across partition key. Best practices to select partition key:
+* use high cardinality attr - email/customerId/orderId/productId
+* use composite attr - combine several attr into single string to be used as key
+* add random key to partition key
+One way to offload dynamoDB writes is to use sqs:
+* you can decrease WCU and save on costs
+* you can use it as protection against accidental load spikes
+When you build NoSql schema you should:
+* create ERD (entity relations diagram) - same as for relational db, define entities and relations between them
+* define access pattern - how data would be accessed
+* design PK + GSI
+You can store many entities in the same table:
+users + profiles(one-to-one) + orders(one-to-many) + order_items (one-to-many)
+* partitionKey - `USER#userId` & `ITEM#itemId`
+* sortKey - for profile - `PROFILE#profileId`, for order - `ORDER#orderId` - it's a good practice to add prefixes to keys
+So we have 2 sortKey with same `ORDER#orderID`, one - for users, another for items. To speed up access create GSI - inverted index and now you have partitionKey - `ORDER#orderID`, sortKey - `USER#userID/ITEM#itemID`.
+If you have several address for single user, just add them as json attribute - until you have access pattern by address (like found all users by single address)
+So you store both profiles and orders in the same table, yet they have different attributes.
+Partition Key (mandatory) - it's used for key-value access pattern, should be unique value. Sort key (optional) - range query access pattern. Example: customerId - partitionKey, orderDate - sortKey.
+So if you store only category in table, you have simple primary key = categoryName.
+If you store category+articles in single table you have composite primary key = partitionKey (categoryName) + sortKey (articleName).
+If you have composite primary key:
+* write/update/delete - must provide full key (both partition & sort keys)
+* query - can provide only partition or both
+Don't use filter expression - it's scans the whole table and filter it based on your request. If you need to filter on other that PK columns, create GSI for filtered columns.
+Composite Sort Key - GSI with partitionKey stays the same, but sortKey is new attribute by which you want to filter. You can also include other attributes into this sortKey.
+For example status+date `DELIVERED#2020-05-05`, and now you can filter by status and date.
+If you want to filter just by attribute without partitionKey. This is problem for dynamoDB, cause it designed in such way that you should narrow all queries to some partitionKey and then filter on sortKey.
+You create sparse key and use scan to search by single attribute without partitionKey.
+Data Partitioning:
+* DynamoDB horizontally shards tables into one or more partitions across multiple servers.
+* Partition allocation of storage for a table, backed by solid state drives (SSDs) and automatically replicated across multiple AZ.
+* Partition management occurs automatically in the background by DynamoDb.
+* Hot partition - when one partition receive way more traffic than all other (if write throughput is 4k, and you have 4 partitions. Each get 500 writes, but fourth get 2k. Although totally you have 4k, but because they are not evenly distribute you got throttle on fourth partition).
+* Adaptive Capacity - in case you got some hot partitions, DynamoDB try to rebalance your data, so it would be evenly stored across all partitions.
+Main reason to use NoSql against relation db is that you can scale horizontally.
+With relational db the scale is vertical (add more compute/memory to single node). If you try to scale horizontally relational db you have to use 2PC (2 phase commit protocol - distributed algorithm that support atomic transaction between 2 nodes) to support transaction atomicity.
+Simplified 2 phase commit is:
+* TC (transaction coordinator) sends commit requests to 2 nodes
+* both nodes decided can they execute commit or not and send results (yes/no) back to TC
+* if both answered yes, TC send request to execute commit
+As you guessed the problem is the more nodes you add the slower is communication to decide should they all run transaction.
+So the good solution is to use db that doesn't adhere to these guidelines (transactionless db or NoSql).
+There are 4 types of NoSql db:
+* key-value (DynamoDB)
+* document (DynamoDB/documentDB)
+* columnar (RedShift)
+* graph (Neptune)
+Since DynamoDb is multi-AZ by default there is no automatic backup (like rds have), but you can use on-demand backup/restore logic.
+DynamoDb just like s3 is not in vpc, so you can either:
+* access it from internet using some url
+* access it from private subnet using vpc gateway endpoint
+Although dynamoDb is proprietary solution with closed source code there are 2 options for local dev (don't use them in production, cause it only for dev purposes, api is the same, but underlying design is different, they not suitable for prod highload):
+* download aws version for developers
+* use it from localstack
+GSI (Global Secondary Index) - special read-only table created by dynamoDb to simplify search for indexed fields. Index speeds up search but require more memory to store itself. You should configure separate read/write capacity for this.
+It's a way to have DynamoDB replicate the data in your table into a new structure using a different primary key schema. This makes it easy to support additional access patterns
+LSI (Local Secondary Index) - same partition as primary key, but different sort key. You can create up to 5 LSI per table. It uses same RCU as base table (comparing to GSI for which you create separate read capacity)
+LSI Projection - you can choose which attributes add to index, but every LSI should have:
+* partition key of base table
+* sortKey of one attribute (should be scalar value)
+* sortKey from base table as attribute value
+* any other attribute from base table
+As you see by default you may choose not to add any additional attributes, cause you already have sortKey from base table. So you can make a query against LSI, it would fetch partitionKey+sortKey from base table
+and return data from base table. But if you want low-latency access for specific attributes, it's better to directly put these attributes into LSI
+GSI/LSI projection - for both index you can set which attributes to include:
+* KEYS_ONLY - only partition key + sort key (this is minimal you can't create gsi without these 2 keys)
+* INCLUDE - KEYS_ONLY + any other non-key attributes that you specify
+* ALL - include all attributes from original table
+Scanning - like `select * from` operation in RDS, just go over all records. Max size is 1MB, if table size above this then `LastEvaluatedKey` returned with last scanned item. For next scan you should supply this value as `ExclusiveStartKey`.
+So you can create `while loop` in java code where first time you pass `ExclusiveStartKey=null` and each subsequent step you will pass `ExclusiveStartKey=LastEvaluatedKey`.
+DynamoDb just like s3 is eventual consistent, so if you update data and read it right away you can get old value (cause items are persisted on multiple machines, and depending from what machine you read you can get stale data).
+You can disable eventual consistency by setting `ConsistentRead: true`. In this case `getItem/query/scan` operations would always return correct value, but reads would take longer time.
+To read data of size:
+* less than 4KB - 1 SCR (strongly consistent read)
+* more than 4KB - 2 SCR
+* eventually consistent read takes half the capacity of a SCR 
+Throughput is of 2 types:
+* read (`ReadCapacityUnits: 5`) - 5 SCR per second (if you have more then dynamoDb will throttle them, if you have too much they would be just rejected)
+* write (`WriteCapacityUnits: 5`) - 5 writes per second 
+You can increase throughput as much as you want but decrease up to 9 times per day. It's the only db that grow/shrink based on load.
+DynamoDB Streams - captures a time-ordered sequence of item-level changes in a DynamoDB table and durably stores the information for up to 24 hours.
+AWS maintains separate endpoints for DynamoDB and DynamoDB Streams. Streams can be enabled or disabled for an Amazon DynamoDB table.
+Stream records are organized into groups, also referred to as shards. With streams you can:
+* build transactional system (based on `insert/update/delete` records from one table do some operation in another)
+* log/audit/aggregate data
+* replicate data to another regions for query purpose using [cross-region replication Library](https://github.com/awslabs/dynamodb-cross-region-library)
+If you need search capabilities you can use Streams + lambda + ElasticSearch. When new record is added, streams would fire a lambda, which would add a record + index to elasticSearch.
+Plz note that you should use global tables for cross-region replication. Don't use this library.
+* update elasticache (so your cache would be always updated to latest state of db)
+* in case your app need to know about all updates
+Cache problems:
+* invalidation - how you guarantee that once db write happens, you update cache
+* race condition - if 2 thread update db and update cache they may update db & cache in different order (in db you would have value from thread 1 and in cache from thread 2)
+* cold start - if you reboot your server, now every request is cache miss (you have to request db)
+So dynamoDB streams nicely solve these 3 problems. Kafka also use this concept of streams inside for replication data across nodes.
+Notice that relational db also has kind of streams internally for replication/indexing(when you add data your index automatically rebuilt), it just doesn't expose this stream as api.
+Cold start can be solved if you have stream, you just go to the beginning and read all items sequentially & concurrently.
+Streams are also useful if you want:
+* analytics - user add 2 items to a cart and then remove - final state hasn't changed, but for analytics it may be useful
+* point-in-time query
+DAX (DynamoDB Accelerator) - in-memory cache for dynamoDb, can expedite up to 10 times. The benefit is that you don't have to modify source code, you just enable cache and it works.
+Global Tables (cross-region replication) - multi-region/master db that automatically replicates across multiple regions. It's multiple replica tables (one per region) that DynamoDB treats as a single unit.
+When app write data to replica table in one region, dynamoDb propagate changes to all regions, so if one region would be unavailable your app continue to work normally.
+Multi-master replication ensures that updates propagate to all regions and that data eventually consistent.
+Don't confuse (2 billing options):
+* provisioned capacity - you can separate capacity for read & write. You can also set AutoScaling (again separately for read & write) to add more capacity when number or read/writes goes beyond certain point
+* on-demand read/write capacity - you can set elastic capacity based on your load for read & write. You can't set it only for read and for write provisioned or vice versa. Indexes also using on-demand capacity, so you don't have to specify it.
+So you can say that there are 3 modes: provisioned/AutoScaling/on-demand. If you don't know the load use on-demand. If you know the load, and have pattern (like 25% increase during weekdays) use provisioned + autoScaling capacity.
+AutoScaling - ability to change write/read throughput according to current load:
+* you can set write/read throughput, but it's hard to predict exact values in advance, moreover your load maybe changing
+* automatically applied to table/GSI created from console
+* you can create scaling policy with target utilization (percentage of consumed provisioned throughput at a point in time)
+* App Auto Scaling - uses tracking policy to adjust write/read capacity
+So if you have write problems with db you should:
+* RDS - add SQS queue in front of db to throttle write requests
+* dynamoDB - use auto scale to scale accordingly to load
+If you have read problems:
+* RDS - add elasticache, add sharding (it would actually help in both read and write)
+* dynamoDB - DAX, auto scale
+Transaction - you can use `TransactWriteItems/TransactGetItems` to run up to 25 PutItem/UpdateItem/DeleteItem/GetItem operations. During transaction, items not blocked, dynamoDB supports only serializable isolation level.
+There are batch operations like `BatchGetItem` (read up to 100 items at once) and `BatchWriteItem` (write up to 25 items at once). There are 2 difference between transact and batch api:
+* for transact you pay twice
+* for transact either all success or all rollbacked, for batch some may succeed, some may fail. So for batch is up to you to handle errors.
+Transaction Idempotency - you can supply `ClientRequestToken` with `TransactWriteItem`, so dynamoDB would handle this request as idempotent.
+If item modified outside of running tx, tx is cancelled & exception is thrown. Tx available only within region, and not supported for global tables.
+In tx you are priced twice for each read/write, cause dynamoDB call 2 times read/write, first - to prepare tx, second - to commit tx.
+Limitations - dynamoDB won’t let you write a query that won’t scale, that's why it has some limitations, but they all make sense:
+* max result in single Query/Scan operation shouldn't exceed 1MB. So if your query has more than 1MB output, dynamoDB returns `LastEvaluatedKey`
+* it doesn't support aggregation query (min/max/avg). If you need this you should manage it on app level, when you write queries
+`FilterExpression` - allows you to further filter query response. But keep in mind, since dynamoDB max return 1MB, you can't just issue filter on whole table and expect result, just like with sql.
+If you have 1GB of data, and only 20 rows out of whole table can be filtered with such query, you have to run 1000 queries, and accumulate all rows into list.
+So first query may return 0 rows, cause it just fetch first 1MB of data, then apply your filter, and nothing was returned, cause there were no items within this 1MB that falls under filter expression.
+So you have to plan in advance you db usage pattern, in case you need filter on price, add it as sort key, or local index, or GSI.
+Single-table design - NoSql design pattern where you put all your database into single table. The main reason for using a single table in dynamoDB is to retrieve multiple, heterogeneous item types using a single request
+For example you can store users/profile/orders in single table. UserId - would be primary key, profile/orders - would be sort key. There are 2 downsides of such design:
+* there is no way to add new access pattern (for example if you want to get all orders above 100$, you will need to redesign your table)
+* no easy way to export data fro analytics (dynamoDB is OLTP, designed to handle unlimited number of small transactions)
+Multiple table approach:
+* if you have table that actively queried during one day and then no more you have to re-create table every day
+* time series - if you know that during first day you query a lot, second - not much, and third - very little - create new table for each day, and for older table modify WCU/RCU to set it to minimum value
+Max item size:
+* max size of item is 400 KB (size of both keys+values, cause for each item we store all keys in a row)
+* if you need more space you can have multiple items per key (use sorted key) or compress (GZIP/LZO using `java.util.zip.GZIPInputStream` and store item as binary) or load data into s3 and store s3 link inside item
+DynamoDB vs s3:
+* if you need low-latency and you data size less then 400KB use dynamoDB, cause on average it faster
+* if your data is more then 400KB, or latency is no issue, you can store data in s3
+Point-in-time recovery - dynamoDB will maintain incremental backup for last 35 days, and in case of accidental write/delete you can recover your db to any point.
+With this you can restore table to any selected date and time (day:hour:minute:second) to a new table. All table settings restored from table at that time (if your WCU is 50, but 2 weeks ago was 500, if you restore table from that time, now your WCU would be 500)
+Cross-region restore - you can recover point-in-time table to another region.
+Security:
+* data-in-rest encryption supported for both dynamoDB & DAX
+* data-in-transit encryption supported by HTTPS protocol. You can enable vpc endpoint to access dynamoDB from inside VPC only
+There is no concept of database in dynamoDB, you just create tables and work with them (usually 1 table per whole application). Table name should be unique within single region (you can have 2 table with same name in different regions).
+
+###### ElastiCache
+Managed service that runs Memcached/Redis server nodes in cloud. It automates common administrative tasks required to operate a distributed in-memory key-value environment, consists of:
+* node - smallest building block - network-attached RAM
+* shard (node group) - primary node and zero or more read-replicas
+* cluster (replication group) - group of shards
+Vertical scaling - you can't scale existing cluster, you should spin up new cluster and redirect traffic there.
+Memcached:
+* cluster consists of up to 20 nodes, keys are distributed across nodes. If one node failed, data is lost. So memcached is best if you have data in db and just need a cache layer, and losing cache is not critical.
+* stores objects as blobs, usually you put serialized result of db query
+* new cluster (vertical scaling) starts empty
+* since there is no replication, if node fails all data in it is lost. So you need to provision several nodes for HA and spread your data equally between nodes.
+* for HA you have to either deploy single cluster with 2 nodes in each AZ, or deploy 2 cluster with single node for each AZ
+Redis:
+* cluster consists of up to 15 shards (each shard is 1 primary and up to 5 replica nodes), so totally 15*6 = 90 nodes. So if you need data replication you should use redis. Replication is supported only by redis.
+* support persisting in-memory data to disk
+* supports blob/list/set/array as data types.
+* can also sort/rank data (used for leaderboard)
+* new cluster can be initialized from snapshot
+Redis security - when you create redis cluster you can enable 2 types of security (memcached doesn't support encryption):
+* encryption at-rest - you specify cmk to encrypt data while at rest
+* encryption in-transit - you specify Redis AUTH Token (16-128 chars) that you will use for every request to redis
+Caching strategies:
+* Lazy loading - populate cache on-demand (first hit - request data from db, all subsequent reads - take directly from cache).
+For this to work you should set TTL (time to live) to ensure that you always have latest data (so if you ttl - 1 month, data would be stored in cache for 1 month, although they have been updated in underlying db after 2 minutes).
+* Write through - whenever update happened you first update cache and then db (or first update dy and then async update of cache)
+Downside if cache is not big enough, when new data arrived, LRU (least recently used) data is evicted from cache
+Cache is implemented as key-value pair. So if you want to store leaderboard in cache you have to store sha256 of query as key and result of query as string value.
+With cluster you distribute load across nodes/shards(in case of redis), it also protection against failure. If you have one node and it failed, your cache is failed, but if you have cluster of 10 nodes, and one node is failed, only 10% of cache is failed.
+All redis calls are blocking & sequential, cause redis is [single-threaded](https://redis.io/topics/latency). There are 2 types of cli:
+* standard - you wait for every command
+* asynchronous - use callback modes, due to network issues, requests send after can received response first
+Redis cli (almost all calls are blocking) examples (to get url open cluster and get primary node endpoint, don't use cluster endpoint):
+```
+# send ping to verify connection
+redis-cli -h {REDIS_URL} ping
+# connect to redis
+redis-cli -h {REDIS_URL}
+SET mykey myvalue
+# store data with ttl of 5 seconds (after expired key would be null)
+SET mykey myvalue EX 5
+# get all available keys
+KEYS *
+```
+There are 3 types of redis cluster in cf:
+* `AWS::ElastiCache::CacheCluster` - create redis cluster with 1 node
+* `AWS::ElastiCache::ReplicationGroup` - create redis cluster with replication (you can still have only 1 primary node, but usually 1 primary and many replicas)
+* `AWS::ElastiCache::GlobalReplicationGroup` - global replication cluster (not supported, `An error occurred (ValidationError) when calling the UpdateStack operation: Template format error: Unrecognized resource types: [AWS::ElastiCache::GlobalReplicationGroup]`)
+
+###### Neptune
+Fully-managed graph database (not relational) service optimized for storing billions of relationships and querying the graph with milliseconds latency:
+* ACID compliant with immediate consistency
+* uses operational technology (lifecycle management, encryption-at-rest with KMS) shared with RDS
+* replicates all data 6 times across 3 AZ (neptune divide your storage on 10GB chunk and replicate each chunk 6 times).
+* runs inside vpc so you can use NACL/SG to secure neptune instance
+Automated backups enabled by default. You can take manual snapshot any time. You can restore snapshot only into new database. You can also share snapshot with other aws accounts.
+It's best suited for: recommendation engines, fraud detection, knowledge graphs. Supports 2 types of graph (you can use both types of query language at the same time):
+* Property Graph - which use Apache TinkerPop Gremlin graph traversal language - neptune provides Gremlin Websocket Server
+* RDF (Resource Description Framework) - which use SPARQL (declarative query language, looks like sql) neptune provides SPARQL 1.1 Protocol REST endpoint
+Gremlin - imperative/declarative graph traversal language. TinkerPop/Gremlin to graph db - the same as jdbc/sql for relational db. 
+Cluster - one or more db instances + cluster volume. Made up of 2 types of instances:
+* primary - support read/write, does all data modification in cluster volume
+* replica - connected to the same volume and does only read operations. Neptune uses Multi-AZ, so in fail, read replica would be promoted to primary.
+There is always 1 master and up to 15 read replica (yet you can read from master too). Each instance using the same storage but evaluate query independently.
+Replication lag is < 10ms. Automatic Failover time = 60sec to promote read replica into master. If you don't have read replica, in case of failover neptune will create new master, cause underlying storage persists.
+Yet it will take some time, so if you want fast failover it's better to have at least 1 read replica and send read query there from time-to-time to keep it warm.
+It stores all data in special format `Subject/Predicate/Object/Graph` - so basically 4 column tables. Indexes are built automatically.
+
+###### Quantum Ledger Database
+QLDB - ledger database with cryptographically verifiable history of all changes made to your app data (quantum has nothing to do with quantum computing, here it means indivisible state change)
+Traditional db allow to overwrite/delete data, so developers use audit tables. While this may work, it put stress on developers to guarantee that audit table works correctly.
+For QLDB data written to append-only journal, providing the developer with full data lineage. So it can work as secure/crypto-proof substitute for audit tables.
+Notice that QLDB is neither blockcahin nor distributed ledger. It's purpose-built database to store all changes to system. So it offers history/immutability/verifiability combined with scalability and ease of use of a fully managed AWS database.
+To connect and work with QLDB you have to use [AWS-provided QLDB driver](https://docs.aws.amazon.com/qldb/latest/developerguide/getting-started-driver.html). 
+In the core of QLDB, replication, DynamoDB Streams, kafka, version control lay simple concept called log - append-only storage of all events happened.
+
+###### DocumentDB
+It's fully managed, mongo-compatible document database service. You can store/query json data. MongoDB-compatible - means your current apps that using mongo, can be easily migrated to DocumentDB (which implements Apache 2.0 open source MongoDB 3.6 API).
+You can easily migrate your mongo to DocumentDB with DMS. It replicates each chunk of data 6 times across 3 AZ. Read - 8KB, write - 4KB. If you write 1 KB it counts as single IO. 
+Yet concurrent write operations with size less than 4kb, are batched to reduce cost. min size - 10GB, max - 64TB. It automatically grows by 10GB chunks. Automated backups are enabled by default.
+Cluster can scale up to 1M reads per sec with up to 15 read replicas (read replica use same underlying storage updated by master). It doesn't support cross region replica (all replicas in same region only).
+
+###### Keyspaces
+It's managed Apache Cassandra-compatible database service, you can run Cassandra workloads using the same CQL (Cassandra Query Language). 
+
 ### Data Analytics services
+###### Athena
+Athena is an interactive query service that makes it easy to analyze data in Amazon S3 using standard SQL. It uses presto under the hood. Presto - good solution if you need to connect to multiple data sources.
+You don’t need to load your data into Athena, as it works directly with data stored in S3. It integrates with Amazon QuickSight for easy visualization. It uses managed data catalog (aws glue - ETL tool) to store tables you create from s3.
+AntiPattern:
+* Enterprise Reporting and Business Intelligence (for enterprise level it's better to use RedShift, query engine in Redshift has been optimized to perform especially well on data warehouse workloads)
+* ETL Workloads (for etl you should use EMR/Glue)
+Be careful cause each time you run query athena scan your s3, so each query would cost some money.
+There are 3 types of aws services:
+* ec2 - you manage your server (like install mysql there)
+* managed server - aws manages server for yourself (like rds, you just tell how big server you want, aws provision it)
+* serverless/clusterless - aws hides away server from you (athena - you just write query and don't care how many servers would be needed to execute it)
+Because you pay for each query based on the amount of scanned data, you can reduce costs by:
+* data partition - reduce amount of scanned data for each query. Athena uses hive for partitioning. You can partition by any key, good practice to partition based on date/location.
+You specify partition in WHERE clause, so athena scan only this single partition instead of whole bucket. It can also help avoid errors, cause if data not partitioned and you run query against whole bucket you may get exceptions.
+* use workgroups - you can separate users/apps and set limits on amount of data each query or the entire workgroup can process, and to track costs. Use iam policy to control access to it.
+launch more like this - settings from aws console that allows you to launch same ec2 in the same AZ (it just copy all params like type/vpc/subnet/SG/storage and prepopulate wizard with this params, you can just create same ec2 or change some params in wizard and create different ec2).
+
+###### RedShift
+Database vs Data Warehouse:
+* relational db (single source) - OLTP (Online Transaction Processing) - store current transactions and quick access to them
+* warehouse (multiple sources) - OLAP (Online Analytical Processing) - store large quantities of historical data
+Redshift support both:
+* ODBC (Open Database Connectivity) - introduced by Microsoft in 1992, platform dependent - only for windows, procedural as most of the code in C/C++
+* JDBC (Java Database Connectivity) - introduced by SUN in 1997, platform-independent, purely object-oriented driver
+RedShift - relational (based on industry-standard PostgreSQL) data warehouse, fully-managed, petabyte-scale, massively parallel. You can create cluster with minimum 1 node & 160GB storage.
+It delivers fast query and I/O performance for virtually any size dataset by using columnar storage technology while parallelizing and distributing queries across multiple nodes.
+It's fully transactional but implements only serializable isolation level (just like dynamoDB). So if you have big workflow that do lot's of modification, wrap it into transaction, cause otherwise redshift will use new transaction for every change.
+Columnar storage more faster for aggregation operations. If you need to do sum/average in row storage you have to scan all pages to get result, it's a lot of IO, but with columnar you get single IO to get whole column.
+Zone maps - in-memory data structures that store column's min/max value, so when you make query, it checks can data possibly be in this block, if not block is not scanned.
+Column data persisted to 1MB immutable blocks. Data sorting used to optimize zone maps, columns that you use for filtering should have low cardinality. 
+So if you have column with high cardinality (timestamp with millisec) there is no point to add such column to sort key, it won't improve performance.
+Redshift only supports Single-AZ deployments. It uses MPP (Massively Parallel Processing) by automatically distribute data/query load across all nodes.
+Single-node can be used to quickly set up cluster and grow later. Multi-node cluster requires leader (who gets client connection and queries) 1 or more compute nodes (execute query in parallel).
+Compute node consists of node slices (depending on type of node there can be 2/16/32 slices within single node), they are kind of virtual compute node, and these slices actually do computational work.
+WLM (Workload Management) - queue to prioritize queries. Each query assigned to queue, and based on queue priority - executed (for example fast-running queries would be run before long-running queries)
+SQA (Short query acceleration) - when query in queue, redshift determine that this query will run short time, and put it into beginning of queue, so it would be executed first.
+Concurrency Scaling - if turned on, add transient cluster (take incremental snapshot to s3 and spin new cluster form it in seconds, we can take incremental cause backup automatically enabled so we already have full snapshot) when queues are full.
+For every 24 hours of running cluster you accrue 1 hour of free transient cluster.
+Just like rds, RedShift supports snapshots (both automatic and manual). Internally each node using ebs to store data, but you can create s3 backups.
+Cross-Region Snapshot - automated or manual copy of data into another aws region. If you created encrypted db (select KMS encryption when you create cluster), you can't transfer keys between regions (KMS bound to region where it was created).
+In this case you have to configure snapshot copy grant - redshift would create snapshot, decrypt it, then copy to another region and encrypt it with KMS key from that region.
+For encryption it uses four-tier hierarchy of encryption keys. These keys are: master/cluster/database/data encryption keys
+Redshift Spectrum - allows you to query data in s3, it's serverless just like Athena, so you pay for resources you consume.
+So it basically allows you to separate storage & compute. You can also use it to insert data into redshift from s3. It different from Athena, cause it allows you to join current redshift tables with data from s3.
+Under the hood there is a fleet of thousands Redshift Spectrum nodes spread across multiple AZ. Query is submitted to leader node of your Redshift cluster, which optimize/compile/push the query to the compute nodes.
+Compute nodes submit requests to redshift spectrum, spectrum create thousands of ec2 and query data from s3 and return it back to cluster. So with spectrum you can store frequently access data in redshift and IA data in s3 and create join of these 2 datasets.
+Distribution style (`DISTSTYLE` - primary goal in selecting it, to evenly distribute the data throughout the cluster for parallel processing) - when you load data into table, redshift distributes the rows to each of the compute nodes:
+* AUTO - start with ALL style, if table grows beyond certain limit, switch to EVEN.
+* ALL - copy of the entire table is distributed to every node. It is for small tables, less than 3million records.
+* EVEN - leader node distributes the rows across the slices in a round-robin fashion. Use it when a table does not participate in joins or when there is not a clear choice between KEY/ALL distribution
+* KEY - rows are distributed according to the values in one column (this column must be defined as a `DISTKEY`), leader node places matching values on the same node slice. This similar to partitionKey in dynamoDB.
+Key is good if you have some foreign key (like departmentId in employee table) and so all employees for particular department would be stored in single slice.
+Enhanced VPC routing - forces `COPY/UNLOAD` traffic between your cluster and your data repositories through your VPC. These allows you to use:
+* all features of vpc
+* vpc flow logs for `COPY/UNLOAD` commands
+* vpc endpoint (route traffic between s3 & redshift)
+Plz note there is no such command as `load` only `COPY` to load data into redshift and `UNLOAD` to read data from redshift.
+Migration:
+* lift-and-shift - is a bad practice cause performance depends on distkey/sortkey/dataCompression and when you just move you current warehouse without redesigning tables you won't get query performance.
+* best practice - to denormalize data if you migrate from heavily normalized database.
+Table design important upfront, cause for mysql/aurora you can create table and when you query pattern changes you just add index, but there is no indexes in redshift
+Changing `distkey/sortkey` will require table rebuilding. Primary/Foreign/Unique keys are not enforced, so you can add duplicating entry into primary key, yet some query patterns can benefit from these constraints, so if you can enforce them from your app it's better to do so.
+You can insert data by single/bulk insert - bad practice cause you will use leader node for this. So you can use `copy` command to load data directly into slices.
+`COPY` - load data into redshift, best performance when you specify source as s3 bucket, automatically compress data before insertion. Best practice to use as many input files as slices in the cluster (if you use single file - single slice would copy all other would sit idle)
+Optimal file size 1MB-1GB. If file size too small - lots of time is overhead to request file from s3, if too large - then you may get 99% uploaded and then failed.
+Managed Storage (`RA3` compute type) - decouple storage & compute, each node can support up to 64TB compressed storage. RA3 - redshift analytics + S3. DC2 - dense compute. DS2 - dense storage, now outdated.
+Compression applied independently for each column (totally 13 types of compression), we able to do this because redshift - columnar storage.
+AZ64 - aws own compression encoding algorithm designed with high compression value and improved query processing. For int/date - use AZ64, char/varchar - LZO/ZSTD.
+Deduplication/Upsert (update + insert):
+* use `copy` to load data into staging table from s3
+* remove duplicates from prod table
+* insert data from staging table into prod table
+```
+BEGIN; # start transaction, cause it's batch of operations
+CREATE TEMP TABLE staging(LIKE prod); # copy distkey/sortkey from prod table
+COPY staging from s3://bucket/data.csv COMPUPDATE OFF; # disable compression to speed up insertion
+DELETE from prod p USING staging s on p.user_id=s.user_id;
+INSET INTO prod SELECT * FROM staging;
+COMMIT; 
+```
+For large copy (billions of records) use `ALTER TABLE APPEND` instead of `INSERT INTO SELECT`
+`VACCUM` do 2 things:
+* remove deleted records (when we delete records they are marked for deletion, but actual removal happens later)
+* globally sort tables
+
+###### EMR
+EMR (Elastic Map Reduce) - highly distributed computing framework for data processing and storing, using Apache Hadoop as its distributed data processing engine.
+It's good if you have some stored data in s3 and want to process it. If you have real-time data stream it's better to use kinesis.
+It's open source java framework supports data-intensive distributed apps running on large clusters of commodity hardware. Hive/Pig/HBase are packages that run on top of Hadoop.
+It reduces large workload into smaller jobs and distribute it between EC2 instances of Hadoop cluster (good for big data analyses).
+Hadoop is basically 2 things: HDFS + Computation/Processing framework (MapReduce - hadoop api name)
+There are 2 types of storage:
+* HDFS (Hadoop Distributed File System) - data replicated across several instances. Data can be stored on EBS or instance store
+* EMRFS (EMR File System) - implementation of HDFS that can store data in s3
+There are 2 types of cluster:
+* persistent - runs continuously, should use HDFS
+* transient - do some work and stop, should use EMRFS, so data won't be lost after cluster is stopped or terminated
+Hadoop vs Spark:
+Hadoop - just storage system (HDFS) + api by which you can process this info. 
+But hadoop api is not fast enough to process big data and here come spark which can help to expedite data processing.
+If you want to run spark on cluster (for testing purposes you can run it on local machine) you need cluster manager.
+There are 2 cluster managers - yarn/mesos. Since yarn is built into hadoop you need hadoop to run spark. But you can use mesos and run spark without hadoop.
+Cluster manager - coordinate code execution on different machines. You can use spring+java+spark to have all features of java/spring to write good code for spark.
+Data Locality - process data on the machines where they are located instead of transfer all data to single machine and precess them there.
+AntiPattern:
+* Small data sets (EMR for large processing, if your dataset is small enough for one machine/thread it's better to use EC2 or Lambda)
+* ACID transaction requirements (if you need this it's better to use RDS instead of Hadoop)
+There are several engines you can run on top of emr:
+* Hive - data warehouse, you can write SQL-like queries to extract data from Hadoop
+* Hbase - open-source, NoSQL key/value column-oriented database built on top of HDFS. It integrates with Hive allowing sql-like query over Hbase tables. You can backup/restore EMR Hbase into s3. Support read-replica.
+* Presto - open-source in-memory distributed SQL query engine developed by Facebook. So it's good for ad-hoc sql analytics
+* Spark - general purpose execution framework that is able to run multiple different workloads such as ETL/ML
+Presto faster than spark cause it doesn't care about fault-tolerance. If one of the Presto worker nodes experiences a failure (say, shuts down) in most cases queries that are in progress will abort and need to be restarted.
+Spark supports mid-query fault-tolerance and can recover from such a situation but in order to do that, it needs to do some extra bookkeeping and essentially "plan for failure". That overhead results in slower performance when your cluster does not experience any faults.
+Spark Streaming - solution to process/analyze data in real-time. On aws if you want to use it you have to provision: kinesis data streams + emr with spark streaming and apache zeppelin
+You can create security configuration (`AWS::EMR::SecurityConfiguration`) where you can enable both data-in-rest (available for both EBS & EMRFS on S3) & data-in-transit encryption, and then assign this config to cluster.
+
+###### ElasticSearch & CloudSearch
+ES - open source search service, it's usually a part of ELK stack. You store data on ebs that attached to ES nodes.
+CS - search service like ElasticSearch, but aws proprietary development. With CS you can search txt/json/pdf/html/cvs/xls documents (so you can use it to search for scanned pdf documents too).
+You should store your data in s3 and then use CS to search this textual data. CS can use s3/DynamoDB, ES - only ebs.
+ES has 2 types of nodes:
+* data nodes - nodes that upload data to ebs and search data
+* master nodes - increase cluster stability by performing cluster management tasks. For prod you should use 3 master nodes.
+ELK stack consists of 3 parts:
+* ElasticSearch - log searching
+* LogStash - log collection from ec2 to ElasticSearch cluster
+* Kibana - data visualization tool (visualize data from ElasticSearch)
+Fluentd vs LogStash:
+* has internal in-memory system, so no need for additional tools like redis / internal queue limited to 20 events, so it needs redis to work normally
+* uses standard built-in parsers (JSON, regex, csv) / use external plugins to parse log
+* Logs are directly shipped from STDOUT without requiring an extra log file / need extra plugin to extract logs from docker
+* for kuber it's better to use Fluentd, due to its built-in Docker logging driver and parser
+
+###### Kinesis
+It is a platform for streaming data/media on AWS, making it easy to load and analyze streaming data.
+With Kinesis, you can ingest real-time data such as application logs, website clickstreams, IoT telemetry into your databases, data lakes, and data warehouses, or build your own real-time applications using this data
+* kineiss firehose (near real time) - load massive volumes of streaming data into AWS (you can configure lambda to transform you data before loading). Receives stream data and stores it in s3/RedShift/ElasticSearch
+It's near real time because it takes data from data streams in real time, buffer them and then sends batches of data into storage (s3/dynamoDB).
+* kineiss streams (real time, it's also data storage - data stored there durable for specified period) - ability to process the data in the stream. 
+Streams can't load data directly to s3/redshift - additional processing required, firehose - for storing data directly in s3/redshift
+Just like fifo/groupId when you send message to kinesis you add partitionKey - determined into which shard to put your record
+Yet there is no deduplicateId, so you can have duplicates inside shards. You can scale throughput for shard by dividing single shard into 2 by dividing partitionKey.
+Consumer decide from which shard to read, they query kinesis, get list of shards, pick one, and start reading using iterator.
+* kineiss Analytics - analyze streaming data real time with:
+    * sql - run sql queries to process data
+    * apache flink - use java/scala to process & analyze data
+AntiPattern:
+* Small scale consistent throughput (Kinesis Data Streams is designed and optimized for large data throughput)
+* Long-term data storage and analytics. By default Kinesis Data Streams stores data 24 hours, you can extend retention up to 168 hours (7 days), if you need longer you should considered RDS/DynamoDb/S3/Glacier
+Auto-scaling:
+* app auto scaling - CloudWatch alarm + App Auto Scaling + api gateway + lambda (that actually change number of shards) - you have to use CloudFormation template to set it up (you can set it up manually for testing)
+* [kinesis auto scaling utility](https://github.com/awslabs/amazon-kinesis-scaling-utils) - you can deploy it as beanstalk (or java server) and it will monitor CloudWatch to dynamically scale out/in your shards
+Queue vs Streaming:
+* queue (not reactive) - you have to poll data, once polled, you should manually remove from queue
+* streaming (reactive) - many consumer notify of changes, events stay for long time (not deleted)
+Write and Read to stream with java:
+* [KPL (Kinesis Producer Library)](https://github.com/awslabs/amazon-kinesis-producer) - allows you to write to kinesis data streams (c++ code, but use java binding)
+It has built-in batching & multithreading logic to collect many small events, batch them and send to kinesis. 
+If you use KCL to retrieve message from kineiss that consist of multiple KPL records, you can use KPL on client side to retrieve these records
+It emits throughput/error/other metrics to cloudWatch, uses async architecture - so call to put record returns immediately with `Future` object from KPL
+* [KCL (Kinesis Client Library)](https://github.com/awslabs/amazon-kinesis-client) - allows you to read from kinensis data streams (java library)
+Kinesis vs Kafka vs Apache Storm (kinesis & kafka are message brokers - middleman between data streaming source and it's consumers):
+* kafka - data stored in Kafka Partition, config store - Apache Zookeeper, replica instances - can be configured
+* kinesis - data stored in Shards, config store - DynamoDB, synchronously replicates across 3 AZ
+* storm - middleman between hadoop (which works with batches only) and streaming source. It takes incoming stream, organize data into packages and sends it to hadoop for further processing. Data sources are called spouts and each processing node is a bolt.
+You can view kinesis video using following api:
+* `GetMedia` (real-time api with low latency) - you have to build your own player to view video from this api using [Stream Parser Library](https://docs.aws.amazon.com/kinesisvideostreams/latest/dg/parser-library.html)
+To upload video to kinesis you should use `PutMedia` and upload MKV (matroshka - multimedia container formats) files. 
+* `GetHLSStreamingSessionURL` - retrieve HLS (HTTP Live Streaming) url that you can open in browser or media player, you can use for live playback or to view archived video. 
+You can use third-party player `Video.js/Google Shaka Player` to display stream using HLS streaming session URL. You can also play back video by typing the HLS streaming session URL in the Location bar of the Safari/Edge browsers.
+* `GetDASHStreamingSessionURL` MPEG-DASH (Dynamic Adaptive Streaming over HTTP) - same as HLS, just different format
+* `GetClip` - use it to download clip (MP4) with archived/on-demand media from video stream over the time range
+If you have need to store data durable with ordering and data should be read with 4 hours interval by 2 apps, you have 2 choices:
+* put data into first sqs, first app read from first sqs and copy data into second sqs for second app (sqs should be of fifo type)
+* use kinesis data stream - this is more appropriate solution, cause first solution require app to make sure that messages would be put into second queue, here no extra coding required (ordering built-in)
+So if you have app that reads from same stream or consume from same stream several hours later you data streams (don't reinvent the wheel with sqs)
+
+###### Data Pipeline
+DP - ETL tool that simplify data movement/processing in aws, integrates with on-premise and cloud-based storage systems.
+You can transfer data between RDS/S3/EMR/DynamoDB. Pipeline - runs activities (common tasks) on data nodes. Data node - location where pipeline reads data or where it writes data.
+Example of Activity (work to be done), you can schedule time when to run, like once a day:
+* export of dynamoDB to s3 & export from s3 to dynamoDB (DP would launch transient EMR cluster on each run to execute export)
+* just run transient EMR cluster
+* rds to s3 export, s3 to rds export, rds to redshift (`RedshiftCopyActivity`), s3 to redshift (DP would launch ec2 on each run to execute export)
+Don't confuse:
+* data pipeline - for automated batch jobs, without human interaction (like run bash script every day at 12)
+* step functions or SWF - when you need human interaction
+
+###### Glue
+Fully managed ETL (extract/transform/load) to catalog/clean/enrich/move your data. Consist of:
+* Data Catalog - central metadata repository. Consist of:
+    * trigger - you can create trigger to fire on cron or when some events done. With it you can create a chain of etl jobs. Can be of 3 types:
+        * scheduled - run on cron
+        * conditional - based on some condition (run third job when 2 other completed)
+        * on-demand - manually activate your trigger
+* ETL engine - run ETL jobs on apache spark, where actual transformation happens (Job can autogenerate python/scala code to run on spark)
+For each job isolated spark env created, where job is executed (you select data source/target and pass script, and on spark your job is run)
+Job Bookmark - glue use it to keep track of processed data. When you add more data to s3, glue won't run etl for whole bucket again, but only changes that were added.
+* scheduler - handles dependency resolution/job monitoring/retries
+Glue crawlers scan various data stores you own to automatically infer schemas and partition structure and populate the Glue Data Catalog with corresponding table definitions and statistics.
+You can then directly query your data lake with Athena and Redshift Spectrum.
+AntiPattern:
+* Streaming data (Glue is batch oriented, minimum interval is 5 min, so for streaming data Kinesis is better choice)
+* NoSQL Databases (Glue doesn't support NoSQL databases as source)
+Don't confuse:
+* glue - managed ETL
+* emr - same as glue but you have more control of underlying hadoop cluster
+Workflow - set of related jobs/crawlers/triggers in glue that execute as single entity. You can design complex multi-job ETL activity.
+During run of each component workflow record execution/status and provide overview for you. Event triggered inside workflow can be fired by job/crawlers to start job/crawler
+If you need completely managed solution for ETL + query data with SQL: use glue + athena. Although emr or ecs cluster can do similar job, they are not fully managed.
+
+###### Lake Formation
+DL (Data Lake) - scalable central repository of large quantities and varieties of data, both structured and unstructured. There are 2 steps:
+* ingesting and cataloging data from a variety of sources
+* data is enriched, combined, and cleaned before analysis
+You can use dms to convert db into s3 and replace read replica with data lake. You can also export RDS snapshot into s3 in parquet format. But if you have many updates you should use Redshift/Hive
+LF (Lake Formation) - integrated data lake service where you ingest/clean/catalog/transform/secure your data and make it available for analysis and ML.
+LF provides you single console to ingest you data and then use other aws services like ML/EMR/RedShift to transform and query your data.
+FindMatches ML Transform - solves 2 problems:
+* Data Deduplication - identify conceptually the same data using fuzzy logic (it's easy remove duplicates when you have some key like productSKU, but if not you should employ some logic to do this)
+* Record Linkage - join 2 databases using fuzzy join (again it's easy to join by some key, but if you don't have such a key you should employ some logic to do this)
+LF discover all available sources s3/RDS/on-premise db/CloudTrail, ingest it and transform into s3 in data formats for optimized performance and cost.
+LF also manages granular access to your s3 bucket, and can give access to it to all other data analytics services (so you have central place to manage all access).
+Hadoop Data Formats:
+* Avro - row-based data format, data schema is stored as JSON.
+* ORC - columnar data format highly optimized for reading, writing, and processing data in Hive. Files are made of stripes of data where each stripe contains index, row data, and footer.
+* Parquet - columnar data format, files consist of row groups, header, and footer. Specialized in efficiently storing and processing nested data types.
+
+###### QuickSight
+QuickSight - BI (business intelligence) tool, for building visualizations, perform ad-hoc analysis (can connect to all aws data sources).
+It's used inside aws infra, so it's for internal users only (not for external). You can load data form s3/athena/rds/redshift/dynamoDB.
+
 ### Machine Learning services
+###### SageMaker
+It's managed service, running JN, that provides ability to build, train, and deploy ML models quickly. SageMaker has 15 built-in ML algorithms, but you can also use your own.
+JN (Jupyter Notebook) - interactive computing environment, single document where you can run code, display the output, and also add explanations, formulas, charts.
+
+###### Rekognition
+Rekognition - managed service that allows you to add powerful visual analysis to your app:
+* image - you can search/verify millions of images quickly (detects objects/scene/faces, search & compare faces, recognize texts or celebrities)
+* video - you can extract motion pics from video/streams and analyse them (detect activity or inappropriate content, understand moving of people)
+Rekognition using deep learning algos to determine image/video patterns. It is pre-trained for image and video recognition tasks (so you don't have to be ML expert to use it).
+You can specify conditions (discard results with low confidence score) under which image would go for human moderation.
+Terminology:
+* label - object/concept found in image based on description (for example, human/face/sun and so on..)
+* confidence score - number 0-100 that indicates the probability that prediction is correct
+Use following api to detect:
+* `DetectFaces` - detects the 100 largest faces in the image, for each face returned: bounding box of face, confidence, presence of beard/sunglasses
+* `CompareFaces` - compare face from source image with 100 faces from target image (you have to pass 2 images). Return 2 arrays of matched/unmatched faces.
+You can set `SimilarityThreshold` (default 80%) to manage at what point face should be included into matching array.
+* `DetectLabels` - use it to detect objects(flower, tree)/events(wedding, birthday)/concepts(evening/nature)
+Return results like `[{Name: flower,Confidence: 99.0562},{Name: plant,Confidence: 99.0562}]`, as you see one thing can be different objects at the same time.
+You can set `MinConfidence` (default is 55%) to filter based on confidence. You can set `MaxLabels` to limit number of objects.
+If object is person, operation doesn't provide same level of facial details as `DetectFaces`.
+* `RecognizeCelebrities` - returns: 64 largest faces in image, celebrity name/ID/url links to additional info. You can use celebrityID in `GetCelebrityInfo` to get more info later.
+* `DetectText` - detect & convert text into machine-readable from image (can detect up to 50 words per image). Use `MinConfidence` (0.5-1) to set confidence level (text below this level won't be included into result).
+Note that for all detect calls `DetectFaces/CompareFaces/DetectLabels/RecognizeCelebrities` you must pass:
+* base64-encoded image bytes or reference to s3
+* if you call from cli, image bytes is not supported, image must be png/jpeg file (cause cli convert your image file into bytes)
+You can create/delete/list collections using `CreateCollection/DeleteCollection/DescribeCollection/ListCollections`. You can store faces in collection.
+For video processing you can use:
+* `StartFaceDetection/StartLabelDetection/StartCelebrityRecognition` - async operations that return jobId (when job is completed you would be notified by SNS). You have to pass video stored in s3.
+* `GetFaceDetection/GetLabelDetection/GetCelebrityDetection` - use jobId from above operation to get results
+real-time face recognition:
+* upload video to kinesis video using `PutMedia`
+* crete stream in rekognition using `CreateStreamProcessor` and provide 4 params:
+    * input - kinesis video stream
+    * output - kinesis data stream to store processed results (places separate json file for each analyzed frame). You can use KCL from ec2 (with asg) to read from stream and do some processing.
+    * settings - `CollectionId` where you store faces to compare and `FaceMatchThreshold` (default 80%)
+    * role-arn - role with permission to read/write from kinesis
+Once created it will start automatically monitor kinesis video stream and consume videos for face recognition. Once you finish processing you can call `StopStreamProcessor` to stop or delete with `DeleteStreamProcessor`.
+
 ### Other services
 ###### Corretto 
 It's free amazon implementation of Java SE specification. As you know there are confusion around java SE. Oracle provides 2 java SE implementations:
@@ -2331,50 +3126,6 @@ Troubleshooting:
     * for match viewer policy domain name in SSL should correspond to origin domain name
     * SSL on origin is expired/invalid/self-signed
 
-###### Kinesis
-It is a platform for streaming data/media on AWS, making it easy to load and analyze streaming data.
-With Kinesis, you can ingest real-time data such as application logs, website clickstreams, IoT telemetry into your databases, data lakes, and data warehouses, or build your own real-time applications using this data
-* kineiss firehose (near real time) - load massive volumes of streaming data into AWS (you can configure lambda to transform you data before loading). Receives stream data and stores it in s3/RedShift/ElasticSearch
-It's near real time because it takes data from data streams in real time, buffer them and then sends batches of data into storage (s3/dynamoDB).
-* kineiss streams (real time, it's also data storage - data stored there durable for specified period) - ability to process the data in the stream. 
-Streams can't load data directly to s3/redshift - additional processing required, firehose - for storing data directly in s3/redshift
-Just like fifo/groupId when you send message to kinesis you add partitionKey - determined into which shard to put your record
-Yet there is no deduplicateId, so you can have duplicates inside shards. You can scale throughput for shard by dividing single shard into 2 by dividing partitionKey.
-Consumer decide from which shard to read, they query kinesis, get list of shards, pick one, and start reading using iterator.
-* kineiss Analytics - analyze streaming data real time with:
-    * sql - run sql queries to process data
-    * apache flink - use java/scala to process & analyze data
-AntiPattern:
-* Small scale consistent throughput (Kinesis Data Streams is designed and optimized for large data throughput)
-* Long-term data storage and analytics. By default Kinesis Data Streams stores data 24 hours, you can extend retention up to 168 hours (7 days), if you need longer you should considered RDS/DynamoDb/S3/Glacier
-Auto-scaling:
-* app auto scaling - CloudWatch alarm + App Auto Scaling + api gateway + lambda (that actually change number of shards) - you have to use CloudFormation template to set it up (you can set it up manually for testing)
-* [kinesis auto scaling utility](https://github.com/awslabs/amazon-kinesis-scaling-utils) - you can deploy it as beanstalk (or java server) and it will monitor CloudWatch to dynamically scale out/in your shards
-Queue vs Streaming:
-* queue (not reactive) - you have to poll data, once polled, you should manually remove from queue
-* streaming (reactive) - many consumer notify of changes, events stay for long time (not deleted)
-Write and Read to stream with java:
-* [KPL (Kinesis Producer Library)](https://github.com/awslabs/amazon-kinesis-producer) - allows you to write to kinesis data streams (c++ code, but use java binding)
-It has built-in batching & multithreading logic to collect many small events, batch them and send to kinesis. 
-If you use KCL to retrieve message from kineiss that consist of multiple KPL records, you can use KPL on client side to retrieve these records
-It emits throughput/error/other metrics to cloudWatch, uses async architecture - so call to put record returns immediately with `Future` object from KPL
-* [KCL (Kinesis Client Library)](https://github.com/awslabs/amazon-kinesis-client) - allows you to read from kinensis data streams (java library)
-Kinesis vs Kafka vs Apache Storm (kinesis & kafka are message brokers - middleman between data streaming source and it's consumers):
-* kafka - data stored in Kafka Partition, config store - Apache Zookeeper, replica instances - can be configured
-* kinesis - data stored in Shards, config store - DynamoDB, synchronously replicates across 3 AZ
-* storm - middleman between hadoop (which works with batches only) and streaming source. It takes incoming stream, organize data into packages and sends it to hadoop for further processing. Data sources are called spouts and each processing node is a bolt.
-You can view kinesis video using following api:
-* `GetMedia` (real-time api with low latency) - you have to build your own player to view video from this api using [Stream Parser Library](https://docs.aws.amazon.com/kinesisvideostreams/latest/dg/parser-library.html)
-To upload video to kinesis you should use `PutMedia` and upload MKV (matroshka - multimedia container formats) files. 
-* `GetHLSStreamingSessionURL` - retrieve HLS (HTTP Live Streaming) url that you can open in browser or media player, you can use for live playback or to view archived video. 
-You can use third-party player `Video.js/Google Shaka Player` to display stream using HLS streaming session URL. You can also play back video by typing the HLS streaming session URL in the Location bar of the Safari/Edge browsers.
-* `GetDASHStreamingSessionURL` MPEG-DASH (Dynamic Adaptive Streaming over HTTP) - same as HLS, just different format
-* `GetClip` - use it to download clip (MP4) with archived/on-demand media from video stream over the time range
-If you have need to store data durable with ordering and data should be read with 4 hours interval by 2 apps, you have 2 choices:
-* put data into first sqs, first app read from first sqs and copy data into second sqs for second app (sqs should be of fifo type)
-* use kinesis data stream - this is more appropriate solution, cause first solution require app to make sure that messages would be put into second queue, here no extra coding required (ordering built-in)
-So if you have app that reads from same stream or consume from same stream several hours later you data streams (don't reinvent the wheel with sqs)
-
 ###### Lambda
 Lambda - piece of code that can be executed without any server env (just write code in python/javascript and it will run). Lambda can be directly triggered by AWS services such as s3/DynamoDB/Kinesis Streams/SNS/CloudWatch
 Lambda are billed per request, so it's better for some small simple tasks. If you have highload with 10m hits per day, run simple ec2 is cheaper.
@@ -2427,312 +3178,6 @@ If lambda can't run the function for some reason you will get immediate error (i
 ###### Step Functions
 Step Functions - visual tool that allows you to build complex logic based on lambda and EC2 calls. They can also help overcome lambda max 900sec execution time, by joining several lambdas into one execution flow.
 If you have several lambdas that need to be called one after another, you can build this directly into lambdas, but it can be difficult to manage, so it's better to use some orchestration tool where you can create a sequence of calls.
-
-###### EMR
-EMR (Elastic Map Reduce) - highly distributed computing framework for data processing and storing, using Apache Hadoop as its distributed data processing engine.
-It's good if you have some stored data in s3 and want to process it. If you have real-time data stream it's better to use kinesis.
-It's open source java framework supports data-intensive distributed apps running on large clusters of commodity hardware. Hive/Pig/HBase are packages that run on top of Hadoop.
-It reduces large workload into smaller jobs and distribute it between EC2 instances of Hadoop cluster (good for big data analyses).
-Hadoop is basically 2 things: HDFS + Computation/Processing framework (MapReduce - hadoop api name)
-There are 2 types of storage:
-* HDFS (Hadoop Distributed File System) - data replicated across several instances. Data can be stored on EBS or instance store
-* EMRFS (EMR File System) - implementation of HDFS that can store data in s3
-There are 2 types of cluster:
-* persistent - runs continuously, should use HDFS
-* transient - do some work and stop, should use EMRFS, so data won't be lost after cluster is stopped or terminated
-Hadoop vs Spark:
-Hadoop - just storage system (HDFS) + api by which you can process this info. 
-But hadoop api is not fast enough to process big data and here come spark which can help to expedite data processing.
-If you want to run spark on cluster (for testing purposes you can run it on local machine) you need cluster manager.
-There are 2 cluster managers - yarn/mesos. Since yarn is built into hadoop you need hadoop to run spark. But you can use mesos and run spark without hadoop.
-Cluster manager - coordinate code execution on different machines. You can use spring+java+spark to have all features of java/spring to write good code for spark.
-Data Locality - process data on the machines where they are located instead of transfer all data to single machine and precess them there.
-AntiPattern:
-* Small data sets (EMR for large processing, if your dataset is small enough for one machine/thread it's better to use EC2 or Lambda)
-* ACID transaction requirements (if you need this it's better to use RDS instead of Hadoop)
-There are several engines you can run on top of emr:
-* Hive - data warehouse, you can write SQL-like queries to extract data from Hadoop
-* Hbase - open-source, NoSQL key/value column-oriented database built on top of HDFS. It integrates with Hive allowing sql-like query over Hbase tables. You can backup/restore EMR Hbase into s3. Support read-replica.
-* Presto - open-source in-memory distributed SQL query engine developed by Facebook. So it's good for ad-hoc sql analytics
-* Spark - general purpose execution framework that is able to run multiple different workloads such as ETL/ML
-Presto faster than spark cause it doesn't care about fault-tolerance. If one of the Presto worker nodes experiences a failure (say, shuts down) in most cases queries that are in progress will abort and need to be restarted.
-Spark supports mid-query fault-tolerance and can recover from such a situation but in order to do that, it needs to do some extra bookkeeping and essentially "plan for failure". That overhead results in slower performance when your cluster does not experience any faults.
-Spark Streaming - solution to process/analyze data in real-time. On aws if you want to use it you have to provision: kinesis data streams + emr with spark streaming and apache zeppelin
-You can create security configuration (`AWS::EMR::SecurityConfiguration`) where you can enable both data-in-rest (available for both EBS & EMRFS on S3) & data-in-transit encryption, and then assign this config to cluster.
-
-###### Glue
-Fully managed ETL (extract/transform/load) to catalog/clean/enrich/move your data. Consist of:
-* Data Catalog - central metadata repository. Consist of:
-    * trigger - you can create trigger to fire on cron or when some events done. With it you can create a chain of etl jobs. Can be of 3 types:
-        * scheduled - run on cron
-        * conditional - based on some condition (run third job when 2 other completed)
-        * on-demand - manually activate your trigger
-* ETL engine - run ETL jobs on apache spark, where actual transformation happens (Job can autogenerate python/scala code to run on spark)
-For each job isolated spark env created, where job is executed (you select data source/target and pass script, and on spark your job is run)
-Job Bookmark - glue use it to keep track of processed data. When you add more data to s3, glue won't run etl for whole bucket again, but only changes that were added.
-* scheduler - handles dependency resolution/job monitoring/retries
-Glue crawlers scan various data stores you own to automatically infer schemas and partition structure and populate the Glue Data Catalog with corresponding table definitions and statistics.
-You can then directly query your data lake with Athena and Redshift Spectrum.
-AntiPattern:
-* Streaming data (Glue is batch oriented, minimum interval is 5 min, so for streaming data Kinesis is better choice)
-* NoSQL Databases (Glue doesn't support NoSQL databases as source)
-Don't confuse:
-* glue - managed ETL
-* emr - same as glue but you have more control of underlying hadoop cluster
-Workflow - set of related jobs/crawlers/triggers in glue that execute as single entity. You can design complex multi-job ETL activity.
-During run of each component workflow record execution/status and provide overview for you. Event triggered inside workflow can be fired by job/crawlers to start job/crawler
-If you need completely managed solution for ETL + query data with SQL: use glue + athena. Although emr or ecs cluster can do similar job, they are not fully managed.
-
-###### DynamoDB
-Fully managed, highly available out-of-the-box(there is no such thing as multi-AZ deployment and read replica) NoSQL key-value/document database, kind of mongo, but aws proprietary solution. Stores data across 3 AZ. 
-It's serverless, so if you have to choose between DynamoDB/RDS if you are building serverless app - dynamoDB your best choice. NoSql terminology: row - item, cell - attribute, primary key - partition key + sort key.
-If you come from relational to NoSql you must forget:
-* normalization - this came from time when storage was expensive, right now compute is expensive so it's better to denormalize data to spend less time on computing
-* joins - you can't join table in NoSql
-* single table per entity - you have a collection of entities per table in NoSql. Table is not single object like in relational model, but a collection of heterogeneous objects, products+users+orders can be store in single NoSql table.
-NoSql tables build on distributed hash tables, so time complexity of most queries is O(1)
-One-to-many (customers-orders, each customer has many orders, but each order has exactly 1 customer):
-* relational (2 tables) - customers, orders (has customerId as foreign key)
-* nosql (1 table) - partitionKey (customerId) and sortKey (orderId)
-Many-to-many (authros-books, each author has many books, and each book can be written by several authors):
-* relational (3 tables) - authors, books, author_book - special table to store auhorId+bookId
-* nosql (1 table) - partitionKey (authorId) and sortKey (bookId). Here duplication happens, cause same book would be duplicating for all it's authors.
-If you need another access pattern, like find all authors by book, you add another type of pk into this table where you swap partition & sort key: partitionKey (bookId) and sortKey (authorId)
-By doing this you add even more duplication, yet now you have 2 access pattern by either author or book.
-This idea of storing data called - adjacency list - way to represent graph data (nodes and edges) in flat model. Suppose we have a bunch of people and want to represent them as friends. We can use graph representation.
-But can use java, if we create `Map<String, List<String>>` where key is person and value is list of this friends. This will add some redundancy/duplication 
-(if Mike & Bob friends, then under key Mark Bob would be inside list of friends, and under kye Bob, Mark would be inside list of friends)
-Yet this duplication in space guarantees instant result, you can get list of friends of anybody within O(1) - cause we are using Map.
-Partition key should have a large number of distinct values relative to the number of items in the table (customerId for orders table - there are many distinct customers comparing to total number of orders).
-This is because max RCU (read capacity unit) - 3000, WCU (write capacity unit) - 1000 per partition. So if you choose wrong partition key and make a lot of request to single partition you will get `ProvisionedThroughputExceededException`.
-Keep in mind if you use java SDK, it already have retry logic within (you don't have to write retry code yourself), so your requests will eventually succeed unless your retry queue is too large to finish. In this case try to lower your request to db or enlarge RCU/WCU.
-AWS SDK generally provide retry logic for most calls and also exponential backoff (use progressively longer waits between retries for consecutive error responses - 1,2,4,8,16 seconds after each failed retry)
-That's why you should have equal distribution across partition key. Best practices to select partition key:
-* use high cardinality attr - email/customerId/orderId/productId
-* use composite attr - combine several attr into single string to be used as key
-* add random key to partition key
-One way to offload dynamoDB writes is to use sqs:
-* you can decrease WCU and save on costs
-* you can use it as protection against accidental load spikes
-When you build NoSql schema you should:
-* create ERD (entity relations diagram) - same as for relational db, define entities and relations between them
-* define access pattern - how data would be accessed
-* design PK + GSI
-You can store many entities in the same table:
-users + profiles(one-to-one) + orders(one-to-many) + order_items (one-to-many)
-* partitionKey - `USER#userId` & `ITEM#itemId`
-* sortKey - for profile - `PROFILE#profileId`, for order - `ORDER#orderId` - it's a good practice to add prefixes to keys
-So we have 2 sortKey with same `ORDER#orderID`, one - for users, another for items. To speed up access create GSI - inverted index and now you have partitionKey - `ORDER#orderID`, sortKey - `USER#userID/ITEM#itemID`.
-If you have several address for single user, just add them as json attribute - until you have access pattern by address (like found all users by single address)
-So you store both profiles and orders in the same table, yet they have different attributes.
-Partition Key (mandatory) - it's used for key-value access pattern, should be unique value. Sort key (optional) - range query access pattern. Example: customerId - partitionKey, orderDate - sortKey.
-So if you store only category in table, you have simple primary key = categoryName.
-If you store category+articles in single table you have composite primary key = partitionKey (categoryName) + sortKey (articleName).
-If you have composite primary key:
-* write/update/delete - must provide full key (both partition & sort keys)
-* query - can provide only partition or both
-Don't use filter expression - it's scans the whole table and filter it based on your request. If you need to filter on other that PK columns, create GSI for filtered columns.
-Composite Sort Key - GSI with partitionKey stays the same, but sortKey is new attribute by which you want to filter. You can also include other attributes into this sortKey.
-For example status+date `DELIVERED#2020-05-05`, and now you can filter by status and date.
-If you want to filter just by attribute without partitionKey. This is problem for dynamoDB, cause it designed in such way that you should narrow all queries to some partitionKey and then filter on sortKey.
-You create sparse key and use scan to search by single attribute without partitionKey.
-Data Partitioning:
-* DynamoDB horizontally shards tables into one or more partitions across multiple servers.
-* Partition allocation of storage for a table, backed by solid state drives (SSDs) and automatically replicated across multiple AZ.
-* Partition management occurs automatically in the background by DynamoDb.
-* Hot partition - when one partition receive way more traffic than all other (if write throughput is 4k, and you have 4 partitions. Each get 500 writes, but fourth get 2k. Although totally you have 4k, but because they are not evenly distribute you got throttle on fourth partition).
-* Adaptive Capacity - in case you got some hot partitions, DynamoDB try to rebalance your data, so it would be evenly stored across all partitions.
-Main reason to use NoSql against relation db is that you can scale horizontally.
-With relational db the scale is vertical (add more compute/memory to single node). If you try to scale horizontally relational db you have to use 2PC (2 phase commit protocol - distributed algorithm that support atomic transaction between 2 nodes) to support transaction atomicity.
-Simplified 2 phase commit is:
-* TC (transaction coordinator) sends commit requests to 2 nodes
-* both nodes decided can they execute commit or not and send results (yes/no) back to TC
-* if both answered yes, TC send request to execute commit
-As you guessed the problem is the more nodes you add the slower is communication to decide should they all run transaction.
-So the good solution is to use db that doesn't adhere to these guidelines (transactionless db or NoSql).
-There are 4 types of NoSql db:
-* key-value (DynamoDB)
-* document (DynamoDB/documentDB)
-* columnar (RedShift)
-* graph (Neptune)
-Since DynamoDb is multi-AZ by default there is no automatic backup (like rds have), but you can use on-demand backup/restore logic.
-DynamoDb just like s3 is not in vpc, so you can either:
-* access it from internet using some url
-* access it from private subnet using vpc gateway endpoint
-Although dynamoDb is proprietary solution with closed source code there are 2 options for local dev (don't use them in production, cause it only for dev purposes, api is the same, but underlying design is different, they not suitable for prod highload):
-* download aws version for developers
-* use it from localstack
-GSI (Global Secondary Index) - special read-only table created by dynamoDb to simplify search for indexed fields. Index speeds up search but require more memory to store itself. You should configure separate read/write capacity for this.
-It's a way to have DynamoDB replicate the data in your table into a new structure using a different primary key schema. This makes it easy to support additional access patterns
-LSI (Local Secondary Index) - same partition as primary key, but different sort key. You can create up to 5 LSI per table. It uses same RCU as base table (comparing to GSI for which you create separate read capacity)
-LSI Projection - you can choose which attributes add to index, but every LSI should have:
-* partition key of base table
-* sortKey of one attribute (should be scalar value)
-* sortKey from base table as attribute value
-* any other attribute from base table
-As you see by default you may choose not to add any additional attributes, cause you already have sortKey from base table. So you can make a query against LSI, it would fetch partitionKey+sortKey from base table
-and return data from base table. But if you want low-latency access for specific attributes, it's better to directly put these attributes into LSI
-GSI/LSI projection - for both index you can set which attributes to include:
-* KEYS_ONLY - only partition key + sort key (this is minimal you can't create gsi without these 2 keys)
-* INCLUDE - KEYS_ONLY + any other non-key attributes that you specify
-* ALL - include all attributes from original table
-Scanning - like `select * from` operation in RDS, just go over all records. Max size is 1MB, if table size above this then `LastEvaluatedKey` returned with last scanned item. For next scan you should supply this value as `ExclusiveStartKey`.
-So you can create `while loop` in java code where first time you pass `ExclusiveStartKey=null` and each subsequent step you will pass `ExclusiveStartKey=LastEvaluatedKey`.
-DynamoDb just like s3 is eventual consistent, so if you update data and read it right away you can get old value (cause items are persisted on multiple machines, and depending from what machine you read you can get stale data).
-You can disable eventual consistency by setting `ConsistentRead: true`. In this case `getItem/query/scan` operations would always return correct value, but reads would take longer time.
-To read data of size:
-* less than 4KB - 1 SCR (strongly consistent read)
-* more than 4KB - 2 SCR
-* eventually consistent read takes half the capacity of a SCR 
-Throughput is of 2 types:
-* read (`ReadCapacityUnits: 5`) - 5 SCR per second (if you have more then dynamoDb will throttle them, if you have too much they would be just rejected)
-* write (`WriteCapacityUnits: 5`) - 5 writes per second 
-You can increase throughput as much as you want but decrease up to 9 times per day. It's the only db that grow/shrink based on load.
-DynamoDB Streams - captures a time-ordered sequence of item-level changes in a DynamoDB table and durably stores the information for up to 24 hours.
-AWS maintains separate endpoints for DynamoDB and DynamoDB Streams. Streams can be enabled or disabled for an Amazon DynamoDB table.
-Stream records are organized into groups, also referred to as shards. With streams you can:
-* build transactional system (based on `insert/update/delete` records from one table do some operation in another)
-* log/audit/aggregate data
-* replicate data to another regions for query purpose using [cross-region replication Library](https://github.com/awslabs/dynamodb-cross-region-library)
-If you need search capabilities you can use Streams + lambda + ElasticSearch. When new record is added, streams would fire a lambda, which would add a record + index to elasticSearch.
-Plz note that you should use global tables for cross-region replication. Don't use this library.
-* update elasticache (so your cache would be always updated to latest state of db)
-* in case your app need to know about all updates
-Cache problems:
-* invalidation - how you guarantee that once db write happens, you update cache
-* race condition - if 2 thread update db and update cache they may update db & cache in different order (in db you would have value from thread 1 and in cache from thread 2)
-* cold start - if you reboot your server, now every request is cache miss (you have to request db)
-So dynamoDB streams nicely solve these 3 problems. Kafka also use this concept of streams inside for replication data across nodes.
-Notice that relational db also has kind of streams internally for replication/indexing(when you add data your index automatically rebuilt), it just doesn't expose this stream as api.
-Cold start can be solved if you have stream, you just go to the beginning and read all items sequentially & concurrently.
-Streams are also useful if you want:
-* analytics - user add 2 items to a cart and then remove - final state hasn't changed, but for analytics it may be useful
-* point-in-time query
-DAX (DynamoDB Accelerator) - in-memory cache for dynamoDb, can expedite up to 10 times. The benefit is that you don't have to modify source code, you just enable cache and it works.
-Global Tables (cross-region replication) - multi-region/master db that automatically replicates across multiple regions. It's multiple replica tables (one per region) that DynamoDB treats as a single unit.
-When app write data to replica table in one region, dynamoDb propagate changes to all regions, so if one region would be unavailable your app continue to work normally.
-Multi-master replication ensures that updates propagate to all regions and that data eventually consistent.
-Don't confuse (2 billing options):
-* provisioned capacity - you can separate capacity for read & write. You can also set AutoScaling (again separately for read & write) to add more capacity when number or read/writes goes beyond certain point
-* on-demand read/write capacity - you can set elastic capacity based on your load for read & write. You can't set it only for read and for write provisioned or vice versa. Indexes also using on-demand capacity, so you don't have to specify it.
-So you can say that there are 3 modes: provisioned/AutoScaling/on-demand. If you don't know the load use on-demand. If you know the load, and have pattern (like 25% increase during weekdays) use provisioned + autoScaling capacity.
-AutoScaling - ability to change write/read throughput according to current load:
-* you can set write/read throughput, but it's hard to predict exact values in advance, moreover your load maybe changing
-* automatically applied to table/GSI created from console
-* you can create scaling policy with target utilization (percentage of consumed provisioned throughput at a point in time)
-* App Auto Scaling - uses tracking policy to adjust write/read capacity
-So if you have write problems with db you should:
-* RDS - add SQS queue in front of db to throttle write requests
-* dynamoDB - use auto scale to scale accordingly to load
-If you have read problems:
-* RDS - add elasticache, add sharding (it would actually help in both read and write)
-* dynamoDB - DAX, auto scale
-Transaction - you can use `TransactWriteItems/TransactGetItems` to run up to 25 PutItem/UpdateItem/DeleteItem/GetItem operations. During transaction, items not blocked, dynamoDB supports only serializable isolation level.
-There are batch operations like `BatchGetItem` (read up to 100 items at once) and `BatchWriteItem` (write up to 25 items at once). There are 2 difference between transact and batch api:
-* for transact you pay twice
-* for transact either all success or all rollbacked, for batch some may succeed, some may fail. So for batch is up to you to handle errors.
-Transaction Idempotency - you can supply `ClientRequestToken` with `TransactWriteItem`, so dynamoDB would handle this request as idempotent.
-If item modified outside of running tx, tx is cancelled & exception is thrown. Tx available only within region, and not supported for global tables.
-In tx you are priced twice for each read/write, cause dynamoDB call 2 times read/write, first - to prepare tx, second - to commit tx.
-Limitations - dynamoDB won’t let you write a query that won’t scale, that's why it has some limitations, but they all make sense:
-* max result in single Query/Scan operation shouldn't exceed 1MB. So if your query has more than 1MB output, dynamoDB returns `LastEvaluatedKey`
-* it doesn't support aggregation query (min/max/avg). If you need this you should manage it on app level, when you write queries
-`FilterExpression` - allows you to further filter query response. But keep in mind, since dynamoDB max return 1MB, you can't just issue filter on whole table and expect result, just like with sql.
-If you have 1GB of data, and only 20 rows out of whole table can be filtered with such query, you have to run 1000 queries, and accumulate all rows into list.
-So first query may return 0 rows, cause it just fetch first 1MB of data, then apply your filter, and nothing was returned, cause there were no items within this 1MB that falls under filter expression.
-So you have to plan in advance you db usage pattern, in case you need filter on price, add it as sort key, or local index, or GSI.
-Single-table design - NoSql design pattern where you put all your database into single table. The main reason for using a single table in dynamoDB is to retrieve multiple, heterogeneous item types using a single request
-For example you can store users/profile/orders in single table. UserId - would be primary key, profile/orders - would be sort key. There are 2 downsides of such design:
-* there is no way to add new access pattern (for example if you want to get all orders above 100$, you will need to redesign your table)
-* no easy way to export data fro analytics (dynamoDB is OLTP, designed to handle unlimited number of small transactions)
-Multiple table approach:
-* if you have table that actively queried during one day and then no more you have to re-create table every day
-* time series - if you know that during first day you query a lot, second - not much, and third - very little - create new table for each day, and for older table modify WCU/RCU to set it to minimum value
-Max item size:
-* max size of item is 400 KB (size of both keys+values, cause for each item we store all keys in a row)
-* if you need more space you can have multiple items per key (use sorted key) or compress (GZIP/LZO using `java.util.zip.GZIPInputStream` and store item as binary) or load data into s3 and store s3 link inside item
-DynamoDB vs s3:
-* if you need low-latency and you data size less then 400KB use dynamoDB, cause on average it faster
-* if your data is more then 400KB, or latency is no issue, you can store data in s3
-Point-in-time recovery - dynamoDB will maintain incremental backup for last 35 days, and in case of accidental write/delete you can recover your db to any point.
-With this you can restore table to any selected date and time (day:hour:minute:second) to a new table. All table settings restored from table at that time (if your WCU is 50, but 2 weeks ago was 500, if you restore table from that time, now your WCU would be 500)
-Cross-region restore - you can recover point-in-time table to another region.
-Security:
-* data-in-rest encryption supported for both dynamoDB & DAX
-* data-in-transit encryption supported by HTTPS protocol. You can enable vpc endpoint to access dynamoDB from inside VPC only
-There is no concept of database in dynamoDB, you just create tables and work with them (usually 1 table per whole application). Table name should be unique within single region (you can have 2 table with same name in different regions).
-
-###### RedShift
-Database vs Data Warehouse:
-* relational db (single source) - OLTP (Online Transaction Processing) - store current transactions and quick access to them
-* warehouse (multiple sources) - OLAP (Online Analytical Processing) - store large quantities of historical data
-Redshift support both:
-* ODBC (Open Database Connectivity) - introduced by Microsoft in 1992, platform dependent - only for windows, procedural as most of the code in C/C++
-* JDBC (Java Database Connectivity) - introduced by SUN in 1997, platform-independent, purely object-oriented driver
-RedShift - relational (based on industry-standard PostgreSQL) data warehouse, fully-managed, petabyte-scale, massively parallel. You can create cluster with minimum 1 node & 160GB storage.
-It delivers fast query and I/O performance for virtually any size dataset by using columnar storage technology while parallelizing and distributing queries across multiple nodes.
-It's fully transactional but implements only serializable isolation level (just like dynamoDB). So if you have big workflow that do lot's of modification, wrap it into transaction, cause otherwise redshift will use new transaction for every change.
-Columnar storage more faster for aggregation operations. If you need to do sum/average in row storage you have to scan all pages to get result, it's a lot of IO, but with columnar you get single IO to get whole column.
-Zone maps - in-memory data structures that store column's min/max value, so when you make query, it checks can data possibly be in this block, if not block is not scanned.
-Column data persisted to 1MB immutable blocks. Data sorting used to optimize zone maps, columns that you use for filtering should have low cardinality. 
-So if you have column with high cardinality (timestamp with millisec) there is no point to add such column to sort key, it won't improve performance.
-Redshift only supports Single-AZ deployments. It uses MPP (Massively Parallel Processing) by automatically distribute data/query load across all nodes.
-Single-node can be used to quickly set up cluster and grow later. Multi-node cluster requires leader (who gets client connection and queries) 1 or more compute nodes (execute query in parallel).
-Compute node consists of node slices (depending on type of node there can be 2/16/32 slices within single node), they are kind of virtual compute node, and these slices actually do computational work.
-WLM (Workload Management) - queue to prioritize queries. Each query assigned to queue, and based on queue priority - executed (for example fast-running queries would be run before long-running queries)
-SQA (Short query acceleration) - when query in queue, redshift determine that this query will run short time, and put it into beginning of queue, so it would be executed first.
-Concurrency Scaling - if turned on, add transient cluster (take incremental snapshot to s3 and spin new cluster form it in seconds, we can take incremental cause backup automatically enabled so we already have full snapshot) when queues are full.
-For every 24 hours of running cluster you accrue 1 hour of free transient cluster.
-Just like rds, RedShift supports snapshots (both automatic and manual). Internally each node using ebs to store data, but you can create s3 backups.
-Cross-Region Snapshot - automated or manual copy of data into another aws region. If you created encrypted db (select KMS encryption when you create cluster), you can't transfer keys between regions (KMS bound to region where it was created).
-In this case you have to configure snapshot copy grant - redshift would create snapshot, decrypt it, then copy to another region and encrypt it with KMS key from that region.
-For encryption it uses four-tier hierarchy of encryption keys. These keys are: master/cluster/database/data encryption keys
-Redshift Spectrum - allows you to query data in s3, it's serverless just like Athena, so you pay for resources you consume.
-So it basically allows you to separate storage & compute. You can also use it to insert data into redshift from s3. It different from Athena, cause it allows you to join current redshift tables with data from s3.
-Under the hood there is a fleet of thousands Redshift Spectrum nodes spread across multiple AZ. Query is submitted to leader node of your Redshift cluster, which optimize/compile/push the query to the compute nodes.
-Compute nodes submit requests to redshift spectrum, spectrum create thousands of ec2 and query data from s3 and return it back to cluster. So with spectrum you can store frequently access data in redshift and IA data in s3 and create join of these 2 datasets.
-Distribution style (`DISTSTYLE` - primary goal in selecting it, to evenly distribute the data throughout the cluster for parallel processing) - when you load data into table, redshift distributes the rows to each of the compute nodes:
-* AUTO - start with ALL style, if table grows beyond certain limit, switch to EVEN.
-* ALL - copy of the entire table is distributed to every node. It is for small tables, less than 3million records.
-* EVEN - leader node distributes the rows across the slices in a round-robin fashion. Use it when a table does not participate in joins or when there is not a clear choice between KEY/ALL distribution
-* KEY - rows are distributed according to the values in one column (this column must be defined as a `DISTKEY`), leader node places matching values on the same node slice. This similar to partitionKey in dynamoDB.
-Key is good if you have some foreign key (like departmentId in employee table) and so all employees for particular department would be stored in single slice.
-Enhanced VPC routing - forces `COPY/UNLOAD` traffic between your cluster and your data repositories through your VPC. These allows you to use:
-* all features of vpc
-* vpc flow logs for `COPY/UNLOAD` commands
-* vpc endpoint (route traffic between s3 & redshift)
-Plz note there is no such command as `load` only `COPY` to load data into redshift and `UNLOAD` to read data from redshift.
-Migration:
-* lift-and-shift - is a bad practice cause performance depends on distkey/sortkey/dataCompression and when you just move you current warehouse without redesigning tables you won't get query performance.
-* best practice - to denormalize data if you migrate from heavily normalized database.
-Table design important upfront, cause for mysql/aurora you can create table and when you query pattern changes you just add index, but there is no indexes in redshift
-Changing `distkey/sortkey` will require table rebuilding. Primary/Foreign/Unique keys are not enforced, so you can add duplicating entry into primary key, yet some query patterns can benefit from these constraints, so if you can enforce them from your app it's better to do so.
-You can insert data by single/bulk insert - bad practice cause you will use leader node for this. So you can use `copy` command to load data directly into slices.
-`COPY` - load data into redshift, best performance when you specify source as s3 bucket, automatically compress data before insertion. Best practice to use as many input files as slices in the cluster (if you use single file - single slice would copy all other would sit idle)
-Optimal file size 1MB-1GB. If file size too small - lots of time is overhead to request file from s3, if too large - then you may get 99% uploaded and then failed.
-Managed Storage (`RA3` compute type) - decouple storage & compute, each node can support up to 64TB compressed storage. RA3 - redshift analytics + S3. DC2 - dense compute. DS2 - dense storage, now outdated.
-Compression applied independently for each column (totally 13 types of compression), we able to do this because redshift - columnar storage.
-AZ64 - aws own compression encoding algorithm designed with high compression value and improved query processing. For int/date - use AZ64, char/varchar - LZO/ZSTD.
-Deduplication/Upsert (update + insert):
-* use `copy` to load data into staging table from s3
-* remove duplicates from prod table
-* insert data from staging table into prod table
-```
-BEGIN; # start transaction, cause it's batch of operations
-CREATE TEMP TABLE staging(LIKE prod); # copy distkey/sortkey from prod table
-COPY staging from s3://bucket/data.csv COMPUPDATE OFF; # disable compression to speed up insertion
-DELETE from prod p USING staging s on p.user_id=s.user_id;
-INSET INTO prod SELECT * FROM staging;
-COMMIT; 
-```
-For large copy (billions of records) use `ALTER TABLE APPEND` instead of `INSERT INTO SELECT`
-`VACCUM` do 2 things:
-* remove deleted records (when we delete records they are marked for deletion, but actual removal happens later)
-* globally sort tables
-
-###### QuickSight
-QuickSight - BI (business intelligence) tool, for building visualizations, perform ad-hoc analysis (can connect to all aws data sources).
-It's used inside aws infra, so it's for internal users only (not for external). You can load data form s3/athena/rds/redshift/dynamoDB.
 
 ###### EC2
 EC2 (Elastic Compute Cloud) - web service that provides resizable (you can stop instance, change its type and start it with new capacity) compute capacity
@@ -3015,23 +3460,6 @@ There are 3 services to configure Windows instance (not linux):
     * execute passed Userdata
 * Ec2Launch (replaced Ec2Config)
 * Ec2Launch v2 (replaced Ec2Launch)
-
-###### Athena
-Athena is an interactive query service that makes it easy to analyze data in Amazon S3 using standard SQL. It uses presto under the hood. Presto - good solution if you need to connect to multiple data sources.
-You don’t need to load your data into Athena, as it works directly with data stored in S3. It integrates with Amazon QuickSight for easy visualization. It uses managed data catalog (aws glue - ETL tool) to store tables you create from s3.
-AntiPattern:
-* Enterprise Reporting and Business Intelligence (for enterprise level it's better to use RedShift, query engine in Redshift has been optimized to perform especially well on data warehouse workloads)
-* ETL Workloads (for etl you should use EMR/Glue)
-Be careful cause each time you run query athena scan your s3, so each query would cost some money.
-There are 3 types of aws services:
-* ec2 - you manage your server (like install mysql there)
-* managed server - aws manages server for yourself (like rds, you just tell how big server you want, aws provision it)
-* serverless/clusterless - aws hides away server from you (athena - you just write query and don't care how many servers would be needed to execute it)
-Because you pay for each query based on the amount of scanned data, you can reduce costs by:
-* data partition - reduce amount of scanned data for each query. Athena uses hive for partitioning. You can partition by any key, good practice to partition based on date/location.
-You specify partition in WHERE clause, so athena scan only this single partition instead of whole bucket. It can also help avoid errors, cause if data not partitioned and you run query against whole bucket you may get exceptions.
-* use workgroups - you can separate users/apps and set limits on amount of data each query or the entire workgroup can process, and to track costs. Use iam policy to control access to it.
-launch more like this - settings from aws console that allows you to launch same ec2 in the same AZ (it just copy all params like type/vpc/subnet/SG/storage and prepopulate wizard with this params, you can just create same ec2 or change some params in wizard and create different ec2).
 
 ###### Organizations
 Org - service that allows to link several accounts to master account and centrally manage them (billing, services, policies), so it basically collection of AWS accounts that you can organize into a hierarchy and manage centrally.
@@ -3795,225 +4223,6 @@ Simple AD dns resolving (you can set-up on-premise-to-vpc connection using AD + 
 * you can use it to forward dns request from on-premise to vpc dns server, and from any ec2 to on-premise dns server
 As you see you can use simple AD, unbound, route53 resolver to resolve dns between on-premise & vpc.
 
-###### RDS
-RDS (Relational Database Service) - managed service, that make it easy install/operate relational database in the cloud. It helps easily scale compute resources or storage associated with your db, simplifies replication.
-if you want to import data you have to:
-* dump data to you local machine
-* copy dump to some ec2/s3 in same vpc
-* pump data into rds from ec2/s3
-There are 2 ways to backup:
-* automatic backup - snapshots takes by RDS daily, retained for limited period (by default 7 days). First snapshot contains full db instance, subsequent - incremental taking only what has been changed.
-Volume snapshot - take daily during backup window + store transaction logs every 5 min - this allow for point-in-time recovery. If you disable automatic backup and then re-enable it, you will be able to recover point-in-time starting from the time when you re-enable automatic backup
-* manual backup - full snapshot taken by user at any time manually (recover to the time when snapshot was taken).
-multi-AZ (failover) for HA:
-* primary - you main db that performs read/write
-* standby - replica db that has most recent updates from primary. You can't use it for reads, the only purpose is failover - when primary fails, your standby becomes primary, so you won't even notice failure. Replication is synchronous.
-You have no control for standby, so you can't promote it to be read replica. Yet if you reboot rds, you can choose option to restart rds in new AZ.
-Since Aurora stores data across 3 AZ, if master is failed, it would automatically recreated in another AZ, so for aurora you don't need to set up stand-by replica.
-Read replica (only for reading) for horizontal scaling:
-* write to master and read from replica
-* can be cross-AZ and cross-region
-* implemented using db (mysql or other) native asynchronous replication, that's why lag can occur, comparing with multi-AZ replication (synchronous replication)
-* can be promoted to become master database.
-There are 3 ways to establish read-replica:
-* rds native read-replica
-* ec2 read replica - use `mysqldump` to make initial transfer
-* on-premise read replica - use `mysqldump` to make initial transfer and create VPN connection, so data transfer is secured
-Although [mysql supports replication over ssl](https://www.howtoforge.com/how-to-set-up-mysql-database-replication-with-ssl-encryption-on-centos-5.4), 
-[rds doesn't support this yet](https://serverfault.com/questions/816863/aws-rds-mysql-replication-with-user-with-require-ssl) so make sure if you replicate outside vpc to secure connection.
-Although you can use read replica for HA, it's recommended to use multi-AZ, cause it's synchronous and would guarantee that in case of fail, db in another AZ is most up-to-date (with read replica you can get some lag, and ended up with stale data when promoting it to master).
-Enhanced monitoring - allows you to view all metrics with 1 sec granularity. Get current database `SELECT DATABASE() FROM DUAL;`.
-RDS Proxy - database proxy that helps:
-* pooling & sharing db connections (useful for serverless, when you constantly open and close connections)
-* reduce db failover time for 66%
-* enforce IAM access to db
-There are 3 types of groups:
-* Subnet group - a list of VPC subnets (you should have at least 2 subnets in 2 different AZ) where rds would create your db.
-* PG (Parameter Group) - a list of db config values (db engine configuraton) that can be applied to 1 or many rds instances (for example you can increase a number of connections to rds here). 
-You can't modify default PG (that would be created when you create db instance). If you want custom params add them to new pg and associate it with db.
-When you change dynamic param, change applied immediately, when you change static param - it would be applied after you manually reboot rds.
-* OG (Option group) - a list of features that are available for db instance. By default empty OG is assigned when you create db, you can't modify it (add options into it), but you can create new OG - add options, and assign it to db.
-    There are 2 types of options:
-    * persistent - can't be removed from an OG while DB instances are associated with this OG
-    * permanent - can never be removed from OG
-    mysql options (only 2):
-    * MariaDB Audit Plugin - records db activity like users logging or queries
-    * MySQL memcached - enables apps to use InnoDB tables in a manner similar to NoSQL key-value data stores
-    oracle options (many):
-    * S3_INTEGRATION - required if you want your oracle rds to read/write data from s3 + you need IAM role. So as you see just adding IAM role is not enough, you need to add this option.
-You can set encryption only on creating, once created you can set it to use encryption, also if you created encrypted you can disable it.
-So if you create unencrypted db and want to turn on encryption you have to take snapshot encrypt it and create new encrypted db from it, then remove old db.
-If encryption is enabled you can't disable it after db creation, yet you can create unencrypted db. Same holds true for read replica. For encrypted db only encrypted read replica is possible (there is no way to have encrypted read-replica for unencrypted db or vice versa).
-Not all ec2 types [support encryption](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Overview.Encryption.html#Overview.Encryption.Availability)
-IAM db auth - you can add db user and use iam user to authenticate to your db. You still have your initial username/password and can use them to access db, but you can also use temporary tokens 
-generated by `aws rds generate-db-auth-token` command to get token and to access your db using this token (token would be valid for 15 min).
-On-premise to rds data migration:
-* copy dump to s3 and from s3 import into rds (you can also use ec2, but create new ec2 for this purpose in to wise, yet this would work: copy dump to ec2 within same vpc as rds, go to ec2, connect from there to rds, and pump data into rds)
-* use DMS for more complex scenario
-If you have problems with writes and need more capacity you have 3 options:
-* use sqs queue to offload writes, if you need to continue to use your current db
-* switch to dynamoDB (if you don't need relational model)
-* use sharding (horizontal partitioning/scaling) - split data into smaller subsets and distribute them across a number of physically separated db servers (shards).
-You can take a look here [mysql sharding example](https://github.com/dgaydukov/cert-spring5/blob/master/files/spring5.md#mysql-sharding) with java/spring.
-Share-nothing model - each shard has same hardware and db engine configuration, but they don't know about each other. So there is no single point of failure, if one shard is down, no other shards affected.
-Disadvantage - because data now separated between shards, you have to re-design your query approach. Because of this sharding is not best solution for OLAP.
-So each shard represented as separate RDS with multi-AZ failover and/or read replica. To distribute data across different shards you can use list/range/hash partitioning.
-Single table can also be partitioned by some key. Each shard contains table with partitions, app read this table from each shard and then app build mapping/routing logic in app layer like if productId in 1-100 - use shard1, otherwise use shard2.
-ReSharding - adding more shards or splitting one shards into multiple in case of scale-out or merging several shards into one in case of scale-in.
-Scale-out is pretty simple with RDS, you just create read replica, promote it to standalone db and then use 2 databases as 2 shards (since Aurora read replica use same storage you have to clone database to achieve the same).
-If you think that sharding is looks like NoSql you are right, and if you got limit with relational db and using shards, it may be the better option to use NoSql, cause with sharding you have to modify your source code to support multiple db.
-Storage autoscaling - when you create db you can enable it. Once enabled it would automatically add more storage capacity when free space would be less than 10%. It would be incremented in chunks of 5GB each, until it reach max auto scale capacity.
-`IS NULL / IS NOT NULL` - use it when you want to check if column null or not null. Comparison operators like `<>` or `!=` won't work when you compare with null, cause null is absence of value.
-In SQL, anything you evaluate/compute with `NULL` results into `UNKNOWN`, that's why if you are using `select * from my_column != null` you will get 0 results, although you have many rows where `my_column` not null.
-Don't confuse (they both solve same problem but for different purposes):
-* read replica - when your data constantly changing
-* elasticache - since it's a cache if data constantly changing you have to constantly clear the cache - which basically remove advantages of cache
-Security group:
-* `AWS::EC2::SecurityGroup` - use if your rds resides inside vpc
-* `AWS::RDS::DBSecurityGroup` - use if you are using old classic ec2 (without vpc)
-SSL connection (use `sa/cloudformation/rds-multi-az.yml` template to test it out):
-* by default ssl enabled in rds. Connect to rds and run:
-```
-MySQL [mydb]> SHOW VARIABLES LIKE '%ssl%';
-+---------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| Variable_name | Value                                                                                                                                                                                                                                                                                   |
-+---------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| have_openssl  | YES                                                                                                                                                                                                                                                                                     |
-| have_ssl      | YES                                                                                                                                                                                                                                                                                     |
-| ssl_ca        | /rdsdbdata/rds-metadata/ca-cert.pem                                                                                                                                                                                                                                                     |
-| ssl_capath    |                                                                                                                                                                                                                                                                                         |
-| ssl_cert      | /rdsdbdata/rds-metadata/server-cert.pem                                                                                                                                                                                                                                                 |
-| ssl_cipher    | ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-SHA256:ECDHE-RSA-AES256-SHA:ECDHE-RSA-AES128-SHA:AES256-GCM-SHA384:AES128-GCM-SHA256:AES256-SHA:AES128-SHA:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA:DHE-DSS-AES128-SHA:DHE-DSS-AES256-SHA |
-| ssl_crl       |                                                                                                                                                                                                                                                                                         |
-| ssl_crlpath   |                                                                                                                                                                                                                                                                                         |
-| ssl_fips_mode | OFF                                                                                                                                                                                                                                                                                     |
-| ssl_key       | /rdsdbdata/rds-metadata/server-key.pem                                                                                                                                                                                                                                                  |
-+---------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-10 rows in set (0.00 sec)
-```
-To see whether you session use ssl or not run `status` or `\s`
-```
-MySQL [mydb]> status
---------------
-mysql  Ver 15.1 Distrib 5.5.68-MariaDB, for Linux (x86_64) using readline 5.1
-
-Connection id:		    13
-Current database:	    mydb
-Current user:		    admin@10.100.1.222
-SSL:			        Not in use
-Current pager:		    stdout
-Using outfile:		    ''
-Using delimiter:	    ;
-Server:			        MySQL
-Server version:		    8.0.20 Source distribution
-Protocol version:	    10
-Connection:		        rm19odgxd4k3dhx.cmeydtld5sy2.us-east-1.rds.amazonaws.com via TCP/IP
-Server characterset:	utf8mb4
-Db     characterset:	utf8mb4
-Client characterset:	utf8
-Conn.  characterset:	utf8
-TCP port:		        3306
-Uptime:			        16 min 40 sec
-
-Threads: 3  Questions: 9688  Slow queries: 0  Opens: 278  Flush tables: 3  Open tables: 184  Queries per second avg: 9.688
-```
-As you see `SSL: Not in use`, that means our current connection is not using ssl.
-* In order to use ssl you ust download certificate and connect using cert
-```
-wget https://s3.amazonaws.com/rds-downloads/rds-ca-2019-root.pem
-mysql -u admin -p'admin123' -h {RDS_ENDPOINT} -D mydb --ssl-ca=rds-ca-2019-root.pem
-```
-After you connect if you run status again you will see
-```
-MySQL [mydb]> \s
---------------
-mysql  Ver 15.1 Distrib 5.5.68-MariaDB, for Linux (x86_64) using readline 5.1
-
-Connection id:		    23
-Current database:	    mydb
-Current user:		    admin@10.100.1.222
-SSL:			        Cipher in use is ECDHE-RSA-AES256-GCM-SHA384
-Current pager:		    stdout
-Using outfile:		    ''
-Using delimiter:	    ;
-Server:			        MySQL
-Server version:		    8.0.20 Source distribution
-Protocol version:	    10
-Connection:		        rm19odgxd4k3dhx.cmeydtld5sy2.us-east-1.rds.amazonaws.com via TCP/IP
-Server characterset:	utf8mb4
-Db     characterset:	utf8mb4
-Client characterset:	utf8
-Conn.  characterset:	utf8
-TCP port:		        3306
-Uptime:			        49 min 54 sec
-
-Threads: 3  Questions: 11063  Slow queries: 0  Opens: 279  Flush tables: 3  Open tables: 185  Queries per second avg: 3.695
-```
-Now you can see `SSL: Cipher in use is ECDHE-RSA-AES256-GCM-SHA384` that your connection using ssl.
-* You can require ssl for specific user:
-```
-# connect to db
-mysql -u admin -p'admin123' -h {RDS_ENDPOINT} -D mydb
-# create user with ssl required
-CREATE USER 'ssl_user'@'%' IDENTIFIED BY 'password' REQUIRE SSL;
-GRANT ALL PRIVILEGES ON mydb.* TO 'ssl_user'@'%';
-FLUSH PRIVILEGES;
-# try to connect without ssl, you will get: ERROR 1045 (28000): Access denied for user 'user3'@'10.100.1.222' (using password: YES)
-mysql -u ssl_user -p'password' -h {RDS_ENDPOINT} -D mydb --ssl-ca=rds-ca-2019-root.pem
-# now connect using ssl
-mysql -u ssl_user -p'password' -h {RDS_ENDPOINT} -D mydb --ssl-ca=rds-ca-2019-root.pem
-```
-IAM auth - you can access db not with username/password but by using iam permission (use `sa/cloudformation/rds-multi-az.yml` to test it out):
-* by default it disabled
-* you should explicitly enable it by setting `EnableIAMDatabaseAuthentication: true` in CF template (you can also enable it from cli)
-* it can only work over ssl (it won't work without secure connection)
-* You first create user then role with policy to this user:
-```
-# first create user
-CREATE USER mydbuser IDENTIFIED WITH AWSAuthenticationPlugin AS 'RDS';
-GRANT ALL PRIVILEGES ON mydb.* TO 'mydbuser'@'%';
-# get access token and connect
-TOKEN=$(aws rds generate-db-auth-token --hostname={RDS_ENDPOINT} --port=3306 --username=mydbuser --region=us-east-1)
-mysql -h {RDS_ENDPOINT} --user=mydbuser --password=$TOKEN --ssl-ca=rds-ca-2019-root.pem
-```
-If you want to build resource for role you should pass not rdsID, but `DbiResourceId`, so you can't use `Resource: !Sub arn:aws:rds-db:${AWS::Region}:${AWS::AccountId}:dbuser:${MultiAzMysqlDb}/mydbuser`.
-Below is example of fetching 2 of them. And there is no way to fetch resourceId from cf `AWS::RDS::DBInstance`, that's why we use `*`.
-```
-aws rds describe-db-instances --query "DBInstances[*].[DBInstanceIdentifier,DbiResourceId]"
-[
-    [
-        "rm19odgxd4k3dhx",
-        "db-K7WGNELFM45SMZJAJMDI7T4F2E"
-    ]
-]
-```
-Materialized view:
-* simple - just a wrapper on top of query
-* materiazlied - temporary table
-Oracle RAC (Real Application Cluster) - shared-everything db cluster technology from Oracle, allows single db (a set of data files) to be concurrently accessed by many db server instances.
-Currently RAC is not supported by RDS, but you can deploy it in ec2. In this case for backup you have to create a script to create/store ebs snapshots.
-[Aurora can be used as managed service instead of Oracle RAC](https://aws.amazon.com/blogs/database/amazon-aurora-as-an-alternative-to-oracle-rac)
-External replication (you can make both RDS & Aurora to replicate to external):
-* Aurora
-    * you can replicate aurora as source/target to external mysql db
-    * [aurora external replication](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/AuroraMySQL.Replication.MySQL.html)
-* rds (for MySql/MariaDB you can configure replication using binlog or GTID)
-    * rds mysql can have up to 5 read replicas (each read replica can also be a source for there read replica)
-    * read replica can't have engine version less than source db
-    * if you create read replica for MyISAM (no tx support) you should lock db (don't do any create/update/delete), run replication, wait until it's done and then work normally
-    * you can set up replication delay (for example to replicate all changes after 1 hour)
-    * [rds external replication](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/MySQL.Procedural.Importing.External.Repl.html)
-GTID (global transaction identifiers) - unique identifiers generated for committed MySQL transactions, mostly used to make binlog replication simpler and easier to troubleshoot.
-MyISAM vs InnoDB:
-* myisam: only full table-level locking, doesn't support tx
-* inndodb: both row-level & table-level locking, support transactions, foreign keys, relationship constraints
-RDS on VMware - manage private on-premise database with rds using rds connector (software appliance for VMware vSphere env)
-For both rds & rds on vmware you can create read replica but you should enable automatic backup (with retention period greater than 0).
-For rds on vmware you can create only 1 read replica and only in the same region. Rds on vmware support DX, but doesn't support aurora. You can also backup to s3 & create read replica in aws.
-If you need load balancing:
-* rds - use private hosted zone with multivalue answer. There is no way to add rds to ELB
-* db on ec2 - use ALB (in this case you can also add WAF to prevent sql injections)
-
 ###### SQS
 SQS (Simple Queue Service) - managed service that provide asynchronous decoupling and publisher/subscriber (queue) model. There are 2 types:
 * standard - ordering is not guaranteed, no limit to number of messages (you should implement custom protection against duplicates)
@@ -4392,54 +4601,6 @@ For eks:
 * you create fargate profile and declare which pods you want to run on fargate. If pod matches multiple profiles, eks selecte profile at random
 * fargate every pod is single ec2 with SG
 
-###### ElastiCache
-Managed service that runs Memcached/Redis server nodes in cloud. It automates common administrative tasks required to operate a distributed in-memory key-value environment, consists of:
-* node - smallest building block - network-attached RAM
-* shard (node group) - primary node and zero or more read-replicas
-* cluster (replication group) - group of shards
-Vertical scaling - you can't scale existing cluster, you should spin up new cluster and redirect traffic there.
-Memcached:
-* cluster consists of up to 20 nodes, keys are distributed across nodes. If one node failed, data is lost. So memcached is best if you have data in db and just need a cache layer, and losing cache is not critical.
-* stores objects as blobs, usually you put serialized result of db query
-* new cluster (vertical scaling) starts empty
-* since there is no replication, if node fails all data in it is lost. So you need to provision several nodes for HA and spread your data equally between nodes.
-* for HA you have to either deploy single cluster with 2 nodes in each AZ, or deploy 2 cluster with single node for each AZ
-Redis:
-* cluster consists of up to 15 shards (each shard is 1 primary and up to 5 replica nodes), so totally 15*6 = 90 nodes. So if you need data replication you should use redis. Replication is supported only by redis.
-* support persisting in-memory data to disk
-* supports blob/list/set/array as data types.
-* can also sort/rank data (used for leaderboard)
-* new cluster can be initialized from snapshot
-Redis security - when you create redis cluster you can enable 2 types of security (memcached doesn't support encryption):
-* encryption at-rest - you specify cmk to encrypt data while at rest
-* encryption in-transit - you specify Redis AUTH Token (16-128 chars) that you will use for every request to redis
-Caching strategies:
-* Lazy loading - populate cache on-demand (first hit - request data from db, all subsequent reads - take directly from cache).
-For this to work you should set TTL (time to live) to ensure that you always have latest data (so if you ttl - 1 month, data would be stored in cache for 1 month, although they have been updated in underlying db after 2 minutes).
-* Write through - whenever update happened you first update cache and then db (or first update dy and then async update of cache)
-Downside if cache is not big enough, when new data arrived, LRU (least recently used) data is evicted from cache
-Cache is implemented as key-value pair. So if you want to store leaderboard in cache you have to store sha256 of query as key and result of query as string value.
-With cluster you distribute load across nodes/shards(in case of redis), it also protection against failure. If you have one node and it failed, your cache is failed, but if you have cluster of 10 nodes, and one node is failed, only 10% of cache is failed.
-All redis calls are blocking & sequential, cause redis is [single-threaded](https://redis.io/topics/latency). There are 2 types of cli:
-* standard - you wait for every command
-* asynchronous - use callback modes, due to network issues, requests send after can received response first
-Redis cli (almost all calls are blocking) examples (to get url open cluster and get primary node endpoint, don't use cluster endpoint):
-```
-# send ping to verify connection
-redis-cli -h {REDIS_URL} ping
-# connect to redis
-redis-cli -h {REDIS_URL}
-SET mykey myvalue
-# store data with ttl of 5 seconds (after expired key would be null)
-SET mykey myvalue EX 5
-# get all available keys
-KEYS *
-```
-There are 3 types of redis cluster in cf:
-* `AWS::ElastiCache::CacheCluster` - create redis cluster with 1 node
-* `AWS::ElastiCache::ReplicationGroup` - create redis cluster with replication (you can still have only 1 primary node, but usually 1 primary and many replicas)
-* `AWS::ElastiCache::GlobalReplicationGroup` - global replication cluster (not supported, `An error occurred (ValidationError) when calling the UpdateStack operation: Template format error: Unrecognized resource types: [AWS::ElastiCache::GlobalReplicationGroup]`)
-
 ###### Systems Manager
 SM - tool that helps you to manage your aws resources and automate some tasks on them.
 SSM Agent - special software installed on ami (by default installed on most aws provided ami) with which SM can manage your ec2.
@@ -4462,47 +4623,6 @@ If you want to schedule, there are 2 options:
 * maintenance window - you define window for disruptive actions like patching, updating drivers. You can use it also for s3/sqs/kms
 Parameter Store - create secure string params and store plaintext key and encrypted value. Use symmetric KMS only.
 
-###### Aurora
-Aurora - mysql/postgres compatible (most app that works with mysql/postgres would switch with no problem to aurora) aws database solution. 
-Although MariaDB was designed to be compatible with MySql, you can't migrate it to Aurora.
-It's serverless - cause you can set-up min & max capacity and aurora would scale up/down based on load. You can also set up pause if aurora idle for specified time (like turn off if it's idle for more than 5 min). 
-It's ideal for saving money in dev env, but don't use it in prod, cause wake up can be up to 30 sec. You can also manually stop RDS.
-Yet some features of mysql/postgres are not supported in aurora (like MyISAM storage engine). It runs 5x faster than mysql and 3x faster than postgres. And cost 1/10 of similar solution.
-It replicates 6 copies of itself in at least 3 AZ (2 copies in each az) - so it's highly available. Backups and failover are done automatically. Self-healing storage - blocks are constantly checked and restored.
-You have 2 options to migrate to aurora:
-* use `mysqldump/pg_dump`, export data from mysql/postgres, and import it into aurora
-* use RDS DB Snapshot migration
-Min storage is 10GB, incrementing by 10GB up to 64TB.
-There are 2 types of replica:
-* aurora replica - aurora native same-region replica
-* mysql replica - cross-region replica based on mysql binlog
-Parallel Query - ability to distribute computational load across multiple instances.
-You can call lambda from function & stored procedures for MySql Aurora:
-* add iam role to allow db cluster to access lambda
-* configure cluster to allow outbound connections to Lambda. This depends on your network config:
-    * public cluster - it can access lambda through the internet - so no additional config required
-    * private cluster - you have to add NAT gateway or lambda vpc endpoint, so your cluster in private subnet can access lambda
-You can also use s3 form MySql Aurora and you have to configure access to s3 same way as for lambda.
-Backtracking - rewind db to specified time (acts like a backup, if you do some destructive operation you can rewind db to previous state):
-* target backtrack window - amount of time you want to be able to backtrack your DB cluster (you can set 24 hours - you can rewind db during whole day)
-* actual backtrack window - actual amount of time you can backtrack your DB cluster (if you set target to 24, but you have heavy load and there is no enough space to store all records, your actual backtrack time can be like 12h)
-Backtracking works by generating change log (called change records), and you pay hourly to store them.
-Aurora serverlsess:
-* internally it uses router fleet that supports continuous connections and distributes the workload among resources + warm resource pool that ready to be used
-* cheap version of aurora, pay only for what you use (aurora start up/down, scale up/down automatically base on your load).
-* for standard aurora you select instance type, with serverless you just select min & max ACU (aurora capacity unit) (2 - 64GB RAM), compute is scaling accordingly.
-* please note that both standard & serverless aurora support only MySql/Postgres. MariaDB (fork of MySql) is unsupported, there is separate RDS type for this.
-* cluster volume always encrypted (you can choose encryption key, but you can't disable encryption)
-* use cases: new apps, infrequently used apps, variable/unpredictable workloads, multi-tenant apps
-* accessible only from VPC (have no public IP). If you create lambda in same subnet as db you can access db from lambda
-* scaling point - time when aurora can start scaling, if not found within 5 min, value of `ForceApplyCapacityChange` timeout used. In this case if you have running transaction you can get error: `ERROR 1105 (HY000): The last transaction was aborted due to Seamless Scaling. Please retry.`
-* data api - special api to run query, use it outside vpc to access db
-* doesn't support: cloning, global database, multi-master cluster, replicas, iam db access, backtracking
-Aurora global:
-* spans multiple regions (one master region with both read/write and up to 5 replica regions with only read), enable low-latency global reads and disaster recovery
-* cross-region replication is fast, usually less than 1 sec
-* doesn't support: serverless, backtracking
-
 ###### Cloud9
 Cloud based IDE (integrated development environment) where you can run and execute your code. It basically a separate ec2 where you can install programs, write/build code, and work just like with your laptop.
 So it basically IDE + linux. AWS CLI is preconfigured there. It's free but you pay for compute & storage, ec2+ebs. You can also connect cloud9 to on-premises server, in this case it's free.
@@ -4516,41 +4636,6 @@ Don't confuse:
 * CodePipeline - running your own CI/CD pipeline with CodeBuild/CodeDeploy/CodeCommit
 * CodeStar - provisions all the necessary services required for a full development pipeline like CodePipeline/CodeBuild/CodeDeploy/CodeCommit
 Although you can create CF template with all ci/cd tools, it's better to use CodeStar for this purpose
-
-###### Rekognition
-Rekognition - managed service that allows you to add powerful visual analysis to your app:
-* image - you can search/verify millions of images quickly (detects objects/scene/faces, search & compare faces, recognize texts or celebrities)
-* video - you can extract motion pics from video/streams and analyse them (detect activity or inappropriate content, understand moving of people)
-Rekognition using deep learning algos to determine image/video patterns. It is pre-trained for image and video recognition tasks (so you don't have to be ML expert to use it).
-You can specify conditions (discard results with low confidence score) under which image would go for human moderation.
-Terminology:
-* label - object/concept found in image based on description (for example, human/face/sun and so on..)
-* confidence score - number 0-100 that indicates the probability that prediction is correct
-Use following api to detect:
-* `DetectFaces` - detects the 100 largest faces in the image, for each face returned: bounding box of face, confidence, presence of beard/sunglasses
-* `CompareFaces` - compare face from source image with 100 faces from target image (you have to pass 2 images). Return 2 arrays of matched/unmatched faces.
-You can set `SimilarityThreshold` (default 80%) to manage at what point face should be included into matching array.
-* `DetectLabels` - use it to detect objects(flower, tree)/events(wedding, birthday)/concepts(evening/nature)
-Return results like `[{Name: flower,Confidence: 99.0562},{Name: plant,Confidence: 99.0562}]`, as you see one thing can be different objects at the same time.
-You can set `MinConfidence` (default is 55%) to filter based on confidence. You can set `MaxLabels` to limit number of objects.
-If object is person, operation doesn't provide same level of facial details as `DetectFaces`.
-* `RecognizeCelebrities` - returns: 64 largest faces in image, celebrity name/ID/url links to additional info. You can use celebrityID in `GetCelebrityInfo` to get more info later.
-* `DetectText` - detect & convert text into machine-readable from image (can detect up to 50 words per image). Use `MinConfidence` (0.5-1) to set confidence level (text below this level won't be included into result).
-Note that for all detect calls `DetectFaces/CompareFaces/DetectLabels/RecognizeCelebrities` you must pass:
-* base64-encoded image bytes or reference to s3
-* if you call from cli, image bytes is not supported, image must be png/jpeg file (cause cli convert your image file into bytes)
-You can create/delete/list collections using `CreateCollection/DeleteCollection/DescribeCollection/ListCollections`. You can store faces in collection.
-For video processing you can use:
-* `StartFaceDetection/StartLabelDetection/StartCelebrityRecognition` - async operations that return jobId (when job is completed you would be notified by SNS). You have to pass video stored in s3.
-* `GetFaceDetection/GetLabelDetection/GetCelebrityDetection` - use jobId from above operation to get results
-real-time face recognition:
-* upload video to kinesis video using `PutMedia`
-* crete stream in rekognition using `CreateStreamProcessor` and provide 4 params:
-    * input - kinesis video stream
-    * output - kinesis data stream to store processed results (places separate json file for each analyzed frame). You can use KCL from ec2 (with asg) to read from stream and do some processing.
-    * settings - `CollectionId` where you store faces to compare and `FaceMatchThreshold` (default 80%)
-    * role-arn - role with permission to read/write from kinesis
-Once created it will start automatically monitor kinesis video stream and consume videos for face recognition. Once you finish processing you can call `StopStreamProcessor` to stop or delete with `DeleteStreamProcessor`.
 
 ###### Global Accelerator
 GA allows you to create 2 static anycast IP addresses and routing users to nearest server to them. You can create 2 ec2 from 2 regions and create GA for it. When user try to access it by IP he would be routed to the nearest region.
@@ -4746,55 +4831,6 @@ Decider is a program that controls the coordination of tasks (ordering/concurren
 * you must ensure that some tasks assigned only once, and tracked all the way down
 So of course you can reinvent the wheel, but it's better to use ready solutions like SWF.
 
-###### Data Pipeline
-DP - ETL tool that simplify data movement/processing in aws, integrates with on-premise and cloud-based storage systems.
-You can transfer data between RDS/S3/EMR/DynamoDB. Pipeline - runs activities (common tasks) on data nodes. Data node - location where pipeline reads data or where it writes data.
-Example of Activity (work to be done), you can schedule time when to run, like once a day:
-* export of dynamoDB to s3 & export from s3 to dynamoDB (DP would launch transient EMR cluster on each run to execute export)
-* just run transient EMR cluster
-* rds to s3 export, s3 to rds export, rds to redshift (`RedshiftCopyActivity`), s3 to redshift (DP would launch ec2 on each run to execute export)
-Don't confuse:
-* data pipeline - for automated batch jobs, without human interaction (like run bash script every day at 12)
-* step functions or SWF - when you need human interaction
-
-###### ElasticSearch & CloudSearch
-ES - open source search service, it's usually a part of ELK stack. You store data on ebs that attached to ES nodes.
-CS - search service like ElasticSearch, but aws proprietary development. With CS you can search txt/json/pdf/html/cvs/xls documents (so you can use it to search for scanned pdf documents too).
-You should store your data in s3 and then use CS to search this textual data. CS can use s3/DynamoDB, ES - only ebs.
-ES has 2 types of nodes:
-* data nodes - nodes that upload data to ebs and search data
-* master nodes - increase cluster stability by performing cluster management tasks. For prod you should use 3 master nodes.
-ELK stack consists of 3 parts:
-* ElasticSearch - log searching
-* LogStash - log collection from ec2 to ElasticSearch cluster
-* Kibana - data visualization tool (visualize data from ElasticSearch)
-Fluentd vs LogStash:
-* has internal in-memory system, so no need for additional tools like redis / internal queue limited to 20 events, so it needs redis to work normally
-* uses standard built-in parsers (JSON, regex, csv) / use external plugins to parse log
-* Logs are directly shipped from STDOUT without requiring an extra log file / need extra plugin to extract logs from docker
-* for kuber it's better to use Fluentd, due to its built-in Docker logging driver and parser
-
-###### SageMaker
-It's managed service, running JN, that provides ability to build, train, and deploy ML models quickly. SageMaker has 15 built-in ML algorithms, but you can also use your own.
-JN (Jupyter Notebook) - interactive computing environment, single document where you can run code, display the output, and also add explanations, formulas, charts.
-
-###### Lake Formation
-DL (Data Lake) - scalable central repository of large quantities and varieties of data, both structured and unstructured. There are 2 steps:
-* ingesting and cataloging data from a variety of sources
-* data is enriched, combined, and cleaned before analysis
-You can use dms to convert db into s3 and replace read replica with data lake. You can also export RDS snapshot into s3 in parquet format. But if you have many updates you should use Redshift/Hive
-LF (Lake Formation) - integrated data lake service where you ingest/clean/catalog/transform/secure your data and make it available for analysis and ML.
-LF provides you single console to ingest you data and then use other aws services like ML/EMR/RedShift to transform and query your data.
-FindMatches ML Transform - solves 2 problems:
-* Data Deduplication - identify conceptually the same data using fuzzy logic (it's easy remove duplicates when you have some key like productSKU, but if not you should employ some logic to do this)
-* Record Linkage - join 2 databases using fuzzy join (again it's easy to join by some key, but if you don't have such a key you should employ some logic to do this)
-LF discover all available sources s3/RDS/on-premise db/CloudTrail, ingest it and transform into s3 in data formats for optimized performance and cost.
-LF also manages granular access to your s3 bucket, and can give access to it to all other data analytics services (so you have central place to manage all access).
-Hadoop Data Formats:
-* Avro - row-based data format, data schema is stored as JSON.
-* ORC - columnar data format highly optimized for reading, writing, and processing data in Hive. Files are made of stripes of data where each stripe contains index, row data, and footer.
-* Parquet - columnar data format, files consist of row groups, header, and footer. Specialized in efficiently storing and processing nested data types.
-
 ###### Application Discovery Service
 ADS collects and presents data about running apps and help understand the configuration, usage, and behavior of them for migration purposes. 
 With data collected by this service you can perform a TCO (Total Cost of Ownership) and calculate is it reasonable to migrate to cloud.
@@ -4927,25 +4963,6 @@ End users have simple portal where they can discover allowed services (products)
 Portfolio - collection of products. Product - cloudFormation template with a list of aws resources. Users then can launch any product in portfolio. 
 You can share portfolio with other aws accounts. By using cloudFormation params you can customize user experience (for example end users can choose what type of ec2 instance to run).
 
-###### Neptune
-Fully-managed graph database (not relational) service optimized for storing billions of relationships and querying the graph with milliseconds latency:
-* ACID compliant with immediate consistency
-* uses operational technology (lifecycle management, encryption-at-rest with KMS) shared with RDS
-* replicates all data 6 times across 3 AZ (neptune divide your storage on 10GB chunk and replicate each chunk 6 times).
-* runs inside vpc so you can use NACL/SG to secure neptune instance
-Automated backups enabled by default. You can take manual snapshot any time. You can restore snapshot only into new database. You can also share snapshot with other aws accounts.
-It's best suited for: recommendation engines, fraud detection, knowledge graphs. Supports 2 types of graph (you can use both types of query language at the same time):
-* Property Graph - which use Apache TinkerPop Gremlin graph traversal language - neptune provides Gremlin Websocket Server
-* RDF (Resource Description Framework) - which use SPARQL (declarative query language, looks like sql) neptune provides SPARQL 1.1 Protocol REST endpoint
-Gremlin - imperative/declarative graph traversal language. TinkerPop/Gremlin to graph db - the same as jdbc/sql for relational db. 
-Cluster - one or more db instances + cluster volume. Made up of 2 types of instances:
-* primary - support read/write, does all data modification in cluster volume
-* replica - connected to the same volume and does only read operations. Neptune uses Multi-AZ, so in fail, read replica would be promoted to primary.
-There is always 1 master and up to 15 read replica (yet you can read from master too). Each instance using the same storage but evaluate query independently.
-Replication lag is < 10ms. Automatic Failover time = 60sec to promote read replica into master. If you don't have read replica, in case of failover neptune will create new master, cause underlying storage persists.
-Yet it will take some time, so if you want fast failover it's better to have at least 1 read replica and send read query there from time-to-time to keep it warm.
-It stores all data in special format `Subject/Predicate/Object/Graph` - so basically 4 column tables. Indexes are built automatically.
-
 ###### Greengrass
 Allows your devices process the data they generate locally, while still taking advantage of AWS services when an internet connection is available. You can use programming language and then install this software on Raspberry Pi.
 So you can have aws lambda, wrap it into greengrass and then ship it ot IoT device. Of course if device in offline mode, and lambda use dynamoDB, calls would fail.
@@ -5055,15 +5072,6 @@ Batch job may be stuck in `RUNNABLE` due to:
 * insufficient resources - your job require more cpu/memory than underlying ec2 has
 * no internet access - batch launch ecs resources inside vpc and they need to communicate with ECS service. So you should either have public IP, NAT or ECS service vpc endpoint
 
-###### DocumentDB
-It's fully managed, mongo-compatible document database service. You can store/query json data. MongoDB-compatible - means your current apps that using mongo, can be easily migrated to DocumentDB (which implements Apache 2.0 open source MongoDB 3.6 API).
-You can easily migrate your mongo to DocumentDB with DMS. It replicates each chunk of data 6 times across 3 AZ. Read - 8KB, write - 4KB. If you write 1 KB it counts as single IO. 
-Yet concurrent write operations with size less than 4kb, are batched to reduce cost. min size - 10GB, max - 64TB. It automatically grows by 10GB chunks. Automated backups are enabled by default.
-Cluster can scale up to 1M reads per sec with up to 15 read replicas (read replica use same underlying storage updated by master). It doesn't support cross region replica (all replicas in same region only).
-
-###### Keyspaces
-It's managed Apache Cassandra-compatible database service, you can run Cassandra workloads using the same CQL (Cassandra Query Language). 
-
 ###### Cloud Development Kit
 CDK - open-source software development framework for writing cloud infra as code using c#/java/python/typescript. Under the hood cdk compiles code into CloudFormation template and run it in aws.
 You use cdk cli to interact with cdk. Take a look at [examples](https://github.com/aws-samples/aws-cdk-examples). Construct Library - packages solution (maven/npm) for specific CloudFormation construct.
@@ -5138,14 +5146,6 @@ SM allows you to rotate/manage/retrieve db credentials, API keys, and other secr
 To retrieve secrets, you simply replace secrets in plain text in your app with code to pull in those secrets programmatically using the Secrets Manager APIs. You use iam to control which users/roles have access to which stores. SM can store json, so you can store any text up to 64KB. 
 Key rotation for RDS/DocumentDB/RedShift supported out-of-the-box. You can add key rotation to oracle on ec2 by modifying sample lambda. You can configure cw events to be notified when SM rotate credentials. SM never store plaintext secrets to any persistent layer.
 This can be ideal for lambda evn vars, cause they are shown in lambda console. Moreover you can use lambda in private subnet without internet access and still be able to access SM with PrivateLink (create vpc endpoint for SM).
-
-###### Quantum Ledger Database
-QLDB - ledger database with cryptographically verifiable history of all changes made to your app data (quantum has nothing to do with quantum computing, here it means indivisible state change)
-Traditional db allow to overwrite/delete data, so developers use audit tables. While this may work, it put stress on developers to guarantee that audit table works correctly.
-For QLDB data written to append-only journal, providing the developer with full data lineage. So it can work as secure/crypto-proof substitute for audit tables.
-Notice that QLDB is neither blockcahin nor distributed ledger. It's purpose-built database to store all changes to system. So it offers history/immutability/verifiability combined with scalability and ease of use of a fully managed AWS database.
-To connect and work with QLDB you have to use [AWS-provided QLDB driver](https://docs.aws.amazon.com/qldb/latest/developerguide/getting-started-driver.html). 
-In the core of QLDB, replication, DynamoDB Streams, kafka, version control lay simple concept called log - append-only storage of all events happened.
 
 ###### AppStream 2.0
 Fully managed non-persistent app & desktop streaming service that provides instant access to desktop applications from anywhere, SAP - one of best candidates to be deployed on this platform.
