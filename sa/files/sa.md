@@ -36,10 +36,27 @@
 * 2.11 [Nmap](#nmap)
 * 2.12 [Stunnel](#stunnel)
 * 2.13 [Docker networking & iptables](#docker-networking--iptables)
-3. [Services](#services)
+3. [Security services](#security-services)
+* 3.1 [IAM](#iam)
+* 3.2 [Cognito](#cognito)
+* 3.3 [Directory Service](#directory-service)
+* 3.4 [Certificate Manager](#certificate-manager)
+* 3.5 [KMS](#kms)
+* 3.6 [CloudHSM](#cloudhsm)
+* 3.7 [Inspector](#inspector)
+* 3.8 [Macie](#macie)
+* 3.9 [GuardDuty](#guardduty)
+* 3.10 [WAF & Shield](#waf--shield)
+* 3.11 [Config](#config)
+* 3.12 [CloudTrail](#cloudtrail)
+* 3.13 [Artifact](#artifact)
+* 3.14 [Resource Access Manager](#resource-access-manager)
+4. [Database services](#database-services)
+5. [Data Analytics services](#data-analytics-services)
+6. [Machine Learning services](#machine-learning-services)
+7. [Other services](#other-services)
 * 3.1 [Corretto](#corretto)
 * 3.2 [CloudFormation](#CloudFormation)
-* 3.3 [IAM](#iam)
 * 3.4 [S3](#s3)
 * 3.5 [Glacier](#glacier)
 * 3.6 [EFS](#efs)
@@ -62,12 +79,10 @@
 * 3.22 [DMS](#dms)
 * 3.22 [ELB](#elb)
 * 3.23 [CloudWatch](#CloudWatch)
-* 3.23 [KMS](#kms)
 * 3.23 [Route53](#route53)
 * 3.24 [RDS](#rds)
 * 3.25 [SQS](#sqs)
 * 3.26 [API Gateway](#api-gateway)
-* 3.26 [Cognito](#cognito)
 * 3.27 [CodePipeline(CodeCommit/CodeBuild/CodeDeploy)](#codepipelinecodecommitcodebuildcodedeploy)
 * 3.28 [Storage Gateway](#storage-gateway)
 * 3.29 [ECS](#ecs)
@@ -75,17 +90,13 @@
 * 3.31 [Fargate](#fargate)
 * 3.32 [ElastiCache](#elasticache)
 * 3.33 [Systems Manager](#systems-manager)
-* 3.34 [Config](#config)
 * 3.35 [Aurora](#aurora)
-* 3.36 [CloudTrail](#cloudtrail)
-* 3.37 [Certificate Manager](#certificate-manager)
 * 3.38 [Cloud9](#cloud9)
 * 3.39 [CodeStar](#codestar)
 * 3.40 [Rekognition](#rekognition)
 * 3.41 [Global Accelerator](#global-accelerator)
 * 3.42 [FSx](#fsx)
 * 3.43 [VPN](#vpn)
-* 3.44 [Directory Service](#directory-service)
 * 3.45 [Wavelength](#wavelength)
 * 3.46 [SSO](#sso)
 * 3.47 [OpsWorks](#opsworks)
@@ -95,20 +106,15 @@
 * 3.51 [SageMaker](#sagemaker)
 * 3.52 [Lake Formation](#lake-formation)
 * 3.53 [Application Discovery Service](#application-discovery-service)
-* 3.54 [Artifact](#artifact)
 * 3.55 [Server Migration Service](#server-migration-service)
-* 3.56 [Resource Access Manager](#resource-access-manager)
 * 3.57 [DataSync](#datasync)
 * 3.58 [Transfer Family](#transfer-family)
 * 3.59 [SNS](#sns)
 * 3.60 [AppSync](#appsync)
 * 3.61 [Service Catalog](#service-catalog)
-* 3.62 [Inspector](#inspector)
 * 3.63 [Neptune](#neptune)
 * 3.64 [Greengrass](#greengrass)
-* 3.65 [WAF & Shield](#waf--shield)
 * 3.66 [Trusted Advisor](#trusted-advisor)
-* 3.67 [CloudHSM](#cloudhsm)
 * 3.68 [Polly](#polly)
 * 3.69 [MQ](#mq)
 * 3.70 [X-Ray](#x-ray)
@@ -120,7 +126,6 @@
 * 3.75 [Cloud Development Kit](#cloud-development-kit)
 * 3.76 [EventBridge](#eventbridge)
 * 3.76 [Managed Blockchain](#managed-blockchain)
-* 3.77 [GuardDuty](#guardduty)
 * 3.78 [Secrets Manager](#systems-manager)
 * 3.79 [Quantum Ledger Database](#quantum-ledger-database)
 * 3.80 [AppStream 2.0](#appstream-20)
@@ -131,7 +136,6 @@
 * 3.85 [Backup](#backup)
 * 3.86 [Migration Hub](#migration-hub)
 * 3.87 [WorkLink](#worklink)
-
 
 
 
@@ -792,144 +796,7 @@ There are several networking drivers that you can specify in `network_mode` prop
 * host - use host machine networking. You don't need to use port binding in this case, cause your docker port would be available as host port.
 * overlay - create network between instances run from different docker daemons (or between swarm and standalone docker)
 
-### Services
-###### Corretto 
-It's free amazon implementation of Java SE specification. As you know there are confusion around java SE. Oracle provides 2 java SE implementations:
-* OpenJDK - free
-* OracleJDK - paid
-Yet there are some features in OpenJDK that can be of charge, that's why you may want to use other java SE implementations like:
-* Amazon Corretto
-* AdoptOpenJDK
-* Azul Zulu
-If you are still confuse you can take a look at [java is still free](https://www.infoq.com/news/2018/09/java-support-options-sept18)
-
-###### CloudFormation 
-It's aws solution to IAC. There are 2 concepts:
-* template - json/yaml file with describe desired infrastructure
-* stack - template deployed to cloud (you can run commands like describe/list/create/update stack). If you create/update stack and errors occur all changes would be rolled back and you can be notified by SNS
-SAM (Serverless Application Model) - framework to build serverless apps, provide a shorthand syntax to write IAC using yaml templates. Later it anyway transformed into CF full template, so you can just learn CF and stick with it.
-[sam local](https://github.com/aws/aws-sam-cli) - cli tool to test lambda locally, simulate s3/dynamoDB/kinesis/sns, it uses built-in CodeBuild/CodeDeploy to build and deploy app to cloud.
-SAM templates are similar to CF, yet it starts from `Serverless`, like `AWS::Serverless::Api/AWS::Serverless::Function/AWS::Serverless::SimpleTable`
-Supported formats are JSON/YAML. Resource naming is supported not for all product, this is due to possible naming conflicts (when you update template, some resources would be recreated, but if names are not updated error would happen).
-To assign real name, you use stack + logical name, this ensures unique names. You can add deletion policy (for example you delete stack and want to preserve s3 buckets and take RDS snapshot).
-CF Registry - managed service that lets you register, use, and discover AWS and third party resource providers. You can use conditions inside templates (for example create ec2 based on input params).
-Don't confuse:
-* nested stack - you put one stack into another (main) by using `AWS::CloudFormation::Stack` and create only 1 stack (main). And this stack would create dependent first. It's the same as have 1 file, you just separate code, yet in aws your stacks would be divided into main and nested.
-* imported stack (Cross-Stack References) - you create 2 separate stacks with different names, and inside main you call resources from dependee stack by using `!ImportValue !Sub "${stackName}-SubnetID"`.
-In both cases your first stack should export resources, by using `Outputs`, that you want to use in main stack.
-By default CF use the same permission as user has (so if user can't create ec2 instances and template should create new ec2, this template would fail).
-But you can assign IAM role to CF, and in this case it would use permissions from this role. To create stack with assumed role you should pass param to cli like `--role-arn={youRoleForCloudFormationARN}`.
-If you don't specify `role-arn`, aws will use previous role. If it first time it will use temporary session that is generated from user (one who is creating the stack) credentials.
-For multi-env deployment (where you have dev/prod env or more) you should use single reusable template file (don't create new template file for each env, cause you will end up in a mess). 
-You can achieve reusability by adding params/mappings/conditions section into your template. Then you just create 2 stacks with different names (dev/prod) and different params but with single template file.
-Use dynamic references, never store secrets in your stack template. If you need secrets you should store them in aws secrets and just reference them from your template by using `'{{resolve:service-name:reference-key}}'`.
-Good practice is to set params constraints, by using `AllowedValues`. In this way you are guarantee that param would be some expected value.
-You can create rules with CF Guard (cfn-guard - open source CLI tool) that can ensure that your stack is compliant (for example: all ebs volumes should be only encrypted). In case rule failed, stack won't be created.
-Best practice is to divide your infra into several stacks. There are 2 approaches:
-* multi-layered architecture - horizontal structure where one layer depends upon another by using nested stacks (you divide all your services into 3 stacks - networking/computing/rds => computing layer depends on networking, cause you create ec2 instances in some vpc and subnet)
-* SOA (service-oriented architecture) - you stacks are separated not by technical layers but by services (each service has a separate stack with it's own networking/computing/rds).
-Layered Architecture usually has 3 layers:
-* Presentations (controllers)
-* Business Logic (services)
-* Database (models/domain objects/dto)
-Presentation depends(can access) on Business Logic and it depends(can access) on Database, but no the other way around.
-There are other 2 types of architecture:
-* hexagonal
-* onion
-But generally they resemble layered style, only difference they divide core (domain objects + services) and outer object (ui, database) and they are connected by using port (on core side) + adapter (on outer side)
-AWS-specific parameter types: If you need to pass param as ec2 key name, you can pass it as string, but if this key doesn't exist, you template would be half-created and aborted. 
-This is what for aws specific param types. If you set param type, not just `string`, but `AWS::EC2::KeyPair::KeyName`, CF would first check that the key with such name exists (in region), and only after this would start to create your stack. 
-Name of ssh key is not the only one, here is full list of [AWS-specific parameter types](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/parameters-section-structure.html#aws-specific-parameter-types)
-Internally CF is nothing but a service that parse your JSON/YAML, creates dependency graph and turn it into aws API calls (from bottom to top, so dependencies would work).
-CF uses declarative approach, cause you declare how your stack should look like, you are not telling what CF should do to in order to build it (imperative approach).
-DD (Drift Detection) - find difference between template values and actual property values in aws (can happen if someone change resource directly from console/cli). 
-DD only checks values explicitly set in template, it doesn't check default values (so if you change some default property directly from console/cli, DD won't find it).
-If you want include default props into DD result you should add all these default properties into CF template.
-Macros - allows you to customize templates. You write lambda that execute before template run and modify it (substitute variables, add new fields to objects). There are 2 types:
-* template level - applied to whole template (all parameters/resources)
-* snippet level - applied to single resource
-Custom resource - ability to create resource not supported by CF. When CF execute templates, and meet custom resource it call your lambda with your custom logic. You can use it to provision:
-* aws resource not supported by cf, like dynamoDB global table, [full list](https://github.com/cfntools/cloudformation-gaps/projects/1)
-* non-aws resource with cf, like github webhook (in case you want to use github for your ci/ci instead of codeCommit)
-* something not related to infra, like run migrations
-Custom resource handler - executed in async callback model, that means cf run it, but doesn't wait for response, instead you are given pre-sign s3 url, where you have to upload json result once you are done.
-As with all resources you have to implement logic for these 3 steps: create/update/delete. You can use [node.js library](https://github.com/andrew-templeton/cfn-lambda) to simplify writing custom resource handler.
-You create custom resource with `Type: Custom::YouCustomResourceName` with at least one property `ServiceToken: {LAMBDA_ARN}`. When cf execute your lambda you are given event with `ResponseURL` - s3 pre-sign url where you have to put json after execution.
-Example of event for lambda
-```
-{
-    "RequestType": "Create",
-    "ServiceToken": "arn:aws:lambda:us-east-1:ACCOUNT_ID:function:example-CustomResourceLambda-4RWJOUFLIPGA",
-    "ResponseURL": "https://cloudformation-custom-resource-response-useast1.s3.amazonaws.com/...",
-    "StackId": "arn:aws:cloudformation:us-east-1:ACCOUNT_ID:stack/example/85e457b0-1383-11eb-a18a-0e09773e6f3f",
-    "RequestId": "5d022657-3843-4f4e-8b6b-a04ed99f49a7",
-    "LogicalResourceId": "GithubWebhook",
-    "ResourceType": "Custom::GithubWebhook",
-    "ResourceProperties": {
-        "ServiceToken": "arn:aws:lambda:us-east-1:ACCOUNT_ID:function:example-CustomResourceLambda-4RWJOUFLIPGA",
-        "Tags": [
-            {
-                "Value": "example-GithubWebhook",
-                "Key": "Name"
-            }
-        ],
-        "Name": "GithubWebhook"
-    }
-}
-```
-Make sure you have logic to update `ResponseURL`, otherwise stack that use your lambda would be stuck in `UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS` state. 
-Description - first level tag, where you can put template description, max size 1024 symbols (if you try to exceed limit you will got exception `An error occurred (ValidationError) when calling the UpdateStack operation: Template format error: 'Description' length is greater than 1024.`)
-All resources can have several generic attributes:
-* DeletionPolicy - what to do with resource after resource deletion (either stack deleted, or stack updated but resource was removed from stack):
-    * Delete - delete resource with all it's contents. This is default policy, but `AWS::RDS::DBCluster` & `AWS::RDS::DBInstance` (that don't specify the `DBClusterIdentifier` property) - default policy is Snapshot. For s3 you must ensure that bucket is empty before it can be deleted.
-    * Retain - retain resource with all it's contents. Yet if you update stack in such a way that new resource of this type is created, than old resource would be deleted & new would be created with same name.
-    * Snapshot - for resources that support snapshot, first create snapshot and then delete resource. It applicable for ebs/elasticache/rds/redshift
-    Although you can use retain for RDS, this would mean that RDS instance would continue to run, so for RDS it's better to always use snapshot deletion policy.
-* DependsOn - resource would be created after specified resources
-* Metadata - associate some metadata with resource
-* UpdatePolicy & UpdateReplacePolicy - what to do in case of stack update
-Built-in function - intrinsic CF function like `GetAtt/Join/Select/GetAZs` for better work with CF templates (see `sa/cloudformation/cf-template.yml`). You can use them only in specific part of template: props/outputs/metadata/updatePolicyAttributes
-Stack policy:
-* by default all update actions for all resources allowed, so anybody with iam permission to update stack can overwrite any resource
-* you can setup stack policy to deny update actions for specified resources (like prod db)
-* once you setup stack policy - all updates denied by default, so you have to add explicit allow 
-* applied only during stack update, use it only as fail-save with combination with iam
-* `principal` element is required (just like for any other resource policy), but supports only the wild card (*)
-* Below example to allow all updates except production DB (`Update` can be either `Modify/Replace/Delete`, yet we use wildcard for short form)
-```
-{
-  "Statement" : [
-    {
-      "Effect" : "Allow",
-      "Action" : "Update:*",
-      "Principal": "*",
-      "Resource" : "*"
-    },
-    {
-      "Effect" : "Deny",
-      "Action" : "Update:*",
-      "Principal": "*",
-      "Resource" : "LogicalResourceId/ProdDb"
-    }
-  ]
-}
-```
-Don't confuse (see `sa/cloudformation/cf-wait-condition.yml`):
-* WaitCondition (`AWS::CloudFormation::WaitCondition`) - resource wait for some external resource (created outside current CF) to finish and only then mark resource status as complete.
-CF waits until WaitCondition get required number of signals or timeout is over. You use `DependsOn` attr to specify that wait condition created after some resource, and another recourse depends on wait condition.
-`AWS::CloudFormation::WaitConditionHandle` - has no props, but return pre-signed url. You use this url (send HTTP request to it) to notify your handle that outside resource is created.
-You can also use `signal-resource` cli to complete condition. In this case you don't even need WaitConditionHandle.
-* CreationPolicy (only applied to AutoScalingGroup/Instance/WaitCondition) - resource waits for signal from `cfn-signal` utility that installed on ec2. Use it in case you want CF to mark resource creation complete only after some script would finish execution in `userdata`.
-You add it to one of three above resource, and then use `/opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource Instance --region ${AWS::Region}` to signal that CF can complete with resource creation
-So you can use WaitCondition:
-* without anything, just call it directly using `signal-resource` api
-* with `WaitConditionHandle` (in this case you have to curl it's url), keep in mind that for each update if you need new wait you have to create new `WaitConditionHandle`, cause old already passed timeout
-* with `CreationPolicy` (in this case you have to call `cfn-signal` cli utility)
-Stack sets (`AWS::CloudFormation::StackSet`, see `sa/cloudformation/cf-multi-region.yml`) - native CF concept to create multi-account/region stack (before you have to use custom resource). You create set in one region for one account, and from there it creates resource to another regions/accounts.
-There are 2 types of permission model:
-* self-managed - you create iam roles in target account that account in which stack set is deployed
-* service-managed - if you deploy stacks in account managed by aws org, you don't have to create roles (they would be created automatically under-the-hood)
-Stack instance - reference to a stack in target account within region (can exist without stack, if stack can't be created, stack instance - shows the reason).
+### Security services
 
 ###### IAM
 There are 3 types of permission:
@@ -1338,6 +1205,449 @@ But if you add explicit deny to everybody except from this vpc endpoint, even if
 }
 ```
 Same true for s3. You can create vpc endpoint policy for s3 to allow access to specific bucket + s3 bucket policy to allow access only from specified vpc or vpc endpoint.
+
+###### Cognito
+Cognito - managed user service that add user sing-in/sign-up/management email/phone verification/2FA logic. There are 2 pools:
+* User Pool - a directory with users' profiles, you can set up password strength, kind of IdP (Identity Provider)
+You can migrate your users into cognito, but password won't be migrated. If you want to migrate them with password you need to add special logic to your app:
+when user signin to your app - you signin him within cognito, if user doesn't exist in cognito you sign-up him with username/password.
+Cognito also support SAML or OpenID Connect, social identity providers (such as Facebook, Twitter, Amazon) and you can also integrate your own identity provider.
+* Identity Pool - temporary credentials to access aws services. If your users don't need to access aws resources, you don't need identity pool, user pool would be enough.
+You can use users from User Pool or Federated Pool (Facebook, Google) as users to whom give temporary credentials.
+You pay for MAU (monthly active users) - user who within a month made some identity operation signIn/singUp/tokenRefresh/passwordChange.
+Free tier - 50k MAU per month. You can call `AssumeRole` to get temporary credentials. So you can singin to user_pool but you can use user_pool id token to get aws credentials from identity_pool.
+There are 3 types of cognito tokens (with accord to OpenID):
+* id token - jwt token that has personal user info (name, email, phone). So you shouldn't use it outside your backend, cause it includes sensitive info. Usually id token = access token + user's personal details.
+* access token - jwt token that includes user's access rights. You can use it outside your backend to get access to other services. Live of id/access token is limited, usually to 1 hour, and that's why you should use refresh token to prolong it.
+* refresh token - use it to retrieve new ID and access tokens
+Example creating users from cli (first run `sa/cloudformation/cognito-iam.yml` as CF stack):
+```
+# create user
+aws cognito-idp sign-up --client-id={USER_POOL_CLIENT_ID} --username=john.doe@gmail.com --password=P@1ssword --user-attributes Name="email",Value="john.doe@gmail.com" Name="name",Value="John Doe"
+# confirm user as admin (without confirmation password sent to eamil)
+aws cognito-idp admin-confirm-sign-up --user-pool-id={USER_POOL_ID} --username=john.doe@gmail.com
+# login & get idToken
+aws cognito-idp initiate-auth --client-id={USER_POOL_CLIENT_ID} --auth-flow=USER_PASSWORD_AUTH --auth-parameters USERNAME=john.doe@gmail.com,PASSWORD=P@1ssword
+# create cognito identity id
+aws cognito-identity get-id --identity-pool-id={IDENTITY_POOL_ID} --logins cognito-idp.us-east-1.amazonaws.com/{USER_POOL_ID}={ID_TOKEN}
+
+# from now you have 2 optios to get temporary credentials
+
+# option1: get temporary aws credentials with cognito
+aws cognito-identity get-credentials-for-identity --identity-id={IDENTITY_ID} --logins cognito-idp.us-east-1.amazonaws.com/{USER_POOL_ID}={ID_TOKEN}
+
+# option2: get temporary aws credentials using AssumeRoleWithWebIdentity api
+# get open id token that you later use
+aws cognito-identity get-open-id-token --identity-id={IDENTITY_ID} --logins cognito-idp.us-east-1.amazonaws.com/{USER_POOL_ID}={ID_TOKEN}
+aws sts assume-role-with-web-identity --role-arn={ROLE_ARN} --role-session-name=temprole --web-identity-token={OPEN_ID_TOKEN}
+```
+You can enable unauthenticated access for guest users in identity pool (by setting `AllowUnauthenticatedIdentities: true`). You also would need attach role to `unauthenticated` under `AWS::Cognito::IdentityPoolRoleAttachment`.
+After this guest users would have permission defined by that role.
+
+###### Directory Service
+DS (Directory Service) - hierarchical structure to store/search/manipulate objects, so users can locate resources no matter where they are stored.
+In software engineering, a directory is a map between names and values. It allows the lookup of named values, similar to a dictionary. DS - is a standard, AD - implementation of DS by microsoft.
+AD (Active Directory) - microsoft DS that additionally provides SSO/LDAP so user can have roles/authentication to access resources, it stores users/computers/printers in company's network and provides access/roles to users.
+AD provides centralize authorization and authentication to network resources, it also stores network resources and users information like computer/printers/users/users groups/organizational units/passwords information.
+LDAP (Lightweight Directory Access Protocol, port 389, don't confuse with RDP - 3389) is an application protocol for querying and modifying items in directory service providers like AD.
+Objects in AD grouped into domains. Tree - collection of one or more domains. Forest - collection of trees that share common global catalog. Domain Controller - windows server that runs AD.
+AWS DS - managed service replicated across multiple AZ. There are 3 types of aws DS:
+* AWS Managed Microsoft AD - microsoft AD completely deployed in cloud and managed there. Trust Relationship - you can build it between aws microsoft AD and your on-premise microsoft AD, and store your users/passwords in your on-premise AD.
+But use aws microsoft AD to access aws services based on users from on-premises AD. So you can use it as either standalone AD or as trust relationship to on-premise AD.
+    * deployed in 2 AZ
+    * connected to VPC
+    * backups automatically taken once per day
+    * EBS by default encrypted
+    * failed domain controllers automatically replaced in the same AZ using the same IP address
+* simple AD - Linux-Samba AD deployed & managed in the cloud. you can singIn to aws console with simple AD account. it doesn't support trust relationship, schema extension, multi-factor auth.
+* AD Connector - connector to redirect all request to your on-premises AD. So it basically directory gateway that forward requests to on-premise AD.
+Connect on-premises AD with aws:
+* create vpc with 2 public subnet in 2 AZ with NAT gateway in each, and 2 private subnet with domain controller (Windows Server 2019 AMI) replicating from on-premises AD + vpn/CGW/VPG to connect on-premises to AD
+Once you create 2 windows server you promote them into domain controller in the on-premises AD forest. In this case your ec2 get low-latency access to AD through domain controllers, and since you have 2 AZ you build HA system.
+* using AD connector - use it for secure aws integration with your on-premises AD (sing-in to console/workSpaces/workDocs). It can't work with you custom apps. If you want custom apps to use AD use first approach with domain controllers.
+Under-the-hood it's dual AZ proxy that connects aws services to on-premises AD. It forward sign-in requests to your AD for authentication and provide ability for aws services to query AD for data.
+Since it's just a proxy, connector doesn't store/cache user credentials & details. You have to provide a pair of DNS IP, connector use it to locate nearest domain controller.
+
+###### Certificate Manager
+ACM (Amazon Certificate Manager) - service that allows you to create/deploy public/private SSL/TLS certificates.
+It removes the time-consuming manual process of purchasing/uploading/renewing SSL/TLS certificates. There are 2 types of certificate:
+* public - issued by public CA, trusted by all browser by default. 
+* private - issued by private CA. You can create your own private CA to manage all your private certificates. There are 3 modes to work:
+    * you can delegate management to ACM
+    * you can manually distribute certificates to other services (like ec2), but ACM still renew your private certificates
+    * you have complete control
+ACM Private CA (Certificate Authority) - managed by aws private CA where you can create your private certificates.
+Private CA handles the issuance/validation/revocation of private certificates within a private network, compose of 2:
+* private certificate
+* CRL (Certificate Revocation List) - resources can check this list, that private certificate is valid one
+Don't confuse:
+* public CA - validate certificates in Internet. Can be used only with ELB/CloudFront/BeanStalk/API Gateway.
+* private CA - validate certificates in private network. Can be used with any aws service (ec2).
+Public certificate should have valid dns name, but private can have any desired name. Self-signed certificate - certificate generated manually without CA (so no way to check if it's revoked or valid).
+You can create certificate with multiple domain names or wildcard domain name (*.example.com).
+Since public certificates proves domain identity, Amazon must verify that you own domain before issuing certificate. Aws use 2 types of validation:
+* dns - you modify your CNAME by adding some randomly generated token by ACM, that's how you prove that you own domain.
+If you want to automatically renew your cert you shouldn't remove CNAME token, otherwise in order to renew you would have to run dns validation again
+* email - amazon sends email to the owner of domain that it obtains from whois service
+For successful issuing of public certificate DNS CAA should be empty or include one of: amazon.com/amazontrust.com/awstrust.com/amazonaws.com
+Public certs are free, but private CA - 400$ per month. You also pay for each private cert.
+ACM internally use KMS (`aws/acm` key that generated first time you request ACM):
+* acm stores all certificate private keys encrypted (acm stores only encrypted version of private key)
+* when you associate acm with service, acm sends certificate & encrypted private key to this service + create kms permission to allow for service to use it to decrypt private key
+* service use this permission, decrypt private key and establish secure connection using plaintext private key
+* if you disassociate acm with service, kms permission for this service would also be removed
+IAM certificate:
+* preferred way to handle certs is ACM, but if you region doesn't support it (ACM is regional based) you can use IAM cert
+* you can't create new cert from iam, but you can upload pre-generated cert
+* you should uce cli/api (currently console not supported cert upload, yet if you create ELB from there you can upload)
+* use commands `UploadServerCertificate` - upload new cert, `ListServerCertificates` - list all certs, `GetServerCertificate` - get cert by id
+* don't confuse server cert with user signing cert `UploadSigningCertificate` - you upload cert for specified user, and this user can make X.509 signed requests
+There is no way to migrate cert from IAM to ACM. There is no way to update imported certs after expire date. If you import certs, you have to take care about expire date manually.
+
+###### KMS
+Key Management Service - service for generating/storing/auditing keys. If you have a lot of encryption it's better to use central key management service.
+You start working with KMS by creating CMK (customer master keys), or if you are using encryption from other aws resource, it would create CMK automatically for you.
+You can import only symmetric keys. But you can't export symmetric/asymmetric private key.
+KMS keys are region specific (you can't transfer them into another region), so if you create key in one region you can't get it by accessing endpoint for another region.
+CMK Rotation - automatic (once per year) change of underlying backing key without change logical resource. 
+Yet previous backing key is stored perpetually until you delete cmk, so all data encrypted with previous key can easily be decrypted. But for all new encryption new key is used.
+Data Key (limited to a region) - generated by CMK and used to encrypt data larger than 4KB (CMK can encrypt only less than 4KB) and be used outside KMS.
+Access to key is a combination of key policy (resource policy) + iam policy. Any explicit deny always overwrite allow. Compare to other resources to add access to kms you must add key policy (with or without iam policy).
+Default key policy - created if you don't specify any policy when you create kms, by default all actions `kms:*` allowed to root user only.
+Comparing to other aws services using iam policy alone not enough, if you add empty key policy, your key would be unmanagable. You have to use either key policy alone or with combination with iam policy.
+To use iam policy, you should explicitly add key policy that allows root user access
+```
+{
+  "Sid": "Enable IAM User Permissions",
+  "Effect": "Allow",
+  "Principal": {"AWS": "arn:aws:iam::111111111111:root"},
+  "Action": "kms:*",
+  "Resource": "*"
+}
+```
+So you can't create key with empty key policy, at least something should be present.
+As other resource policy, key policy include `Principal` - who is using policy statement, and `Resource` - which is always `*` - which means this CMK. When you create CMK from:
+* cli - if you don't provide any custom policy, default is created which gives full access to root user.
+* console - you can choose users/roles from current account or any root user from other aws account which would have full access. Also root user is given full access.
+It's best practice to give root user full access. Cause if you give some user full access, then delete this user, you can't use cmk. You must contact aws support.
+So compare to other services cmk doesn't implicitly allow access to root user, you have to add it explicitly.
+Don't confuse:
+* cloudHSM - your personal key encryption hardware in aws cloud. Note that it doesn't provide encryption/decryption services like kms, it only stores keys (so you can't encrypt s3 bucket with it, but you can encrypt it with kms).
+* kms - shared hardware tenancy, you have your own partition inside shared with other aws customers. Yet KMS inside run managed CloudHSM to generate key materials
+When you create kms key you may choose key material origin:  kms (default) / external / CloudHSM (in this case you need to set up CloudHSM cluster with at least 2 nodes in 2 AZ)
+When you use kms for every policy (for example read policy for s3) you have to add `kms:Decrypt`, so s3 would have access to kms in order to decrypt data. So if you provide only s3 read without kms, s3 won't decrypt your data and you can't read it.
+cross-account access - you can allow your KMS to be used in another account by adding resource policy to kms with principal as another account or you can also add cross-account role iam access:
+* in account A add principal of account B to key policy
+* in account B add permissions to access kms resource from account A
+There are 2 types of keys:
+* symmetric - created by default (if you don't specify type), 256-bit encryption key that never leaves kms unencrypted. Almost all aws services integrated with kms support only symmetric key.
+* asymmetric - public & private key pair. Private key never leaves kms, yet you can download public key. Use it mostly for encryption outside aws. If you want encryption inside aws infra - always use symmetric key, cause symmetric encryption is faster.
+2 types of asymetric key supported: RSA & ECC (Elliptic Curve)
+AWS Encryption SDK - client-side encryption library (c/java/JS/python) for easy encrypt/decrypt data using industry standards & best practices. You can encrypt/decrypt data using:
+* kms CMK
+* master key generated by your
+* CMK + your offline RSA private key. Then you can decrypt your data using combination of both, or either one alone
+As you see Encryption SDK integrated with KMS, yet it doesn't require it, you can generate your own keys and safely store it on your own.
+Encryption SDK concepts:
+* envelope encryption - you encrypt data with data key (stored where you encrypted data stored), then encrypt data key with master key (stored securely by kms). s3 also use this type of encryption.
+S3 use envelope encryption. It supports only symmetric CMK, cause it faster. We use envelope encryption, cause kms can encrypt/decrypt up to 4KB. So if you need to encrypt 10MB file you create data key, encrypt file with data key & encrypt data key with symmetric CMK.
+KMS support up to 4KB cause in order to encrypt you have to send your data to kms, so it's better to send small files, cause otherwise imagine that you would send 1GB file to kms. Encryption is done by s3, kms - is mere key storage.
+* encryption context - optional non-secret param (cause you store it in kms key policy in plaintext) that you can include into each encrypt/decrypt. When you encrypt data, security context encrypted with data, so to decrypt you have to pass same param.
+you can also use it for tracking purpose, cause it recorded in CloudTrail. CW log support kms encryption context. It works only with symmetric key, you can't pass encryption context to asymmetric key.
+It also called AAD (additional authenticated data) - non-secret data that is provided to encryption and decryption operations to add an additional integrity and authenticity check on the encrypted data.
+When you encrypt file you can pass filename as encryption context. EBS use volumeId as security context. You can add encryption context to policy, in this case you can use kms only with specific context params.
+
+###### CloudHSM
+Dedicated HSM instance within aws cloud. You can securely generate/store/manage cryptographic keys. HSM (Hardware Security Module) provides secure key storage and cryptographic operations within a tamper-resistant hardware device.
+Cluster - contains multiple devices across AZ/subnet in single region. You can't create single device, only cluster with 1 or more devices. Since devices created in sunbets you need to have vpc in order to use CloudHSM.
+You can use with database or with nginx to off-load ssl. Best practice to sync all keys at least in 2 devices in separate AZ. It's built with physical and logical tamper-protection, so it trigger key deletion (zeroization) in case of breach.
+Daily backups are automatically taken and stored in s3 (bucket must be in the same region as cluster). All backups encrypted with 2 types of keys:
+* EBK (ephemeral backup key) - generated inside HSM when backup is taken. Used to encrypt backup. Encrypted backup include encrypted EBK.
+* PBK (persistent backup key) - used by HSM to encrypt EBK. Generated based on 2 other keys:
+    * MKBK (manufacturer key backup key) - permanently embedded in the HSM hardware by manufacturer
+    * AKBK (AWS key backup key) - installed in the HSM during initial setup by aws CloudHSM.
+
+###### Inspector 
+It's automated security assessment service that test the network accessibility of your ec2 and apps running on them. Plz note that it designed to ec2 only, so you can't use it to perform security assessment of API gateway, lambda and so on.
+You install agent on your OS, and it collects data and send it to inspector for analyzing. Assessment template - configuration based on which inspector validates your system.
+
+###### Macie
+
+###### GuardDuty
+Threat management tools that helps to protect aws accounts/workloads/data by analyzing data from cloudTrail/vpcFlowLogs/dnsLogs using ML. It's regional service, so all collected data is aggregated/analyzed within region. 
+It doesn't store any data, once data is analyzed it discarded. threat intelligence - list of malicious IP addresses maintained by aws and third-party partners. You should first enable GuardDuty, you can also assign admin account (it can assume 2 roles to administer your GuardDuty).
+
+###### WAF & Shield
+3 security services joined under single tab in aws:
+* waf (web application firewall) - you add rules that allow/deny/count web requests based on conditions that you define. Conditions are: HTTP header/body, URL string, SQL injection, XSS (for example you can block specific user-agents).
+Underlying service send request to waf, waf validate it based on rules you defined and instruct your service to block/allow request to proceed. It's integrated with CloudFront/ALB/ApiGateway/AppSync.
+You create Web ACL (Access Control List), specify resource, and add rules. Plz note only ALB can be specified, there is no way to add WAF above NLB, cause NLB works on level 4.
+Rate-Base Rule - allows you to set a number of allowed request per IP address during predefined time (100 requests per 5 min - once this IP send 101 request, it would be blocked, until 5 min period ends, and new starts).
+Managed Rule - default rules that automatically updated by AWS Marketplace security Sellers, protects against common known issues. 
+In case of rule fail you can configure CloudFront to show error page. Rules take a minute to propagate worldwide. It inspects both HTTP/HTTPS traffic.
+* shield - provides protection against DDoS (Distributed Denial of Service) attack. There are 2 types of this service:
+    * standard - free, activated by default for all accounts. Protect all aws infra (layer 3 and 4) against most common attacks like SYN/UDP floods or reflection attacks.
+    * advanced - paid, protect against more sophisticated attacks, like layer 7 HTTP & DNS floods. It constantly monitors network traffic and provides near real-time notifications of suspected DDoS incidents.
+You can use shield to protect on-premise servers. For this use aws endpoint with shield in front of your on-premise server. Shield notify about attack by sending metrics to CloudWatch.
+* FM (Firewall Manager) - tool that makes it easier for you to configure your WAF rules and vpc SG across your accounts. So if you have single account no need to use FM, but if you have aws organization with many accounts
+it's better to use single tool to configure waf across all accounts, cause FM integrated with organization so have a single place to quickly respond to incidents.
+WAF sandwich (see `sa/files/images/waf-sandwich.png`) - concept where instead of aws, you use custom software with waf on ec2.
+In this case you have elb -> custom waf with asg -> elb -> ec2 with app. So basically you put your custom waf ec2 into ASG and between 2 elb.
+
+###### Config
+Managed service that provides aws resources inventory, config history, change notification. When you turn it on, it creates config item for each resource.
+It provides detailed view of the configuration of AWS resources in your AWS account (how the resources are related and how they were configured in the past so that you can see how the configurations and relationships change over time).
+It integrated with cloudTrail, and record `CloudTrailID` for any resource change. Config Item - point-in-time record of aws resource, that include metadata, attributes, relationships, current configuration, and related events
+Config Rule - desired configuration of resource that is evaluated against actual change (and report in case of mismatch). Conformance Pack - collection of config rules. There are 2 types of rules:
+* managed - use one of many aws predefined rules to build your rule on top of it
+* custom - you create rule from scratch and write your lambda that would be invoked by your rule to evaluate resource
+CloudTrail - list of all api calls (cli & CF templates in the end are transformed into api calls). It stores point-in-time configuration of your aws resources.
+
+###### CloudTrail
+CT - service that logs activity of your aws account (who made request, what params were passed, when and so on..). It's useful for compliance, when you need to ensure that only certain rules have ever been applied.
+There are 3 types of logs:
+* management events - api calls to modify aws resources (create ec2/s3 and so on...)
+* data events - api calls to modify actual data (s3 get/put/delete object + lambda calls)
+* insights events - CT use ML (Machine Learning) to determine any anomaly (like spike in some api calls) and notify you.
+By default:
+* log files delivered within 15 minutes of account activity. 
+* logs stored for 90 days and only management events stored. If you need longer you should create trail. Trail stores data in s3, you have to analyze it yourself (usually using Athena)
+* trail viewable in region where it's created. for all-region trail - it's viewable in all regions.
+* trail collects data from all regions. You can create single region trail [only from cli](https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-create-and-update-a-trail-by-using-the-aws-cli-create-trail.html#cloudtrail-create-and-update-a-trail-by-using-the-aws-cli-examples-single), no way to create single-region trail from console. 
+* trail created with GSE enabled (it's true for both when you create from console and from cli. Although when you create trail from cli you can specify `--no-include-global-service-events` not to include GSE into this trail). 
+When aws launch new region, in case of all region trail - new trail would be created in newly launched region.
+* trail in s3  encrypted using SSE. You can set custom encryption with KMS.
+SNS delivery - you can configure to get notification each time new log file delivered to s3 bucket (not single event, but whole file with many events).
+Cross-account trails (you can configure to deliver CT events from multiple accounts to single s3 bucket):
+* create s3 bucket in account A, accountAMyS3Bucket and add bucket policy to allow cross-account access
+* in account B (or any other) create CT and set bucket name as accountAMyS3Bucket. From now all logs would be delivered to bucket in another account
+Log file validation - guaranty that logs were not tampered with. When turn in, CT create a hash for each log file, and every hour store all these hashes in digest file in the same s3 bucket. 
+Each digest file is signed with private key that generated by CT. You can download public keys with `list-public-keys` command, and validate signed files. But you have no access to private keys - they are managed by CT.
+Private key is unique for each region within aws account. When you retrieve public keys you specify time range - 1 or more public keys may be returned. Mare sure your s3 bucket has correct write policy, otherwise CT won't be able to store logs there.
+Organization trail - created by master account to log all events in all aws accounts for this organization (can be one/all region). You can deliver CT logs to CloudWatch, in this case CT would deliver logs to s3 & CloudWatch logs.
+GSE (Global Service Events) - services like IAM/STS/CloudFront add logs to all trails that support GSE. It's turn on by default. You can turn it off only from cli/sdk.
+* create trail `aws cloudtrail create-trail --name=multiRegionTrail --s3-bucket-name=my-test-s3-bucket-1 --is-multi-region-trail`
+S3 bucket should have both `s3:GetBucketAcl/s3:PutObject` enabled in bucket policy, otherwise you got `Incorrect S3 bucket policy is detected for bucket`.
+Below is bucket policy example:
+```
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "Service": "cloudtrail.amazonaws.com"
+            },
+            "Action": "s3:GetBucketAcl",
+            "Resource": "arn:aws:s3:::my-test-s3-bucket-1"
+        },
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "Service": "cloudtrail.amazonaws.com"
+            },
+            "Action": "s3:PutObject",
+            "Resource": "arn:aws:s3:::my-test-s3-bucket-1/*"
+        }
+    ]
+}
+```
+Result of CT creation:
+```
+{
+    "Name": "multiRegionTrail",
+    "S3BucketName": "my-test-s3-bucket-1",
+    "IncludeGlobalServiceEvents": true,
+    "IsMultiRegionTrail": true,
+    "TrailARN": "arn:aws:cloudtrail:us-east-1:ACCOUNT_ID:trail/multiRegionTrail",
+    "LogFileValidationEnabled": false,
+    "IsOrganizationTrail": false
+}
+```
+* change trail to single region `aws cloudtrail update-trail --name=multiRegionTrail --no-is-multi-region-trail`.
+In this case trail would remain in the region in which it was created, and all it's shadow trails in other regions would be removed.
+```
+{
+    "Name": "multiRegionTrail",
+    "S3BucketName": "my-test-s3-bucket-1",
+    "IncludeGlobalServiceEvents": true,
+    "IsMultiRegionTrail": false,
+    "TrailARN": "arn:aws:cloudtrail:us-east-1:ACCOUNT_ID:trail/multiRegionTrail",
+    "LogFileValidationEnabled": false,
+    "IsOrganizationTrail": false
+}
+```
+* Remove GSE `aws cloudtrail update-trail --name=multiRegionTrail --no-include-global-service-events`
+* Change back to multi-region `aws cloudtrail update-trail --name=multiRegionTrail --is-multi-region-trail`
+You get `Multi-Region trail must include global service events.`. So you should do both `aws cloudtrail update-trail --name=multiRegionTrail --is-multi-region-trail --include-global-service-events`. So You can't remove GSE from multi-region trail.
+cross-account role audit (to check who made cross-account request you have to access both cloudTrail logs):
+* if your dev account assume role in prod account and call `DeleteBucket` in prod
+* in prod cloudTrail log you will see that `userIdentity` with `type: AssumedRole` and with specific `accessKeyId` called delete bucket api, yet you can't see which user exactly did it
+* in dev cloudTrail log you can see which user called operation `AssumeRole`. Since many users can call this api, to distinguish you may use `accessKeyId`
+So there are 2 ways to find out which iam user called delete bucket api:
+* [Find iam user using accessKeyId](https://aws.amazon.com/blogs/security/how-to-audit-cross-account-roles-using-aws-cloudtrail-and-amazon-cloudwatch-events)
+    * in prod account you extract `accessKeyId` from `userIdentity` for `DeleteBucket` call
+    * in dev account you extract `accessKeyId` from `responseElementscredentials` (this is important cause in dev account inside `userIdentity` there is another accessKeyId of iam user), and `userName` from `userIdentity` for `AssumeRole` call
+    * then you compare `accessKeyId` from both dev & prod cloudTrail logs. If they are the same, then this userName from dev account called your `DeleteBucket` api
+* [Find iam user using sharedEventID](https://aws.amazon.com/blogs/security/aws-cloudtrail-now-tracks-cross-account-activity-to-its-origin)
+    * in prod account you extract `accessKeyId` from `userIdentity` for `DeleteBucket` call
+    * in prod account you extract `sharedEventID` from `AssumeRole` call using `userIdentity` from previous step
+    * in dev account you extract `userName` from `userIdentity` for `AssumeRole` with same `sharedEventID` as from previous step
+    * `sharedEventID` - unique GUID generated for cross-account api calls (AssumeRole/use kms key) that send CloudTrail logs to 2 accounts, by which you can link 2 log entries
+    
+
+###### Artifact
+Artifact - portal that provides customers with ability to download AWS security and compliance documents, such as AWS ISO certifications, Payment Card Industry (PCI), and System and Organization Control (SOC) reports.
+There are 2 types of docs: agreements (you can accept it or terminate, so 2 statuses - active/inactive) / report
+
+###### Resource Access Manager
+RAM - helps securely share your resources across AWS accounts or within your Organization. Shared resources can't be re-shared. To share resources, you create a Resource Share, give it a name, add one or more of your resources to it, and grant access to other AWS accounts.
+Account iam policy & scp applied to shared resource same way they are applied to provisioned resource in that account. There are 2 types of sharing:
+* sharing with organization - share resource with whole organization or with OU. For this to work master account should enable resource sharing within organization. If it's not done you can't share resources with organization, but you can still use individual sharing.
+To enable sharing to to RAM console => setting, and tick `Enable sharing with AWS Organizations`. This would activate sharing for your org.
+* individual sharing - share resource with individual account
+
+### Database services
+### Data Analytics services
+### Machine Learning services
+### Other services
+###### Corretto 
+It's free amazon implementation of Java SE specification. As you know there are confusion around java SE. Oracle provides 2 java SE implementations:
+* OpenJDK - free
+* OracleJDK - paid
+Yet there are some features in OpenJDK that can be of charge, that's why you may want to use other java SE implementations like:
+* Amazon Corretto
+* AdoptOpenJDK
+* Azul Zulu
+If you are still confuse you can take a look at [java is still free](https://www.infoq.com/news/2018/09/java-support-options-sept18)
+
+###### CloudFormation 
+It's aws solution to IAC. There are 2 concepts:
+* template - json/yaml file with describe desired infrastructure
+* stack - template deployed to cloud (you can run commands like describe/list/create/update stack). If you create/update stack and errors occur all changes would be rolled back and you can be notified by SNS
+SAM (Serverless Application Model) - framework to build serverless apps, provide a shorthand syntax to write IAC using yaml templates. Later it anyway transformed into CF full template, so you can just learn CF and stick with it.
+[sam local](https://github.com/aws/aws-sam-cli) - cli tool to test lambda locally, simulate s3/dynamoDB/kinesis/sns, it uses built-in CodeBuild/CodeDeploy to build and deploy app to cloud.
+SAM templates are similar to CF, yet it starts from `Serverless`, like `AWS::Serverless::Api/AWS::Serverless::Function/AWS::Serverless::SimpleTable`
+Supported formats are JSON/YAML. Resource naming is supported not for all product, this is due to possible naming conflicts (when you update template, some resources would be recreated, but if names are not updated error would happen).
+To assign real name, you use stack + logical name, this ensures unique names. You can add deletion policy (for example you delete stack and want to preserve s3 buckets and take RDS snapshot).
+CF Registry - managed service that lets you register, use, and discover AWS and third party resource providers. You can use conditions inside templates (for example create ec2 based on input params).
+Don't confuse:
+* nested stack - you put one stack into another (main) by using `AWS::CloudFormation::Stack` and create only 1 stack (main). And this stack would create dependent first. It's the same as have 1 file, you just separate code, yet in aws your stacks would be divided into main and nested.
+* imported stack (Cross-Stack References) - you create 2 separate stacks with different names, and inside main you call resources from dependee stack by using `!ImportValue !Sub "${stackName}-SubnetID"`.
+In both cases your first stack should export resources, by using `Outputs`, that you want to use in main stack.
+By default CF use the same permission as user has (so if user can't create ec2 instances and template should create new ec2, this template would fail).
+But you can assign IAM role to CF, and in this case it would use permissions from this role. To create stack with assumed role you should pass param to cli like `--role-arn={youRoleForCloudFormationARN}`.
+If you don't specify `role-arn`, aws will use previous role. If it first time it will use temporary session that is generated from user (one who is creating the stack) credentials.
+For multi-env deployment (where you have dev/prod env or more) you should use single reusable template file (don't create new template file for each env, cause you will end up in a mess). 
+You can achieve reusability by adding params/mappings/conditions section into your template. Then you just create 2 stacks with different names (dev/prod) and different params but with single template file.
+Use dynamic references, never store secrets in your stack template. If you need secrets you should store them in aws secrets and just reference them from your template by using `'{{resolve:service-name:reference-key}}'`.
+Good practice is to set params constraints, by using `AllowedValues`. In this way you are guarantee that param would be some expected value.
+You can create rules with CF Guard (cfn-guard - open source CLI tool) that can ensure that your stack is compliant (for example: all ebs volumes should be only encrypted). In case rule failed, stack won't be created.
+Best practice is to divide your infra into several stacks. There are 2 approaches:
+* multi-layered architecture - horizontal structure where one layer depends upon another by using nested stacks (you divide all your services into 3 stacks - networking/computing/rds => computing layer depends on networking, cause you create ec2 instances in some vpc and subnet)
+* SOA (service-oriented architecture) - you stacks are separated not by technical layers but by services (each service has a separate stack with it's own networking/computing/rds).
+Layered Architecture usually has 3 layers:
+* Presentations (controllers)
+* Business Logic (services)
+* Database (models/domain objects/dto)
+Presentation depends(can access) on Business Logic and it depends(can access) on Database, but no the other way around.
+There are other 2 types of architecture:
+* hexagonal
+* onion
+But generally they resemble layered style, only difference they divide core (domain objects + services) and outer object (ui, database) and they are connected by using port (on core side) + adapter (on outer side)
+AWS-specific parameter types: If you need to pass param as ec2 key name, you can pass it as string, but if this key doesn't exist, you template would be half-created and aborted. 
+This is what for aws specific param types. If you set param type, not just `string`, but `AWS::EC2::KeyPair::KeyName`, CF would first check that the key with such name exists (in region), and only after this would start to create your stack. 
+Name of ssh key is not the only one, here is full list of [AWS-specific parameter types](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/parameters-section-structure.html#aws-specific-parameter-types)
+Internally CF is nothing but a service that parse your JSON/YAML, creates dependency graph and turn it into aws API calls (from bottom to top, so dependencies would work).
+CF uses declarative approach, cause you declare how your stack should look like, you are not telling what CF should do to in order to build it (imperative approach).
+DD (Drift Detection) - find difference between template values and actual property values in aws (can happen if someone change resource directly from console/cli). 
+DD only checks values explicitly set in template, it doesn't check default values (so if you change some default property directly from console/cli, DD won't find it).
+If you want include default props into DD result you should add all these default properties into CF template.
+Macros - allows you to customize templates. You write lambda that execute before template run and modify it (substitute variables, add new fields to objects). There are 2 types:
+* template level - applied to whole template (all parameters/resources)
+* snippet level - applied to single resource
+Custom resource - ability to create resource not supported by CF. When CF execute templates, and meet custom resource it call your lambda with your custom logic. You can use it to provision:
+* aws resource not supported by cf, like dynamoDB global table, [full list](https://github.com/cfntools/cloudformation-gaps/projects/1)
+* non-aws resource with cf, like github webhook (in case you want to use github for your ci/ci instead of codeCommit)
+* something not related to infra, like run migrations
+Custom resource handler - executed in async callback model, that means cf run it, but doesn't wait for response, instead you are given pre-sign s3 url, where you have to upload json result once you are done.
+As with all resources you have to implement logic for these 3 steps: create/update/delete. You can use [node.js library](https://github.com/andrew-templeton/cfn-lambda) to simplify writing custom resource handler.
+You create custom resource with `Type: Custom::YouCustomResourceName` with at least one property `ServiceToken: {LAMBDA_ARN}`. When cf execute your lambda you are given event with `ResponseURL` - s3 pre-sign url where you have to put json after execution.
+Example of event for lambda
+```
+{
+    "RequestType": "Create",
+    "ServiceToken": "arn:aws:lambda:us-east-1:ACCOUNT_ID:function:example-CustomResourceLambda-4RWJOUFLIPGA",
+    "ResponseURL": "https://cloudformation-custom-resource-response-useast1.s3.amazonaws.com/...",
+    "StackId": "arn:aws:cloudformation:us-east-1:ACCOUNT_ID:stack/example/85e457b0-1383-11eb-a18a-0e09773e6f3f",
+    "RequestId": "5d022657-3843-4f4e-8b6b-a04ed99f49a7",
+    "LogicalResourceId": "GithubWebhook",
+    "ResourceType": "Custom::GithubWebhook",
+    "ResourceProperties": {
+        "ServiceToken": "arn:aws:lambda:us-east-1:ACCOUNT_ID:function:example-CustomResourceLambda-4RWJOUFLIPGA",
+        "Tags": [
+            {
+                "Value": "example-GithubWebhook",
+                "Key": "Name"
+            }
+        ],
+        "Name": "GithubWebhook"
+    }
+}
+```
+Make sure you have logic to update `ResponseURL`, otherwise stack that use your lambda would be stuck in `UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS` state. 
+Description - first level tag, where you can put template description, max size 1024 symbols (if you try to exceed limit you will got exception `An error occurred (ValidationError) when calling the UpdateStack operation: Template format error: 'Description' length is greater than 1024.`)
+All resources can have several generic attributes:
+* DeletionPolicy - what to do with resource after resource deletion (either stack deleted, or stack updated but resource was removed from stack):
+    * Delete - delete resource with all it's contents. This is default policy, but `AWS::RDS::DBCluster` & `AWS::RDS::DBInstance` (that don't specify the `DBClusterIdentifier` property) - default policy is Snapshot. For s3 you must ensure that bucket is empty before it can be deleted.
+    * Retain - retain resource with all it's contents. Yet if you update stack in such a way that new resource of this type is created, than old resource would be deleted & new would be created with same name.
+    * Snapshot - for resources that support snapshot, first create snapshot and then delete resource. It applicable for ebs/elasticache/rds/redshift
+    Although you can use retain for RDS, this would mean that RDS instance would continue to run, so for RDS it's better to always use snapshot deletion policy.
+* DependsOn - resource would be created after specified resources
+* Metadata - associate some metadata with resource
+* UpdatePolicy & UpdateReplacePolicy - what to do in case of stack update
+Built-in function - intrinsic CF function like `GetAtt/Join/Select/GetAZs` for better work with CF templates (see `sa/cloudformation/cf-template.yml`). You can use them only in specific part of template: props/outputs/metadata/updatePolicyAttributes
+Stack policy:
+* by default all update actions for all resources allowed, so anybody with iam permission to update stack can overwrite any resource
+* you can setup stack policy to deny update actions for specified resources (like prod db)
+* once you setup stack policy - all updates denied by default, so you have to add explicit allow 
+* applied only during stack update, use it only as fail-save with combination with iam
+* `principal` element is required (just like for any other resource policy), but supports only the wild card (*)
+* Below example to allow all updates except production DB (`Update` can be either `Modify/Replace/Delete`, yet we use wildcard for short form)
+```
+{
+  "Statement" : [
+    {
+      "Effect" : "Allow",
+      "Action" : "Update:*",
+      "Principal": "*",
+      "Resource" : "*"
+    },
+    {
+      "Effect" : "Deny",
+      "Action" : "Update:*",
+      "Principal": "*",
+      "Resource" : "LogicalResourceId/ProdDb"
+    }
+  ]
+}
+```
+Don't confuse (see `sa/cloudformation/cf-wait-condition.yml`):
+* WaitCondition (`AWS::CloudFormation::WaitCondition`) - resource wait for some external resource (created outside current CF) to finish and only then mark resource status as complete.
+CF waits until WaitCondition get required number of signals or timeout is over. You use `DependsOn` attr to specify that wait condition created after some resource, and another recourse depends on wait condition.
+`AWS::CloudFormation::WaitConditionHandle` - has no props, but return pre-signed url. You use this url (send HTTP request to it) to notify your handle that outside resource is created.
+You can also use `signal-resource` cli to complete condition. In this case you don't even need WaitConditionHandle.
+* CreationPolicy (only applied to AutoScalingGroup/Instance/WaitCondition) - resource waits for signal from `cfn-signal` utility that installed on ec2. Use it in case you want CF to mark resource creation complete only after some script would finish execution in `userdata`.
+You add it to one of three above resource, and then use `/opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource Instance --region ${AWS::Region}` to signal that CF can complete with resource creation
+So you can use WaitCondition:
+* without anything, just call it directly using `signal-resource` api
+* with `WaitConditionHandle` (in this case you have to curl it's url), keep in mind that for each update if you need new wait you have to create new `WaitConditionHandle`, cause old already passed timeout
+* with `CreationPolicy` (in this case you have to call `cfn-signal` cli utility)
+Stack sets (`AWS::CloudFormation::StackSet`, see `sa/cloudformation/cf-multi-region.yml`) - native CF concept to create multi-account/region stack (before you have to use custom resource). You create set in one region for one account, and from there it creates resource to another regions/accounts.
+There are 2 types of permission model:
+* self-managed - you create iam roles in target account that account in which stack set is deployed
+* service-managed - if you deploy stacks in account managed by aws org, you don't have to create roles (they would be created automatically under-the-hood)
+Stack instance - reference to a stack in target account within region (can exist without stack, if stack can't be created, stack instance - shows the reason).
 
 ###### S3
 S3 (Simple Storage Service) used for:
@@ -3319,6 +3629,8 @@ There are several tricks you can do with CW Logs:
 * stream logs into ElasticSearch/lambda/kinesis using real-time subscription with subscription filters (each LG can stream up to 2 destinations)
 * by default logs encrypted with SSE, you can also encrypt it using KMS (only symmetric kms supported). To use kms associate LG with kms key, you can't use console, you have to use cli.
 
+###### Route53
+Route53 - amazon DNS service that help to transform domain name into IP address. Reason for a name, cause 53 - port of DNS.
 ###### KMS
 Key Management Service - service for generating/storing/auditing keys. If you have a lot of encryption it's better to use central key management service.
 You start working with KMS by creating CMK (customer master keys), or if you are using encryption from other aws resource, it would create CMK automatically for you.
@@ -3372,8 +3684,6 @@ you can also use it for tracking purpose, cause it recorded in CloudTrail. CW lo
 It also called AAD (additional authenticated data) - non-secret data that is provided to encryption and decryption operations to add an additional integrity and authenticity check on the encrypted data.
 When you encrypt file you can pass filename as encryption context. EBS use volumeId as security context. You can add encryption context to policy, in this case you can use kms only with specific context params.
 
-###### Route53
-Route53 - amazon DNS service that help to transform domain name into IP address. Reason for a name, cause 53 - port of DNS.
 You can buy hostname from any provider and register it within Route53, after this Route53 gives you 4 TLD (Top-Level Domain) that you put into your hostname provider, so end user will request your domain, request would go to your provider, and from there to aws. Route53 supports wildcards (subdomains).
 Route53 also supports:
 * WRR (Weighted Round Robin) where you can assign weight ans divide your traffic (for example you have new feature and want only 25% of users to use it).
@@ -3951,44 +4261,6 @@ So if you have some long-running lambda or http backend, you have to use async a
 * server run your task in background
 * you start polling server to check if background task completed by someID
 
-###### Cognito
-Cognito - managed user service that add user sing-in/sign-up/management email/phone verification/2FA logic. There are 2 pools:
-* User Pool - a directory with users' profiles, you can set up password strength, kind of IdP (Identity Provider)
-You can migrate your users into cognito, but password won't be migrated. If you want to migrate them with password you need to add special logic to your app:
-when user signin to your app - you signin him within cognito, if user doesn't exist in cognito you sign-up him with username/password.
-Cognito also support SAML or OpenID Connect, social identity providers (such as Facebook, Twitter, Amazon) and you can also integrate your own identity provider.
-* Identity Pool - temporary credentials to access aws services. If your users don't need to access aws resources, you don't need identity pool, user pool would be enough.
-You can use users from User Pool or Federated Pool (Facebook, Google) as users to whom give temporary credentials.
-You pay for MAU (monthly active users) - user who within a month made some identity operation signIn/singUp/tokenRefresh/passwordChange.
-Free tier - 50k MAU per month. You can call `AssumeRole` to get temporary credentials. So you can singin to user_pool but you can use user_pool id token to get aws credentials from identity_pool.
-There are 3 types of cognito tokens (with accord to OpenID):
-* id token - jwt token that has personal user info (name, email, phone). So you shouldn't use it outside your backend, cause it includes sensitive info. Usually id token = access token + user's personal details.
-* access token - jwt token that includes user's access rights. You can use it outside your backend to get access to other services. Live of id/access token is limited, usually to 1 hour, and that's why you should use refresh token to prolong it.
-* refresh token - use it to retrieve new ID and access tokens
-Example creating users from cli (first run `sa/cloudformation/cognito-iam.yml` as CF stack):
-```
-# create user
-aws cognito-idp sign-up --client-id={USER_POOL_CLIENT_ID} --username=john.doe@gmail.com --password=P@1ssword --user-attributes Name="email",Value="john.doe@gmail.com" Name="name",Value="John Doe"
-# confirm user as admin (without confirmation password sent to eamil)
-aws cognito-idp admin-confirm-sign-up --user-pool-id={USER_POOL_ID} --username=john.doe@gmail.com
-# login & get idToken
-aws cognito-idp initiate-auth --client-id={USER_POOL_CLIENT_ID} --auth-flow=USER_PASSWORD_AUTH --auth-parameters USERNAME=john.doe@gmail.com,PASSWORD=P@1ssword
-# create cognito identity id
-aws cognito-identity get-id --identity-pool-id={IDENTITY_POOL_ID} --logins cognito-idp.us-east-1.amazonaws.com/{USER_POOL_ID}={ID_TOKEN}
-
-# from now you have 2 optios to get temporary credentials
-
-# option1: get temporary aws credentials with cognito
-aws cognito-identity get-credentials-for-identity --identity-id={IDENTITY_ID} --logins cognito-idp.us-east-1.amazonaws.com/{USER_POOL_ID}={ID_TOKEN}
-
-# option2: get temporary aws credentials using AssumeRoleWithWebIdentity api
-# get open id token that you later use
-aws cognito-identity get-open-id-token --identity-id={IDENTITY_ID} --logins cognito-idp.us-east-1.amazonaws.com/{USER_POOL_ID}={ID_TOKEN}
-aws sts assume-role-with-web-identity --role-arn={ROLE_ARN} --role-session-name=temprole --web-identity-token={OPEN_ID_TOKEN}
-```
-You can enable unauthenticated access for guest users in identity pool (by setting `AllowUnauthenticatedIdentities: true`). You also would need attach role to `unauthenticated` under `AWS::Cognito::IdentityPoolRoleAttachment`.
-After this guest users would have permission defined by that role.
-
 ###### CodePipeline(CodeCommit/CodeBuild/CodeDeploy)
 CodePipeline - aws ci/cd tool, like jenkins. There are following stages:
 * source stage - select what can be source: CodeCommit/ECR/S3/Bitbucket/Github
@@ -4190,15 +4462,6 @@ If you want to schedule, there are 2 options:
 * maintenance window - you define window for disruptive actions like patching, updating drivers. You can use it also for s3/sqs/kms
 Parameter Store - create secure string params and store plaintext key and encrypted value. Use symmetric KMS only.
 
-###### Config
-Managed service that provides aws resources inventory, config history, change notification. When you turn it on, it creates config item for each resource.
-It provides detailed view of the configuration of AWS resources in your AWS account (how the resources are related and how they were configured in the past so that you can see how the configurations and relationships change over time).
-It integrated with cloudTrail, and record `CloudTrailID` for any resource change. Config Item - point-in-time record of aws resource, that include metadata, attributes, relationships, current configuration, and related events
-Config Rule - desired configuration of resource that is evaluated against actual change (and report in case of mismatch). Conformance Pack - collection of config rules. There are 2 types of rules:
-* managed - use one of many aws predefined rules to build your rule on top of it
-* custom - you create rule from scratch and write your lambda that would be invoked by your rule to evaluate resource
-CloudTrail - list of all api calls (cli & CF templates in the end are transformed into api calls). It stores point-in-time configuration of your aws resources.
-
 ###### Aurora
 Aurora - mysql/postgres compatible (most app that works with mysql/postgres would switch with no problem to aurora) aws database solution. 
 Although MariaDB was designed to be compatible with MySql, you can't migrate it to Aurora.
@@ -4239,134 +4502,6 @@ Aurora global:
 * spans multiple regions (one master region with both read/write and up to 5 replica regions with only read), enable low-latency global reads and disaster recovery
 * cross-region replication is fast, usually less than 1 sec
 * doesn't support: serverless, backtracking
-
-###### CloudTrail
-CT - service that logs activity of your aws account (who made request, what params were passed, when and so on..). It's useful for compliance, when you need to ensure that only certain rules have ever been applied.
-There are 3 types of logs:
-* management events - api calls to modify aws resources (create ec2/s3 and so on...)
-* data events - api calls to modify actual data (s3 get/put/delete object + lambda calls)
-* insights events - CT use ML (Machine Learning) to determine any anomaly (like spike in some api calls) and notify you.
-By default:
-* log files delivered within 15 minutes of account activity. 
-* logs stored for 90 days and only management events stored. If you need longer you should create trail. Trail stores data in s3, you have to analyze it yourself (usually using Athena)
-* trail viewable in region where it's created. for all-region trail - it's viewable in all regions.
-* trail collects data from all regions. You can create single region trail [only from cli](https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-create-and-update-a-trail-by-using-the-aws-cli-create-trail.html#cloudtrail-create-and-update-a-trail-by-using-the-aws-cli-examples-single), no way to create single-region trail from console. 
-* trail created with GSE enabled (it's true for both when you create from console and from cli. Although when you create trail from cli you can specify `--no-include-global-service-events` not to include GSE into this trail). 
-When aws launch new region, in case of all region trail - new trail would be created in newly launched region.
-* trail in s3  encrypted using SSE. You can set custom encryption with KMS.
-SNS delivery - you can configure to get notification each time new log file delivered to s3 bucket (not single event, but whole file with many events).
-Cross-account trails (you can configure to deliver CT events from multiple accounts to single s3 bucket):
-* create s3 bucket in account A, accountAMyS3Bucket and add bucket policy to allow cross-account access
-* in account B (or any other) create CT and set bucket name as accountAMyS3Bucket. From now all logs would be delivered to bucket in another account
-Log file validation - guaranty that logs were not tampered with. When turn in, CT create a hash for each log file, and every hour store all these hashes in digest file in the same s3 bucket. 
-Each digest file is signed with private key that generated by CT. You can download public keys with `list-public-keys` command, and validate signed files. But you have no access to private keys - they are managed by CT.
-Private key is unique for each region within aws account. When you retrieve public keys you specify time range - 1 or more public keys may be returned. Mare sure your s3 bucket has correct write policy, otherwise CT won't be able to store logs there.
-Organization trail - created by master account to log all events in all aws accounts for this organization (can be one/all region). You can deliver CT logs to CloudWatch, in this case CT would deliver logs to s3 & CloudWatch logs.
-GSE (Global Service Events) - services like IAM/STS/CloudFront add logs to all trails that support GSE. It's turn on by default. You can turn it off only from cli/sdk.
-* create trail `aws cloudtrail create-trail --name=multiRegionTrail --s3-bucket-name=my-test-s3-bucket-1 --is-multi-region-trail`
-S3 bucket should have both `s3:GetBucketAcl/s3:PutObject` enabled in bucket policy, otherwise you got `Incorrect S3 bucket policy is detected for bucket`.
-Below is bucket policy example:
-```
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Principal": {
-                "Service": "cloudtrail.amazonaws.com"
-            },
-            "Action": "s3:GetBucketAcl",
-            "Resource": "arn:aws:s3:::my-test-s3-bucket-1"
-        },
-        {
-            "Effect": "Allow",
-            "Principal": {
-                "Service": "cloudtrail.amazonaws.com"
-            },
-            "Action": "s3:PutObject",
-            "Resource": "arn:aws:s3:::my-test-s3-bucket-1/*"
-        }
-    ]
-}
-```
-Result of CT creation:
-```
-{
-    "Name": "multiRegionTrail",
-    "S3BucketName": "my-test-s3-bucket-1",
-    "IncludeGlobalServiceEvents": true,
-    "IsMultiRegionTrail": true,
-    "TrailARN": "arn:aws:cloudtrail:us-east-1:ACCOUNT_ID:trail/multiRegionTrail",
-    "LogFileValidationEnabled": false,
-    "IsOrganizationTrail": false
-}
-```
-* change trail to single region `aws cloudtrail update-trail --name=multiRegionTrail --no-is-multi-region-trail`.
-In this case trail would remain in the region in which it was created, and all it's shadow trails in other regions would be removed.
-```
-{
-    "Name": "multiRegionTrail",
-    "S3BucketName": "my-test-s3-bucket-1",
-    "IncludeGlobalServiceEvents": true,
-    "IsMultiRegionTrail": false,
-    "TrailARN": "arn:aws:cloudtrail:us-east-1:ACCOUNT_ID:trail/multiRegionTrail",
-    "LogFileValidationEnabled": false,
-    "IsOrganizationTrail": false
-}
-```
-* Remove GSE `aws cloudtrail update-trail --name=multiRegionTrail --no-include-global-service-events`
-* Change back to multi-region `aws cloudtrail update-trail --name=multiRegionTrail --is-multi-region-trail`
-You get `Multi-Region trail must include global service events.`. So you should do both `aws cloudtrail update-trail --name=multiRegionTrail --is-multi-region-trail --include-global-service-events`. So You can't remove GSE from multi-region trail.
-cross-account role audit (to check who made cross-account request you have to access both cloudTrail logs):
-* if your dev account assume role in prod account and call `DeleteBucket` in prod
-* in prod cloudTrail log you will see that `userIdentity` with `type: AssumedRole` and with specific `accessKeyId` called delete bucket api, yet you can't see which user exactly did it
-* in dev cloudTrail log you can see which user called operation `AssumeRole`. Since many users can call this api, to distinguish you may use `accessKeyId`
-So there are 2 ways to find out which iam user called delete bucket api:
-* [Find iam user using accessKeyId](https://aws.amazon.com/blogs/security/how-to-audit-cross-account-roles-using-aws-cloudtrail-and-amazon-cloudwatch-events)
-    * in prod account you extract `accessKeyId` from `userIdentity` for `DeleteBucket` call
-    * in dev account you extract `accessKeyId` from `responseElementscredentials` (this is important cause in dev account inside `userIdentity` there is another accessKeyId of iam user), and `userName` from `userIdentity` for `AssumeRole` call
-    * then you compare `accessKeyId` from both dev & prod cloudTrail logs. If they are the same, then this userName from dev account called your `DeleteBucket` api
-* [Find iam user using sharedEventID](https://aws.amazon.com/blogs/security/aws-cloudtrail-now-tracks-cross-account-activity-to-its-origin)
-    * in prod account you extract `accessKeyId` from `userIdentity` for `DeleteBucket` call
-    * in prod account you extract `sharedEventID` from `AssumeRole` call using `userIdentity` from previous step
-    * in dev account you extract `userName` from `userIdentity` for `AssumeRole` with same `sharedEventID` as from previous step
-    * `sharedEventID` - unique GUID generated for cross-account api calls (AssumeRole/use kms key) that send CloudTrail logs to 2 accounts, by which you can link 2 log entries
-    
-###### Certificate Manager
-ACM (Amazon Certificate Manager) - service that allows you to create/deploy public/private SSL/TLS certificates.
-It removes the time-consuming manual process of purchasing/uploading/renewing SSL/TLS certificates. There are 2 types of certificate:
-* public - issued by public CA, trusted by all browser by default. 
-* private - issued by private CA. You can create your own private CA to manage all your private certificates. There are 3 modes to work:
-    * you can delegate management to ACM
-    * you can manually distribute certificates to other services (like ec2), but ACM still renew your private certificates
-    * you have complete control
-ACM Private CA (Certificate Authority) - managed by aws private CA where you can create your private certificates.
-Private CA handles the issuance/validation/revocation of private certificates within a private network, compose of 2:
-* private certificate
-* CRL (Certificate Revocation List) - resources can check this list, that private certificate is valid one
-Don't confuse:
-* public CA - validate certificates in Internet. Can be used only with ELB/CloudFront/BeanStalk/API Gateway.
-* private CA - validate certificates in private network. Can be used with any aws service (ec2).
-Public certificate should have valid dns name, but private can have any desired name. Self-signed certificate - certificate generated manually without CA (so no way to check if it's revoked or valid).
-You can create certificate with multiple domain names or wildcard domain name (*.example.com).
-Since public certificates proves domain identity, Amazon must verify that you own domain before issuing certificate. Aws use 2 types of validation:
-* dns - you modify your CNAME by adding some randomly generated token by ACM, that's how you prove that you own domain.
-If you want to automatically renew your cert you shouldn't remove CNAME token, otherwise in order to renew you would have to run dns validation again
-* email - amazon sends email to the owner of domain that it obtains from whois service
-For successful issuing of public certificate DNS CAA should be empty or include one of: amazon.com/amazontrust.com/awstrust.com/amazonaws.com
-Public certs are free, but private CA - 400$ per month. You also pay for each private cert.
-ACM internally use KMS (`aws/acm` key that generated first time you request ACM):
-* acm stores all certificate private keys encrypted (acm stores only encrypted version of private key)
-* when you associate acm with service, acm sends certificate & encrypted private key to this service + create kms permission to allow for service to use it to decrypt private key
-* service use this permission, decrypt private key and establish secure connection using plaintext private key
-* if you disassociate acm with service, kms permission for this service would also be removed
-IAM certificate:
-* preferred way to handle certs is ACM, but if you region doesn't support it (ACM is regional based) you can use IAM cert
-* you can't create new cert from iam, but you can upload pre-generated cert
-* you should uce cli/api (currently console not supported cert upload, yet if you create ELB from there you can upload)
-* use commands `UploadServerCertificate` - upload new cert, `ListServerCertificates` - list all certs, `GetServerCertificate` - get cert by id
-* don't confuse server cert with user signing cert `UploadSigningCertificate` - you upload cert for specified user, and this user can make X.509 signed requests
-There is no way to migrate cert from IAM to ACM. There is no way to update imported certs after expire date. If you import certs, you have to take care about expire date manually.
 
 ###### Cloud9
 Cloud based IDE (integrated development environment) where you can run and execute your code. It basically a separate ec2 where you can install programs, write/build code, and work just like with your laptop.
@@ -4514,30 +4649,6 @@ Then upload them and use `CloudFormation/advanced-networking/client-vpn.yml` upd
 * `<key></key>` - private key from client.key file
 Remove `remote-cert-tls server` from `*.ovpn` file, otherwise you got `ERROR: Certificate does not have key usage extension`
 After run `sudo openvpn --config ~/Downloads/downloaded-client-config.ovpn`. Then you can ping private ec2 from your local machine.
-
-###### Directory Service
-DS (Directory Service) - hierarchical structure to store/search/manipulate objects, so users can locate resources no matter where they are stored.
-In software engineering, a directory is a map between names and values. It allows the lookup of named values, similar to a dictionary. DS - is a standard, AD - implementation of DS by microsoft.
-AD (Active Directory) - microsoft DS that additionally provides SSO/LDAP so user can have roles/authentication to access resources, it stores users/computers/printers in company's network and provides access/roles to users.
-AD provides centralize authorization and authentication to network resources, it also stores network resources and users information like computer/printers/users/users groups/organizational units/passwords information.
-LDAP (Lightweight Directory Access Protocol, port 389, don't confuse with RDP - 3389) is an application protocol for querying and modifying items in directory service providers like AD.
-Objects in AD grouped into domains. Tree - collection of one or more domains. Forest - collection of trees that share common global catalog. Domain Controller - windows server that runs AD.
-AWS DS - managed service replicated across multiple AZ. There are 3 types of aws DS:
-* AWS Managed Microsoft AD - microsoft AD completely deployed in cloud and managed there. Trust Relationship - you can build it between aws microsoft AD and your on-premise microsoft AD, and store your users/passwords in your on-premise AD.
-But use aws microsoft AD to access aws services based on users from on-premises AD. So you can use it as either standalone AD or as trust relationship to on-premise AD.
-    * deployed in 2 AZ
-    * connected to VPC
-    * backups automatically taken once per day
-    * EBS by default encrypted
-    * failed domain controllers automatically replaced in the same AZ using the same IP address
-* simple AD - Linux-Samba AD deployed & managed in the cloud. you can singIn to aws console with simple AD account. it doesn't support trust relationship, schema extension, multi-factor auth.
-* AD Connector - connector to redirect all request to your on-premises AD. So it basically directory gateway that forward requests to on-premise AD.
-Connect on-premises AD with aws:
-* create vpc with 2 public subnet in 2 AZ with NAT gateway in each, and 2 private subnet with domain controller (Windows Server 2019 AMI) replicating from on-premises AD + vpn/CGW/VPG to connect on-premises to AD
-Once you create 2 windows server you promote them into domain controller in the on-premises AD forest. In this case your ec2 get low-latency access to AD through domain controllers, and since you have 2 AZ you build HA system.
-* using AD connector - use it for secure aws integration with your on-premises AD (sing-in to console/workSpaces/workDocs). It can't work with you custom apps. If you want custom apps to use AD use first approach with domain controllers.
-Under-the-hood it's dual AZ proxy that connects aws services to on-premises AD. It forward sign-in requests to your AD for authentication and provide ability for aws services to query AD for data.
-Since it's just a proxy, connector doesn't store/cache user credentials & details. You have to provide a pair of DNS IP, connector use it to locate nearest domain controller.
 
 ###### Wavelength
 Wavelength combines 5G networks with aws compute/storage services. You should use it when you want your aws services to be accessed from mobile devices with low latency.
@@ -4700,10 +4811,6 @@ Don't confuse:
 * agent-based - for normal linux like centos
 You can import data form ADS to Migration Hub, and from there export data using Athena. There is no way to use athena from ADS, or use agent to send data into s3 bucket.
 
-###### Artifact
-Artifact - portal that provides customers with ability to download AWS security and compliance documents, such as AWS ISO certifications, Payment Card Industry (PCI), and System and Organization Control (SOC) reports.
-There are 2 types of docs: agreements (you can accept it or terminate, so 2 statuses - active/inactive) / report
-
 ###### Server Migration Service
 SMS - agentless service that helps migrate on-premise workload to aws, significant enhancement of ec2 VM Import. You can migrate virtual machines from VMware vSphere, Windows Hyper-V, or Microsoft Azure to aws.
 Server Migration Connector - pre-configured FreeBSD virtual machine that you install in your on-premise. This connector replicate volumes into ami and transfer it into aws using TLS.
@@ -4718,13 +4825,6 @@ Migration works in 4 steps:
 To migrate multiple servers you create Application and divide it into groups (group1 - db servers, group2 - file servers ...). When you create Application you can enable notification.
 First you have to deploy connector, then you can create Application & configure settings/replication jobs/launch. CF template generated as a result and launched automatically using your configures launch settings from Application.
 Since SMS create CF template, you can integrate it with Service catalog to centrally manage all imported resources, so users can choose certain products & deploy them quickly.
-
-###### Resource Access Manager
-RAM - helps securely share your resources across AWS accounts or within your Organization. Shared resources can't be re-shared. To share resources, you create a Resource Share, give it a name, add one or more of your resources to it, and grant access to other AWS accounts.
-Account iam policy & scp applied to shared resource same way they are applied to provisioned resource in that account. There are 2 types of sharing:
-* sharing with organization - share resource with whole organization or with OU. For this to work master account should enable resource sharing within organization. If it's not done you can't share resources with organization, but you can still use individual sharing.
-To enable sharing to to RAM console => setting, and tick `Enable sharing with AWS Organizations`. This would activate sharing for your org.
-* individual sharing - share resource with individual account
 
 ###### DataSync
 Online data transfer service that simplifies/automates/accelerates copying large amounts of data to and from s3/efs/FSx over the internet/DX. How it works:
@@ -4827,10 +4927,6 @@ End users have simple portal where they can discover allowed services (products)
 Portfolio - collection of products. Product - cloudFormation template with a list of aws resources. Users then can launch any product in portfolio. 
 You can share portfolio with other aws accounts. By using cloudFormation params you can customize user experience (for example end users can choose what type of ec2 instance to run).
 
-###### Inspector 
-It's automated security assessment service that test the network accessibility of your ec2 and apps running on them. Plz note that it designed to ec2 only, so you can't use it to perform security assessment of API gateway, lambda and so on.
-You install agent on your OS, and it collects data and send it to inspector for analyzing. Assessment template - configuration based on which inspector validates your system.
-
 ###### Neptune
 Fully-managed graph database (not relational) service optimized for storing billions of relationships and querying the graph with milliseconds latency:
 * ACID compliant with immediate consistency
@@ -4855,23 +4951,6 @@ Allows your devices process the data they generate locally, while still taking a
 So you can have aws lambda, wrap it into greengrass and then ship it ot IoT device. Of course if device in offline mode, and lambda use dynamoDB, calls would fail.
 Local Resource - buses/peripherals that are physically present on the device. You can also build ML model with SageMaker Nero and then install into device.
 
-###### WAF & Shield
-3 security services joined under single tab in aws:
-* waf (web application firewall) - you add rules that allow/deny/count web requests based on conditions that you define. Conditions are: HTTP header/body, URL string, SQL injection, XSS (for example you can block specific user-agents).
-Underlying service send request to waf, waf validate it based on rules you defined and instruct your service to block/allow request to proceed. It's integrated with CloudFront/ALB/ApiGateway/AppSync.
-You create Web ACL (Access Control List), specify resource, and add rules. Plz note only ALB can be specified, there is no way to add WAF above NLB, cause NLB works on level 4.
-Rate-Base Rule - allows you to set a number of allowed request per IP address during predefined time (100 requests per 5 min - once this IP send 101 request, it would be blocked, until 5 min period ends, and new starts).
-Managed Rule - default rules that automatically updated by AWS Marketplace security Sellers, protects against common known issues. 
-In case of rule fail you can configure CloudFront to show error page. Rules take a minute to propagate worldwide. It inspects both HTTP/HTTPS traffic.
-* shield - provides protection against DDoS (Distributed Denial of Service) attack. There are 2 types of this service:
-    * standard - free, activated by default for all accounts. Protect all aws infra (layer 3 and 4) against most common attacks like SYN/UDP floods or reflection attacks.
-    * advanced - paid, protect against more sophisticated attacks, like layer 7 HTTP & DNS floods. It constantly monitors network traffic and provides near real-time notifications of suspected DDoS incidents.
-You can use shield to protect on-premise servers. For this use aws endpoint with shield in front of your on-premise server. Shield notify about attack by sending metrics to CloudWatch.
-* FM (Firewall Manager) - tool that makes it easier for you to configure your WAF rules and vpc SG across your accounts. So if you have single account no need to use FM, but if you have aws organization with many accounts
-it's better to use single tool to configure waf across all accounts, cause FM integrated with organization so have a single place to quickly respond to incidents.
-WAF sandwich (see `sa/files/images/waf-sandwich.png`) - concept where instead of aws, you use custom software with waf on ec2.
-In this case you have elb -> custom waf with asg -> elb -> ec2 with app. So basically you put your custom waf ec2 into ASG and between 2 elb.
-
 ###### Trusted Advisor
 Reviews your account and makes recommendations for saving money, improving system performance, closing security gaps. It includes a list of checks in the categories of cost optimization, security, fault tolerance, performance, service limits.
 If you turn it on you will got weekly email notifications regarding what can be improved (you can exclude resources on which you don't want to get notified). So basically if you want improve performance/efficiency you should use trusted advisor + CloudWatch.
@@ -4887,16 +4966,6 @@ There are 4 support plans you can use (you must be logged in as root in order to
 * developer (paid) - 7 core checks
 * business (paid) - full set of checks
 * enterprise (paid) - full set of checks + Designated Technical Account Manager
-
-###### CloudHSM
-Dedicated HSM instance within aws cloud. You can securely generate/store/manage cryptographic keys. HSM (Hardware Security Module) provides secure key storage and cryptographic operations within a tamper-resistant hardware device.
-Cluster - contains multiple devices across AZ/subnet in single region. You can't create single device, only cluster with 1 or more devices. Since devices created in sunbets you need to have vpc in order to use CloudHSM.
-You can use with database or with nginx to off-load ssl. Best practice to sync all keys at least in 2 devices in separate AZ. It's built with physical and logical tamper-protection, so it trigger key deletion (zeroization) in case of breach.
-Daily backups are automatically taken and stored in s3 (bucket must be in the same region as cluster). All backups encrypted with 2 types of keys:
-* EBK (ephemeral backup key) - generated inside HSM when backup is taken. Used to encrypt backup. Encrypted backup include encrypted EBK.
-* PBK (persistent backup key) - used by HSM to encrypt EBK. Generated based on 2 other keys:
-    * MKBK (manufacturer key backup key) - permanently embedded in the HSM hardware by manufacturer
-    * AKBK (AWS key backup key) - installed in the HSM during initial setup by aws CloudHSM.
 
 ###### Polly
 It turns text into lifelike speech. You can supply polly with either simple text or SSML format. Pronunciation lexicon - enable you to customize pronunciation of words. 
@@ -5063,10 +5132,6 @@ There are 2 types of members:
 Aws account and creator don't own network. For any changes there should be voting process between all network members. Peer node - when member join network it should have at least 1 peer node which store copy of distributed ledger with all transactions.
 Each blockchain has unique identifier `ResourceID.MemberID.NetworkID.managedblockchain.AWSRegion.amazonaws.com:PortNumber`. Port depends on blockcahin framework you are using. Yet this link is private, so members should have vpc and use vpc PrivateLink to access blockchain endpoint.
 AWS Blockchain Templates - you can run Ethereum/Hyperledger on ECS cluster or in ec2 using docker and have full control (compare to managed blockchain where you don't have access to ec2 machines).
-
-###### GuardDuty
-Threat management tools that helps to protect aws accounts/workloads/data by analyzing data from cloudTrail/vpcFlowLogs/dnsLogs using ML. It's regional service, so all collected data is aggregated/analyzed within region. 
-It doesn't store any data, once data is analyzed it discarded. threat intelligence - list of malicious IP addresses maintained by aws and third-party partners. You should first enable GuardDuty, you can also assign admin account (it can assume 2 roles to administer your GuardDuty).
 
 ###### Secrets Manager
 SM allows you to rotate/manage/retrieve db credentials, API keys, and other secrets throughout their lifecycle. You can encrypt secrets at rest using kms (you can choose your own, otherwise SM create new kms for you).

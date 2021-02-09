@@ -32,6 +32,8 @@ https://en.wikipedia.org/wiki/The_Notebook (movie)
 https://en.wikipedia.org/wiki/Unsane
 https://en.wikipedia.org/wiki/500_Days_of_Summer
 https://en.wikipedia.org/wiki/The_Laundromat_(film)
+https://en.wikipedia.org/wiki/Crouching_Tiger,_Hidden_Dragon
+https://en.wikipedia.org/wiki/Crouching_Tiger,_Hidden_Dragon:_Sword_of_Destiny
 https://sleek.com/hk/resources/offshore-companys-guide-to-tax-exemption-in-hong-kong (offshore company, no tax)
 https://www.creditcardinsider.com/blog/what-are-the-worlds-most-exclusive-luxury-credit-cards-here-are-8
 https://www.dell.com/en-us/work/shop/dell-laptops-and-notebooks/sr/laptops/64gb-ram
@@ -43,10 +45,7 @@ aws reinvent CodeStar
 https://www.youtube.com/watch?v=-ObImxw1PmI (checkout other aws reinforce talk)
 https://habr.com/ru/post/224955 (scan wifi)
 add sites that helped to prepare to cert for java/spring/aws
-move all java stuff into data analytics
 read nmap book
-move all security services (iam/cognito/active_directory/ACM/kms/cloudhsm/inspector/macie/guardduty/waf/config/cloudtrail/artifact/RAM/security_hub) into fourth content type (call them security aws services)
-divide sa.md into servives (database/data alanytics/ML/other services)
 * dynamodb kinesis integration, dynamodb backups
 * https://www.amazon.science/publications/amazon-aurora-design-considerations-for-high-throughput-cloud-native-relational-databases
 * https://dl.acm.org/doi/abs/10.1145/1323293.1294281
@@ -58,6 +57,7 @@ divide sa.md into servives (database/data alanytics/ML/other services)
 * cloudhsm encrypt oracle with transparent data encryption
 * kms runs cloudhsm behind the scene
 * https://aws.amazon.com/macie/faq/
+* https://aws.amazon.com/security-hub/faqs/
 * cross region s3 replication for encrypted bucket
 * https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_boundaries.html
 * elb to ec2 end-to-end https connection
