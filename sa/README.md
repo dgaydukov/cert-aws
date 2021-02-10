@@ -20,10 +20,9 @@ Associate tier give you just superficial knowledge, you would just know that som
 * [Free questions](https://www.examtopics.com/exams/amazon)
 
 ### TODO
-download spring cert score or write to support team (add to folder)
 https://www.youtube.com/watch?v=GwEtiRZR4g4 (Deep Dive on Amazon Aurora)
 https://www.youtube.com/watch?v=UpeV4OqB6Us (Cloud Migration, Application Modernization and Security for Partners)
-aws reinvent CodeStar
+https://www.youtube.com/watch?v=7UygHxU9fU8 (CodeStar)
 https://www.youtube.com/watch?v=-ObImxw1PmI (checkout other aws reinforce talk)
 https://habr.com/ru/post/224955 (scan wifi)
 read nmap book
