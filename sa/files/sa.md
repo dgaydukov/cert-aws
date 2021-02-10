@@ -1782,6 +1782,7 @@ One-to-many (customers-orders, each customer has many orders, but each order has
 Many-to-many (authros-books, each author has many books, and each book can be written by several authors):
 * relational (3 tables) - authors, books, author_book - special table to store auhorId+bookId
 * nosql (1 table) - partitionKey (authorId) and sortKey (bookId). Here duplication happens, cause same book would be duplicating for all it's authors.
+There is no concept of database in dynamoDB, you just create tables and work with them (usually 1 table per whole application). Table name should be unique within single region (you can have 2 table with same name in different regions).
 If you need another access pattern, like find all authors by book, you add another type of pk into this table where you swap partition & sort key: partitionKey (bookId) and sortKey (authorId)
 By doing this you add even more duplication, yet now you have 2 access pattern by either author or book.
 This idea of storing data called - adjacency list - way to represent graph data (nodes and edges) in flat model. Suppose we have a bunch of people and want to represent them as friends. We can use graph representation.
@@ -1840,7 +1841,6 @@ There are 4 types of NoSql db:
 * document (DynamoDB/documentDB)
 * columnar (RedShift)
 * graph (Neptune)
-Since DynamoDb is multi-AZ by default there is no automatic backup (like rds have), but you can use on-demand backup/restore logic.
 DynamoDb just like s3 is not in vpc, so you can either:
 * access it from internet using some url
 * access it from private subnet using vpc gateway endpoint
@@ -1939,13 +1939,13 @@ Max item size:
 DynamoDB vs s3:
 * if you need low-latency and you data size less then 400KB use dynamoDB, cause on average it faster
 * if your data is more then 400KB, or latency is no issue, you can store data in s3
+Since DynamoDb is multi-AZ by default there is no automatic backup (like rds have), but you can use on-demand backup/restore logic.
 Point-in-time recovery - dynamoDB will maintain incremental backup for last 35 days, and in case of accidental write/delete you can recover your db to any point.
 With this you can restore table to any selected date and time (day:hour:minute:second) to a new table. All table settings restored from table at that time (if your WCU is 50, but 2 weeks ago was 500, if you restore table from that time, now your WCU would be 500)
 Cross-region restore - you can recover point-in-time table to another region.
 Security:
 * data-in-rest encryption supported for both dynamoDB & DAX
 * data-in-transit encryption supported by HTTPS protocol. You can enable vpc endpoint to access dynamoDB from inside VPC only
-There is no concept of database in dynamoDB, you just create tables and work with them (usually 1 table per whole application). Table name should be unique within single region (you can have 2 table with same name in different regions).
 
 ###### ElastiCache
 Managed service that runs Memcached/Redis server nodes in cloud. It automates common administrative tasks required to operate a distributed in-memory key-value environment, consists of:
@@ -2790,11 +2790,28 @@ Access restriction - you can restrict access to objects in your bucket to specif
 If you have single image (2kx2K pixels) split into number of tiles (40x40), bad practice is to store one big picture - increase size of tiles to max size - in this case you reduce number of `GET` requests to s3 bucket and save costs.
 Access Points - simplify managing data access at scale for shared datasets in S3. If you have hundreds of apps/users use your single s3 bucket, you have to add all access permission into single json and manage it there.
 This is error prone & time consuming, cause every change need to be reviewed carefully & tested. Access point - named network endpoint with separate permission. Each access point enforced customized access and work with conjunction with main bucket policy.
+Block public access - special feature of s3 to block public access to bucket/accessPoint/account outside iam policy or bucket policy. You can configure it to separate bucket (would be applied to all access points associated with bucket) or whole account (would be applied to all buckets).
+Although you can use iam/resource policy to control access, you can use these 4 options as safeguard, to ensure that even if somebody mess-up with iam/resource policy & open public access, content won't be publicly accessible. There are 4 options:
+* BlockPublicAcls - PUT bucket/object ACL will fail if ACL is public (it would block all new modification, but doesn't touch existing)
+* IgnorePublicAcls - ignore all bucket/object public ACL (so it would affect all existing public ACL - basically it would block all previously enabled access)
+* BlockPublicPolicy - PUT bucket/accessPoint policy would fail if such policy allows public access (it would block any new policy, but won't touch existing)
+If you want to use it, it's better to set it to whole account, cause otherwise smart user can create bucket policy with `s3:PutBucketPublicAccessBlock`, then modify bucket public access settings to set value to false, and then add public resource policy.
+* RestrictPublicBuckets - restrict access to bucket with public policy only to authorized iam users within account (so basically block public access for already existed policy)
+You can set such policy from CF template (you can set all 4 to true to block all, or just some of them):
+```
+Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+        PublicAccessBlockConfiguration:
+            BlockPublicAcls: true
+            IgnorePublicAcls: true
+            BlockPublicPolicy: true
+            RestrictPublicBuckets: true
+```
 
 ###### Glacier
-Glacier - low-cost tape-drive storage value with $0.007 per gigabyte per month. Used to store backups that you don't need frequently.
-Access to data can take from few minutes to a few hours. You store data as archives.
-Vault - same as bucket for s3, actual place where your archives are stored. You control access by using iam identity or vault policy.
+Glacier - low-cost tape-drive storage value with $0.007 per gigabyte per month. Used to store backups that you don't need frequently. Access to data can take from few minutes to a few hours. You store data as archives.
+Vault - same as bucket for s3, actual place where your archives are stored. You control access by using iam identity or vault policy. 
 Vault Lock - compliance control policy like WORM (write-once-read-many) where you put object only once and lock applied and you can't overwrite it
 Anti-pattern:
 * rapidly changing data (use EBS/EFS/RDS/DynamoDB)
@@ -3158,6 +3175,37 @@ When you create lambda you have to provide `role_arn`, the role which lambda ass
 When you create lambda you can specify:
 * Runtime (default `nodejs12.x`) - which programing runtime (java/python/go/nodejs/ruby/dotnetcore) to use. You can also build your own runtime with `provided/provided.al2` which create Amazon Linux & Amazon Linux 2 ami. Custom runtime may run shell script, language included in Amazon Linux or compiled binary
 * Timeout (1-900 sec, default 3 sec) - max time of function execution. Once timeout over, lambda stop running your code and throw an error `Response:{"errorMessage":"2021-01-07T07:55:11.512Z 12e1e1ab-7d43-4dcc-90b4-0489274b6ecf Task timed out after 3.00 seconds"}`
+You can't catch timeout error inside lambda, yet you can create timeout code in javascript to execute just a few milisec before your lambda timeout using `context.getRemainingTimeInMillis()` - returns remaining timeout.
+```
+exports.handler = (event, context, callback)=>{
+    // call just 100 milisec before actual timeout, we subtract 100 to be sure, cause if you just leave context.getRemainingTimeInMillis() as it's, sometimes lambda timeout may fire before your code, so lambda would throw error (it would be race condition)
+    var timer = setTimeout(() => {
+        // if we don't set this, calling callback won't effectively terminate lambda, here without this line, next callback won't close lambda, cause there is another timeout. You can alternatively clearTimeout for second timeout
+        context.callbackWaitsForEmptyEventLoop = false;
+        callback(null, "timeout expired");
+    }, context.getRemainingTimeInMillis()-100);
+    // if you set value less than 3000, then your callback would be called before tiemout
+    setTimeout(() => {
+        clearTimeout(timer);
+        callback(null, "success");
+    }, 3000);
+};
+```
+Here same function rewritten using async 
+```
+exports.handler = async (event, context, callback)=>{
+    try{
+        let timer;
+        await Promise.race([
+            new Promise(r=>setTimeout(r, 2000)),
+            new Promise((r, rej) => timer = setTimeout(rej, context.getRemainingTimeInMillis()-100, "timeout expired"))
+        ]).finally(() => clearTimeout(timer));
+	return "success";
+    } catch (ex){
+        return ex;
+    }
+};
+```
 * Memory usage (128-10240 MB, default - 128) - you can allocate more memory if lambda does memory-intensive computing. Yet you can't manually configure cpu - it's allocated proportionally your RAM, so more memory allocation - means more cpu would be allocated.
 * Concurrency - number of request lambda can server at the same time. There are limits with up to 3k max (limits based on region from 500-3000). There are 2 types:
     * reserved concurrency - creates a pool of requests that can only be used by its function, prevents using unreserved concurrency

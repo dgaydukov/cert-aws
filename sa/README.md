@@ -20,8 +20,7 @@ Associate tier give you just superficial knowledge, you would just know that som
 * [Free questions](https://www.examtopics.com/exams/amazon)
 
 ### TODO
-add sites that helped to prepare to cert for java(https://enthuware.com)/spring(https://www.certification-questions.com)/aws
-download spring cert score (add to folder)
+download spring cert score or write to support team (add to folder)
 https://www.youtube.com/watch?v=GwEtiRZR4g4 (Deep Dive on Amazon Aurora)
 https://www.youtube.com/watch?v=UpeV4OqB6Us (Cloud Migration, Application Modernization and Security for Partners)
 aws reinvent CodeStar
@@ -31,6 +30,7 @@ read nmap book
 * dynamodb kinesis integration, dynamodb backups
 * https://www.amazon.science/publications/amazon-aurora-design-considerations-for-high-throughput-cloud-native-relational-databases
 * https://dl.acm.org/doi/abs/10.1145/1323293.1294281
+* https://www.allthingsdistributed.com/2007/10/amazons_dynamo.html
 * dynamodb on-demand vs auto-scaling (cause they both solve same problem - scale based on load)
 * deploy aurora & call lambda from it
 * https://aws.amazon.com/blogs/security/how-to-use-amazon-guardduty-and-aws-web-application-firewall-to-automatically-block-suspicious-hosts
