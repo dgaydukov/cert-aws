@@ -26,10 +26,6 @@ https://www.youtube.com/watch?v=7UygHxU9fU8 (CodeStar)
 https://www.youtube.com/watch?v=-ObImxw1PmI (checkout other aws reinforce talk)
 https://habr.com/ru/post/224955 (scan wifi)
 read nmap book
-* dynamodb kinesis integration, dynamodb backups
-* https://www.amazon.science/publications/amazon-aurora-design-considerations-for-high-throughput-cloud-native-relational-databases
-* https://dl.acm.org/doi/abs/10.1145/1323293.1294281
-* https://www.allthingsdistributed.com/2007/10/amazons_dynamo.html
 * dynamodb on-demand vs auto-scaling (cause they both solve same problem - scale based on load)
 * deploy aurora & call lambda from it
 * https://aws.amazon.com/blogs/security/how-to-use-amazon-guardduty-and-aws-web-application-firewall-to-automatically-block-suspicious-hosts

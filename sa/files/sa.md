@@ -1873,8 +1873,6 @@ Throughput is of 2 types:
 * read (`ReadCapacityUnits: 5`) - 5 SCR per second (if you have more then dynamoDb will throttle them, if you have too much they would be just rejected)
 * write (`WriteCapacityUnits: 5`) - 5 writes per second 
 You can increase throughput as much as you want but decrease up to 9 times per day. It's the only db that grow/shrink based on load.
-DynamoDB Streams - captures a time-ordered sequence of item-level changes in a DynamoDB table and durably stores the information for up to 24 hours.
-AWS maintains separate endpoints for DynamoDB and DynamoDB Streams. Streams can be enabled or disabled for an Amazon DynamoDB table.
 Stream records are organized into groups, also referred to as shards. With streams you can:
 * build transactional system (based on `insert/update/delete` records from one table do some operation in another)
 * log/audit/aggregate data
@@ -1883,6 +1881,12 @@ If you need search capabilities you can use Streams + lambda + ElasticSearch. Wh
 Plz note that you should use global tables for cross-region replication. Don't use this library.
 * update elasticache (so your cache would be always updated to latest state of db)
 * in case your app need to know about all updates
+DynamoDB Streams:
+* captures a time-ordered sequence of item-level changes in a DynamoDB table and durably stores the information for up to 24 hours.
+* aws maintains separate endpoints for DynamoDB and DynamoDB Streams. Streams can be enabled or disabled for an Amazon DynamoDB table.
+DynamoDB Streams Kinesis Adapter:
+* java library that allows you to use KCL with dynamoDB streams same way as with kinesis
+* use [streams adapter library](https://github.com/awslabs/dynamodb-streams-kinesis-adapter) in your java code
 Cache problems:
 * invalidation - how you guarantee that once db write happens, you update cache
 * race condition - if 2 thread update db and update cache they may update db & cache in different order (in db you would have value from thread 1 and in cache from thread 2)
@@ -1939,8 +1943,9 @@ Max item size:
 DynamoDB vs s3:
 * if you need low-latency and you data size less then 400KB use dynamoDB, cause on average it faster
 * if your data is more then 400KB, or latency is no issue, you can store data in s3
-Since DynamoDb is multi-AZ by default there is no automatic backup (like rds have), but you can use on-demand backup/restore logic.
-Point-in-time recovery - dynamoDB will maintain incremental backup for last 35 days, and in case of accidental write/delete you can recover your db to any point.
+There are 2 types of backup (since DynamoDb is multi-AZ by default there is no automatic backup, like rds have):
+* on-demand - you can manually create backup at any time, and restore it into new table
+* point-in-time recovery - dynamoDB will maintain incremental backup for last 35 days, and in case of accidental write/delete you can recover your db to any point
 With this you can restore table to any selected date and time (day:hour:minute:second) to a new table. All table settings restored from table at that time (if your WCU is 50, but 2 weeks ago was 500, if you restore table from that time, now your WCU would be 500)
 Cross-region restore - you can recover point-in-time table to another region.
 Security:
