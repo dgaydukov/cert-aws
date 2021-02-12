@@ -1,0 +1,253 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+# ssh to bastion instance and connect to db `mysql -u admin -p'admin123' -h {RDS_ENDPOINT}` and then call lambda: `SELECT lambda_sync('{LAMBDA_ARN}', '{"a":1,"b":2}') as sum;`
+# You can either create publicly accessible rds endpoint in us-east-1b and then it would work out-of-the-box, or create it in private subnet + add lambda vpc endpoint (not implemented in this template)
+
+# !important => to get lambda arn you can call `aws cloudformation describe-stacks --stack-name=rds --query "Stacks[0].Outputs[0].OutputValue"`, or go to aws console => lambda and get arn from there
+# !important => we use 3 az (b,c,d), cause only them supported. If you try to create instance in us-east-1a you will get: The availability zone requested is not supported by the DB Cluster. Available options: [us-east-1b, us-east-1c, us-east-1d]
+# !important => aurora doesn't support free tier db.t2.micro (so we used paid instance type), if you try to create db instance with this type you get: RDS does not support creating a DB instance with the following combination: DBInstanceClass=db.t2.micro, Engine=aurora, EngineVersion=5.6.mysql_aurora.1.22.2
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.100.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value:  !Sub ${AWS::StackName}-MyVpc
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    DependsOn: VPC
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-IGW
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: us-east-1b
+      CidrBlock: 10.100.1.0/24
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-Public
+
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: us-east-1d
+      CidrBlock: 10.100.2.0/24
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-Private-1
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: us-east-1d
+      CidrBlock: 10.100.3.0/24
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-Private-2
+  PublicRT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-Public-RT
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: !Ref PublicRT
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+  PrivateRT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-Private-RT
+  PublicSubnetRTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref PublicRT
+  PrivateSubnet1RTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet1
+      RouteTableId: !Ref PrivateRT
+  PrivateSubnet2RTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet2
+      RouteTableId: !Ref PrivateRT
+
+  BastionSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH access from anywhere
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-BastionSG
+  BastionInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-09d95fab7fff3776c
+      KeyName: mykey
+      UserData:
+        Fn::Base64:
+          !Sub |
+          #!/usr/bin/env bash
+          sudo yum install mysql -y
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: 0
+          SubnetId: !Ref PublicSubnet
+          GroupSet:
+            - !GetAtt BastionSG.GroupId
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 8
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-BastionInstance
+
+  ClusterSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable mysql access only from bastion SG
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          SourceSecurityGroupId: !GetAtt BastionSG.GroupId
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-ClusterSG
+  ClusterSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: description
+      SubnetIds:
+        - !Ref PublicSubnet
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-SubnetGroup
+  ClusterPG:
+    Type: AWS::RDS::DBClusterParameterGroup
+    Properties:
+      Description: Aurora Cluster Parameter Group with role to invoke lambda
+      Family: aurora5.6
+      Parameters:
+        aws_default_lambda_role: !GetAtt AuroraRole.Arn
+
+  RdsCluster:
+    Type: AWS::RDS::DBCluster
+    Properties:
+      Engine: aurora
+      MasterUsername: admin
+      MasterUserPassword: admin123
+      DBSubnetGroupName: !Ref ClusterSubnetGroup
+      DBClusterParameterGroupName: !Ref ClusterPG
+      AssociatedRoles:
+        - RoleArn: !GetAtt AuroraRole.Arn
+      VpcSecurityGroupIds:
+        - !GetAtt ClusterSG.GroupId
+  DbInstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      AvailabilityZone: us-east-1b
+      PubliclyAccessible: true
+      DBInstanceClass: db.r3.large
+      Engine: aurora # although we specify engine on cluster level, we should still set it there, if we omit it we get error: Invalid DB engine
+      DBClusterIdentifier: !Ref RdsCluster
+
+  AuroraRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-AuroraRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - rds.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: !Sub ${AWS::StackName}-AllowLambdaInvocation
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "lambda:InvokeFunction"
+                Resource: "*"
+
+  AddTwoNumbersLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-AddTwoNumbersLambda
+      Description: Run some checks on schedule
+      Role: !GetAtt LambdaRole.Arn
+      Runtime: nodejs12.x
+      Handler: index.handler
+      Code:
+        ZipFile: |
+          exports.handler = (event, context, cb) => {
+            console.log("event=" + event);
+            cb(null, event.a + event.b);
+          }
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-LambdaRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: !Sub ${AWS::StackName}-AllowCloudWatchLogging
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                  - "logs:DescribeLogStreams"
+                Resource: "*"
+
+Outputs:
+  LambdaArn:
+    Value: !GetAtt AddTwoNumbersLambda.Arn

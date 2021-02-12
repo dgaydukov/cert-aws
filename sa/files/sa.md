@@ -1536,6 +1536,20 @@ Although [mysql supports replication over ssl](https://www.howtoforge.com/how-to
 [rds doesn't support this yet](https://serverfault.com/questions/816863/aws-rds-mysql-replication-with-user-with-require-ssl) so make sure if you replicate outside vpc to secure connection.
 Although you can use read replica for HA, it's recommended to use multi-AZ, cause it's synchronous and would guarantee that in case of fail, db in another AZ is most up-to-date (with read replica you can get some lag, and ended up with stale data when promoting it to master).
 Enhanced monitoring - allows you to view all metrics with 1 sec granularity. Get current database `SELECT DATABASE() FROM DUAL;`.
+For both rds/aurora you can create db as either:
+* private - db allocated private IP only
+* public - db allocated both public/private IP, so inside vpc db dns address resolved into private IP, but outside into public IP
+```
+[ec2-user@ip-10-100-1-215 ~]$ nslookup rddp4prsvxckz4.cmeydtld5sy2.us-east-1.rds.amazonaws.com
+rddp4prsvxckz4.cmeydtld5sy2.us-east-1.rds.amazonaws.com	canonical name = ec2-54-144-189-225.compute-1.amazonaws.com.
+Name:	ec2-54-144-189-225.compute-1.amazonaws.com
+Address: 10.100.1.183
+
+diman@pc:~$ nslookup rddp4prsvxckz4.cmeydtld5sy2.us-east-1.rds.amazonaws.com
+rddp4prsvxckz4.cmeydtld5sy2.us-east-1.rds.amazonaws.com	canonical name = ec2-54-144-189-225.compute-1.amazonaws.com.
+Name:	ec2-54-144-189-225.compute-1.amazonaws.com
+Address: 54.144.189.225
+```
 RDS Proxy - database proxy that helps:
 * pooling & sharing db connections (useful for serverless, when you constantly open and close connections)
 * reduce db failover time for 66%
@@ -1742,11 +1756,15 @@ There are 2 types of replica:
 * aurora replica - aurora native same-region replica
 * mysql replica - cross-region replica based on mysql binlog
 Parallel Query - ability to distribute computational load across multiple instances.
-You can call lambda from function & stored procedures for MySql Aurora:
-* add iam role to allow db cluster to access lambda
-* configure cluster to allow outbound connections to Lambda. This depends on your network config:
+You can call lambda from function & stored procedures for MySql Aurora (see `sa/cloudformation/rds-aurora-lambda.yml`):
+* add `aws_default_lambda_role` parameter to PG (if you don't do it when you call lambda you will get `ERROR 1873 (HY000): Lambda API returned error: Missing designated IAM role (aws_default_lambda_role)`)
+* add iam role to allow db cluster to access lambda (if you don't do it when you call lambda you will get: `ERROR 1873 (HY000): Lambda API returned error: Missing IAM Credentials for specified aws_default_lambda_role`)
+* configure cluster to allow outbound connections to Lambda. This depends on your network config (if you don't do this you will wait for some time (while rds try to connect to lambda) and get error: `ERROR 1873 (HY000): Lambda API returned error: Network Connection. Unable to connect to endpoint`):
     * public cluster - it can access lambda through the internet - so no additional config required
     * private cluster - you have to add NAT gateway or lambda vpc endpoint, so your cluster in private subnet can access lambda
+Don't confuse:
+* lambda accessing resources inside vpc - just put lambda inside vpc, and it will get access to vpc resources. If you lambda need internet access, create NAT gateway.
+* access lambda from within vpc - create vpc endpoint for lambda
 You can also use s3 form MySql Aurora and you have to configure access to s3 same way as for lambda.
 Backtracking - rewind db to specified time (acts like a backup, if you do some destructive operation you can rewind db to previous state):
 * target backtrack window - amount of time you want to be able to backtrack your DB cluster (you can set 24 hours - you can rewind db during whole day)
@@ -1904,7 +1922,10 @@ Multi-master replication ensures that updates propagate to all regions and that 
 Don't confuse (2 billing options):
 * provisioned capacity - you can separate capacity for read & write. You can also set AutoScaling (again separately for read & write) to add more capacity when number or read/writes goes beyond certain point
 * on-demand read/write capacity - you can set elastic capacity based on your load for read & write. You can't set it only for read and for write provisioned or vice versa. Indexes also using on-demand capacity, so you don't have to specify it.
-So you can say that there are 3 modes: provisioned/AutoScaling/on-demand. If you don't know the load use on-demand. If you know the load, and have pattern (like 25% increase during weekdays) use provisioned + autoScaling capacity.
+So you can say that there are 3 modes: provisioned/AutoScaling/on-demand. 
+Don't confuse:
+* on-demand - if you don't know the load, and want to serve as much requests as possible
+* AutoScaling - you know the load, and have pattern (like 25% increase during weekdays) use provisioned + autoScaling capacity. You want control upper limit (with on-demand there is no upper limit). 
 AutoScaling - ability to change write/read throughput according to current load:
 * you can set write/read throughput, but it's hard to predict exact values in advance, moreover your load maybe changing
 * automatically applied to table/GSI created from console
@@ -2473,6 +2494,11 @@ There are 2 types of permission model:
 * self-managed - you create iam roles in target account that account in which stack set is deployed
 * service-managed - if you deploy stacks in account managed by aws org, you don't have to create roles (they would be created automatically under-the-hood)
 Stack instance - reference to a stack in target account within region (can exist without stack, if stack can't be created, stack instance - shows the reason).
+stack capabilities - f you try to create create stack with role with name you may get: `An error occurred (InsufficientCapabilitiesException) when calling the UpdateStack operation: Requires capabilities : [CAPABILITY_NAMED_IAM]`.
+You need to pass `--capabilities=CAPABILITY_NAMED_IAM` in order to succeed. There are 3 types of capabilities:
+* CAPABILITY_IAM - when your stack has a role without name
+* CAPABILITY_NAMED_IAM - when your stack has a role with name
+* CAPABILITY_AUTO_EXPAND - when your stack contains macros
 
 ###### S3
 S3 (Simple Storage Service) used for:

@@ -185,10 +185,10 @@ Resources:
         - Name: InstanceId
           Value: !Ref WebServer
 
-  SheduledLambda:
+  ScheduledLambda:
     Type: AWS::Lambda::Function
     Properties:
-      FunctionName: !Sub ${AWS::StackName}-SheduledLambda
+      FunctionName: !Sub ${AWS::StackName}-ScheduledLambda
       Description: Run some checks on schedule
       Role: !GetAtt LambdaRole.Arn
       Runtime: nodejs12.x
@@ -198,9 +198,6 @@ Resources:
           exports.handler = (event, context, cb) => {
             console.log(JSON.stringify(event, null, 2), JSON.stringify(context, null, 2));
           }
-      Tags:
-        - Key: Name
-          Value: !Sub ${AWS::StackName}-AlarmLambda
   ScheduledEvent:
     Type: AWS::Events::Rule
     Properties:
