@@ -46,11 +46,12 @@
 * 3.7 [Inspector](#inspector)
 * 3.8 [Macie](#macie)
 * 3.9 [GuardDuty](#guardduty)
-* 3.10 [WAF & Shield](#waf--shield)
-* 3.11 [Config](#config)
-* 3.12 [CloudTrail](#cloudtrail)
-* 3.13 [Artifact](#artifact)
-* 3.14 [Resource Access Manager](#resource-access-manager)
+* 3.10 [Security Hub](#security-hub)
+* 3.11 [WAF & Shield](#waf--shield)
+* 3.12 [Config](#config)
+* 3.13 [CloudTrail](#cloudtrail)
+* 3.14 [Artifact](#artifact)
+* 3.15 [Resource Access Manager](#resource-access-manager)
 4. [Database services](#database-services)
 * 4.1 [RDS](#rds)
 * 4.2 [Aurora](#aurora)
@@ -329,12 +330,6 @@ aws <service> <action> help # shaw all avaialble action options to perform for s
 ```
 Service endpoint - you use it to connect to aws services. When you are using cli/sdk it automatically get api url for service you are going to use.
 Endpoint url built like `protocol://service.region.amazonaws.com` (for example `https://dynamodb.us-east-1.amazonaws.com`).
-Since s3 is global service but has region, 5 urls are possible:
-* default url without region        `https://s3.amazonaws.com/www.aumingo.com/index.html`
-* default url with region           `https://s3.us-east-1.amazonaws.com/www.aumingo.com/index.html`
-* bucket name first without region  `https://www.aumingo.com.s3.amazonaws.com/index.html`
-* bucket name first with region     `https://www.aumingo.com.s3.us-east-1.amazonaws.com/index.html`
-* static website (http only)        `http://www.aumingo.com.s3-website-us-east-1.amazonaws.com` (there is no way to set https for static website)
 Note that all this urls can be divided into 2 types:
 * path-style - can be:
     * global - https://s3.amazonaws.com/bucket_name
@@ -1358,9 +1353,27 @@ It also called AAD (additional authenticated data) - non-secret data that is pro
 When you encrypt file you can pass filename as encryption context. EBS use volumeId as security context. You can add encryption context to policy, in this case you can use kms only with specific context params.
 
 ###### CloudHSM
-Dedicated HSM instance within aws cloud. You can securely generate/store/manage cryptographic keys. HSM (Hardware Security Module) provides secure key storage and cryptographic operations within a tamper-resistant hardware device.
-Cluster - contains multiple devices across AZ/subnet in single region. You can't create single device, only cluster with 1 or more devices. Since devices created in sunbets you need to have vpc in order to use CloudHSM.
-You can use with database or with nginx to off-load ssl. Best practice to sync all keys at least in 2 devices in separate AZ. It's built with physical and logical tamper-protection, so it trigger key deletion (zeroization) in case of breach.
+Dedicated HSM (Hardware Security Module) instance within aws cloud. You can securely generate/store/manage cryptographic keys. HSM provides secure key storage and cryptographic operations within a tamper-resistant hardware device.
+Cluster - contains multiple devices across AZ/subnet in single region. You can't create single device, only cluster with 1 or more devices. Since devices created in subnets you need to have vpc in order to use CloudHSM.
+You create cluster (it's empty & not initialized). You add first HSM, and then initialize cluster.
+You can integrate CloudHSM with third-party systems:
+* ssl/tls offload - you can use linux (nignx or apache web server) or windows (IIS) to offload ssl:
+    * create ec2 with nginx installed
+    * connect to HSM and import/generate new private key in cloudHSM => then generate certificate using CSR (using `openssl` command)
+    * export fake PEM private key (not real private key, but reference to the key stored in HSM)
+    * upload fake private key to your nginx server (and add configuration to `/etc/nginx/nginx.conf` like `ssl_engine cloudhsm;` and `env n3fips_password;`)
+    * now for client requests, nginx would forward to cloudHSM, which would do all decryption work
+    * you can add ELB in front of your ec2, but encryption would still be handled on each ec2 which would forward it to cloudHSM
+* configure windows server Certificate Authority:
+    * use cloudHSM to store private keys
+    * create windows ec2 and use cloudHSM KSP (key storage provider) to create/store private keys inside cloudHSM
+* oracle TDE(transparent data encryption) - some oracle version support TDE:
+    * data in columns encrypted with table/tablespace key, these keys encrypted with TDE master key, which is store in HSM
+    * you have oracle db in ec2 and it use cloudHSM to store master TDE
+* Microsoft SignTool - cli tool that sign/verify/timestamp files to simplify signing process:
+    * create ec2 with windows server and use HSM to store private keys
+* other third-party services - you can use other solutions (like hashicorp) but store keys in cloudHSM
+Best practice to sync all keys at least in 2 devices in separate AZ. It's built with physical and logical tamper-protection, so it trigger key deletion (zeroization) in case of breach.
 Daily backups are automatically taken and stored in s3 (bucket must be in the same region as cluster). All backups encrypted with 2 types of keys:
 * EBK (ephemeral backup key) - generated inside HSM when backup is taken. Used to encrypt backup. Encrypted backup include encrypted EBK.
 * PBK (persistent backup key) - used by HSM to encrypt EBK. Generated based on 2 other keys:
@@ -1372,10 +1385,48 @@ It's automated security assessment service that test the network accessibility o
 You install agent on your OS, and it collects data and send it to inspector for analyzing. Assessment template - configuration based on which inspector validates your system.
 
 ###### Macie
+Managed data security/privacy service that uses ML & pattern matching to discover/protect your sensitive data (PII (personally identifiable information) - names, addresses, and credit card numbers) in aws.
+You are charged based on number of s3 buckets in your account, and amount of processed data. You also have 30 days trial period. Also 1GB of processed data is always for free.
+It's regional service and you have to enable it region-by-region. This guarantees that all analyzed data in same region, and don't cross region boundaries.
+To use it, you have to first enable it from aws console/cli. You can add regular expressions to search for. So it helps you to understand what data do you store in s3 buckets.
+It can also identify too permissive or unencrypted buckets. Once it found sensitive data, it creates findings (detailed report of sensitive data in an S3).
+Macie publish findings in EventBridge and to security hub.
 
 ###### GuardDuty
 Threat management tools that helps to protect aws accounts/workloads/data by analyzing data from cloudTrail/vpcFlowLogs/dnsLogs using ML. It's regional service, so all collected data is aggregated/analyzed within region. 
 It doesn't store any data, once data is analyzed it discarded. threat intelligence - list of malicious IP addresses maintained by aws and third-party partners. You should first enable GuardDuty, you can also assign admin account (it can assume 2 roles to administer your GuardDuty).
+Since WAF using application layer you can't use it to block other ports (you have to use NACL for this), so you can't use it to block ssh access to ec2. Yet you can use guardDuty to track malicious activity on ssh (like determine who is trying to brute force ssh)
+You can build solution where GuardDuty once find issue, would invoke CW event which would invoke lambda, which would update VPC NACL & web ACL(see `sa/files/images/guardduty-cloudwatch-lambda.png`)
+You can configure cw event rule to capture all or specific guardDuty finding types (using `detail: type` - you can specify which types to filter):
+```
+GuardDuryFindingEvent:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: GuardDuryFindingEvent
+      EventPattern:
+        source:
+          - aws.guardduty
+        detail-type:
+          - GuardDuty Finding
+        detail:
+            type:
+                - "UnauthorizedAccess:EC2/SSHBruteForce"
+                - "UnauthorizedAccess:EC2/TorIPCaller"
+                - "Trojan:EC2/BlackholeTraffic"
+                - "Trojan:EC2/DropPoint"
+```
+
+###### Security Hub
+SH - provides comprehensive view of security state within aws account and your compliance with security best practices. To use it you have to first enable it from aws console/cli (note you have to enable config first).
+You are charged based on number of security checks & number of finding ingestion events per account/region/month. Service is regional, so if you want to use it in another region - you have to explicitly enable it in that region.
+When you enable security hub - role with permission to use aws config is created. You can configure multi-account hierarchy and manage several account under single SH.
+Finding - potential security issue. SH aggregates findings from aws & third-party services and provide overview. Finding ingestion event - when finding ingested into SH.
+Insight - collection of related findings. You can use filters to group similar findigns into insights for ease of management. SH analyze findings from GuardDuty/Inspector/FM/Macie/Access Analyzier + it also analyze config rules.
+If you need already existed compliance standard like PCI-DSS, then managed SH is the way to go. Yet if you need custom compliance/security standard - use config conformance pack.
+Don't confuse:
+* macie - search sensitive data in s3 bucket using ML
+* guardDuty - search for security threats in cloudTrail, vpc flow logs, dns logs using ML
+* SH - aggregate all findings from other security services
 
 ###### WAF & Shield
 3 security services joined under single tab in aws:
@@ -2514,6 +2565,21 @@ Anti-pattern:
 * data updated very frequently (better to use EBS/RDS/DynamoDB)
 * archives with infrequent access (better to use Glacier)
 * dynamic web-sites (better to use EC2/EFS)
+There are 2 types of s3 endpoints:
+* REST endpoint - standard https endpoint, always available
+* static website - additional http-only endpoint, that you may activate if you need quick solution. Difference from REST:
+    * you have to explicitly enable it (by default disabled)
+    * only http is supported, only GET/HEAD method supported
+    * you can configure custom domain name, error page, 301 redirects (all this not supported for REST endpoint, in case of error - xml page with error shows, redirection - not supported)
+    * root request return index document (for REST - root request return list of object keys)
+So if you need quick website - enable static website, if you want more complex solution + https, then use CloudFront.
+Since s3 is global service but has region, 5 urls are possible:
+* default url without region        `https://s3.amazonaws.com/www.aumingo.com/index.html`
+* default url with region           `https://s3.us-east-1.amazonaws.com/www.aumingo.com/index.html`
+* bucket name first without region  `https://www.aumingo.com.s3.amazonaws.com/index.html`
+* bucket name first with region     `https://www.aumingo.com.s3.us-east-1.amazonaws.com/index.html`
+* static website (http only)        `http://www.aumingo.com.s3-website-us-east-1.amazonaws.com` (there is no way to set https for static website, if you need https - use CloudFront)
+* static website (with dot)         `http://www.aumingo.com.s3-website.us-east-1.amazonaws.com`
 You can upload/download file by parts:
 * MPU (multipart upload) - your large file uploaded as parts, and on server they are assembled into single file:
     * by default you can upload file up to 5GB, with MPU you can upload object up to 5TB
@@ -3247,7 +3313,6 @@ AntiPattern:
 * Dynamic Websites (it's better to use some programming language like java/node.js and deploy it to EC2)
 * Stateful Applications (Lambda is stateless, if you need state it's better to create app in java/node.js and deploy it ot EC2 + RDS/DynamoDb)
 Cold Start - when you first run your code aws create new execution context (download code, set up env vars, load code) and it can take from few millisec to a few sec. When you run it for second and consecutive time, there is no delay.
-By default lambda runs in no VPC (so it has internet access), if you want your lambda to talk with other services you should put it into VPC, if your lambda need internet access you have to configure NAT for it.
 Lambda doesn't run `npm install`. So if you add new package you have to build it locally, create `.zip` file with your project (including `node_modules`) and upload it to aws lambda.
 Global state - lambda can run on the same container or on new container (aws shuts down inactive containers after ~20 minutes, so after this new call will run lambda on new container).
 So when lambda run on the same container global variables (those outside handler function) can be leaked between invocations.
@@ -3278,6 +3343,13 @@ If lambda can't run the function for some reason you will get immediate error (i
     Both sqs standard & fifo support as event source for lambda. `BatchSize` - size of how many messages send to lambda, default 10, max standard sqs - 10k, fifo - 10
     With batch only 1 lambda is called to process all 10 messages. For fifo lambda scaled concurrently based on number of messageGroupId
     * direct invocation (`AWS::ApiGatewayV2::Integration`) - in this case you create invocation from other aws service like api gateway, and you also need to add permissions
+Lambda inside vpc:
+* lambda run in aws managed lambda service vpc. So you can always call it if you have internet access
+* you can attach lambda to your vpc, in this case vpc-to-vpc nat created (see `sa/files/images/lambda-vpc.png`), aws put shared ENI into your network, and from now on all egress lambda traffic goes through your vpc
+* that's why lambda inside vpc needs NAT to connect to internet. That's the reason that just lambda can call vpc lambda, but not vice versa
+* if you want your lambda to talk with private services in your vpc, you should attach it to your VPC (set `VpcConfig` in CF template). If your lambda need internet access you have to configure NAT for it
+* you can always call your lambda if you have internet access (even if lambda attached to private subnet you can still call it). You can also call lambda from private subnet by adding lambda vpc endpoint
+* so if you want to call your lambda only from within vpc, then you have to add lambda resource policy (just like s3, lambda support both iam & resource policy) with condition, that would allow calls only from within vpc
 
 ###### Step Functions
 Step Functions - visual tool that allows you to build complex logic based on lambda and EC2 calls. They can also help overcome lambda max 900sec execution time, by joining several lambdas into one execution flow.

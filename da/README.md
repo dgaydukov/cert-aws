@@ -52,3 +52,12 @@ Here is my experience of taking data analytics specialty exam
 * HBase in Action
 * https://dev.to/scrummastert/aws-certified-data-analytics-vs-big-data-what-s-the-difference-5aol
 * https://dev.to/scrummastert/re-invent-2020-part-ii-data-sessions-reviewed-1n47
+-----------------------------------------------------------------------------------------------------------------------
+* create glue workflow `AWS::Glue::Workflow` and call aws batch when etl complete
+* migrate rds to s3 using glue etl (https://aws.amazon.com/blogs/database/how-to-extract-transform-and-load-data-for-analytic-processing-using-aws-glue-part-2)
+* Try Athena & Aws Glue with cloudformation/cloudtrail-s3.yml (combine all json files into one. Find who put object into s3)
+* athena federated query (from multiple sources). ELT using athena federated (read from multiple sources and store in s3)
+* glue etl job vs athena etl job vs athena udf
+* create cloudsearch/elasticsearch clusters and try to put logs from ec2 there
+* try emr on t2 (with different engines hive/hbase/presto/spark)
+* kinesis firehose real example (with cf template)
