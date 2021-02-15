@@ -188,6 +188,7 @@ Continuous deployment is continuous delivery that deploys to production (deliver
 * Security (IAM/KMS)
 Dev side of DevOps is responsible for: code building/code coverage/unit testing/packaging/deployment
 Ops side of DevOps is responsible for: provisioning/configuration/orchestration/deployment
+2 pizza team - right size of team, so you can feed such a team with 2 pizza (confirmed by amazon internal structure)  
 
 ###### AWS Tagging
 Tags - metadata that describes resources, a simple key-value pair (value can be empty), used for:
@@ -1381,6 +1382,7 @@ You can integrate CloudHSM with third-party systems:
 * oracle TDE(transparent data encryption) - some oracle version support TDE:
     * data in columns encrypted with table/tablespace key, these keys encrypted with TDE master key, which is store in HSM
     * you have oracle db in ec2 and it use cloudHSM to store master TDE
+    * it's better than whole ebs encryption, cause in case of TDE you can encrypt single row or column instead of encrypting whole db
 * Microsoft SignTool - cli tool that sign/verify/timestamp files to simplify signing process:
     * create ec2 with windows server and use HSM to store private keys
 * other third-party services - you can use other solutions (like hashicorp) but store keys in cloudHSM
@@ -1825,6 +1827,11 @@ If you need load balancing:
 ###### Aurora
 Aurora - mysql/postgres compatible (most app that works with mysql/postgres would switch with no problem to aurora) aws database solution. 
 Although MariaDB was designed to be compatible with MySql, you can't migrate it to Aurora.
+Compare with mysql/postgres which save both log & pages, aurora saves only log, and rebuild pages from log later, saving on io and improving performance.
+Internally it uses simple quorum system 4-out-of-6 and commit tracker. Once 4 our of 6 copies has been made, commit tracket make commit.
+So since aurora doesn't use complex sync algo, it has low latency and less jitter (cause if 2 nodes slow is fine, we need max 4 nodes to make commit)
+since it same storage, read replica lag is almost 0, compare to mysql, where it can be 10-20 min in large db with multiple replicas
+Query latency is also low, cause query executed on nodes, just like with big data, aurora doesn't load all data into memory and run query, instead it sends query to all nodes to execute locally
 It's serverless - cause you can set-up min & max capacity and aurora would scale up/down based on load. You can also set up pause if aurora idle for specified time (like turn off if it's idle for more than 5 min). 
 It's ideal for saving money in dev env, but don't use it in prod, cause wake up can be up to 30 sec. You can also manually stop RDS.
 Yet some features of mysql/postgres are not supported in aurora (like MyISAM storage engine). It runs 5x faster than mysql and 3x faster than postgres. And cost 1/10 of similar solution.
@@ -4794,7 +4801,8 @@ You can start cloud9 directly from CodeStar, and any code you commit in cloud9 a
 Don't confuse:
 * CodePipeline - running your own CI/CD pipeline with CodeBuild/CodeDeploy/CodeCommit
 * CodeStar - provisions all the necessary services required for a full development pipeline like CodePipeline/CodeBuild/CodeDeploy/CodeCommit
-Although you can create CF template with all ci/cd tools, it's better to use CodeStar for this purpose
+Although you can create CF template with all ci/cd tools (codepipeline/codebuild/codedeploy/codecommit), it may be hard for beginner, and that's why to use codeStar is a good option
+So if you create codeStar project (there are many template like spring/java, so your project provided  with sample project) under the hood it would create 4 other services already linked with configured with each other  
 
 ###### Global Accelerator
 GA allows you to create 2 static anycast IP addresses and routing users to nearest server to them. You can create 2 ec2 from 2 regions and create GA for it. When user try to access it by IP he would be routed to the nearest region.

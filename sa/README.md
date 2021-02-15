@@ -21,10 +21,6 @@ In real exam I didn't meet any questions regarding `Rekognition`, but there are 
 * [Free questions](https://www.examtopics.com/exams/amazon)
 
 ### TODO
-https://www.youtube.com/watch?v=GwEtiRZR4g4 (Deep Dive on Amazon Aurora)
-https://www.youtube.com/watch?v=UpeV4OqB6Us (Cloud Migration, Application Modernization and Security for Partners)
-https://www.youtube.com/watch?v=7UygHxU9fU8 (CodeStar)
-https://www.youtube.com/watch?v=-ObImxw1PmI (checkout other aws reinforce talk)
 read nmap book && scan wifi (https://habr.com/ru/post/224955)
 * cross region s3 replication for encrypted bucket
 * https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_boundaries.html
