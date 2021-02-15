@@ -26,8 +26,6 @@ https://www.youtube.com/watch?v=UpeV4OqB6Us (Cloud Migration, Application Modern
 https://www.youtube.com/watch?v=7UygHxU9fU8 (CodeStar)
 https://www.youtube.com/watch?v=-ObImxw1PmI (checkout other aws reinforce talk)
 read nmap book && scan wifi (https://habr.com/ru/post/224955)
-* does kms runs cloudhsm behind the scene?
-* create CF template with vpc/cloudHSM/bastion and try to connect to cloudHSM instance + create manual backup
 * cross region s3 replication for encrypted bucket
 * https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_boundaries.html
 * elb to ec2 end-to-end https connection

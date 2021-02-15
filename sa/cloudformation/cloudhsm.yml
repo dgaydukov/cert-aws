@@ -1,0 +1,130 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+# create vpc + bastion ec2 that acts like cloudHSM client
+# !important => as of February 2021 there is no CF template for CloudHSM, use `Instruction to create cluster` from sa.md
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.100.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value:  !Sub ${AWS::StackName}-MyVpc
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    DependsOn: VPC
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-IGW
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: us-east-1a
+      CidrBlock: 10.100.1.0/24
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-Public
+
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: us-east-1b
+      CidrBlock: 10.100.2.0/24
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-Private-1
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: us-east-1c
+      CidrBlock: 10.100.3.0/24
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-Private-2
+  PublicRT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-Public-RT
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: !Ref PublicRT
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+  PrivateRT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-Private-RT
+  PublicSubnetRTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref PublicRT
+  PrivateSubnet1RTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet1
+      RouteTableId: !Ref PrivateRT
+  PrivateSubnet2RTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet2
+      RouteTableId: !Ref PrivateRT
+
+  BastionSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH access from anywhere
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-BastionSG
+  BastionInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-09d95fab7fff3776c
+      KeyName: mykey
+      UserData:
+        Fn::Base64:
+          !Sub |
+          #!/usr/bin/env bash
+          wget https://s3.amazonaws.com/cloudhsmv2-software/CloudHsmClient/EL6/cloudhsm-client-latest.el6.x86_64.rpm
+          sudo yum install -y ./cloudhsm-client-latest.el6.x86_64.rpm
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: 0
+          SubnetId: !Ref PublicSubnet
+          GroupSet:
+            - !GetAtt BastionSG.GroupId
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 8
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-BastionInstance
