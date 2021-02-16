@@ -22,8 +22,6 @@ In real exam I didn't meet any questions regarding `Rekognition`, but there are 
 
 ### TODO
 read nmap book && scan wifi (https://habr.com/ru/post/224955)
-* cross region s3 replication for encrypted bucket
-* https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_boundaries.html
 * elb to ec2 end-to-end https connection
 * get access to aws console/services through: iam+google vs cognito+google
 * secrets manager for rds/redshift

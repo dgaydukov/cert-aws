@@ -1036,7 +1036,8 @@ There are 6 policy types:
 * Resource-based policies - define policies separately for aws resources like s3 bucket policy (not all resources support this)
 * Permissions boundaries - same policy as for identity, but added not as permission policy to iam identity but as permission boundary. Specify what permission user can potentially have.
 So they don't actually give these permissions but merely state that this identity can potentially have up to these permission.
-So the actual permission are calculated as intersection of permission policy & permission boundary. Whenever you create new iam identity (user/group/role) you can add actual permissions and permission boundaries.
+Effective permission - permission calculated as intersection of permission policy & permission boundary. Whenever you create new iam identity (user/group/role) you can add permissions and permission boundaries.
+They limit only identity based policy, not resource based (explicit deny in permission boundary will have no effect on resource policy, so if resource policy allow, user would be able to access resource)
 Don't confuse:
 * resource-based policy - separate policy, added directly to resource (like s3) and using `Principal` attribute to denote who can access this policy
 * resource-level permission - `Resource` attribute for identity-based policy, indicates to which particular resources to apply this policy (not relevant to resource-based cause it's applied to specified resource already)
@@ -1420,7 +1421,7 @@ You install agent on your OS, and it collects data and send it to inspector for 
 ###### Macie
 Managed data security/privacy service that uses ML & pattern matching to discover/protect your sensitive data (PII (personally identifiable information) - names, addresses, and credit card numbers) in aws.
 You are charged based on number of s3 buckets in your account, and amount of processed data. You also have 30 days trial period. Also 1GB of processed data is always for free.
-It's regional service and you have to enable it region-by-region. This guarantees that all analyzed data in same region, and don't cross region boundaries.
+It's regional service and you have to enable it region-by-region. This guarantees that all analyzed data in same region, and don't cross-region boundaries.
 To use it, you have to first enable it from aws console/cli. You can add regular expressions to search for. So it helps you to understand what data do you store in s3 buckets.
 It can also identify too permissive or unencrypted buckets. Once it found sensitive data, it creates findings (detailed report of sensitive data in an S3). Macie publish findings in EventBridge and to security hub.
 
@@ -2140,7 +2141,7 @@ In the core of QLDB, replication, DynamoDB Streams, kafka, version control lay s
 It's fully managed, mongo-compatible document database service. You can store/query json data. MongoDB-compatible - means your current apps that using mongo, can be easily migrated to DocumentDB (which implements Apache 2.0 open source MongoDB 3.6 API).
 You can easily migrate your mongo to DocumentDB with DMS. It replicates each chunk of data 6 times across 3 AZ. Read - 8KB, write - 4KB. If you write 1 KB it counts as single IO. 
 Yet concurrent write operations with size less than 4kb, are batched to reduce cost. min size - 10GB, max - 64TB. It automatically grows by 10GB chunks. Automated backups are enabled by default.
-Cluster can scale up to 1M reads per sec with up to 15 read replicas (read replica use same underlying storage updated by master). It doesn't support cross region replica (all replicas in same region only).
+Cluster can scale up to 1M reads per sec with up to 15 read replicas (read replica use same underlying storage updated by master). It doesn't support cross-region replica (all replicas in same region only).
 
 ###### Keyspaces
 It's managed Apache Cassandra-compatible database service, you can run Cassandra workloads using the same CQL (Cassandra Query Language). 
@@ -2760,9 +2761,23 @@ If you need to transfer large amount of data from single space, SnowBall can be 
 TA doesn't cache data in edge location, so if you want low latency access then it's better to use plain cf distribution, cause in this case all files would be cached in all edge locations.
 So for fast uploading - use TA for fast downloading - use CloudFront. If you need both at the same time - use both (TA + cf distribution).
 You can use [comparison tool](http://s3-accelerate-speedtest.s3-accelerate.amazonaws.com/en/accelerate-speed-comparsion.html) to compare general upload speed for TA across different regions (what speed increase you can get for each region if you use TA).
-Replication - automatic & asynchronous copy of data between 2 s3 buckets, can be within same account or between different aws accounts. There are 2 types:
+Replication - automatic & asynchronous copy of data between 2 s3 buckets, you can also replicate into multiple destinations). By default only new object replicated after you enable replication (yet you can contact aws to ask to clone previous objects).
+You can also do initial copy yourself, by using s3 cli (better to run from ec2 in same region as s3):
+```
+# increase max number of concurrent request to expedite copy
+aws configure set default.s3.max_concurrent_requests 200
+# run copy
+aws s3 sync s3://source-bucket s3://destination-bucket
+```
+s3 replicate into same/another region within 15 min under SLA, using RTC (Replication Time Control). You should also create role responsible for replication.
+To enable replication, you add replication config to your bucket (you can add filter to such configuration, so only filtered objects would be replicated). There are 2 types or replication:
 * SRR (Same-Region replication)
 * CRR (Cross-Region replication)
+Replication of encrypted objects:
+* object encrypted with customer key are not replicated
+* by default s3 doesn't replicate bucket encrypted with kms. You have to explicitly enable such configuration
+* for destination bucket - you have to add kms key (keep in mind that it regional, so if your destination bucket in another region - you have to use different CMK from that region)
+* add permision to replication role (`kms:Decrypt` - for source bucket kms, `kms:Encrypt` - for destination bucket kms)
 CORS - ability to load data from `non-static url`. So for example if you use domain name to host content you may get error when try to load html/javascript files from s3. To get rid of error enable cors.
 Below rule allows POST/DELETE cors requests from example.com origin. 
 ```
