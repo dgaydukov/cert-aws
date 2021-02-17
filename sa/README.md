@@ -22,9 +22,6 @@ In real exam I didn't meet any questions regarding `Rekognition`, but there are 
 
 ### TODO
 read nmap book && scan wifi (https://habr.com/ru/post/224955)
-* elb to ec2 end-to-end https connection
-* get access to aws console/services through: iam+google vs cognito+google
-* secrets manager for rds/redshift
 * cloudformation cfn-init (call ec2 instances)
 * how system manager connect to ec2 (does it use ssh, what if ssh disabled? what if you disalbe any network access using iptables or firewall, will SM be able to connect)?
 * connect 2 vpc with privatelink (access ec2 from one vpc from another)
@@ -58,3 +55,4 @@ read nmap book && scan wifi (https://habr.com/ru/post/224955)
     * add resource handler to validate ACM Certificate, so you can automate `sa/cloudformation/elb-asg-route53-acm.yml` template, no more need to manually update route53 record
     * use spot instance to handle sqs, use `AWS::Events::Rule` to catch termination notice and put message into second queue. Monitor second queue, when instance would be stopped - stop requesting new messages from queue, finish processing remaining messages and quit
     * create asg based on sqs queue size using custom metric backlogPerInstance (https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-using-sqs-queue.html). Create same but using spot fleet instead of asg (https://aws.amazon.com/blogs/compute/dynamic-scaling-with-ec2-spot-fleet)
+    * create elb end-to-end encryption, with nginx on ec2 which offload ssl to cloudHSM

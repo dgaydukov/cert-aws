@@ -52,6 +52,7 @@
 * 3.13 [CloudTrail](#cloudtrail)
 * 3.14 [Artifact](#artifact)
 * 3.15 [Resource Access Manager](#resource-access-manager)
+* 3.16 [Secrets Manager](#systems-manager)
 4. [Database services](#database-services)
 * 4.1 [RDS](#rds)
 * 4.2 [Aurora](#aurora)
@@ -76,68 +77,67 @@
 * 6.2 [Rekognition](#rekognition)
 * 6.3 [Polly](#polly)
 7. [Other services](#other-services)
-* 3.1 [Corretto](#corretto)
-* 3.2 [CloudFormation](#CloudFormation)
-* 3.3 [S3](#s3)
-* 3.4 [Glacier](#glacier)
-* 3.5 [EFS](#efs)
-* 3.6 [EBS](#ebs)
-* 3.7 [Instance Store](#ec2-instance-store)
-* 3.8 [CloudFront](#cloudfront)
-* 3.9 [Lambda](#lambda)
-* 3.10 [Step Functions](#step-functions)
-* 3.11 [EC2](#ec2)
-* 3.12 [Organizations](#organizations)
-* 3.13 [Well-Architected Tool](#well-architected-tool)
-* 3.14 [VPC](#vpc)
-* 3.15 [Elastic Beanstalk](#elastic-beanstalk)
-* 3.16 [DMS](#dms)
-* 3.17 [ELB](#elb)
-* 3.18 [CloudWatch](#CloudWatch)
-* 3.19 [Route53](#route53)
-* 3.20 [SQS](#sqs)
-* 3.21 [API Gateway](#api-gateway)
-* 3.22 [CodePipeline(CodeCommit/CodeBuild/CodeDeploy)](#codepipelinecodecommitcodebuildcodedeploy)
-* 3.23 [Storage Gateway](#storage-gateway)
-* 3.24 [ECS](#ecs)
-* 3.25 [EKS](#eks)
-* 3.26 [Fargate](#fargate)
-* 3.27 [Systems Manager](#systems-manager)
-* 3.28 [Cloud9](#cloud9)
-* 3.29 [CodeStar](#codestar)
-* 3.30 [Global Accelerator](#global-accelerator)
-* 3.31 [FSx](#fsx)
-* 3.32 [VPN](#vpn)
-* 3.33 [Wavelength](#wavelength)
-* 3.34 [SSO](#sso)
-* 3.35 [OpsWorks](#opsworks)
-* 3.36 [SWF](#swf)
-* 3.37 [Application Discovery Service](#application-discovery-service)
-* 3.38 [Server Migration Service](#server-migration-service)
-* 3.39 [DataSync](#datasync)
-* 3.40 [Transfer Family](#transfer-family)
-* 3.41 [SNS](#sns)
-* 3.42 [AppSync](#appsync)
-* 3.43 [Service Catalog](#service-catalog)
-* 3.44 [Greengrass](#greengrass)
-* 3.45 [Trusted Advisor](#trusted-advisor)
-* 3.46 [MQ](#mq)
-* 3.47 [X-Ray](#x-ray)
-* 3.48 [WorkDocs](#workdocs)
-* 3.49 [WorkSpaces](#workspaces)
-* 3.50 [Batch](#batch)
-* 3.51 [Cloud Development Kit](#cloud-development-kit)
-* 3.52 [EventBridge](#eventbridge)
-* 3.53 [Managed Blockchain](#managed-blockchain)
-* 3.54 [Secrets Manager](#systems-manager)
-* 3.55 [AppStream 2.0](#appstream-20)
-* 3.56 [License Manager](#license-manager)
-* 3.57 [Elastic Transcoder](#elastic-transcoder)
-* 3.58 [Elemental Media](#elemental-media)
-* 3.59 [Billing and Cost Management](#billing-and-cost-management)
-* 3.60 [Backup](#backup)
-* 3.61 [Migration Hub](#migration-hub)
-* 3.62 [WorkLink](#worklink)
+* 7.1 [Corretto](#corretto)
+* 7.2 [CloudFormation](#CloudFormation)
+* 7.3 [S3](#s3)
+* 7.4 [Glacier](#glacier)
+* 7.5 [EFS](#efs)
+* 7.6 [EBS](#ebs)
+* 7.7 [Instance Store](#ec2-instance-store)
+* 7.8 [CloudFront](#cloudfront)
+* 7.9 [Lambda](#lambda)
+* 7.10 [Step Functions](#step-functions)
+* 7.11 [EC2](#ec2)
+* 7.12 [Organizations](#organizations)
+* 7.13 [Well-Architected Tool](#well-architected-tool)
+* 7.14 [VPC](#vpc)
+* 7.15 [Elastic Beanstalk](#elastic-beanstalk)
+* 7.16 [DMS](#dms)
+* 7.17 [ELB](#elb)
+* 7.18 [CloudWatch](#CloudWatch)
+* 7.19 [Route53](#route53)
+* 7.20 [SQS](#sqs)
+* 7.21 [API Gateway](#api-gateway)
+* 7.22 [CodePipeline(CodeCommit/CodeBuild/CodeDeploy)](#codepipelinecodecommitcodebuildcodedeploy)
+* 7.23 [Storage Gateway](#storage-gateway)
+* 7.24 [ECS](#ecs)
+* 7.25 [EKS](#eks)
+* 7.26 [Fargate](#fargate)
+* 7.27 [Systems Manager](#systems-manager)
+* 7.28 [Cloud9](#cloud9)
+* 7.29 [CodeStar](#codestar)
+* 7.30 [Global Accelerator](#global-accelerator)
+* 7.31 [FSx](#fsx)
+* 7.32 [VPN](#vpn)
+* 7.33 [Wavelength](#wavelength)
+* 7.34 [SSO](#sso)
+* 7.35 [OpsWorks](#opsworks)
+* 7.36 [SWF](#swf)
+* 7.37 [Application Discovery Service](#application-discovery-service)
+* 7.38 [Server Migration Service](#server-migration-service)
+* 7.39 [DataSync](#datasync)
+* 7.40 [Transfer Family](#transfer-family)
+* 7.41 [SNS](#sns)
+* 7.42 [AppSync](#appsync)
+* 7.43 [Service Catalog](#service-catalog)
+* 7.44 [Greengrass](#greengrass)
+* 7.45 [Trusted Advisor](#trusted-advisor)
+* 7.46 [MQ](#mq)
+* 7.47 [X-Ray](#x-ray)
+* 7.48 [WorkDocs](#workdocs)
+* 7.49 [WorkSpaces](#workspaces)
+* 7.50 [Batch](#batch)
+* 7.51 [Cloud Development Kit](#cloud-development-kit)
+* 7.52 [EventBridge](#eventbridge)
+* 7.53 [Managed Blockchain](#managed-blockchain)
+* 7.54 [AppStream 2.0](#appstream-20)
+* 7.55 [License Manager](#license-manager)
+* 7.56 [Elastic Transcoder](#elastic-transcoder)
+* 7.57 [Elemental Media](#elemental-media)
+* 7.58 [Billing and Cost Management](#billing-and-cost-management)
+* 7.59 [Backup](#backup)
+* 7.60 [Migration Hub](#migration-hub)
+* 7.61 [WorkLink](#worklink)
 
 
 
@@ -804,7 +804,10 @@ EC2 role access - you can add (for example bucket write access) role to ec2 inst
 ec2 stores temporary credentials in instance metadata, when you use aws cli/sdk it would automatically fetch temporary credentials from instance metadata. 
 Yet if you want to call aws api outside cli/sdk you have to manually fetch credentials and make a call (`sa/cloudformation/ec2-role.yml`). This security credentials are temporary and ec2 rotate them automatically, new credentials available for 5 min before expiration of old.
 ec2 can assume 1 role at a tile, so `AWS::IAM::InstanceProfile` has `Roles` where you should provide list of roles, you can actually add only 1 role, if you add 2 - syntactically it would be correct, but when CF template would run you would get error: `Roles has too many elements. The limit is 1`.
-You can run ```TOKEN=`curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600"` && curl -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/iam/security-credentials/role-Ec2Role``` where `role-Ec2Role` - your role name
+You can run below command to manually extract temporary credentials (where `role-Ec2Role` - your role name)
+```
+TOKEN=`curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600"` && curl -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/iam/security-credentials/role-Ec2Role
+```
 IAM user - `who am I` & `what can I do`. But role is just `what can I do`. So for ec2 to use role it should become type of iam instance, that's why we create instance profile.
 When you create ec2 role from console, instance profile automatically created with same name. But if you are using CLI/CloudFormation you have to manually create it `AWS::IAM::InstanceProfile` and assign it to ec2 using `IamInstanceProfile`.
 Entity can assume only 1 role at a time, so if user is assigned to 2 groups he would get all permissions from 2 groups at the same time, but if he assigned 2 roles, he can use only one at a time (by assuming one role)
@@ -1011,6 +1014,9 @@ So if you need federated access:
 * if you have public web IdP like Facebook/Google/SalesForce - use role with openId connect (supported out-of-the-box by aws)
 * if you have corporate saml IdP like microsoft AD - use role with saml connect (supported out-of-the-box by aws)
 * if your corporate IdP is not saml based - use custom identity broker to fetch aws console url (you need to write code to get console access)
+You can either use:
+* iam+google - to get access to aws console for your google users
+* cognito+google - get temporary aws credentials using google users
 FU (Federated user) - user of such external identity who can access aws services but don't have corresponding iam user (so it managed outside aws iam)
 FU can access aws management console in 2 ways
 * programmatically request security credentials and put them into sign-in request to the AWS
@@ -1591,6 +1597,27 @@ Account iam policy & scp applied to shared resource same way they are applied to
 To enable sharing to to RAM console => setting, and tick `Enable sharing with AWS Organizations`. This would activate sharing for your org.
 * individual sharing - share resource with individual account
 
+###### Secrets Manager
+SM allows you to rotate/manage/retrieve db credentials, API keys, and other secrets throughout their lifecycle. You can encrypt secrets at rest using kms (you can choose your own, otherwise SM create new kms for you).
+To retrieve secrets, you simply replace secrets in plain text in your app with code to pull in those secrets programmatically using the SM API. You use iam to control which users/roles have access to which stores. SM can store json, so you can store any text up to 64KB. 
+This can be ideal for lambda evn vars, cause they are shown in lambda console. Moreover you can use lambda in private subnet without internet access and still be able to access SM with PrivateLink (create vpc endpoint for SM).
+Key rotation (when you create new secret from SM console, on third step you can optionally configure rotation):
+* SM use lambda to do rotation on the source, you also configure how often do rotation
+* supported out-of-the-box for RDS/RedShift/DocumentDB (SM comes with already written lambdas for these 3)
+* for db on ec2 (or just your remote host) - create new lambda that would modify credentials on your source and attach this lambda when you create secret 
+* you can configure cw events to be notified when SM rotate credentials. SM never store plaintext secrets to any persistent layer.
+To enalbe key rotation to work with lambda:
+* make sure SM can call lambda (when you create from console - SM create role to be assumed by SM and to call lambda)
+* make sure lambda can communicate with both db and SM:
+    * public rds - no extra work is needed, lambda can talk with both rds/SM using public internet
+    * private rds - 2 steps required:
+        * put lambda inside vpc - lambda can communicate with rds
+        * add NAT or vpc endpoint for SM - lambda can communicate with SM
+Some system allow users to change passwords (you need provide old password and new), but some are more restrictive, and only super user can change passwords (so you need to provide password of super user and new password).
+That's why for RDS/RedShift/DocumentDB there are 2 options which secret to use to rotate keys (for otherDB/other services since you write lambda yourself, no option to choose other secret exists):
+* this secret - change password using current secret
+* other secret from SM - you have to select existing secret which would be used to rotate passwords
+
 ### Database services
 ###### RDS
 RDS (Relational Database Service) - managed service, that make it easy install/operate relational database in the cloud. It helps easily scale compute resources or storage associated with your db, simplifies replication.
@@ -1824,6 +1851,7 @@ For rds on vmware you can create only 1 read replica and only in the same region
 If you need load balancing:
 * rds - use private hosted zone with multivalue answer. There is no way to add rds to ELB
 * db on ec2 - use ALB (in this case you can also add WAF to prevent sql injections)
+Export to s3 - you can export snapshot to s3 (data is compressed parquet format). This is async operation and doesn't affect snapshot
 
 ###### Aurora
 Aurora - mysql/postgres compatible (most app that works with mysql/postgres would switch with no problem to aurora) aws database solution. 
@@ -3711,6 +3739,7 @@ Typical use case is to have 2 accounts (dev + prod) to separate concerns, but to
 You can attach a policy to the root/OU/account. SCP limits IAM permissions (if you create SCP to block ec2 creation for all accounts, even root user form child account won't be able to launch any ec2 except for t2.micro)
 Order of execution - most restrictive policies take precedence. It never grant permission, they work like permission boundary - defining max set of permission accounts in organization can have.
 It will never limit permission to internal user of current account who has permission to access resources (for these purposes you have to use permission boundary).
+You can add permission to create new users only with specified permission boundary using condition key `"StringEquals":{"iam:PermissionsBoundary": "arn:aws:iam::123456789012:policy/MyCompanyBoundaries"}`
 * TP (Tag policy) - set of rules regarding tags (which resource should have which tags).
 Feature sets (you select it when you create organization) - how your organization manage its accounts:
 * Consolidated billing - provides only shared billing functionality (you can't define SCP/TP with this type). You can switch from consolidated billing to all by just updating org (there is no need to delete & create org).
@@ -4177,8 +4206,8 @@ Smart certificate selection - nlb support multiple certificates per tls connecti
 SNI (Server Name Indication) - host multiple tls application, each with it's own (or multiple) ssl certificate behind single ELB, which would choose optimal certificate for each client. Supported only by elb.
 You can't create multi-vpc elb, but if you want to route traffic to multiple vpc, better for each vpc to have single elb, and use route53 to route traffic to multiple elb.
 Yet if you want to use single elb to multiple vpc, you should use vpc peering and for target group set `TargetType: ip` and set list of private IP addresses to `TargetDescription.Id` attribute.
-End-to-end encryption - usually we terminate ssl on elb and from there we send traffic to ec2 using http, cause anyway from elb traffic is inside vpc, so it's secured.
-But if you want, you can implement encrypted communication end-to-end. For this you need to add TargetGroup that forward traffic to ec2 using https. In this case you need some kind of nginx in your ec2 to terminate ssl there.
+End-to-end encryption - usually we terminate ssl on elb and from there we send traffic to ec2 using http, cause anyway from elb traffic goes inside vpc, so it's secured.
+But if you want, you can implement encrypted communication end-to-end. For this you need to add TargetGroup that forward traffic to ec2 using https. In this case you need some kind of nginx (again you can offload this to cloudHSM) in your ec2 to terminate ssl there.
 ```
 TG:
   Type: AWS::ElasticLoadBalancingV2::TargetGroup
@@ -5297,12 +5326,6 @@ There are 2 types of members:
 Aws account and creator don't own network. For any changes there should be voting process between all network members. Peer node - when member join network it should have at least 1 peer node which store copy of distributed ledger with all transactions.
 Each blockchain has unique identifier `ResourceID.MemberID.NetworkID.managedblockchain.AWSRegion.amazonaws.com:PortNumber`. Port depends on blockcahin framework you are using. Yet this link is private, so members should have vpc and use vpc PrivateLink to access blockchain endpoint.
 AWS Blockchain Templates - you can run Ethereum/Hyperledger on ECS cluster or in ec2 using docker and have full control (compare to managed blockchain where you don't have access to ec2 machines).
-
-###### Secrets Manager
-SM allows you to rotate/manage/retrieve db credentials, API keys, and other secrets throughout their lifecycle. You can encrypt secrets at rest using kms (you can choose your own, otherwise SM create new kms for you).
-To retrieve secrets, you simply replace secrets in plain text in your app with code to pull in those secrets programmatically using the Secrets Manager APIs. You use iam to control which users/roles have access to which stores. SM can store json, so you can store any text up to 64KB. 
-Key rotation for RDS/DocumentDB/RedShift supported out-of-the-box. You can add key rotation to oracle on ec2 by modifying sample lambda. You can configure cw events to be notified when SM rotate credentials. SM never store plaintext secrets to any persistent layer.
-This can be ideal for lambda evn vars, cause they are shown in lambda console. Moreover you can use lambda in private subnet without internet access and still be able to access SM with PrivateLink (create vpc endpoint for SM).
 
 ###### AppStream 2.0
 Fully managed non-persistent app & desktop streaming service that provides instant access to desktop applications from anywhere, SAP - one of best candidates to be deployed on this platform.
