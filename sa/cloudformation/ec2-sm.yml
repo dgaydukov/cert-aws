@@ -3,6 +3,7 @@ AWSTemplateFormatVersion: 2010-09-09
 # create ec2 with ssm role and disable ssh (you can't ssh to ec2, yet you can connect using session manager, cause it uses ssm agent installed on ec2 to imitate ssh)
 # You can also disable access from iptables => sudo iptables -A INPUT -p tcp --dport ssh -j DROP # to remove either restart or run `sudo iptables -A INPUT -p tcp --dport ssh -j DROP`
 # disable all access => sudo iptables -P INPUT DROP # there is no way to connect to ec2 with session manager after you disable all input connections
+# if you disable inbound NACL, session manager won't be able to connect
 
 Resources:
   VPC:
@@ -54,6 +55,18 @@ Resources:
     Properties:
       SubnetId: !Ref PublicSubnet
       RouteTableId: !Ref PublicRT
+#  Nacl:
+#    Type: AWS::EC2::NetworkAcl
+#    Properties:
+#      VpcId: !Ref VPC
+#      Tags:
+#        - Key: Name
+#          Value: !Sub ${AWS::StackName}-MyVpc-Nacl
+#  PublicSubnetNaclAssociation:
+#    Type: AWS::EC2::SubnetNetworkAclAssociation
+#    Properties:
+#      SubnetId: !Ref PublicSubnet
+#      NetworkAclId: !Ref Nacl
 
   SshSG:
     Type: AWS::EC2::SecurityGroup
@@ -69,6 +82,11 @@ Resources:
           FromPort: 22
           ToPort: 22
           CidrIp: 0.0.0.0/0
+#      SecurityGroupEgress:
+#        - IpProtocol: tcp
+#          FromPort: 1
+#          ToPort: 1
+#          CidrIp: 0.0.0.0/32
       Tags:
         - Key: Name
           Value: !Sub ${AWS::StackName}-MyVpc-SshPingSG

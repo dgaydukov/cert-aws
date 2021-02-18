@@ -4826,7 +4826,17 @@ There are 3 ways to connect to ec2:
 * session manager - connect to ec2 using installed ssm agent (ssh tunnel not required)
 As you from above first 2 approaches uses ssh tunnel, so if you disable ssh, you won't be able to connect, yet since SM uses installed agent, it doesn't require ssh. You can disable ssh, and still be able to connect (see `sa/cloudformation/ec2-sm.yml`)
 Yet ssm agent use some port to communicate with ec2. So if you disable ssh only with `sudo service sshd stop` or with iptables (block all incoming ssh connections) `sudo iptables -A INPUT -p tcp --dport ssh -j DROP`, you can still connect to ec2 with session manager
-But if you block all incoming connections `sudo iptables -P INPUT DROP` - even session manager can't connect to ec2.
+But if you block all incoming connections `sudo iptables -P INPUT DROP` - even session manager can't connect to ec2. Session manager communicate with ec2 using ssm agent.
+This agent require permission to some aws services, that's why your ec2 should have `AmazonSSMManagedInstanceCore` managed policy as part of it role. You don't need to have any open SG/NACL rule, cause agent use outbound connection 
+But if you deny all inbound traffic from NACL, session manager won't be able to connect to ec2. By default SG allows all outbound traffic, but if you remove this rule (you can explicitly add 1 dumb rule)
+```
+SecurityGroupEgress:
+    - IpProtocol: tcp
+      FromPort: 1
+      ToPort: 1
+      CidrIp: 0.0.0.0/32
+```
+Then ssm agent can't send info to session manager, and you won't be able to connect to ec2 (even button `connect` won't be available from aws console)
 When you create ec2 with SM role (this will allow agent running on ec2 to talk with SM), and later manage your ec2 from SM console (without need to connecting to instance with ssh), includes:
 * document (json/yaml configuration as code) - allows you to set a series of actions to be performed on ec2. You can create your own documents or use provided by default, including collecting inventory/metrics, installing apps and so on.
 * OpsCenter - place where ops team can view/resolve ops issues. It aggregates issues by creating OpsItems. On average OpsCenter reduce mean time resolution by 50%.
