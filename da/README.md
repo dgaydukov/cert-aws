@@ -61,3 +61,4 @@ Here is my experience of taking data analytics specialty exam
 * create cloudsearch/elasticsearch clusters and try to put logs from ec2 there
 * try emr on t2 (with different engines hive/hbase/presto/spark)
 * kinesis firehose real example (with cf template)
+* use kinesis sdk and try java data streaming. In all example firehose consume data from data streams, but can we directly send data to it without data streams?

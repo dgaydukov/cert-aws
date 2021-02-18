@@ -2569,7 +2569,7 @@ All resources can have several generic attributes:
 * DependsOn - resource would be created after specified resources
 * Metadata - associate some metadata with resource
 * UpdatePolicy & UpdateReplacePolicy - what to do in case of stack update
-Built-in function - intrinsic CF function like `GetAtt/Join/Select/GetAZs` for better work with CF templates (see `sa/cloudformation/cf-template.yml`). You can use them only in specific part of template: props/outputs/metadata/updatePolicyAttributes
+Built-in function - intrinsic CF function like `GetAtt/Join/Select/GetAZs` for better work with CF templates (see `sa/cloudformation/cf/template.yml`). You can use them only in specific part of template: props/outputs/metadata/updatePolicyAttributes
 Stack policy:
 * by default all update actions for all resources allowed, so anybody with iam permission to update stack can overwrite any resource
 * you can setup stack policy to deny update actions for specified resources (like prod db)
@@ -2595,7 +2595,7 @@ Stack policy:
   ]
 }
 ```
-Don't confuse (see `sa/cloudformation/cf-wait-condition.yml`):
+Don't confuse (see `sa/cloudformation/cf/wait-condition.yml`):
 * WaitCondition (`AWS::CloudFormation::WaitCondition`) - resource wait for some external resource (created outside current CF) to finish and only then mark resource status as complete.
 CF waits until WaitCondition get required number of signals or timeout is over. You use `DependsOn` attr to specify that wait condition created after some resource, and another recourse depends on wait condition.
 `AWS::CloudFormation::WaitConditionHandle` - has no props, but return pre-signed url. You use this url (send HTTP request to it) to notify your handle that outside resource is created.
@@ -2606,7 +2606,7 @@ So you can use WaitCondition:
 * without anything, just call it directly using `signal-resource` api
 * with `WaitConditionHandle` (in this case you have to curl it's url), keep in mind that for each update if you need new wait you have to create new `WaitConditionHandle`, cause old already passed timeout
 * with `CreationPolicy` (in this case you have to call `cfn-signal` cli utility)
-Stack sets (`AWS::CloudFormation::StackSet`, see `sa/cloudformation/cf-multi-region.yml`) - native CF concept to create multi-account/region stack (before you have to use custom resource). You create set in one region for one account, and from there it creates resource to another regions/accounts.
+Stack sets (`AWS::CloudFormation::StackSet`, see `sa/cloudformation/cf/multi-region.yml`) - native CF concept to create multi-account/region stack (before you have to use custom resource). You create set in one region for one account, and from there it creates resource to another regions/accounts.
 There are 2 types of permission model:
 * self-managed - you create iam roles in target account that account in which stack set is deployed
 * service-managed - if you deploy stacks in account managed by aws org, you don't have to create roles (they would be created automatically under-the-hood)
@@ -2616,6 +2616,12 @@ You need to pass `--capabilities=CAPABILITY_NAMED_IAM` in order to succeed. Ther
 * CAPABILITY_IAM - when your stack has a role without name
 * CAPABILITY_NAMED_IAM - when your stack has a role with name
 * CAPABILITY_AUTO_EXPAND - when your stack contains macros
+CF helper scripts - there are 4 scripts you can use in `Userdata` for ec2 (these are python scripts that are pre-installed on amazon linux, for other OS, like windows, you can download `aws-cfn-bootstrap` package):
+* cfn-init - you can run scripts from `AWS::CloudFormation::Init` using this command (take a look at `sa/cloudformation/cf/ec2-cfn.yml`)
+You can just write command in imperative style under `Userdata`, but using cfn-init allows you to write installation steps in declarative manner under  `AWS::CloudFormation::Init`
+* cfn-signal - you can signal CF that resource is created (useful with `cfn-init`)
+* cfn-get-metadata - retrieve metadata for resource
+* cfn-hup - check updates for metadata, execute custom hooks when updates detected
 
 ###### S3
 S3 (Simple Storage Service) used for:
@@ -4814,6 +4820,13 @@ For eks:
 ###### Systems Manager
 SM - tool that helps you to manage your aws resources and automate some tasks on them.
 SSM Agent - special software installed on ami (by default installed on most aws provided ami) with which SM can manage your ec2.
+There are 3 ways to connect to ec2:
+* ec2 instance connect - connect to ec2 from aws console without ssh key
+* ssh client - connect from your machine to ec2 using ssh key
+* session manager - connect to ec2 using installed ssm agent (ssh tunnel not required)
+As you from above first 2 approaches uses ssh tunnel, so if you disable ssh, you won't be able to connect, yet since SM uses installed agent, it doesn't require ssh. You can disable ssh, and still be able to connect (see `sa/cloudformation/ec2-sm.yml`)
+Yet ssm agent use some port to communicate with ec2. So if you disable ssh only with `sudo service sshd stop` or with iptables (block all incoming ssh connections) `sudo iptables -A INPUT -p tcp --dport ssh -j DROP`, you can still connect to ec2 with session manager
+But if you block all incoming connections `sudo iptables -P INPUT DROP` - even session manager can't connect to ec2.
 When you create ec2 with SM role (this will allow agent running on ec2 to talk with SM), and later manage your ec2 from SM console (without need to connecting to instance with ssh), includes:
 * document (json/yaml configuration as code) - allows you to set a series of actions to be performed on ec2. You can create your own documents or use provided by default, including collecting inventory/metrics, installing apps and so on.
 * OpsCenter - place where ops team can view/resolve ops issues. It aggregates issues by creating OpsItems. On average OpsCenter reduce mean time resolution by 50%.
@@ -4832,7 +4845,6 @@ If you want to schedule, there are 2 options:
 * state manager - run scripts on linux/windows, patch instances with software/security updates
 * maintenance window - you define window for disruptive actions like patching, updating drivers. You can use it also for s3/sqs/kms
 Parameter Store - create secure string params and store plaintext key and encrypted value. Use symmetric KMS only.
-
 ###### Cloud9
 Cloud based IDE (integrated development environment) where you can run and execute your code. It basically a separate ec2 where you can install programs, write/build code, and work just like with your laptop.
 So it basically IDE + linux. AWS CLI is preconfigured there. It's free but you pay for compute & storage, ec2+ebs. You can also connect cloud9 to on-premises server, in this case it's free.
