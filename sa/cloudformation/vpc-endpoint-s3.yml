@@ -145,7 +145,7 @@ Resources:
         - Key: Name
           Value: !Sub ${AWS::StackName}-MyVpc-Private
 
-  S3VpcEndpoing:
+  S3VpcEndpoint:
     Type: AWS::EC2::VPCEndpoint
     Properties:
       PolicyDocument:

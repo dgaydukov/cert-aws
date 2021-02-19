@@ -1,0 +1,260 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+#
+
+Resources:
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-LambdaRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+  LogPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub ${AWS::StackName}-LogPolicy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - "logs:CreateLogGroup"
+              - "logs:CreateLogStream"
+              - "logs:PutLogEvents"
+              - "logs:DescribeLogStreams"
+            Resource: "*"
+      Roles:
+        - !Ref LambdaRole
+
+  ApiGatewayRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-ApiGatewayRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - apigateway.amazonaws.com
+            Action:
+              - sts:AssumeRole
+  LambdaExecutionPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub ${AWS::StackName}-ApiGatewayPolicy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - "lambda:InvokeFunction"
+            Resource: "*"
+      Roles:
+        - !Ref ApiGatewayRole
+#  AuthLambda:
+#    Type: AWS::Lambda::Function
+#    Properties:
+#      FunctionName: !Sub ${AWS::StackName}-AuthLambda
+#      Description: Authenticate user by custom header
+#      Role: !GetAtt LambdaRole.Arn
+#      Runtime: nodejs12.x
+#      Handler: index.handler
+#      Code:
+#        ZipFile: |
+#          exports.handler = (event, context, cb) => {
+#            // in case of TOKEN we got authorizationToken, REQUEST - event would be standard lambda event with all fields
+#            if(event.authorizationToken === "user" || event.headers.auth === "user"){
+#              cb(null, {
+#                    "principalId": "123",
+#                    "policyDocument": {
+#                      "Version": "2012-10-17",
+#                      "Statement": [{
+#                        "Action": "execute-api:Invoke",
+#                        "Effect": "Allow",
+#                        "Resource": "*"
+#                      }]
+#                    },
+#                    "context": {"user_id": "456"}
+#              });
+#            }
+#            cb("Unauthorized");
+#          }
+#      Tags:
+#        - Key: Name
+#          Value: !Sub ${AWS::StackName}-AuthLambda
+#
+#  InfoLambda:
+#    Type: AWS::Lambda::Function
+#    Properties:
+#      FunctionName: !Sub ${AWS::StackName}-InfoLambda
+#      Description: Show basic information about app
+#      Role: !GetAtt LambdaRole.Arn
+#      Runtime: nodejs12.x
+#      Handler: index.handler
+#      Code:
+#        ZipFile: |
+#          exports.handler = (event, context, cb) => {
+#              cb(null, {
+#                statusCode: 200,
+#                headers: {"Content-Type": "application/json"},
+#                body: JSON.stringify({event})
+#              });
+#          }
+#      Tags:
+#        - Key: Name
+#          Value: !Sub ${AWS::StackName}-InfoLambda
+#  ApiGatewayLambdaPermission:
+#    Type: AWS::Lambda::Permission
+#    Properties:
+#      FunctionName: !GetAtt InfoLambda.Arn
+#      Action: lambda:InvokeFunction
+#      Principal: apigateway.amazonaws.com
+#      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${RestApi}/*/*/*
+#
+#  RestApi:
+#    Type: AWS::ApiGateway::RestApi
+#    Properties:
+#      Description: Auth (lambda & cognito) example using REST API
+#      Name: REST API Auth
+#      EndpointConfiguration:
+#        Types:
+#          - REGIONAL
+#
+#  RequestLambdaAuthorizer:
+#    Type: AWS::ApiGateway::Authorizer
+#    Properties:
+#      AuthorizerCredentials: !GetAtt ApiGatewayRole.Arn
+#      AuthorizerResultTtlInSeconds: 300
+#      AuthorizerUri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AuthLambda.Arn}/invocations
+#      Type: REQUEST
+#      IdentitySource: method.request.header.auth
+#      Name: RequestLambdaAuthorizer
+#      RestApiId: !Ref RestApi
+#  RequestAuthResource:
+#    Type: AWS::ApiGateway::Resource
+#    Properties:
+#      RestApiId: !Ref RestApi
+#      ParentId: !GetAtt RestApi.RootResourceId
+#      PathPart: request
+#  RequestAuthMethod:
+#    Type: AWS::ApiGateway::Method
+#    Properties:
+#      RestApiId: !Ref RestApi
+#      ResourceId: !Ref RequestAuthResource
+#      HttpMethod: ANY
+#      AuthorizationType: CUSTOM
+#      AuthorizerId: !Ref RequestLambdaAuthorizer
+#      Integration:
+#        Type: AWS_PROXY
+#        IntegrationHttpMethod: POST
+#        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${InfoLambda.Arn}/invocations
+#
+#
+#  LambdaAuthorizer:
+#    Type: AWS::ApiGateway::Authorizer
+#    Properties:
+#      AuthorizerCredentials: !GetAtt ApiGatewayRole.Arn
+#      AuthorizerResultTtlInSeconds: 30
+#      AuthorizerUri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AuthLambda.Arn}/invocations
+#      Type: TOKEN
+#      IdentitySource: method.request.header.auth
+#      Name: LambdaAuthorizer
+#      RestApiId: !Ref RestApi
+#  CustomAuthResource:
+#    Type: AWS::ApiGateway::Resource
+#    Properties:
+#      RestApiId: !Ref RestApi
+#      ParentId: !GetAtt RestApi.RootResourceId
+#      PathPart: custom
+#  CustomAuthMethod:
+#    Type: AWS::ApiGateway::Method
+#    Properties:
+#      RestApiId: !Ref RestApi
+#      ResourceId: !Ref CustomAuthResource
+#      HttpMethod: ANY
+#      AuthorizationType: CUSTOM
+#      AuthorizerId: !Ref LambdaAuthorizer
+#      Integration:
+#        Type: AWS_PROXY
+#        IntegrationHttpMethod: POST
+#        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${InfoLambda.Arn}/invocations
+#
+#  UserPool:
+#    Type: AWS::Cognito::UserPool
+#    Properties:
+#      UserPoolName: !Sub ${AWS::StackName}-UserPool
+#      AutoVerifiedAttributes:
+#        - email
+#      UsernameConfiguration:
+#        CaseSensitive: true
+#      Schema:
+#        - Name: name
+#          AttributeDataType: String
+#          Mutable: true
+#          Required: true
+#        - Name: email
+#          AttributeDataType: String
+#          Mutable: false
+#          Required: true
+#  WebClient:
+#    Type: AWS::Cognito::UserPoolClient
+#    Properties:
+#      ClientName: !Sub ${AWS::StackName}-WebClient
+#      GenerateSecret: false
+#      UserPoolId: !Ref UserPool
+#      ExplicitAuthFlows:
+#        - ALLOW_REFRESH_TOKEN_AUTH
+#        - ALLOW_USER_PASSWORD_AUTH
+#
+#  CognitoAuthorizer:
+#    Type: AWS::ApiGateway::Authorizer
+#    Properties:
+#      ProviderARNs:
+#        - !GetAtt UserPool.Arn
+#      IdentitySource: method.request.header.auth
+#      Type: COGNITO_USER_POOLS
+#      Name: CognitoAuthorizer
+#      RestApiId: !Ref RestApi
+#  CognitoAuthResource:
+#    Type: AWS::ApiGateway::Resource
+#    Properties:
+#      RestApiId: !Ref RestApi
+#      ParentId: !GetAtt RestApi.RootResourceId
+#      PathPart: cognito
+#  CognitoAuthMethod:
+#    Type: AWS::ApiGateway::Method
+#    Properties:
+#      RestApiId: !Ref RestApi
+#      ResourceId: !Ref CognitoAuthResource
+#      HttpMethod: ANY
+#      AuthorizationType: COGNITO_USER_POOLS
+#      AuthorizerId: !Ref CognitoAuthorizer
+#      Integration:
+#        Type: AWS_PROXY
+#        IntegrationHttpMethod: POST
+#        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${InfoLambda.Arn}/invocations
+#
+#  Deployment:
+#    DependsOn:
+#      - CustomAuthMethod
+#      - CognitoAuthMethod
+#      - RequestAuthMethod
+#    Type: AWS::ApiGateway::Deployment
+#    Properties:
+#      RestApiId: !Ref RestApi
+#      Description: My deployment
+#  DevStage:
+#    Type: AWS::ApiGateway::Stage
+#    Properties:
+#      StageName: dev
+#      Description: Dev Stage
+#      RestApiId: !Ref RestApi
+#      DeploymentId: !Ref Deployment

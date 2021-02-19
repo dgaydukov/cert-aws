@@ -3970,11 +3970,11 @@ VIF (virtual interface) - you have to create one of the following VIF to start u
 * transit - access vpc Transit Gateway associated with dx
 When you establish DX/VPN make sure that your vpc has no IP range conflict with on-premises network. All private IP addresses on both network should be unique (just the same rule as for vpc peering)
 Don't confuse 3 links:
-* VPC PrivateLink (see `sa/cloudformation/advanced-networking/ec2-privatelink.yml`) - expose aws services (except s3/dynamoDb who are using gateway endpoint) or private ec2 to vpc in the same or other aws account, by adding eni inside vpc for exposed service.
+* VPC PrivateLink (see `sa/cloudformation/vpc-endpoint-ec2-privatelink.yml`) - expose aws services (except s3/dynamoDb who are using gateway endpoint) or private ec2 to vpc in the same or other aws account, by adding eni inside vpc for exposed service.
 If you have 3 vpc and ec2 in each of them, and you want to connect these 3 ec2 you can use either PrivateLink or vpc peering. PrivateLink is better solution, cause it allows you to connect only these 3 ec2, without exposing all other services from these vpc to each other.
 Yet keep in mind that vpc endpoint can't be cross-region, it also supports only IPv4 traffic.
 * VPC ClassicLink (before 2013 there were no default VPC and all EC2 where launched in flat network shared with other aws users) - allows to connect your VPC with ec2 classic, ec2 becomes a member of VPC SG.
-* VPC Link - connect API GateWay to private ec2.
+* VPC Link (see `sa/cloudformation/vpc-endpoint-http-api.yml`) - connect API GateWay to private ec2.
 VPC Endpoint - private connection to AWS services without IGW/NAT/VPN. It make sure all traffic goes inside aws network. There are 2 types:
 * Gateway endpoint — target for a route in your route table for traffic destined to a supported AWS service (s3/dynamoDB)
 * Interface endpoint — ENI with a private IP address from the IP range of your subnet that serves as an entry point for traffic destined to a supported service (supported only within single region)
