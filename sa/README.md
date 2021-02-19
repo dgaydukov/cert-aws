@@ -22,10 +22,7 @@ In real exam I didn't meet any questions regarding `Rekognition`, but there are 
 
 ### TODO
 read nmap book && scan wifi (https://habr.com/ru/post/224955)
-* create vpc with custom DHCP options set and create ec2 instance and see it private/public domain name
-* connect 2 vpc with privatelink (access ec2 from one vpc from another)
 * create vpc link and connect http api to ec2 in private subnet
-* vpc endpoint service (add ec2 (with basic httpd service) + NLB and share it to vpc from another region)
 * redshift enhanced vpc routing (send data inside vpc between redhshift & s3 and view vpc flow logs)
 * create cf template with dynamodb vpc endpoint and access dynamodb from ec2 in private subnet (add auto scaling to dynamoDb)
 * create dynamodb lsi & gsi and compare them

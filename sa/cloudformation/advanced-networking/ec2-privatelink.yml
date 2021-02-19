@@ -1,0 +1,291 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+# create 2 vpc (vpc1 wih public webserver, vpc2 with public & private ec2). Go to endpoint, and get private IP of endpoint eni. Now you can access ec2 from vpc1 using this privateIP
+# !important => we intentionally made both ec2 & nlb public, but they can also be private, and still be accessible through privatelink
+# !important => if you want to enable `PrivateDnsEnabled: true`, your vpc should support private dns
+
+Resources:
+  Vpc1:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.100.0.0/16
+      Tags:
+        - Key: Name
+          Value:  !Sub ${AWS::StackName}-Vpc1
+  Vpc1InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    DependsOn: Vpc1
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-Vpc1InternetGateway
+  Vpc1AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref Vpc1
+      InternetGatewayId: !Ref Vpc1InternetGateway
+  Vpc1PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc1
+      AvailabilityZone: us-east-1a
+      CidrBlock: 10.100.1.0/24
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-Vpc1-PublicSubnet
+  Vpc1PublicRT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc1
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-Vpc1-PublicRT
+  Vpc1PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: Vpc1AttachGateway
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId: !Ref Vpc1PublicRT
+      GatewayId: !Ref Vpc1InternetGateway
+  Vpc1PublicSubnetRtAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref Vpc1PublicSubnet
+      RouteTableId: !Ref Vpc1PublicRT
+  Vpc1SG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH/HTTP access from anywhere
+      VpcId: !Ref Vpc1
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-Vpc1-SG
+  Vpc1WebServer:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-09d95fab7fff3776c
+      KeyName: mykey
+      UserData:
+        Fn::Base64:
+          !Sub |
+          #!/usr/bin/env bash
+          sudo yum install httpd -y
+          sudo service httpd start
+          sudo echo "<h1>WebServer $(curl -s http://169.254.169.254/latest/meta-data/local-ipv4)</h1>" > /var/www/html/index.html
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: 0
+          SubnetId: !Ref Vpc1PublicSubnet
+          GroupSet:
+            - !GetAtt Vpc1SG.GroupId
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 8
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-Vpc1-WebServer
+
+  Vpc2:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.200.0.0/16
+      Tags:
+        - Key: Name
+          Value:  !Sub ${AWS::StackName}-Vpc2
+  Vpc2InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    DependsOn: Vpc2
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-Vpc2InternetGateway
+  Vpc2AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref Vpc2
+      InternetGatewayId: !Ref Vpc2InternetGateway
+  Vpc2PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc2
+      AvailabilityZone: us-east-1a
+      CidrBlock: 10.200.1.0/24
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-Vpc2-PublicSubnet
+  Vpc2PrivateSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc2
+      AvailabilityZone: us-east-1b
+      CidrBlock: 10.200.2.0/24
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-Vpc2-PrivateSubnet
+  Vpc2PublicRT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc2
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-Vpc2-PublicRT
+  Vpc2PrivateRT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc2
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-Vpc2-PrivateRT
+  Vpc2PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: Vpc2AttachGateway
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId: !Ref Vpc2PublicRT
+      GatewayId: !Ref Vpc2InternetGateway
+  Vpc2PublicSubnetRtAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref Vpc2PublicSubnet
+      RouteTableId: !Ref Vpc2PublicRT
+  Vpc2PrivateSubnetRtAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref Vpc2PrivateSubnet
+      RouteTableId: !Ref Vpc2PrivateRT
+  Vpc2SG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH access from anywhere
+      VpcId: !Ref Vpc2
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-Vpc2-SG
+  Vpc2PublicInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-09d95fab7fff3776c
+      KeyName: mykey
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: 0
+          SubnetId: !Ref Vpc2PublicSubnet
+          GroupSet:
+            - !GetAtt Vpc2SG.GroupId
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 8
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-Vpc2-PublicInstance
+  Vpc2PrivateSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH access from public SG
+      VpcId: !Ref Vpc2
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          SourceSecurityGroupId: !GetAtt Vpc2SG.GroupId
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-Vpc2-PrivateSG
+  Vpc2PrivateInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-09d95fab7fff3776c
+      KeyName: mykey
+      SubnetId: !Ref Vpc2PrivateSubnet
+      SecurityGroupIds:
+        - !GetAtt Vpc2PrivateSG.GroupId
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 8
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-Vpc2-PrivateInstance
+
+  NLB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub ${AWS::StackName}-Vpc1-NLB
+      Scheme: internet-facing
+      Type: network
+      Subnets:
+        - !Ref Vpc1PublicSubnet
+  TG:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      VpcId: !Ref Vpc1
+      TargetType: instance
+      Port: 80
+      Protocol: TCP
+      Targets:
+        - Id: !Ref Vpc1WebServer
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-TG
+  TcpListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TG
+      LoadBalancerArn: !Ref NLB
+      Port: 80
+      Protocol: TCP
+
+  Vpc1PrivateLink:
+    Type: AWS::EC2::VPCEndpointService
+    Properties:
+      AcceptanceRequired: false # if you don't set it or set to true, you have to manually accept endpoint requests
+      NetworkLoadBalancerArns:
+        - !Ref NLB
+  Vpc2Endpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcEndpointType: Interface
+      ServiceName: !Sub com.amazonaws.vpce.${AWS::Region}.${Vpc1PrivateLink}
+      VpcId: !Ref Vpc2
+      SubnetIds:
+        - !Ref Vpc2PublicSubnet
+      SecurityGroupIds:
+        - !GetAtt Vpc2EndpointSG.GroupId
+  Vpc2EndpointSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable HTTP access from public & private SG
+      VpcId: !Ref Vpc2
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          SourceSecurityGroupId: !GetAtt Vpc2SG.GroupId
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          SourceSecurityGroupId: !GetAtt Vpc2PrivateSG.GroupId
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-Vpc2-EndpointSG

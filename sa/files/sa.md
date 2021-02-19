@@ -3970,7 +3970,7 @@ VIF (virtual interface) - you have to create one of the following VIF to start u
 * transit - access vpc Transit Gateway associated with dx
 When you establish DX/VPN make sure that your vpc has no IP range conflict with on-premises network. All private IP addresses on both network should be unique (just the same rule as for vpc peering)
 Don't confuse 3 links:
-* VPC PrivateLink - expose aws services (except s3/dynamoDb who are using gateway endpoint) or private ec2 to vpc in the same or other aws account, by adding eni inside vpc for exposed service.
+* VPC PrivateLink (see `sa/cloudformation/advanced-networking/ec2-privatelink.yml`) - expose aws services (except s3/dynamoDb who are using gateway endpoint) or private ec2 to vpc in the same or other aws account, by adding eni inside vpc for exposed service.
 If you have 3 vpc and ec2 in each of them, and you want to connect these 3 ec2 you can use either PrivateLink or vpc peering. PrivateLink is better solution, cause it allows you to connect only these 3 ec2, without exposing all other services from these vpc to each other.
 Yet keep in mind that vpc endpoint can't be cross-region, it also supports only IPv4 traffic.
 * VPC ClassicLink (before 2013 there were no default VPC and all EC2 where launched in flat network shared with other aws users) - allows to connect your VPC with ec2 classic, ec2 becomes a member of VPC SG.
@@ -4050,8 +4050,8 @@ If your request failed that means there is insufficient unique hardware to fulfi
 PG can be only within same AZ, yet you can peer vpc and instances can be put into same PG (if both vpc have subnet in same AZ).
 Prefix list - set of one or more CIDR blocks (can be used in SG as `SourcePrefixListId` to define not single CIDR range but a set of them).
 If you want your ec2 to be accessed from elb you should put `SourceSecurityGroupId` id of SG for elb (in this way only elb or whoever has same SG can access ec2).
-DHCP options sets - set of rules how to create private domain name. When you create new vpc, default DHCP set would be linked to it. It also add dns server into your vpc to determine dns rules.
-You can crete your custom set and link it to any vpc. You can also remove DHCP set form vpc, in this case no dns name would be created.
+DHCP options sets - set of rules how to create private domain name. When you create new vpc, default DHCP set would be linked to it. It also add DNS server into your vpc to determine DNS rules.
+You can crete your custom set and link it to any vpc. You can also remove DHCP set form vpc, in this case no DNS name would be created.
 If you want to change vpc DHCP set you can do it only after you've created vpc, go to `Actions=>Edit DHCP options set` and select another set or remove it from vpc. 
 Yet if you unlink DHCP from default vpc, and try to create ec2, it will still use default dhcp rules and add public/private dns names.
 You can't modify DHCP options set. If you want to change it you must create new one and associate it with VPC.
