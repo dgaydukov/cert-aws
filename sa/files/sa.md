@@ -3974,7 +3974,7 @@ Don't confuse 3 links:
 If you have 3 vpc and ec2 in each of them, and you want to connect these 3 ec2 you can use either PrivateLink or vpc peering. PrivateLink is better solution, cause it allows you to connect only these 3 ec2, without exposing all other services from these vpc to each other.
 Yet keep in mind that vpc endpoint can't be cross-region, it also supports only IPv4 traffic.
 * VPC ClassicLink (before 2013 there were no default VPC and all EC2 where launched in flat network shared with other aws users) - allows to connect your VPC with ec2 classic, ec2 becomes a member of VPC SG.
-* VPC Link (see `sa/cloudformation/vpc-endpoint-http-api.yml`) - connect API GateWay to private ec2.
+* VPC Link (see `sa/cloudformation/vpc-endpoint-http-api.yml`) - connect API GateWay to private ec2. It only to connect api to internal vpc resources. If you want to call api from inside vpc, use vpc interface endpoint for `execute-api` (name of api gateway inside aws)
 VPC Endpoint - private connection to AWS services without IGW/NAT/VPN. It make sure all traffic goes inside aws network. There are 2 types:
 * Gateway endpoint — target for a route in your route table for traffic destined to a supported AWS service (s3/dynamoDB)
 * Interface endpoint — ENI with a private IP address from the IP range of your subnet that serves as an entry point for traffic destined to a supported service (supported only within single region)
@@ -4198,7 +4198,7 @@ Since we can modify rules, you can use elb to hide some api endpoints. For examp
 * rule-1 - forward /api requests to /api endpoint in your app
 * default rule - always return 403
 So with this only `/api` endpoint would be available. All other endpoints would return 403.
-Access logs - contains clientIP/latency/request path/response - can be collected by CloudWatch and analyzed later. If you have problems with ELB you have to analyze access logs, cause vpc flow logs don't provide desired info (like request path or server response).
+Access logs - contains clientIP/latency/requestPath/response - can be stored in s3 in compressed format & encrypted with sse. If you have problems with ELB you have to analyze access logs, cause vpc flow logs don't provide desired info (like request path or server response).
 You can use elb with ec2 from private subnet. For this you should have public subnet within same AZ as private subnet and NAT. In this case you ec2 would be completely hidden behind elb.
 TLS Listener - used by nlb for secure connection. To use it you must:
 * deploy 1 server certificate (from ACM) - terminate the front-end connection and decrypt requests from clients, before sending decrypted data to TG

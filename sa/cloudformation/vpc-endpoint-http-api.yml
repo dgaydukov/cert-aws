@@ -1,8 +1,140 @@
 AWSTemplateFormatVersion: 2010-09-09
 
-#
+# create ec2 + internal NLB, and expose it through vpc link to http gateway
+
+# !important => NLB should be internal, otherwise you will always get 503 Service Unavailable
+# !important => For VpcLink VPC_LINK, integration uri should be a valid ELB listener ARN or a valid Cloud Map service ARN
+# !important => according to https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-develop-integrations-private.html, api gateway add stage prefix to request
+# !important => although elb would use s3, for bucket policy we use delivery.logs.amazonaws.com, not elasticloadbalancing.amazonaws.com
 
 Resources:
+  MyVpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.100.0.0/16
+      Tags:
+        - Key: Name
+          Value:  !Sub ${AWS::StackName}-MyVpc
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    DependsOn: MyVpc
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-InternetGateway
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref MyVpc
+      InternetGatewayId: !Ref InternetGateway
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref MyVpc
+      AvailabilityZone: us-east-1a
+      CidrBlock: 10.100.1.0/24
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-PublicSubnet
+  PublicRT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref MyVpc
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-PublicRT
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId: !Ref PublicRT
+      GatewayId: !Ref InternetGateway
+  PublicSubnetRtAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref PublicRT
+  SshHttpSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH/HTTP access from anywhere
+      VpcId: !Ref MyVpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-SshHttpSG
+  WebServer:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-09d95fab7fff3776c
+      KeyName: mykey
+      UserData:
+        Fn::Base64:
+          !Sub |
+          #!/usr/bin/env bash
+          sudo yum install httpd -y
+          sudo service httpd start
+          sudo echo "<h1>WebServer $(curl -s http://169.254.169.254/latest/meta-data/local-ipv4)</h1>" > /var/www/html/index.html
+          sudo mkdir /var/www/html/dev && sudo echo "<h1>dev page</h1>" > /var/www/html/dev/index.html
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: 0
+          SubnetId: !Ref PublicSubnet
+          GroupSet:
+            - !GetAtt SshHttpSG.GroupId
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 8
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-WebServer
+
+  NLB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub ${AWS::StackName}-MyVpc-NLB
+      Scheme: internal
+      Type: network
+      Subnets:
+        - !Ref PublicSubnet
+      LoadBalancerAttributes:
+        - Key: access_logs.s3.enabled
+          Value: true
+        - Key: access_logs.s3.bucket
+          Value: !Ref ElbAccessLogsBucket
+  TG:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      VpcId: !Ref MyVpc
+      TargetType: instance
+      Port: 80
+      Protocol: TCP
+      Targets:
+        - Id: !Ref WebServer
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-TG
+  TcpListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TG
+      LoadBalancerArn: !Ref NLB
+      Port: 80
+      Protocol: TCP
+
   LambdaRole:
     Type: AWS::IAM::Role
     Properties:
@@ -16,245 +148,139 @@ Resources:
                 - lambda.amazonaws.com
             Action:
               - sts:AssumeRole
-  LogPolicy:
-    Type: AWS::IAM::Policy
+      Policies:
+        - PolicyName: !Sub ${AWS::StackName}-AllowCloudWatchLogging
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                  - "logs:DescribeLogStreams"
+                Resource: "*"
+  InfoLambda:
+    Type: AWS::Lambda::Function
     Properties:
-      PolicyName: !Sub ${AWS::StackName}-LogPolicy
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Action:
-              - "logs:CreateLogGroup"
-              - "logs:CreateLogStream"
-              - "logs:PutLogEvents"
-              - "logs:DescribeLogStreams"
-            Resource: "*"
-      Roles:
-        - !Ref LambdaRole
+      FunctionName: !Sub ${AWS::StackName}-InfoLambda
+      Description: Show basic information about app
+      Role: !GetAtt LambdaRole.Arn
+      Runtime: nodejs12.x
+      Handler: index.handler
+      Code:
+        ZipFile: |
+          exports.handler = (event, context, cb) => {
+              cb(null, {
+                statusCode: 200,
+                body: JSON.stringify({"msg": "hello world!"}),
+                headers: {"Content-Type": "application/json"}
+              });
+          }
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-Info
+  ApiGatewayLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt InfoLambda.Arn
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*/*/*
+  HttpApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: !Sub ${AWS::StackName}-HttpApi
+      Description: Example using HTTP API
+      ProtocolType: HTTP
+      Tags:
+        Name: !Sub ${AWS::StackName}-HttpApi
+  DevStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      StageName: dev
+      Description: Only for dev env
+      ApiId: !Ref HttpApi
+      AutoDeploy: true
+      AccessLogSettings:
+        DestinationArn: !GetAtt LogGroup.Arn
+        Format: $context.requestId,$context.identity.sourceIp,$context.identity.caller,$context.identity.user,$context.requestTime,$context.protocol,$context.httpMethod,$context.routeKey,$context.status,$context.responseLength
+  LambdaIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref HttpApi
+      Description: Lambda Integration
+      ConnectionType: INTERNET
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${InfoLambda.Arn}/invocations
+      IntegrationMethod: POST
+      PayloadFormatVersion: 1.0
+      TimeoutInMillis: 5000
+  InfoRoute:
+    DependsOn:
+      - LambdaIntegration
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: GET /info
+      Target: !Sub integrations/${LambdaIntegration}
 
-  ApiGatewayRole:
-    Type: AWS::IAM::Role
+  VpcLink:
+    Type: AWS::ApiGatewayV2::VpcLink
     Properties:
-      RoleName: !Sub ${AWS::StackName}-ApiGatewayRole
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
+      Name: !Sub ${AWS::StackName}-VpcLink
+      SubnetIds:
+        - !Ref PublicSubnet
+  VpcLinkIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref HttpApi
+      Description: VpcLink Integration
+      ConnectionType: VPC_LINK
+      ConnectionId: !Ref VpcLink
+      IntegrationType: HTTP_PROXY
+      IntegrationUri: !Ref TcpListener
+      IntegrationMethod: GET
+      PayloadFormatVersion: 1.0
+  MainRoute:
+    DependsOn:
+      - VpcLinkIntegration
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: GET /
+      Target: !Sub integrations/${VpcLinkIntegration}
+
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub ${AWS::StackName}-MyVpc-LogGroup
+      RetentionInDays: 7
+
+  ElbAccessLogsBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    Properties:
+      BucketName: !Sub ${AWS::StackName}-${AWS::Region}-elb-access-logs-bucket
+  S3Policy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref ElbAccessLogsBucket
+      PolicyDocument:
         Statement:
           - Effect: Allow
             Principal:
               Service:
-                - apigateway.amazonaws.com
+                - delivery.logs.amazonaws.com
             Action:
-              - sts:AssumeRole
-  LambdaExecutionPolicy:
-    Type: AWS::IAM::Policy
-    Properties:
-      PolicyName: !Sub ${AWS::StackName}-ApiGatewayPolicy
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
+              - s3:GetBucketAcl
+            Resource:
+              - !Sub arn:aws:s3:::${ElbAccessLogsBucket}
           - Effect: Allow
+            Principal:
+              Service:
+                - delivery.logs.amazonaws.com
             Action:
-              - "lambda:InvokeFunction"
-            Resource: "*"
-      Roles:
-        - !Ref ApiGatewayRole
-#  AuthLambda:
-#    Type: AWS::Lambda::Function
-#    Properties:
-#      FunctionName: !Sub ${AWS::StackName}-AuthLambda
-#      Description: Authenticate user by custom header
-#      Role: !GetAtt LambdaRole.Arn
-#      Runtime: nodejs12.x
-#      Handler: index.handler
-#      Code:
-#        ZipFile: |
-#          exports.handler = (event, context, cb) => {
-#            // in case of TOKEN we got authorizationToken, REQUEST - event would be standard lambda event with all fields
-#            if(event.authorizationToken === "user" || event.headers.auth === "user"){
-#              cb(null, {
-#                    "principalId": "123",
-#                    "policyDocument": {
-#                      "Version": "2012-10-17",
-#                      "Statement": [{
-#                        "Action": "execute-api:Invoke",
-#                        "Effect": "Allow",
-#                        "Resource": "*"
-#                      }]
-#                    },
-#                    "context": {"user_id": "456"}
-#              });
-#            }
-#            cb("Unauthorized");
-#          }
-#      Tags:
-#        - Key: Name
-#          Value: !Sub ${AWS::StackName}-AuthLambda
-#
-#  InfoLambda:
-#    Type: AWS::Lambda::Function
-#    Properties:
-#      FunctionName: !Sub ${AWS::StackName}-InfoLambda
-#      Description: Show basic information about app
-#      Role: !GetAtt LambdaRole.Arn
-#      Runtime: nodejs12.x
-#      Handler: index.handler
-#      Code:
-#        ZipFile: |
-#          exports.handler = (event, context, cb) => {
-#              cb(null, {
-#                statusCode: 200,
-#                headers: {"Content-Type": "application/json"},
-#                body: JSON.stringify({event})
-#              });
-#          }
-#      Tags:
-#        - Key: Name
-#          Value: !Sub ${AWS::StackName}-InfoLambda
-#  ApiGatewayLambdaPermission:
-#    Type: AWS::Lambda::Permission
-#    Properties:
-#      FunctionName: !GetAtt InfoLambda.Arn
-#      Action: lambda:InvokeFunction
-#      Principal: apigateway.amazonaws.com
-#      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${RestApi}/*/*/*
-#
-#  RestApi:
-#    Type: AWS::ApiGateway::RestApi
-#    Properties:
-#      Description: Auth (lambda & cognito) example using REST API
-#      Name: REST API Auth
-#      EndpointConfiguration:
-#        Types:
-#          - REGIONAL
-#
-#  RequestLambdaAuthorizer:
-#    Type: AWS::ApiGateway::Authorizer
-#    Properties:
-#      AuthorizerCredentials: !GetAtt ApiGatewayRole.Arn
-#      AuthorizerResultTtlInSeconds: 300
-#      AuthorizerUri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AuthLambda.Arn}/invocations
-#      Type: REQUEST
-#      IdentitySource: method.request.header.auth
-#      Name: RequestLambdaAuthorizer
-#      RestApiId: !Ref RestApi
-#  RequestAuthResource:
-#    Type: AWS::ApiGateway::Resource
-#    Properties:
-#      RestApiId: !Ref RestApi
-#      ParentId: !GetAtt RestApi.RootResourceId
-#      PathPart: request
-#  RequestAuthMethod:
-#    Type: AWS::ApiGateway::Method
-#    Properties:
-#      RestApiId: !Ref RestApi
-#      ResourceId: !Ref RequestAuthResource
-#      HttpMethod: ANY
-#      AuthorizationType: CUSTOM
-#      AuthorizerId: !Ref RequestLambdaAuthorizer
-#      Integration:
-#        Type: AWS_PROXY
-#        IntegrationHttpMethod: POST
-#        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${InfoLambda.Arn}/invocations
-#
-#
-#  LambdaAuthorizer:
-#    Type: AWS::ApiGateway::Authorizer
-#    Properties:
-#      AuthorizerCredentials: !GetAtt ApiGatewayRole.Arn
-#      AuthorizerResultTtlInSeconds: 30
-#      AuthorizerUri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AuthLambda.Arn}/invocations
-#      Type: TOKEN
-#      IdentitySource: method.request.header.auth
-#      Name: LambdaAuthorizer
-#      RestApiId: !Ref RestApi
-#  CustomAuthResource:
-#    Type: AWS::ApiGateway::Resource
-#    Properties:
-#      RestApiId: !Ref RestApi
-#      ParentId: !GetAtt RestApi.RootResourceId
-#      PathPart: custom
-#  CustomAuthMethod:
-#    Type: AWS::ApiGateway::Method
-#    Properties:
-#      RestApiId: !Ref RestApi
-#      ResourceId: !Ref CustomAuthResource
-#      HttpMethod: ANY
-#      AuthorizationType: CUSTOM
-#      AuthorizerId: !Ref LambdaAuthorizer
-#      Integration:
-#        Type: AWS_PROXY
-#        IntegrationHttpMethod: POST
-#        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${InfoLambda.Arn}/invocations
-#
-#  UserPool:
-#    Type: AWS::Cognito::UserPool
-#    Properties:
-#      UserPoolName: !Sub ${AWS::StackName}-UserPool
-#      AutoVerifiedAttributes:
-#        - email
-#      UsernameConfiguration:
-#        CaseSensitive: true
-#      Schema:
-#        - Name: name
-#          AttributeDataType: String
-#          Mutable: true
-#          Required: true
-#        - Name: email
-#          AttributeDataType: String
-#          Mutable: false
-#          Required: true
-#  WebClient:
-#    Type: AWS::Cognito::UserPoolClient
-#    Properties:
-#      ClientName: !Sub ${AWS::StackName}-WebClient
-#      GenerateSecret: false
-#      UserPoolId: !Ref UserPool
-#      ExplicitAuthFlows:
-#        - ALLOW_REFRESH_TOKEN_AUTH
-#        - ALLOW_USER_PASSWORD_AUTH
-#
-#  CognitoAuthorizer:
-#    Type: AWS::ApiGateway::Authorizer
-#    Properties:
-#      ProviderARNs:
-#        - !GetAtt UserPool.Arn
-#      IdentitySource: method.request.header.auth
-#      Type: COGNITO_USER_POOLS
-#      Name: CognitoAuthorizer
-#      RestApiId: !Ref RestApi
-#  CognitoAuthResource:
-#    Type: AWS::ApiGateway::Resource
-#    Properties:
-#      RestApiId: !Ref RestApi
-#      ParentId: !GetAtt RestApi.RootResourceId
-#      PathPart: cognito
-#  CognitoAuthMethod:
-#    Type: AWS::ApiGateway::Method
-#    Properties:
-#      RestApiId: !Ref RestApi
-#      ResourceId: !Ref CognitoAuthResource
-#      HttpMethod: ANY
-#      AuthorizationType: COGNITO_USER_POOLS
-#      AuthorizerId: !Ref CognitoAuthorizer
-#      Integration:
-#        Type: AWS_PROXY
-#        IntegrationHttpMethod: POST
-#        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${InfoLambda.Arn}/invocations
-#
-#  Deployment:
-#    DependsOn:
-#      - CustomAuthMethod
-#      - CognitoAuthMethod
-#      - RequestAuthMethod
-#    Type: AWS::ApiGateway::Deployment
-#    Properties:
-#      RestApiId: !Ref RestApi
-#      Description: My deployment
-#  DevStage:
-#    Type: AWS::ApiGateway::Stage
-#    Properties:
-#      StageName: dev
-#      Description: Dev Stage
-#      RestApiId: !Ref RestApi
-#      DeploymentId: !Ref Deployment
+              - s3:PutObject
+            Resource:
+              - !Sub arn:aws:s3:::${ElbAccessLogsBucket}/*

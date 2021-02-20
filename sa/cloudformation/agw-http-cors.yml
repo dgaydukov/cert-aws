@@ -48,7 +48,7 @@ Resources:
           exports.handler = (event, context, cb) => {
               cb(null, {
                 statusCode: 200,
-                JSON.stringify({"msg": "HttpCors", event});,
+                body: JSON.stringify({"msg": "HttpCors", event}),
                 headers: {"Content-Type": "application/json"}
               });
           }

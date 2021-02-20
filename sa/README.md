@@ -21,8 +21,9 @@ In real exam I didn't meet any questions regarding `Rekognition`, but there are 
 * [Free questions](https://www.examtopics.com/exams/amazon)
 
 ### TODO
-read nmap book && scan wifi (https://habr.com/ru/post/224955)
-* create vpc link and connect http api to ec2 in private subnet (finish `sa/cloudformation/vpc-endpoint-http-api.yml`)
+Gold: The Once and Future Money
+https://www.youtube.com/watch?v=05HK-z6HoHM (The Wizard of Lies)
+* https://aws.amazon.com/cloud-map/faqs
 * redshift enhanced vpc routing (send data inside vpc between redhshift & s3 and view vpc flow logs)
 * create cf template with dynamodb vpc endpoint and access dynamodb from ec2 in private subnet (add auto scaling to dynamoDb)
 * create dynamodb lsi & gsi and compare them
@@ -42,6 +43,7 @@ read nmap book && scan wifi (https://habr.com/ru/post/224955)
 * create iam identity federation with this AD and with Cognito
 * clientVPN with security as microsoft AD
 * create site-to-site vpn with 2 locations so each of this can communicate with each other using VPN CloudHub (each location is imitated by separate vpc)
+* read nmap book && scan wifi (https://habr.com/ru/post/224955)
 * Github Project:
     * add logic to `sa/cloudformation/custom-resource/handler.yml` to update `ResponseURL` (pre-sign s3 url)
     * add resource handler to validate ACM Certificate, so you can automate `sa/cloudformation/elb-asg-route53-acm.yml` template, no more need to manually update route53 record

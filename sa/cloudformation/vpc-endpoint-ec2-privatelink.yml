@@ -245,7 +245,7 @@ Resources:
         - Id: !Ref Vpc1WebServer
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-MyVpc-TG
+          Value: !Sub ${AWS::StackName}-Vpc1-TG
   TcpListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
