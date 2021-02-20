@@ -21,8 +21,6 @@ In real exam I didn't meet any questions regarding `Rekognition`, but there are 
 * [Free questions](https://www.examtopics.com/exams/amazon)
 
 ### TODO
-Gold: The Once and Future Money
-https://www.youtube.com/watch?v=05HK-z6HoHM (The Wizard of Lies)
 * https://aws.amazon.com/cloud-map/faqs
 * redshift enhanced vpc routing (send data inside vpc between redhshift & s3 and view vpc flow logs)
 * create cf template with dynamodb vpc endpoint and access dynamodb from ec2 in private subnet (add auto scaling to dynamoDb)

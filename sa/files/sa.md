@@ -3975,6 +3975,7 @@ If you have 3 vpc and ec2 in each of them, and you want to connect these 3 ec2 y
 Yet keep in mind that vpc endpoint can't be cross-region, it also supports only IPv4 traffic.
 * VPC ClassicLink (before 2013 there were no default VPC and all EC2 where launched in flat network shared with other aws users) - allows to connect your VPC with ec2 classic, ec2 becomes a member of VPC SG.
 * VPC Link (see `sa/cloudformation/vpc-endpoint-http-api.yml`) - connect API GateWay to private ec2. It only to connect api to internal vpc resources. If you want to call api from inside vpc, use vpc interface endpoint for `execute-api` (name of api gateway inside aws)
+You can make ELB internet-facing, and connect your api to it directly through internet, but in this case elb would be public. If you want to hide it, you can make it internal (private) and create vpc link to connect to internal ELB (traffic goes inside aws network).
 VPC Endpoint - private connection to AWS services without IGW/NAT/VPN. It make sure all traffic goes inside aws network. There are 2 types:
 * Gateway endpoint — target for a route in your route table for traffic destined to a supported AWS service (s3/dynamoDB)
 * Interface endpoint — ENI with a private IP address from the IP range of your subnet that serves as an entry point for traffic destined to a supported service (supported only within single region)
