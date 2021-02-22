@@ -2227,10 +2227,13 @@ Distribution style (`DISTSTYLE` - primary goal in selecting it, to evenly distri
 * EVEN - leader node distributes the rows across the slices in a round-robin fashion. Use it when a table does not participate in joins or when there is not a clear choice between KEY/ALL distribution
 * KEY - rows are distributed according to the values in one column (this column must be defined as a `DISTKEY`), leader node places matching values on the same node slice. This similar to partitionKey in dynamoDB.
 Key is good if you have some foreign key (like departmentId in employee table) and so all employees for particular department would be stored in single slice.
-Enhanced VPC routing - forces `COPY/UNLOAD` traffic between your cluster and your data repositories through your VPC. These allows you to use:
-* all features of vpc
-* vpc flow logs for `COPY/UNLOAD` commands
-* vpc endpoint (route traffic between s3 & redshift)
+Don't confuse:
+* redshift vpc endpoint - endpoint for `com.amazonaws.us-east-1.redshift` to access redshift from inside vpc without internet, all traffic from your vpc to redshift stays inside vpc, you can also access redshift from private subnet
+* enhanced VPC routing - traffic (`COPY/UNLOAD` commands) between redshift and s3 stays inside vpc. you must configure routes, otherwise if you just enable it, but s3 is not accessible your `copy` would fail
+There are 3 ways you can configure pathway for enhanced routing:
+* vpc endpoint for s3 - now s3 can be accessed from inside vpc without traversing internet
+* nat gateway - connect to s3 from private subnet using nat
+* internet gateway - connect to s3 using internet
 Plz note there is no such command as `load` only `COPY` to load data into redshift and `UNLOAD` to read data from redshift.
 Migration:
 * lift-and-shift - is a bad practice cause performance depends on distkey/sortkey/dataCompression and when you just move you current warehouse without redesigning tables you won't get query performance.
@@ -2259,6 +2262,9 @@ For large copy (billions of records) use `ALTER TABLE APPEND` instead of `INSERT
 `VACCUM` do 2 things:
 * remove deleted records (when we delete records they are marked for deletion, but actual removal happens later)
 * globally sort tables
+Data API - separate api to access redshift from other aws services like lambda with HTTP connection & using either iam or credentials from secrets manager (you don't need persistent cluster connection).
+You can also create vpc endpoint for data api (this is separate endpoint `com.amazonaws.us-east-1.redshift-data`). Limits: max query execution - 24hours, max result size - 100MB, cluster must be inside vpc.
+With standard redshift - you have to connect to cluster with sql client tool, and run queries.
 
 ###### EMR
 EMR (Elastic Map Reduce) - highly distributed computing framework for data processing and storing, using Apache Hadoop as its distributed data processing engine.

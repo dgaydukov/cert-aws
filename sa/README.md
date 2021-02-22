@@ -22,9 +22,8 @@ In real exam I didn't meet any questions regarding `Rekognition`, but there are 
 
 ### TODO
 * https://aws.amazon.com/cloud-map/faqs
-* redshift enhanced vpc routing (send data inside vpc between redhshift & s3 and view vpc flow logs)
-* create cf template with dynamodb vpc endpoint and access dynamodb from ec2 in private subnet (add auto scaling to dynamoDb)
 * create dynamodb lsi & gsi and compare them
+* create cf template with dynamodb vpc endpoint and access dynamodb from ec2 in private subnet (add auto scaling to dynamoDb)
 * trigger lambda when dynamodb change happend with dynamodb streams (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-lambda-eventsourcemapping.html)
 * ecs + elb with dynamic port mapping (sa/cloudformation/ecs-elb.yml) + add fargate launch type
 * eks + elb with elb path routing to route to eks nodeport

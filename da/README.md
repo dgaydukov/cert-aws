@@ -53,6 +53,8 @@ Here is my experience of taking data analytics specialty exam
 * https://dev.to/scrummastert/aws-certified-data-analytics-vs-big-data-what-s-the-difference-5aol
 * https://dev.to/scrummastert/re-invent-2020-part-ii-data-sessions-reviewed-1n47
 -----------------------------------------------------------------------------------------------------------------------
+* create cf redshift enhanced vpc routing and send data inside vpc between redhshift & s3 and view vpc flow logs (you have 2 month free trial)
+* create redshift data api and compare to standard redshift access
 * create glue workflow `AWS::Glue::Workflow` and call aws batch when etl complete
 * migrate rds to s3 using glue etl (https://aws.amazon.com/blogs/database/how-to-extract-transform-and-load-data-for-analytic-processing-using-aws-glue-part-2)
 * Try Athena & Aws Glue with cloudformation/cloudtrail-s3.yml (combine all json files into one. Find who put object into s3)
