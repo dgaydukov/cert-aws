@@ -138,6 +138,7 @@
 * 7.59 [Backup](#backup)
 * 7.60 [Migration Hub](#migration-hub)
 * 7.61 [WorkLink](#worklink)
+* 7.62 [Cloud Map](#cloud-map)
 
 
 
@@ -1905,7 +1906,10 @@ Aurora global:
 
 ###### DynamoDB
 Fully managed, highly available out-of-the-box(there is no such thing as multi-AZ deployment and read replica) NoSQL key-value/document database, kind of mongo, but aws proprietary solution. Stores data across 3 AZ. 
-It's serverless, so if you have to choose between DynamoDB/RDS if you are building serverless app - dynamoDB your best choice. NoSql terminology: row - item, cell - attribute, primary key - partition key + sort key.
+It's serverless, so if you have to choose between DynamoDB/RDS if you are building serverless app - dynamoDB your best choice. NoSql terminology: row - item, cell - attribute, primary key - PartitionKey + SortKey.
+PK (Primary key):
+* PartitionKey (also called hash attribute) - internally dynamoDB hash every partitionKey to evenly store them across partitions
+* SortKey (also called range attribute) - internally dynamoDB stores items with same partitionKey close together in sorted order by sortKey
 If you come from relational to NoSql you must forget:
 * normalization - this came from time when storage was expensive, right now compute is expensive so it's better to denormalize data to spend less time on computing
 * joins - you can't join table in NoSql
@@ -1914,24 +1918,24 @@ NoSql tables build on distributed hash tables, so time complexity of most querie
 One-to-many (customers-orders, each customer has many orders, but each order has exactly 1 customer):
 * relational (2 tables) - customers, orders (has customerId as foreign key)
 * nosql (1 table) - partitionKey (customerId) and sortKey (orderId)
-Many-to-many (authros-books, each author has many books, and each book can be written by several authors):
+Many-to-many (authors-books, each author has many books, and each book can be written by several authors):
 * relational (3 tables) - authors, books, author_book - special table to store auhorId+bookId
 * nosql (1 table) - partitionKey (authorId) and sortKey (bookId). Here duplication happens, cause same book would be duplicating for all it's authors.
 There is no concept of database in dynamoDB, you just create tables and work with them (usually 1 table per whole application). Table name should be unique within single region (you can have 2 table with same name in different regions).
-If you need another access pattern, like find all authors by book, you add another type of pk into this table where you swap partition & sort key: partitionKey (bookId) and sortKey (authorId)
+If you need another access pattern, like find all authors by book, you add another type of pk into this table where you swap partition & SortKey: partitionKey (bookId) and sortKey (authorId)
 By doing this you add even more duplication, yet now you have 2 access pattern by either author or book.
 This idea of storing data called - adjacency list - way to represent graph data (nodes and edges) in flat model. Suppose we have a bunch of people and want to represent them as friends. We can use graph representation.
 But can use java, if we create `Map<String, List<String>>` where key is person and value is list of this friends. This will add some redundancy/duplication 
 (if Mike & Bob friends, then under key Mark Bob would be inside list of friends, and under kye Bob, Mark would be inside list of friends)
 Yet this duplication in space guarantees instant result, you can get list of friends of anybody within O(1) - cause we are using Map.
-Partition key should have a large number of distinct values relative to the number of items in the table (customerId for orders table - there are many distinct customers comparing to total number of orders).
-This is because max RCU (read capacity unit) - 3000, WCU (write capacity unit) - 1000 per partition. So if you choose wrong partition key and make a lot of request to single partition you will get `ProvisionedThroughputExceededException`.
+PartitionKey should have a large number of distinct values relative to the number of items in the table (customerId for orders table - there are many distinct customers comparing to total number of orders).
+This is because max RCU (read capacity unit) - 3000, WCU (write capacity unit) - 1000 per partition. So if you choose wrong PartitionKey and make a lot of request to single partition you will get `ProvisionedThroughputExceededException`.
 Keep in mind if you use java SDK, it already have retry logic within (you don't have to write retry code yourself), so your requests will eventually succeed unless your retry queue is too large to finish. In this case try to lower your request to db or enlarge RCU/WCU.
 AWS SDK generally provide retry logic for most calls and also exponential backoff (use progressively longer waits between retries for consecutive error responses - 1,2,4,8,16 seconds after each failed retry)
-That's why you should have equal distribution across partition key. Best practices to select partition key:
+That's why you should have equal distribution across PartitionKey. Best practices to select PartitionKey:
 * use high cardinality attr - email/customerId/orderId/productId
 * use composite attr - combine several attr into single string to be used as key
-* add random key to partition key
+* add random key to PartitionKey
 One way to offload dynamoDB writes is to use sqs:
 * you can decrease WCU and save on costs
 * you can use it as protection against accidental load spikes
@@ -1946,14 +1950,14 @@ users + profiles(one-to-one) + orders(one-to-many) + order_items (one-to-many)
 So we have 2 sortKey with same `ORDER#orderID`, one - for users, another for items. To speed up access create GSI - inverted index and now you have partitionKey - `ORDER#orderID`, sortKey - `USER#userID/ITEM#itemID`.
 If you have several address for single user, just add them as json attribute - until you have access pattern by address (like found all users by single address)
 So you store both profiles and orders in the same table, yet they have different attributes.
-Partition Key (mandatory) - it's used for key-value access pattern, should be unique value. Sort key (optional) - range query access pattern. Example: customerId - partitionKey, orderDate - sortKey.
+PartitionKey (mandatory) - it's used for key-value access pattern, should be unique value. SortKey (optional) - range query access pattern. Example: customerId - partitionKey, orderDate - sortKey.
 So if you store only category in table, you have simple primary key = categoryName.
 If you store category+articles in single table you have composite primary key = partitionKey (categoryName) + sortKey (articleName).
 If you have composite primary key:
-* write/update/delete - must provide full key (both partition & sort keys)
+* write/update/delete - must provide full key (both partition & SortKeys)
 * query - can provide only partition or both
 Don't use filter expression - it's scans the whole table and filter it based on your request. If you need to filter on other that PK columns, create GSI for filtered columns.
-Composite Sort Key - GSI with partitionKey stays the same, but sortKey is new attribute by which you want to filter. You can also include other attributes into this sortKey.
+Composite SortKey - GSI with partitionKey stays the same, but sortKey is new attribute by which you want to filter. You can also include other attributes into this sortKey.
 For example status+date `DELIVERED#2020-05-05`, and now you can filter by status and date.
 If you want to filter just by attribute without partitionKey. This is problem for dynamoDB, cause it designed in such way that you should narrow all queries to some partitionKey and then filter on sortKey.
 You create sparse key and use scan to search by single attribute without partitionKey.
@@ -1984,16 +1988,16 @@ Although dynamoDb is proprietary solution with closed source code there are 2 op
 * use it from localstack
 GSI (Global Secondary Index) - special read-only table created by dynamoDb to simplify search for indexed fields. Index speeds up search but require more memory to store itself. You should configure separate read/write capacity for this.
 It's a way to have DynamoDB replicate the data in your table into a new structure using a different primary key schema. This makes it easy to support additional access patterns
-LSI (Local Secondary Index) - same partition as primary key, but different sort key. You can create up to 5 LSI per table. It uses same RCU as base table (comparing to GSI for which you create separate read capacity)
+LSI (Local Secondary Index) - same partition as primary key, but different SortKey. You can create up to 5 LSI per table. It uses same RCU as base table (comparing to GSI for which you create separate read capacity)
 LSI Projection - you can choose which attributes add to index, but every LSI should have:
-* partition key of base table
+* PartitionKey of base table
 * sortKey of one attribute (should be scalar value)
 * sortKey from base table as attribute value
 * any other attribute from base table
 As you see by default you may choose not to add any additional attributes, cause you already have sortKey from base table. So you can make a query against LSI, it would fetch partitionKey+sortKey from base table
 and return data from base table. But if you want low-latency access for specific attributes, it's better to directly put these attributes into LSI
 GSI/LSI projection - for both index you can set which attributes to include:
-* KEYS_ONLY - only partition key + sort key (this is minimal you can't create gsi without these 2 keys)
+* KEYS_ONLY - only PartitionKey + SortKey (this is minimal you can't create gsi without these 2 keys)
 * INCLUDE - KEYS_ONLY + any other non-key attributes that you specify
 * ALL - include all attributes from original table
 Scanning - like `select * from` operation in RDS, just go over all records. Max size is 1MB, if table size above this then `LastEvaluatedKey` returned with last scanned item. For next scan you should supply this value as `ExclusiveStartKey`.
@@ -2067,9 +2071,9 @@ Limitations - dynamoDB won’t let you write a query that won’t scale, that's 
 `FilterExpression` - allows you to further filter query response. But keep in mind, since dynamoDB max return 1MB, you can't just issue filter on whole table and expect result, just like with sql.
 If you have 1GB of data, and only 20 rows out of whole table can be filtered with such query, you have to run 1000 queries, and accumulate all rows into list.
 So first query may return 0 rows, cause it just fetch first 1MB of data, then apply your filter, and nothing was returned, cause there were no items within this 1MB that falls under filter expression.
-So you have to plan in advance you db usage pattern, in case you need filter on price, add it as sort key, or local index, or GSI.
+So you have to plan in advance you db usage pattern, in case you need filter on price, add it as SortKey, or local index, or GSI.
 Single-table design - NoSql design pattern where you put all your database into single table. The main reason for using a single table in dynamoDB is to retrieve multiple, heterogeneous item types using a single request
-For example you can store users/profile/orders in single table. UserId - would be primary key, profile/orders - would be sort key. There are 2 downsides of such design:
+For example you can store users/profile/orders in single table. UserId - would be primary key, profile/orders - would be SortKey. There are 2 downsides of such design:
 * there is no way to add new access pattern (for example if you want to get all orders above 100$, you will need to redesign your table)
 * no easy way to export data fro analytics (dynamoDB is OLTP, designed to handle unlimited number of small transactions)
 Multiple table approach:
@@ -2087,7 +2091,7 @@ There are 2 types of backup (since DynamoDb is multi-AZ by default there is no a
 With this you can restore table to any selected date and time (day:hour:minute:second) to a new table. All table settings restored from table at that time (if your WCU is 50, but 2 weeks ago was 500, if you restore table from that time, now your WCU would be 500)
 Cross-region restore - you can recover point-in-time table to another region.
 Security:
-* data-in-rest encryption supported for both dynamoDB & DAX
+* data-in-rest encryption supported for both dynamoDB & DAX (only kms supported, you can use your CMK, or use aws managed kms `aws/dynamodb`)
 * data-in-transit encryption supported by HTTPS protocol. You can enable vpc endpoint to access dynamoDB from inside VPC only
 
 ###### ElastiCache
@@ -2205,7 +2209,7 @@ It's fully transactional but implements only serializable isolation level (just 
 Columnar storage more faster for aggregation operations. If you need to do sum/average in row storage you have to scan all pages to get result, it's a lot of IO, but with columnar you get single IO to get whole column.
 Zone maps - in-memory data structures that store column's min/max value, so when you make query, it checks can data possibly be in this block, if not block is not scanned.
 Column data persisted to 1MB immutable blocks. Data sorting used to optimize zone maps, columns that you use for filtering should have low cardinality. 
-So if you have column with high cardinality (timestamp with millisec) there is no point to add such column to sort key, it won't improve performance.
+So if you have column with high cardinality (timestamp with millisec) there is no point to add such column to SortKey, it won't improve performance.
 Redshift only supports Single-AZ deployments. It uses MPP (Massively Parallel Processing) by automatically distribute data/query load across all nodes.
 Single-node can be used to quickly set up cluster and grow later. Multi-node cluster requires leader (who gets client connection and queries) 1 or more compute nodes (execute query in parallel).
 Compute node consists of node slices (depending on type of node there can be 2/16/32 slices within single node), they are kind of virtual compute node, and these slices actually do computational work.
@@ -5511,3 +5515,16 @@ When user type link in web browser - WorkLink isolate & render corporate web con
 You can also render on-premises websites using DX/VPN. You can use email template to invite users to download WorkLink app. Internally it uses chromium to render content, so if your website works in chrome, it would work in WorkLink.
 During WorkLink session data isolated in cloud and securely rendered, once session is over, data is destroyed, data-in-transit secured by https.
 It streams representation (image) of web content to browsers that doesn't cache data. So it prevents browsers from caching your content. It delivers logs via kinesis streams.
+
+###### Cloud Map
+CM - cloud resource discovery service, you can register any cloud resource (ec2/dynamoDB/s3/sqs/apiGateway) with custom name, and CM constantly check health of such resource. 
+You can discover resources in VPC/ECS(if new container tasks up or down - it automatically registers with CM)/EKS(use Kubernetes ExternalDNS connector to integrate eks with CM).
+Previously route53 auto naming support only IP-based resources, CM can support resources based on IP/URL/ARN. All route53 auto naming resources automatically upgraded into CM.
+Namespace - logical entity in CM for grouping services and enforce same level of visibility either: public (accessible from internet) or private (accessible from inside VPC only).
+Don't confuse:
+* service - run on infra like ec2/ecs/dynamoDB
+* resource - service may run on 1 resource or be deployed on thousands of them
+You can query CM over:
+* dns - if your service has IP:port combination
+* http - if you only have IP/URL/ARN
+Health check - you can configure how to run health checks including: type (regular/path-based), optional path to check, number of retry after we consider resource unhealthy.

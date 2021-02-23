@@ -21,6 +21,7 @@ Here is my experience of taking data analytics specialty exam
     * enable AspectJ proxy mode for the @EnableAsync and provide a weaver (so you can call `@Async` from same class)
     * move to guice for dependency injection (check if guice good for low-latency project if we need only DI)
     * check hibernate @Version (so read+write becomes atomic, and we can use db row locking) => solve race condition
+    * sleuth tracing when several microservices call each other
 * kafka
     * https://docs.confluent.io/platform/current/schema-registry/index.html
     * kafka poll wait for specified timeout (don't return even if there are already messages)

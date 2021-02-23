@@ -21,9 +21,10 @@ In real exam I didn't meet any questions regarding `Rekognition`, but there are 
 * [Free questions](https://www.examtopics.com/exams/amazon)
 
 ### TODO
-* https://aws.amazon.com/cloud-map/faqs
+Bitcoin Billionaires: A True Story of Genius, Betrayal, and Redemption
+The Infinite Machine: How an Army of Crypto-Hackers Is Building the Next Internet with Ethereum
+https://en.wikipedia.org/wiki/The_Grind_(2012_film)
 * create dynamodb lsi & gsi and compare them
-* create cf template with dynamodb vpc endpoint and access dynamodb from ec2 in private subnet (add auto scaling to dynamoDb)
 * trigger lambda when dynamodb change happend with dynamodb streams (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-lambda-eventsourcemapping.html)
 * ecs + elb with dynamic port mapping (sa/cloudformation/ecs-elb.yml) + add fargate launch type
 * eks + elb with elb path routing to route to eks nodeport
@@ -34,12 +35,12 @@ In real exam I didn't meet any questions regarding `Rekognition`, but there are 
 * transit gateway - add on-premise network imitated by third vpc (https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-transitgateway.html - guide to add on-premise, https://theithollow.com/2018/12/12/setup-aws-transit-gateway)
 * clientVPN add nat instance so internet would work without tunnel split (yet check it also with tunnel split, and your IP would be different)
 * create custom vpn server in ec2 and try to connect to it (do both use oepnvpn server ami and any ami (OpenVPN Access Server from marketplace which is free tier, in this case you should configure it through browser admin panel) + manually configure openvpn server)
+* create site-to-site vpn with 2 locations so each of this can communicate with each other using VPN CloudHub (each location is imitated by separate vpc)
 * try maximum automate site-to-site vpn cloudformation template (try to extract somehow all IP addresses and PSK secret string and put it into ec2 userdata for VpnServer)
 * try to create aws sso user with permission set and add 1 free app, and then try to login to both aws console & this app
 * create aws microsoft AD and see how it works + add aws sso with this ad + use ADFS to add AD to iam as identity provider and assume role (so you can access aws without iam user). cf template iam create identity provider with both saml & openId connect, and with cognito/aws AD (by the way learn how AD works internally)
 * create iam identity federation with this AD and with Cognito
 * clientVPN with security as microsoft AD
-* create site-to-site vpn with 2 locations so each of this can communicate with each other using VPN CloudHub (each location is imitated by separate vpc)
 * read nmap book && scan wifi (https://habr.com/ru/post/224955)
 * Github Project:
     * add logic to `sa/cloudformation/custom-resource/handler.yml` to update `ResponseURL` (pre-sign s3 url)
