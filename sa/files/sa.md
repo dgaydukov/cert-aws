@@ -2036,6 +2036,67 @@ Cold start can be solved if you have stream, you just go to the beginning and re
 Streams are also useful if you want:
 * analytics - user add 2 items to a cart and then remove - final state hasn't changed, but for analytics it may be useful
 * point-in-time query
+You can configure dynamoDB streams to send data to lambda with event sourcing (`sa/cloudformation/dynamodb-lsi-gsi-streams.yml`)
+For each update lambda get following json body
+```
+{
+    "Records": [
+        {
+            "eventID": "358d09cdca5a4b2eac86cf4dede31d67",
+            "eventName": "MODIFY",
+            "eventVersion": "1.1",
+            "eventSource": "aws:dynamodb",
+            "awsRegion": "us-east-1",
+            "dynamodb": {
+                "ApproximateCreationDateTime": 1614250055,
+                "Keys": {
+                    "PartitionKey": {
+                        "S": "AUTHOR#Mike"
+                    },
+                    "SortKey": {
+                        "S": "BOOK#Forever"
+                    }
+                },
+                "NewImage": {
+                    "Book": {
+                        "S": "Forever"
+                    },
+                    "Author": {
+                        "S": "Mike"
+                    },
+                    "PartitionKey": {
+                        "S": "AUTHOR#Mike"
+                    },
+                    "SortKey": {
+                        "S": "BOOK#Forever"
+                    },
+                    "newData": {
+                        "S": "hello world"
+                    }
+                },
+                "OldImage": {
+                    "Book": {
+                        "S": "Forever"
+                    },
+                    "Author": {
+                        "S": "Mike"
+                    },
+                    "PartitionKey": {
+                        "S": "AUTHOR#Mike"
+                    },
+                    "SortKey": {
+                        "S": "BOOK#Forever"
+                    }
+                },
+                "SequenceNumber": "200000000026914285992",
+                "SizeBytes": 186,
+                "StreamViewType": "NEW_AND_OLD_IMAGES"
+            },
+            "eventSourceARN": "arn:aws:dynamodb:us-east-1:530313143429:table/dynamo-MyVpc-ManyToManyTable/stream/2021-02-25T10:43:51.026"
+        }
+    ]
+}
+```
 DAX (DynamoDB Accelerator) - in-memory cache for dynamoDb, can expedite up to 10 times. The benefit is that you don't have to modify source code, you just enable cache and it works.
 Global Tables (cross-region replication) - multi-region/master db that automatically replicates across multiple regions. It's multiple replica tables (one per region) that DynamoDB treats as a single unit.
 When app write data to replica table in one region, dynamoDb propagate changes to all regions, so if one region would be unavailable your app continue to work normally.

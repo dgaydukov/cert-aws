@@ -1,0 +1,180 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+# create many-to-many dynamoDB table with authors-books + lambda with event sourcing (when you call put-item, streams would send data to lambda)
+# aws dynamodb list-tables # list all tables
+# aws dynamodb put-item --table-name=dynamo-ManyToManyTable --item='{"BookName":{"S":"Cool"},"Author":{"S":"Mike"},"BookISBN":{"S":"123"}}' # insert/update into table
+# aws dynamodb get-item --table-name=dynamo-ManyToManyTable --key='{"BookName":{"S":"Cool"},"Author":{"S":"Mike"}}'
+
+# !important => dynamoDB limits the number of tables with secondary index that are in creating state. So if you have 5 tables with GSI, you have to use DependsOn attribute, so your table created sequentially. But if you create tables without GSI, they can be created in parallel.
+# !important => dynamoDB is schema-less, yet you have to define primary key. Attributes for primary key or GSI should be declared in AttributeDefinitions. If you declare some attributes there but don't use it you will get error: One or more parameter values were invalid: Number of attributes in KeySchema does not exactly match number of attributes defined in AttributeDefinitions
+# !important => lambda should have permission to read from dynamoDbStream, otherwise you get error: Cannot access stream {STREAM_ARN}. Please ensure the role can perform the GetRecords, GetShardIterator, DescribeStream, ListShards, and ListStreams Actions on your stream in IAM
+# !important => when you add LSI you have to rename your table, otherwise you get error: CloudFormation cannot update a stack when a custom-named resource requires replacing. Rename dynamo-ManyToManyTable and update the stack again
+
+
+Resources:
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-LambdaRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: AllowCreateLogGroupAndPutLogsPolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                  - "logs:DescribeLogStreams"
+                Resource: "*"
+        - PolicyName: AllowDynamoDbPolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "dynamodb:DescribeStream"
+                  - "dynamodb:GetRecords"
+                  - "dynamodb:GetShardIterator"
+                  - "dynamodb:ListStreams"
+                  - "dynamodb:ListShards"
+                Resource: "*"
+  MyLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-MyLambda
+      Description: Fire when s3 file uploaded
+      Role: !GetAtt LambdaRole.Arn
+      Runtime: nodejs12.x
+      Handler: index.handler
+      Code:
+        ZipFile: |
+          exports.handler = (event, context, cb) => {
+            console.log(JSON.stringify(event, null, 2), JSON.stringify(context, null, 2));
+          }
+
+  DynamoDbStreamsToLambdaMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      EventSourceArn: !GetAtt ManyToManyTable.StreamArn
+      FunctionName: !GetAtt MyLambda.Arn
+      StartingPosition: LATEST
+
+  ManyToManyTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub ${AWS::StackName}-ManyToManyTable
+      AttributeDefinitions:
+        - AttributeName: BookName
+          AttributeType: S
+        - AttributeName: Author
+          AttributeType: S
+        - AttributeName: BookISBN
+          AttributeType: S
+      KeySchema:
+        - AttributeName: BookName
+          KeyType: HASH
+        - AttributeName: Author
+          KeyType: RANGE
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      SSESpecification:
+        SSEEnabled: true
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      GlobalSecondaryIndexes:
+        - IndexName: MyGSI
+          KeySchema:
+            - AttributeName: Author
+              KeyType: HASH
+            - AttributeName: BookName
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+          ProvisionedThroughput:
+            ReadCapacityUnits: 5
+            WriteCapacityUnits: 5
+      LocalSecondaryIndexes:
+        - IndexName: MyLSI
+          KeySchema:
+            - AttributeName: BookName
+              KeyType: HASH
+            - AttributeName: BookISBN
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+
+  ScalingRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-ScalingRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - application-autoscaling.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+      Policies:
+        - PolicyName: AllowDynamoDbTableModification
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "dynamodb:DescribeTable"
+                  - "dynamodb:UpdateTable"
+                Resource: "*"
+  ReadScalingTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Properties:
+      MaxCapacity: 50
+      MinCapacity: 5
+      ResourceId: !Sub table/${ManyToManyTable}
+      RoleARN: !GetAtt ScalingRole.Arn
+      ScalableDimension: dynamodb:table:ReadCapacityUnits
+      ServiceNamespace: dynamodb
+  WriteScalingTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Properties:
+      MaxCapacity: 50
+      MinCapacity: 5
+      ResourceId: !Sub table/${ManyToManyTable}
+      RoleARN: !GetAtt ScalingRole.Arn
+      ScalableDimension: dynamodb:table:WriteCapacityUnits
+      ServiceNamespace: dynamodb
+  ReadScalingPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: !Sub ${AWS::StackName}-ReadScalingPolicy
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref ReadScalingTarget
+      TargetTrackingScalingPolicyConfiguration:
+        TargetValue: 50
+        PredefinedMetricSpecification:
+          PredefinedMetricType: DynamoDBReadCapacityUtilization
+  WriteScalingPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: !Sub ${AWS::StackName}-WriteScalingPolicy
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref WriteScalingTarget
+      TargetTrackingScalingPolicyConfiguration:
+        TargetValue: 50
+        PredefinedMetricSpecification:
+          PredefinedMetricType: DynamoDBWriteCapacityUtilization
+
+
