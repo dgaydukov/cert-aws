@@ -27,6 +27,7 @@ Here is my experience of taking data analytics specialty exam
     * kafka poll wait for specified timeout (don't return even if there are already messages)
     * kafka cluster docker example
 * core java videos
+    * compare chronicle-logger vs async log4j with jmh (implement testing like it high-throughput trading system)
     * https://www.youtube.com/watch?v=CnRtbtis79U (Алексей Шипилёв — Shenandoah: сборщик мусора, который смог)
     * https://www.youtube.com/watch?v=iGRfyhE02lA (Владимир Иванов — G1 Garbage Collector)
     * https://www.youtube.com/watch?v=c1jVn5Sm8Uw (Алексей Шипилёв – Shenandoah GC 2.0)

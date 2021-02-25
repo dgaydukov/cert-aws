@@ -21,12 +21,6 @@ In real exam I didn't meet any questions regarding `Rekognition`, but there are 
 * [Free questions](https://www.examtopics.com/exams/amazon)
 
 ### TODO
-Bitcoin Billionaires: A True Story of Genius, Betrayal, and Redemption
-The Infinite Machine: How an Army of Crypto-Hackers Is Building the Next Internet with Ethereum
-https://en.wikipedia.org/wiki/The_Grind_(2012_film)
-David Laidler - Taking Money Seriously
-David Laidler - The Golden Age of the Quantity Theory
-David Laidler - Fabricating the Keynesian Revolution
 * ecs + elb with dynamic port mapping (sa/cloudformation/ecs-elb.yml) + add fargate launch type
 * eks + elb with elb path routing to route to eks nodeport
 * deploy datasync agent on ec2 and imitate data transfer to s3
