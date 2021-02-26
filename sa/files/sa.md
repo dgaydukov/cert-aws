@@ -4104,9 +4104,18 @@ VPC Tenancy:
 * multi-tenant (virtual isolation) - you share your instances on the same server as other aws clients, you instance is divided by virtualization
 * single-tenant (dedicated, physical isolation) - you get completely separate hardware (can be useful if you have regulatory requirements)
 EC2 Tenancy - you can set it for individual ec2:
-* shared (accessible only if vpc tenancy = multi-tenant) - instance runs on shared hardware
-* dedicated - instance runs on single-tenant hardware. After launch you can change only from dedicated to host and vice versa.
-* host - instance runs on a Dedicated Host, which is an isolated server with configurations that you can control
+* shared (accessible only if vpc tenancy = multi-tenant) - instance runs on shared hardware using pool of resources (like cpu). When you terminate such ec2, it returns resources back to pool.
+* DI (dedicated instance) - instance runs on single-tenant hardware. After launch you can change only from dedicated to host and vice versa.
+* DH (dedicated host) - instance runs on a Dedicated Host, which is an isolated server with configurations that you can control
+DH is very similar to DI, yet there are few difference:
+* with DH you have more control over which physical host exactly you use (you have visibility to the number of sockets and physical cores)
+* you can allocate Dedicated Host Group and put all your ec2 into this host
+* you can create host resource group (from licence manager console) and control you licences
+* except control over physical server - there is no performance/security/physical difference
+Conclusion: if you need dedicated ec2 only for compliance reason - use DI, if you need to put all ec2 on same physical host - use DH
+Don't confuse:
+* dedicated host - you have dedicated ec2 with pre-installed virtualization
+* bare metal server - you have dedicated ec2 without pre-installed virtualization, you get access to hardware itself, you can either install your own virtualization, or use it without it
 3 layers of security:
 * vpc layer - route tables define which traffic to allow
 * subnet layer - NACL decide which traffic to allow
