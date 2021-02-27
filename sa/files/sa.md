@@ -4109,7 +4109,7 @@ EC2 Tenancy - you can set it for individual ec2:
 * DH (dedicated host) - instance runs on a Dedicated Host, which is an isolated server with configurations that you can control
 DH is very similar to DI, yet there are few difference:
 * with DH you have more control over which physical host exactly you use (you have visibility to the number of sockets and physical cores)
-* you can allocate Dedicated Host Group and put all your ec2 into this host
+* you can allocate Dedicated Host and put all your ec2 into this host (when you allocate you select host family like C3/R5/M5 and you pay on-demand for such family, even if you don't run ec2 on it)
 * you can create host resource group (from licence manager console) and control you licences
 * except control over physical server - there is no performance/security/physical difference
 Conclusion: if you need dedicated ec2 only for compliance reason - use DI, if you need to put all ec2 on same physical host - use DH
@@ -5177,12 +5177,15 @@ First you have to deploy connector, then you can create Application & configure 
 Since SMS create CF template, you can integrate it with Service catalog to centrally manage all imported resources, so users can choose certain products & deploy them quickly.
 
 ###### DataSync
-Online data transfer service that simplifies/automates/accelerates copying large amounts of data to and from s3/efs/FSx over the internet/DX. How it works:
+Online data transfer service that simplifies/automates/accelerates copying large amounts of data to and from s3/efs/FSx over the internet/DX. 
+So you can transfer data between on-premise & aws (from on-premise to s3 and vice versa), or between different aws services. For on-premise you can use NFS/SMB or plain object storage (datasync has 3 types for each of this)
+How it works:
 * uses a purpose-built network protocol and scale-out architecture to accelerate transfer to and from AWS.
 * automatically scales and handles moving files and objects, scheduling data transfers, monitoring the progress of transfers, encryption, verification of data transfers, and notifying customers of any issues
 If you want to migrate on-premise data to aws you should:
 * make an initial copy of your entire dataset
 * schedule subsequent incremental transfers of changing data until the final cut-over from on-premises to AWS
+You can run agent on-premise and in cloud using datasync ami (`sa/cloudformation/datasync-agent-s3.yml`)
 During migration DataSync:
 * includes encryption and integrity validation to help make sure your data arrives securely, intact, and ready to use. 
 You can turn off integrity check for initial transfer if data in source are constantly changing - this would expedite initial sync, and then turn it on after finish initial transfer.

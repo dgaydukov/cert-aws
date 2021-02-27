@@ -21,7 +21,8 @@ In real exam I didn't meet any questions regarding `Rekognition`, but there are 
 * [Free questions](https://www.examtopics.com/exams/amazon)
 
 ### TODO
-* deploy datasync agent on ec2 and imitate data transfer to s3
+* TODO: finish sa/cloudformation/datasync-agent-s3.yml (connect to ec2 from another ec2, then from nfs location, then create task and then run task)
+turn off integrity check from cf template
 * create codepipeline with cf template and use codedeploy/beanstalk as deploy stage (compare them) + create ci/ci pipeline use codestar
 * ecs + elb with dynamic port mapping (sa/cloudformation/ecs-elb.yml) + add fargate launch type
 * eks + elb with elb path routing to route to eks nodeport

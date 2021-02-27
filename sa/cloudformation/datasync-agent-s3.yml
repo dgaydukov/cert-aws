@@ -1,0 +1,251 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+# create nfs server (ec2 as on-premise nfs) + datasync agent (run on ec2) + 2 locations (1 for nfs and 1 for s3). Transfer data from nfs to s3
+
+# !important => to get datasync ami run this: aws ssm get-parameter --name=/aws/service/datasync/ami --region=us-east-1
+# !important => to create agent you need to get activation key. Go to datasync aws console => create agent => Automatically get the activation key from your agent (enter ec2 IP address) => copy your key to this template
+# !important => once you create agent with correct activationKey, http would be closed, so in security group it would still be opened, but http server for port 80 won't run on ec2 anymore
+
+Parameters:
+  BucketName:
+    Description: Valid Bucket name.
+    Default: test-s3-bucket-12345
+    Type: String
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.100.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    DependsOn: VPC
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-IGW
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: us-east-1a
+      CidrBlock: 10.100.1.0/24
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-PublicSubnet
+  PublicRT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-Public-RT
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: !Ref PublicRT
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+  PublicSubnetRTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref PublicRT
+  NfsServerSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH access from anywhere
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+
+#        - IpProtocol: tcp
+#          FromPort: 111
+#          ToPort: 111
+#          CidrIp: 0.0.0.0/0
+#        - IpProtocol: udp
+#          FromPort: 111
+#          ToPort: 111
+#          CidrIp: 0.0.0.0/0
+#
+#        - IpProtocol: tcp
+#          FromPort: 2049
+#          ToPort: 2049
+#          CidrIp: 0.0.0.0/0
+#        - IpProtocol: udp
+#          FromPort: 2049
+#          ToPort: 2049
+#          CidrIp: 0.0.0.0/0
+#
+#        - IpProtocol: tcp
+#          FromPort: 34642
+#          ToPort: 34642
+#          CidrIp: 0.0.0.0/0
+#        - IpProtocol: udp
+#          FromPort: 34642
+#          ToPort: 34642
+#          CidrIp: 0.0.0.0/0
+
+#          SourceSecurityGroupId: !GetAtt DatasyncAgentSG.GroupId
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-Public-SG
+  NfsServer:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-09d95fab7fff3776c
+      KeyName: mykey
+      UserData:
+        Fn::Base64:
+          !Sub |
+          #!/usr/bin/env bash
+          sudo mkfs.ext4 /dev/xvdb
+          sudo mkdir /mnt/nfs-server
+          sudo mount /dev/xvdb /mnt/nfs-server
+          sudo touch /mnt/nfs-server/myfile.dat
+          sudo echo "hello world!" > /mnt/nfs-server/data.txt
+          sudo service nfs start
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: 0
+          SubnetId: !Ref PublicSubnet
+          GroupSet:
+            - !GetAtt NfsServerSG.GroupId
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 8
+        - DeviceName: /dev/xvdb
+          Ebs:
+            VolumeSize: 8
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-NfsServer
+
+  Test:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-09d95fab7fff3776c
+      KeyName: mykey
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: 0
+          SubnetId: !Ref PublicSubnet
+          GroupSet:
+            - !GetAtt DatasyncAgentSG.GroupId
+            - !GetAtt NfsServerSG.GroupId
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 8
+
+  DatasyncAgentSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH/HTTP access from anywhere
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-DatasyncAgent-SG
+  DatasyncAgent:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-0ed23392fad2c0c06
+      KeyName: mykey
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: 0
+          SubnetId: !Ref PublicSubnet
+          GroupSet:
+            - !GetAtt DatasyncAgentSG.GroupId
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 160
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-DatasyncAgent
+
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    Properties:
+      BucketName: !Sub ${AWS::StackName}-${AWS::Region}-my-s3-datasync-bucket-123
+  DataSyncS3LocationRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-DataSyncS3LocationRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - datasync.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: AllowS3FullAccess
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "s3:*"
+                Resource: "*"
+
+  Agent:
+    Type: AWS::DataSync::Agent
+    Properties:
+      ActivationKey: KTM28-TLTO8-L5NEE-BS9IQ-1NG5K
+      AgentName: !Sub ${AWS::StackName}-Agent
+#  LocationNFS:
+#    Type: AWS::DataSync::LocationNFS
+#    Properties:
+#      OnPremConfig:
+#        AgentArns:
+#          - !Ref Agent
+#      ServerHostname: !GetAtt NfsServer.PrivateIp
+#      Subdirectory: /mnt/nfs-server
+#  LocationS3:
+#    Type: AWS::DataSync::LocationS3
+#    Properties:
+#      S3BucketArn: !GetAtt S3Bucket.Arn
+#      S3Config:
+#        BucketAccessRoleArn: !GetAtt DataSyncS3LocationRole.Arn
+#      Subdirectory: /data
+#  NfsToS3Task:
+#    Type: AWS::DataSync::Task
+#    Properties:
+#      Name: !Sub ${AWS::StackName}-NfsToS3Task
+#      SourceLocationArn: !GetAtt LocationNFS.LocationArn
+#      DestinationLocationArn: !GetAtt LocationS3.LocationArn
