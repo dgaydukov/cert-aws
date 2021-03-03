@@ -4381,6 +4381,8 @@ You can create cross-account & cross-region cw dashboard and view your resources
     * view cross-account data - just enable to view other accounts dashboard
 `ScheduleExpression` - you can specify to call some lambda every 1 min or more (cron expression)
 CloudWatch Logs - you can collect app logs into CW LG (Log Groups). The only problem is that inside LG, logs stored in files (LogStream), and files are added every few minutes. That means if you want to check logs for last week you have to go through hundreds of logs files.
+Logs can have resource policy, who is allowed to add logs (for example this template `sa/cloudformation/datasync-agent-s3.yml` need resource policy for datasync, so it should add logs).
+You can't add log resource policy from CF/console, you have to use cli `aws logs put-resource-policy`
 Log retention - by default indefinitely, you can also configure retention from 1 day to 10 years (after such retention period, logs would expire). There are 3 ways you can check logs:
 * manually open each file and search it in CW console
 * Athena - there is no integration between Athena & CW Logs, yet there is [Athena CW Connector](https://github.com/awslabs/aws-athena-query-federation/tree/master/athena-cloudwatch) that you can deploy as lambda and query it

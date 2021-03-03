@@ -1,15 +1,22 @@
 AWSTemplateFormatVersion: 2010-09-09
 
 # create nfs server (ec2 as on-premise nfs) + datasync agent (run on ec2) + 2 locations (1 for nfs and 1 for s3). Transfer data from nfs to s3
+# go to datasync => tasks, and run task from datasync console
+# we turned off integrity check (VerifyMode) for initial transfer to expedite it, once it done we should turn it on manually
 
 # !important => to get datasync ami run this: aws ssm get-parameter --name=/aws/service/datasync/ami --region=us-east-1
 # !important => to create agent you need to get activation key. Go to datasync aws console => create agent => Automatically get the activation key from your agent (enter ec2 IP address) => copy your key to this template
 # !important => once you create agent with correct activationKey, http would be closed, so in security group it would still be opened, but http server for port 80 won't run on ec2 anymore
+# !important => we can't use t2.micro for datasync ec2 agent, cause we got error when run task: Insufficient system memory. Minimum required is 4GiB; recommended is 16GiB
 
 Parameters:
   BucketName:
     Description: Valid Bucket name.
-    Default: test-s3-bucket-12345
+    Default: s3-datasync-bucket-12345
+    Type: String
+  MountPoint:
+    Description: Valid mount point.
+    Default: /mnt/nfs-server
     Type: String
 
 Resources:
@@ -65,48 +72,20 @@ Resources:
   NfsServerSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Enable SSH access from anywhere
+      GroupDescription: Enable SSH access from anywhere and NFS access only from SG of datasync ec2 agent
       VpcId: !Ref VPC
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 22
           ToPort: 22
           CidrIp: 0.0.0.0/0
-
-        - IpProtocol: -1
-          CidrIp: 0.0.0.0/0
-
-#        - IpProtocol: tcp
-#          FromPort: 111
-#          ToPort: 111
-#          CidrIp: 0.0.0.0/0
-#        - IpProtocol: udp
-#          FromPort: 111
-#          ToPort: 111
-#          CidrIp: 0.0.0.0/0
-#
-#        - IpProtocol: tcp
-#          FromPort: 2049
-#          ToPort: 2049
-#          CidrIp: 0.0.0.0/0
-#        - IpProtocol: udp
-#          FromPort: 2049
-#          ToPort: 2049
-#          CidrIp: 0.0.0.0/0
-#
-#        - IpProtocol: tcp
-#          FromPort: 34642
-#          ToPort: 34642
-#          CidrIp: 0.0.0.0/0
-#        - IpProtocol: udp
-#          FromPort: 34642
-#          ToPort: 34642
-#          CidrIp: 0.0.0.0/0
-
-#          SourceSecurityGroupId: !GetAtt DatasyncAgentSG.GroupId
+        - IpProtocol: tcp
+          FromPort: 2049
+          ToPort: 2049
+          SourceSecurityGroupId: !GetAtt DatasyncAgentSG.GroupId
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-MyVpc-Public-SG
+          Value: !Sub ${AWS::StackName}-MyVpc-NfsServer-SG
   NfsServer:
     Type: AWS::EC2::Instance
     Properties:
@@ -118,10 +97,12 @@ Resources:
           !Sub |
           #!/usr/bin/env bash
           sudo mkfs.ext4 /dev/xvdb
-          sudo mkdir /mnt/nfs-server
+          sudo mkdir ${MountPoint}
           sudo mount /dev/xvdb /mnt/nfs-server
-          sudo touch /mnt/nfs-server/myfile.dat
-          sudo echo "hello world!" > /mnt/nfs-server/data.txt
+          sudo echo "personal data" > ${MountPoint}/files.txt
+          sudo echo "hello world!" > ${MountPoint}/data.txt
+          echo "/mnt/nfs-server ${DatasyncAgent.PrivateIp}(rw)" > /etc/exports
+          sudo exports -a
           sudo service nfs start
       NetworkInterfaces:
         - AssociatePublicIpAddress: true
@@ -139,24 +120,6 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AWS::StackName}-MyVpc-NfsServer
-
-  Test:
-    Type: AWS::EC2::Instance
-    Properties:
-      InstanceType: t2.micro
-      ImageId: ami-09d95fab7fff3776c
-      KeyName: mykey
-      NetworkInterfaces:
-        - AssociatePublicIpAddress: true
-          DeviceIndex: 0
-          SubnetId: !Ref PublicSubnet
-          GroupSet:
-            - !GetAtt DatasyncAgentSG.GroupId
-            - !GetAtt NfsServerSG.GroupId
-      BlockDeviceMappings:
-        - DeviceName: /dev/xvda
-          Ebs:
-            VolumeSize: 8
 
   DatasyncAgentSG:
     Type: AWS::EC2::SecurityGroup
@@ -178,7 +141,7 @@ Resources:
   DatasyncAgent:
     Type: AWS::EC2::Instance
     Properties:
-      InstanceType: t2.micro
+      InstanceType: t2.medium
       ImageId: ami-0ed23392fad2c0c06
       KeyName: mykey
       NetworkInterfaces:
@@ -199,7 +162,19 @@ Resources:
     Type: AWS::S3::Bucket
     DeletionPolicy: Delete
     Properties:
-      BucketName: !Sub ${AWS::StackName}-${AWS::Region}-my-s3-datasync-bucket-123
+      BucketName: !Sub ${AWS::StackName}-${AWS::Region}-${BucketName}
+  S3ReadPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref S3Bucket
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal: "*"
+            Action:
+              - s3:GetObject
+            Resource:
+              - !Sub arn:aws:s3:::${S3Bucket}/*
   DataSyncS3LocationRole:
     Type: AWS::IAM::Role
     Properties:
@@ -222,12 +197,18 @@ Resources:
                 Action:
                   - "s3:*"
                 Resource: "*"
-
-  Agent:
-    Type: AWS::DataSync::Agent
+  LogGroup:
+    Type: AWS::Logs::LogGroup
     Properties:
-      ActivationKey: KTM28-TLTO8-L5NEE-BS9IQ-1NG5K
-      AgentName: !Sub ${AWS::StackName}-Agent
+      LogGroupName: !Sub ${AWS::StackName}-DataSync-LogGroup
+      RetentionInDays: 7
+
+# get key first, then uncomment and use this key
+#  Agent:
+#    Type: AWS::DataSync::Agent
+#    Properties:
+#      ActivationKey: A36EB-QPBL8-MQGGH-6CPP4-HOTVP
+#      AgentName: !Sub ${AWS::StackName}-Agent
 #  LocationNFS:
 #    Type: AWS::DataSync::LocationNFS
 #    Properties:
@@ -235,7 +216,7 @@ Resources:
 #        AgentArns:
 #          - !Ref Agent
 #      ServerHostname: !GetAtt NfsServer.PrivateIp
-#      Subdirectory: /mnt/nfs-server
+#      Subdirectory: !Ref MountPoint
 #  LocationS3:
 #    Type: AWS::DataSync::LocationS3
 #    Properties:
@@ -249,3 +230,10 @@ Resources:
 #      Name: !Sub ${AWS::StackName}-NfsToS3Task
 #      SourceLocationArn: !GetAtt LocationNFS.LocationArn
 #      DestinationLocationArn: !GetAtt LocationS3.LocationArn
+#      CloudWatchLogGroupArn: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:${LogGroup} # we use this, cause Arn return with `:*` at the end, and it failed to create
+#      Options:
+#        LogLevel: TRANSFER
+#        VerifyMode: NONE
+#      Excludes:
+#        - FilterType: SIMPLE_PATTERN
+#          Value: /lost+found
