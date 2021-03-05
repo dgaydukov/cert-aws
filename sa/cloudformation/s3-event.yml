@@ -41,16 +41,16 @@ Resources:
             Action:
               - sts:AssumeRole
       Policies:
-        - PolicyName: AllowCreateLogGroupAndPutLogsPolicy
+        - PolicyName: AllowCloudWatchLogsAccess
           PolicyDocument:
             Version: 2012-10-17
             Statement:
               - Effect: Allow
                 Action:
-                  - "logs:CreateLogGroup"
-                  - "logs:CreateLogStream"
-                  - "logs:PutLogEvents"
-                  - "logs:DescribeLogStreams"
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                  - logs:DescribeLogStreams
                 Resource: "*"
   S3NotificationLambda:
     Type: AWS::Lambda::Function

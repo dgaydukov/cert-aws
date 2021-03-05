@@ -51,20 +51,24 @@ Resources:
       SubnetId: !Ref PublicSubnet
       RouteTableId: !Ref PublicRT
 
-#  SshSG:
+#  WebServerSG:
 #    Type: AWS::EC2::SecurityGroup
 #    Properties:
-#      GroupDescription: Allow SSH from anywhere
+#      GroupDescription: Allow SSH & HTTP (8080) from anywhere
 #      VpcId: !Ref VPC
 #      SecurityGroupIngress:
 #        - IpProtocol: tcp
 #          FromPort: 22
 #          ToPort: 22
 #          CidrIp: 0.0.0.0/0
+#        - IpProtocol: tcp
+#          FromPort: 8080
+#          ToPort: 8080
+#          CidrIp: 0.0.0.0/0
 #      Tags:
 #        - Key: Name
-#          Value: !Sub ${AWS::StackName}-MyVpc-Ssh-SG
-#  PublicInstance:
+#          Value: !Sub ${AWS::StackName}-MyVpc-WebServer-SG
+#  WebServer:
 #    Type: AWS::EC2::Instance
 #    Properties:
 #      InstanceType: t2.micro
@@ -74,26 +78,72 @@ Resources:
 #        Fn::Base64:
 #          !Sub |
 #          #!/usr/bin/env bash
+#          sudo yum install java -y
 #      NetworkInterfaces:
 #        - AssociatePublicIpAddress: true
 #          DeviceIndex: 0
 #          SubnetId: !Ref PublicSubnet
 #          GroupSet:
-#            - !GetAtt SshSG.GroupId
+#            - !GetAtt WebServerSG.GroupId
 #      BlockDeviceMappings:
 #        - DeviceName: /dev/xvda
 #          Ebs:
 #            VolumeSize: 8
 #      Tags:
 #        - Key: Name
-#          Value: !Sub ${AWS::StackName}-MyVpc-PublicInstance
+#          Value: !Sub ${AWS::StackName}-MyVpc-WebServer
 
-  MyRepo:
+  WebAppRepo:
     Type: AWS::CodeCommit::Repository
     Properties:
-      RepositoryName: MyDemoRepo
-      RepositoryDescription: This is a repository for my project with code from MySourceCodeBucket
-
+      RepositoryName: !Sub ${AWS::StackName}-webapp
+      RepositoryDescription: SpringBoot webapp with tests
+  BuildStage:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub ${AWS::StackName}-BuildStage
+      Description: Build project using spring boot 2
+      ServiceRole: !GetAtt CodeBuildRole.Arn
+      Artifacts:
+        Type: no_artifacts
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/java:openjdk-8
+      Source:
+        Location: !GetAtt WebAppRepo.CloneUrlHttp
+        Type: CODECOMMIT
+      TimeoutInMinutes: 10
+  DeployStage:
+    Type: AWS::CodeDeploy::Application
+    Properties:
+      ApplicationName: !Sub ${AWS::StackName}-DeployStage
+      ComputePlatform: Lambda
+  CodeBuildRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-CodeBuildRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - codebuild.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: AllowCloudWatchLogsAccess
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                  - logs:DescribeLogStreams
+                Resource: "*"
 
 
 

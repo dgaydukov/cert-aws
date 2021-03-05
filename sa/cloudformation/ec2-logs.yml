@@ -123,23 +123,18 @@ Resources:
                 - ec2.amazonaws.com
             Action:
               - sts:AssumeRole
-  LogPolicy:
-    Type: AWS::IAM::Policy
-    Properties:
-      PolicyName: !Sub ${AWS::StackName}-MyVpc-LogPolicy
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Action:
-              - "logs:CreateLogGroup"
-              - "logs:CreateLogStream"
-              - "logs:PutLogEvents"
-              - "logs:DescribeLogStreams"
-            Resource: "*"
-      Roles:
-        - !Ref LogRole
-
+      Policies:
+        - PolicyName: AllowCloudWatchLogsAccess
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                  - logs:DescribeLogStreams
+                Resource: "*"
 
   LogGroup:
     Type: AWS::Logs::LogGroup

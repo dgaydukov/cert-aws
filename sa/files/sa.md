@@ -4778,7 +4778,7 @@ So if you have some long-running lambda or http backend, you have to use async a
 * you start polling server to check if background task completed by someID
 
 ###### CodePipeline(CodeCommit/CodeBuild/CodeDeploy)
-CodePipeline - aws ci/cd tool, like jenkins (`sa/cloudformation/codepipeline.yml`). There are following stages:
+CodePipeline - aws ci/cd tool, like jenkins. There are following stages:
 * source stage - select what can be source: CodeCommit/ECR/S3/Bitbucket/Github
 * build stage - what app would build your project: CodeBuild/Jenkins
 * deploy stage - what provider would deploy app: 
@@ -4794,6 +4794,11 @@ Pipeline execution - can be started in 2 ways:
     * CloudWatch Events (CodeCommit/S3/ECR) - default when you create pipeline from console with CodeCommit/S3/ECR as source
     * periodic checks (CodeCommit/S3/GitHub) - default when you create pipeline from cli with CodeCommit/S3/GitHub as source. Not recommended. If you create from cli, remove periodic checks by setting `PollForSourceChanges=false`. Use either CloudWatch events or webhooks.
     * webhooks (GitHub) - default when you create pipeline from console with github as source
+POC:
+* upload ssh key to your user: iam => users => Security credentials => SSH keys for AWS CodeCommit
+* add entry to your `~/.ssh/config` with host from codecommit
+* run `sa/cloudformation/codepipeline.yml`
+* go to `sa/beanstalk/webapp` and push this project into newly created CodeCommit repo
 
 ###### Storage Gateway
 Storage Gateway - hybrid storage that connects on-premises storage with cloud storage. The main idea is that you still use your on-premise storage (so don't lose that investment) and use cloud at the same time.
