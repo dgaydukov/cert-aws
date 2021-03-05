@@ -4799,6 +4799,7 @@ POC:
 * add entry to your `~/.ssh/config` with host from codecommit
 * run `sa/cloudformation/codepipeline.yml`
 * go to `sa/beanstalk/webapp` and push this project into newly created CodeCommit repo
+* make sure your repo include build script inside `buildspec.yml` file (which is used by CodeBuild)
 
 ###### Storage Gateway
 Storage Gateway - hybrid storage that connects on-premises storage with cloud storage. The main idea is that you still use your on-premise storage (so don't lose that investment) and use cloud at the same time.
