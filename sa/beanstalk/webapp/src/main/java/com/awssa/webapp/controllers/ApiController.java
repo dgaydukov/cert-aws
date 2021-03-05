@@ -1,7 +1,6 @@
-package com.awssa.todolist.controllers;
+package com.awssa.webapp.controllers;
 
-import java.util.List;
-
+import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -9,32 +8,26 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
-
-import com.awssa.todolist.domain.TodoItemEntity;
-import com.awssa.todolist.repository.TodoItemRepository;
+import com.awssa.webapp.domain.TodoItem;
+import com.awssa.webapp.service.TodoService;
 
 @RestController
 public class ApiController {
     @Autowired
-    private TodoItemRepository repository;
-
-    @GetMapping("/")
-    public String getInfo(){
-        return "Todolist App v1.0";
-    }
+    private TodoService service;
 
     @GetMapping("/api/todo")
-    public List<TodoItemEntity> getItems(){
-        return repository.findAll();
+    public Set<TodoItem> getItems(){
+        return service.getAll();
     }
 
     @PostMapping("/api/todo")
-    public TodoItemEntity createItem(@RequestBody TodoItemEntity entity){
-        return repository.save(entity);
+    public TodoItem createItem(@RequestBody TodoItem item){
+        return service.add(item);
     }
 
     @DeleteMapping("/api/todo/{id}")
-    public void deleteById(@PathVariable String id){
-        repository.deleteById(id);
+    public void deleteById(@PathVariable int id){
+        service.deleteById(id);
     }
 }
