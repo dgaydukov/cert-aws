@@ -3160,6 +3160,14 @@ Statement:
         "aws:SecureTransport": true
 ```
 So if you run without tls you would get `mount.nfs4: Operation not permitted`
+You can connect to efs only form inside vpc, if you want to access outside:
+* use vpc peering or aws vpn
+* use `sshfs` utility to mount locally efs. So you create bastion inside vpc, mount efs to bastion, then mount dir from bastion to your local machine which is outside vpc
+```
+mkdir remote
+# if you need debug logs you can add: -odebug,sshfs_debug,loglevel=debug
+sudo sshfs -o IdentityFile=/home/diman/mykey.pem ec2-user@3.231.94.56:/home/ec2-user ./remote
+```
 
 ###### EBS
 EBS (Elastic Block Storage) - simple block storage for EC2. After EBS is attached to EC2 you can format it with desired file system.
@@ -4770,7 +4778,7 @@ So if you have some long-running lambda or http backend, you have to use async a
 * you start polling server to check if background task completed by someID
 
 ###### CodePipeline(CodeCommit/CodeBuild/CodeDeploy)
-CodePipeline - aws ci/cd tool, like jenkins. There are following stages:
+CodePipeline - aws ci/cd tool, like jenkins (`sa/cloudformation/codepipeline.yml`). There are following stages:
 * source stage - select what can be source: CodeCommit/ECR/S3/Bitbucket/Github
 * build stage - what app would build your project: CodeBuild/Jenkins
 * deploy stage - what provider would deploy app: 
