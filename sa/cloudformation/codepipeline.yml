@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: 2010-09-09
 
-# Create codepipeline to deploy spring app to beanstalk
+# Create codepipeline to deploy spring app to ec2 (you push changes to CodeCommit repo, and then pipeline build + run tests + deploy your app to ec2)
 
 Resources:
   VPC:
@@ -68,10 +68,11 @@ Resources:
 #      Tags:
 #        - Key: Name
 #          Value: !Sub ${AWS::StackName}-MyVpc-WebServer-SG
-#  WebServer:
+#  WebServer2:
 #    Type: AWS::EC2::Instance
 #    Properties:
 #      InstanceType: t2.micro
+#      IamInstanceProfile: !Ref InstanceProfile
 #      ImageId: ami-09d95fab7fff3776c
 #      KeyName: mykey
 #      UserData:
@@ -79,6 +80,10 @@ Resources:
 #          !Sub |
 #          #!/usr/bin/env bash
 #          sudo yum install java -y
+#          sudo yum install ruby wget -y
+#          wget https://aws-codedeploy-us-east-2.s3.us-east-2.amazonaws.com/latest/install
+#          chmod +x ./install
+#          sudo ./install auto
 #      NetworkInterfaces:
 #        - AssociatePublicIpAddress: true
 #          DeviceIndex: 0
@@ -125,8 +130,111 @@ Resources:
       ApplicationName: !Ref DeployStageApp
       DeploymentGroupName: !Sub ${AWS::StackName}-DeployStageGroup
       ServiceRoleArn: !GetAtt CodeDeployRole.Arn
+      Ec2TagFilters:
+        - Key: Name
+          Type: KEY_AND_VALUE
+          Value: !Sub ${AWS::StackName}-MyVpc-WebServer
+#  CodePipeline:
+#    Type: AWS::CodePipeline::Pipeline
+#    Properties:
+#      Name: !Sub ${AWS::StackName}-CodePipeline
+#      RoleArn: !GetAtt CodePipelineRole.Arn
+#      ArtifactStore:
+#        Type: S3
+#        Location: !Ref S3Bucket
+#      Stages:
+#        - Name: SourceStage
+#          Actions:
+#            - Name: SourceAction
+#              ActionTypeId:
+#                Category: Source
+#                Owner: AWS
+#                Provider: CodeCommit
+#                Version: 1
+#              Configuration:
+#                RepositoryName: !GetAtt WebAppRepo.Name
+#                BranchName: master
+#              OutputArtifacts:
+#                - Name: ArtifactSourceCode
+#        - Name: BuildStage
+#          Actions:
+#            - Name: BuildAction
+#              ActionTypeId:
+#                Category: Build
+#                Owner: AWS
+#                Provider: CodeBuild
+#                Version: 1
+#              Configuration:
+#                ProjectName: !Ref BuildStage
+#              InputArtifacts:
+#                - Name: ArtifactSourceCode
+#              OutputArtifacts:
+#                - Name: ArtifactBuild
+#        - Name: DeployStage
+#          Actions:
+#            - Name: DeployAction
+#              ActionTypeId:
+#                Category: Deploy
+#                Owner: AWS
+#                Provider: CodeDeploy
+#                Version: 1
+#              Configuration:
+#                ApplicationName: !Ref DeployStageApp
+#                DeploymentGroupName: !Ref DeployStageGroup
+#              InputArtifacts:
+#                - Name: ArtifactBuild
+#  S3Bucket:
+#    Type: AWS::S3::Bucket
+#    DeletionPolicy: Delete
+#    Properties:
+#      BucketName: !Sub ${AWS::StackName}-${AWS::Region}-s3-codepipeline-bucket-123
 
-
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref WebServerRole
+  WebServerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-WebServerRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforAWSCodeDeploy
+  CodePipelineRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-CodePipelineRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - codepipeline.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: AllowCodeCommitAccess
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - codecommit:GetBranch
+                  - codecommit:GetCommit
+                  - codecommit:UploadArchive
+                  - codecommit:GetUploadArchiveStatus
+                  - codecommit:CancelUploadArchive
+                Resource: "*"
   CodeDeployRole:
     Type: AWS::IAM::Role
     Properties:
@@ -140,6 +248,16 @@ Resources:
                 - codedeploy.amazonaws.com
             Action:
               - sts:AssumeRole
+      Policies:
+        - PolicyName: AllowS3Access
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:Get*
+                  - s3:List*
+                Resource: "*"
   CodeBuildRole:
     Type: AWS::IAM::Role
     Properties:

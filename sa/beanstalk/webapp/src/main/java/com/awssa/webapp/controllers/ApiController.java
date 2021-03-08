@@ -16,6 +16,11 @@ public class ApiController {
     @Autowired
     private TodoService service;
 
+    @GetMapping("/")
+    public String getInfo(){
+        return "WebApp v2.0";
+    }
+
     @GetMapping("/api/todo")
     public Set<TodoItem> getItems(){
         return service.getAll();

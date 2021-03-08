@@ -4794,12 +4794,13 @@ Pipeline execution - can be started in 2 ways:
     * CloudWatch Events (CodeCommit/S3/ECR) - default when you create pipeline from console with CodeCommit/S3/ECR as source
     * periodic checks (CodeCommit/S3/GitHub) - default when you create pipeline from cli with CodeCommit/S3/GitHub as source. Not recommended. If you create from cli, remove periodic checks by setting `PollForSourceChanges=false`. Use either CloudWatch events or webhooks.
     * webhooks (GitHub) - default when you create pipeline from console with github as source
-POC:
+POC (deploy spring boot app into ec2 with CodeCommit => CodeBuild => CodeDeploy => EC2):
 * upload ssh key to your user: iam => users => Security credentials => SSH keys for AWS CodeCommit
-* add entry to your `~/.ssh/config` with host from codecommit
+* add entry to your `~/.ssh/config` with host from CodeCommit
 * run `sa/cloudformation/codepipeline.yml`
 * go to `sa/beanstalk/webapp` and push this project into newly created CodeCommit repo
 * make sure your repo include build script inside `buildspec.yml` file (which is used by CodeBuild)
+* ec2 should have installed CodeDeploy agent, you can check agent status `sudo service codedeploy-agent status`
 
 ###### Storage Gateway
 Storage Gateway - hybrid storage that connects on-premises storage with cloud storage. The main idea is that you still use your on-premise storage (so don't lose that investment) and use cloud at the same time.

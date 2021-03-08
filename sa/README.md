@@ -21,6 +21,7 @@ In real exam I didn't meet any questions regarding `Rekognition`, but there are 
 * [Free questions](https://www.examtopics.com/exams/amazon)
 
 ### TODO
+* finish off `sa/cloudformation/codepipeline.yml`
 * ecs + elb with dynamic port mapping (sa/cloudformation/ecs-elb.yml) + add fargate launch type
 * eks + elb with elb path routing to route to eks nodeport
 * deploy spring app into ECS and EKS and compare the difference (try fargate too). Try auto scaling in eks/ecs
