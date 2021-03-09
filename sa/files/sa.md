@@ -1423,7 +1423,10 @@ Self-signed cert should be named `customerCA.crt`, otherwise when you connect to
 
 ###### Inspector 
 It's automated security assessment service that test the network accessibility of your ec2 and apps running on them. Plz note that it designed to ec2 only, so you can't use it to perform security assessment of API gateway, lambda and so on.
-You install agent on your OS, and it collects data and send it to inspector for analyzing. Assessment template - configuration based on which inspector validates your system.
+Also you can't assess SG with Inspector, use Trusted Advisor if you wan to assess SG. You install agent on your OS, and it collects data and send it to inspector for analyzing. Assessment template - configuration based on which inspector validates your system.
+There are 2 types of assessments (you can configure to run it weekly or run only once):
+* network (agent is not required) - check if ports reachable outside VPC (if agent installed also found if apps running on this ports)
+* host (agent should be install on ec2) - check for vulnerable software installed
 
 ###### Macie
 Managed data security/privacy service that uses ML & pattern matching to discover/protect your sensitive data (PII (personally identifiable information) - names, addresses, and credit card numbers) in aws.
@@ -1618,6 +1621,58 @@ Some system allow users to change passwords (you need provide old password and n
 That's why for RDS/RedShift/DocumentDB there are 2 options which secret to use to rotate keys (for otherDB/other services since you write lambda yourself, no option to choose other secret exists):
 * this secret - change password using current secret
 * other secret from SM - you have to select existing secret which would be used to rotate passwords
+PS (Parameter Store) - part of Systems Manager designed to store secrets, create secure string params and store plaintext key and encrypted value. Use symmetric KMS only.
+You can store param as:
+* plaintext - String or StringList(Separate strings using commas)
+* encrypted - SecureString (data encrypted with KMS key). You can use either default key `aws/ssm` or create your own CMK
+There are 2 tier of param (you can convert standard into advanced, but not vice versa, cause if you want to convert advanced into standard you have to cut 8KB to 4KB with possible lose of data):
+* standard - size less than 4KB, encrypted directly by KMS
+* advanced - size less than 8KB, PS uses Encryption SDK to provide envelope encryption (each advanced param encrypted under data key, and each data key encrypted under KMS). 
+Encryption SDK returns encrypted messages (combination of encrypted param value + encrypted data key), ans PS store entire message as string param.
+Parameter policies - special policy available only for advanced tier:
+* parameter expiration - you can set-up expiration date (including hours & minutes) and configure notification (like notify 1 day before param expiration)
+PS encryption context - PS would include it into each request with `PARAMETER_ARN: arn:aws:ssm:<REGION_NAME>:<ACCOUNT_ID>:parameter/<parameter-name>` (value is ARN of parameter)
+Hierarchical params - you can create params like `/a/b/c` (starting slash is required) with up to 15 levels deep.
+If you want to use encrypted params from ec2 you have to:
+* add permission to ec2 role for PS access
+* add permission to ec2 role for KMS encrypt/decrypt/generateDataKey (in case you use advanced, you also need this permission, cause advanced PS uses envelope encryption and it need to generate data key)
+Below is example for iam entity (user/role) to get param from PS:
+```
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "ssm:GetParameter*"
+            ],
+            "Resource": "arn:aws:ssm:us-west-2:111122223333:parameter/MyPassword/*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "kms:Decrypt"
+            ],
+            "Resource": "arn:aws:kms:us-west-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab"
+        }
+    ]
+}
+```
+change history (audit log) - each time you edit param, PS create new version, and retains old (when you create PS assign version 1, and increase it each time you modify param).
+You can view all versions with all param values. You can also specify param version in API. You can create up to 100 versions, once you reach this limit, when you add new version, old is removed.
+You can attach label to versions, and use this human-friendly label instead of versions in API calls.
+There are 2 data types when you create param:
+* text - any text
+* aws:ec2:image - will ensure that param value you entered is a valid AMI (amazon machine image)
+Don't confuse:
+* parameter store
+* secrets manager:
+    * 0.4$ per secret per month + 0.05$ per 10K api calls - while standard PS is free
+    * out of the box integration with RDS, with PS you have to manually write logic from RDS
+    * store multiple params under single unit using json
+    * you don't need to give permission to aws key, only for SM. compare with PS, where in order to encrypt/decrypt you have to give kms permission to calling service
+    * rotation is out-of-the-boxy, yet for PS you can create custom lambda and call it with CloudWatch
+    * compare to PS it doesn't have change history
 
 ### Database services
 ###### RDS
@@ -4952,7 +5007,7 @@ SM is mostly free (running commands or patch manager), yet some are paid service
 If you want to schedule, there are 2 options:
 * state manager - run scripts on linux/windows, patch instances with software/security updates
 * maintenance window - you define window for disruptive actions like patching, updating drivers. You can use it also for s3/sqs/kms
-Parameter Store - create secure string params and store plaintext key and encrypted value. Use symmetric KMS only.
+
 ###### Cloud9
 Cloud based IDE (integrated development environment) where you can run and execute your code. It basically a separate ec2 where you can install programs, write/build code, and work just like with your laptop.
 So it basically IDE + linux. AWS CLI is preconfigured there. It's free but you pay for compute & storage, ec2+ebs. You can also connect cloud9 to on-premises server, in this case it's free.
@@ -5309,14 +5364,22 @@ There are 5 areas:
 * cost optimization - quickest way to analyze which resources are idle and can be safely removed. You can also use CUR (or check bills tab from aws budgets), but in this case you have to dig into report and manually analyze which resource you are not actively using.
 Keep in mind that cost explorer doesn't state much about usage, it just shows how much you paid for previous month and totally for each aws service.
 * performance
-* security
+* security - basic tier include following:
+    * mfa on root device - checks if MFA enabled for root
+    * SG - checks if rules that allow unrestricted access (0.0.0.0/0) to specific ports
+    * EBS/RDS public snapshot - checks permission for EBS/RDS snapshot and alert if any permission are public
+    * S3 bucket permissions - checks if list/put/delete permission are public
+    * IAM use - checks that you create 1 or more iam users and use it (instead of using root user) 
 * fault tolerance
 * service limits
 There are 4 support plans you can use (you must be logged in as root in order to update support plan):
-* basic (free)
-* developer (paid) - 7 core checks
-* business (paid) - full set of checks
+* basic (free) - 6 security checks + 50 service limit checks
+* developer (paid) - basic + basic tech support (only on business hours)
+* business (paid) - full set of checks + advanced tech support
 * enterprise (paid) - full set of checks + Designated Technical Account Manager
+According to [this](https://aws.amazon.com/premiumsupport/technology/trusted-advisor) there are 6 checks for both basic/developer plan, yet [this source](https://aws.amazon.com/premiumsupport/plans) says it's 7.
+I think they count 50 service limit checks as 1 more check, or it just outdated, cause in trusted advisor console, I see only 6 available security checks for basic plan.
+Full set of checks - 115 Trusted Advisor checks (14 cost optimization, 17 security, 24 fault tolerance, 10 performance, 50 service limits) 
 
 ###### MQ
 MQ (Message queue) - managed Apache ActiveMQ message broker. It stores messages in EFS for durability and provides HA. It provides both push-based and poll-based messaging model.
