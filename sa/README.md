@@ -21,9 +21,6 @@ In real exam I didn't meet any questions regarding `Rekognition`, but there are 
 * [Free questions](https://www.examtopics.com/exams/amazon)
 
 ### TODO
-https://www.investopedia.com/articles/investing/080415/5-biggest-etf-companies.asp
-SNB stocks (Swiss National Bank)
-Belgium national bank stocks (lowest, may be worth buying)
 * question 12
 * finish off `sa/cloudformation/codepipeline.yml`
 * ecs + elb with dynamic port mapping (sa/cloudformation/ecs-elb.yml) + add fargate launch type
