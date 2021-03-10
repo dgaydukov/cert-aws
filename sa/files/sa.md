@@ -1610,7 +1610,7 @@ Key rotation (when you create new secret from SM console, on third step you can 
 * supported out-of-the-box for RDS/RedShift/DocumentDB (SM comes with already written lambdas for these 3)
 * for db on ec2 (or just your remote host) - create new lambda that would modify credentials on your source and attach this lambda when you create secret 
 * you can configure cw events to be notified when SM rotate credentials. SM never store plaintext secrets to any persistent layer.
-To enalbe key rotation to work with lambda:
+To enable key rotation to work with lambda:
 * make sure SM can call lambda (when you create from console - SM create role to be assumed by SM and to call lambda)
 * make sure lambda can communicate with both db and SM:
     * public rds - no extra work is needed, lambda can talk with both rds/SM using public internet
@@ -1621,6 +1621,10 @@ Some system allow users to change passwords (you need provide old password and n
 That's why for RDS/RedShift/DocumentDB there are 2 options which secret to use to rotate keys (for otherDB/other services since you write lambda yourself, no option to choose other secret exists):
 * this secret - change password using current secret
 * other secret from SM - you have to select existing secret which would be used to rotate passwords
+Cross-region replication - since secrets use KMS, they are region-bounded, but you can create replica of secret in another region. SM automatically maintain replica in latest state (if you change primary secret, replica would be updated).
+When you create replica you have to select KMS key in that region. Cross-account access - you can either use role or resource-based policy for SM to allow other principal to call SM.
+Versioning - by default `AWSCURRENT` version is used, during rotation new version is created `AWSPENDING`. Your lambda should run rotation and change versions (so new rotated credentials would be used).
+By default only active secrets showed in aws console. You can click settings and check `Show secrets scheduled for deletion`.
 PS (Parameter Store) - part of Systems Manager designed to store secrets, create secure string params and store plaintext key and encrypted value. Use symmetric KMS only.
 You can store param as:
 * plaintext - String or StringList(Separate strings using commas)
@@ -1673,6 +1677,8 @@ Don't confuse:
     * you don't need to give permission to aws key, only for SM. compare with PS, where in order to encrypt/decrypt you have to give kms permission to calling service
     * rotation is out-of-the-boxy, yet for PS you can create custom lambda and call it with CloudWatch
     * compare to PS it doesn't have change history
+    * [size limit 64KB](https://docs.aws.amazon.com/secretsmanager/latest/userguide/reference_limits.html) compare to 4/8KB for PS
+    * when you delete it you can schedule deletion time 7-30 days, so if you accidentally delete it you can restore. PS delete immediately and forever.
 
 ### Database services
 ###### RDS
