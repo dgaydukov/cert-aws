@@ -3613,6 +3613,11 @@ Lambda inside vpc:
 * if you want your lambda to talk with private services in your vpc, you should attach it to your VPC (set `VpcConfig` in CF template). If your lambda need internet access you have to configure NAT for it
 * you can always call your lambda if you have internet access (even if lambda attached to private subnet you can still call it). You can also call lambda from private subnet by adding lambda vpc endpoint
 * so if you want to call your lambda only from within vpc, then you have to add lambda resource policy (just like s3, lambda support both iam & resource policy) with condition, that would allow calls only from within vpc
+There are 2 ways you can grant access to lambda:
+* iam permission - add to user/service iam role with permissions to access lambda
+* resource policy - add resource policy directly to lambda with `Principal` - you can easily grant cross-account access (in CF you can use `AWS::Lambda::Permission` which generate lambda resource policy)
+That's why inside `sa/cloudformation/agw-http-auth.yml` you have 2 lambdas and for `InfoLambda` you add resource policy with `AWS::Lambda::Permission`, but for `AuthLambda` you create role for api gateway.
+So in first case, api gateway access lambda using resource policy, but in another it assume role, and access lambda with this role.
 
 ###### Step Functions
 Step Functions - visual tool that allows you to build complex logic based on lambda and EC2 calls. They can also help overcome lambda max 900sec execution time, by joining several lambdas into one execution flow.

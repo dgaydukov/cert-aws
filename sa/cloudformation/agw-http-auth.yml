@@ -72,19 +72,15 @@ Resources:
                 - apigateway.amazonaws.com
             Action:
               - sts:AssumeRole
-  LambdaAccessPolicy:
-    Type: AWS::IAM::Policy
-    Properties:
-      PolicyName: !Sub ${AWS::StackName}-LambdaAccessPolicy
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Action:
-              - lambda:InvokeFunction
-            Resource: "*"
-      Roles:
-        - !Ref ApiGatewayRole
+      Policies:
+        - PolicyName: AllowToInvokeAnyLambda
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - lambda:InvokeFunction
+                Resource: "*"
   AuthLambda:
     Type: AWS::Lambda::Function
     Properties:

@@ -51,52 +51,51 @@ Resources:
       SubnetId: !Ref PublicSubnet
       RouteTableId: !Ref PublicRT
 
-#  WebServerSG:
-#    Type: AWS::EC2::SecurityGroup
-#    Properties:
-#      GroupDescription: Allow SSH & HTTP (8080) from anywhere
-#      VpcId: !Ref VPC
-#      SecurityGroupIngress:
-#        - IpProtocol: tcp
-#          FromPort: 22
-#          ToPort: 22
-#          CidrIp: 0.0.0.0/0
-#        - IpProtocol: tcp
-#          FromPort: 8080
-#          ToPort: 8080
-#          CidrIp: 0.0.0.0/0
-#      Tags:
-#        - Key: Name
-#          Value: !Sub ${AWS::StackName}-MyVpc-WebServer-SG
-#  WebServer2:
-#    Type: AWS::EC2::Instance
-#    Properties:
-#      InstanceType: t2.micro
-#      IamInstanceProfile: !Ref InstanceProfile
-#      ImageId: ami-09d95fab7fff3776c
-#      KeyName: mykey
-#      UserData:
-#        Fn::Base64:
-#          !Sub |
-#          #!/usr/bin/env bash
-#          sudo yum install java -y
-#          sudo yum install ruby wget -y
-#          wget https://aws-codedeploy-us-east-2.s3.us-east-2.amazonaws.com/latest/install
-#          chmod +x ./install
-#          sudo ./install auto
-#      NetworkInterfaces:
-#        - AssociatePublicIpAddress: true
-#          DeviceIndex: 0
-#          SubnetId: !Ref PublicSubnet
-#          GroupSet:
-#            - !GetAtt WebServerSG.GroupId
-#      BlockDeviceMappings:
-#        - DeviceName: /dev/xvda
-#          Ebs:
-#            VolumeSize: 8
-#      Tags:
-#        - Key: Name
-#          Value: !Sub ${AWS::StackName}-MyVpc-WebServer
+  WebServerSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow SSH & HTTP (8080) from anywhere
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-WebServer-SG
+  WebServer:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      IamInstanceProfile: !Ref InstanceProfile
+      ImageId: ami-09d95fab7fff3776c
+      KeyName: mykey
+      UserData:
+        Fn::Base64:
+          !Sub |
+          #!/usr/bin/env bash
+          sudo yum install java ruby wget -y
+          wget https://aws-codedeploy-us-east-2.s3.us-east-2.amazonaws.com/latest/install
+          chmod +x ./install
+          sudo ./install auto
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: 0
+          SubnetId: !Ref PublicSubnet
+          GroupSet:
+            - !GetAtt WebServerSG.GroupId
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 8
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-MyVpc-WebServer
 
   WebAppRepo:
     Type: AWS::CodeCommit::Repository
@@ -110,7 +109,7 @@ Resources:
       Description: Build project using spring boot 2
       ServiceRole: !GetAtt CodeBuildRole.Arn
       Artifacts:
-        Type: no_artifacts
+        Type: S3
       Environment:
         Type: LINUX_CONTAINER
         ComputeType: BUILD_GENERAL1_SMALL
@@ -130,6 +129,10 @@ Resources:
       ApplicationName: !Ref DeployStageApp
       DeploymentGroupName: !Sub ${AWS::StackName}-DeployStageGroup
       ServiceRoleArn: !GetAtt CodeDeployRole.Arn
+#      Deployment:
+#        Description: DeployWebAppToEc2
+#        Revision:
+
       Ec2TagFilters:
         - Key: Name
           Type: KEY_AND_VALUE
@@ -207,8 +210,17 @@ Resources:
                 - ec2.amazonaws.com
             Action:
               - sts:AssumeRole
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforAWSCodeDeploy
+      Policies:
+        - PolicyName: AllowS3GetAccess
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                  - s3:ListBucket
+                Resource: "*"
   CodePipelineRole:
     Type: AWS::IAM::Role
     Properties:
