@@ -22,6 +22,7 @@ In real exam I didn't meet any questions regarding `Rekognition`, but there are 
 
 ### TODO
 https://www.amazon.com/Stocks-Long-Run-Definitive-Investment/dp/0071800514
+https://en.wikipedia.org/wiki/The_Road_(2009_film)
 * finish off `sa/cloudformation/codepipeline.yml` (build artifacts => to s3, and create deployment from s3 to ec2. And then rebuild it to use codepipelien)
 * ecs + elb with dynamic port mapping (sa/cloudformation/ecs-elb.yml) + add fargate launch type
 * eks + elb with elb path routing to route to eks nodeport
