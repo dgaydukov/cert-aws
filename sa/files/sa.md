@@ -1029,6 +1029,18 @@ Principal - IAM identity (user/group/role) that can interact with aws, can be:
 * permanent/temporary
 * represented by human/application
 * root user / iam user / role
+Below example of resource policy with aws principal for root/user/role (yet you can't assign it to group. Group can't be principal in resource policy):
+```
+"Principal": {
+  "AWS": [
+    "arn:aws:iam::{ACCOUNT_ID}:root", 
+    "arn:aws:iam::{ACCOUNT_ID}:user/myuser", 
+    "arn:aws:iam::{ACCOUNT_ID}:role/myrole"
+  ]
+}
+```
+To prevent risk of privilege escalating (like you delete user & re-create it), aws internally link user/role to uniqueID of that user/role. So once you re-create it, policy won't work, cause internalID would be different for newly created role/user.
+If you say principal to root, you give access to whole account, yet if some user want to have permission, they would need to have explicit iam permission.
 Policy - json file with permission which you attach to IAM identity or aws resource (some resources can have it's own access policy, like s3 bucket policy - where you can define which user which action should take).
 Resource policy - policy for single resource like s3 bucket policy or SQS access control
 Main difference between identity and resource policy is that identity policy doesn't have `Principal` attribute, cause you link it to some iam identity which would be it's principal.
@@ -1110,6 +1122,15 @@ To get aws console url you should:
 * construct console sign-in url and return it to user
 You can use [java example](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_enable-console-custom-url.html#STSConsoleLink_programJava) to get sing-in url
 `DecodeAuthorizationMessage` (sts api call) - in case api call return 403, some api may returned encoded message, it's encoded cause it may have some private info. So to decode you have to use this api, and have permission to use this api.
+```
+# try to start ec2 with user that has no permissions to do this
+aws ec2 start-instances --instance-id=i-04ee5711b4afe70d0 --profile=jack
+
+An error occurred (UnauthorizedOperation) when calling the StartInstances operation: You are not authorized to perform this operation. Encoded authorization failure message: xmwNM8Y2qt......
+
+You can use sts to decode message
+aws sts decode-authorization-message --encoded-message={ENCODED_MESSAGE}
+```
 Cross-account ec2 role (ec2 from accountA can assume role from accountB, take a loot at `sa/cloudformation/ec2-cross-account-assume-role.yml`):
 * create ec2 role (it should have permission to assume role from accountB) in accountA (`sts:AssumeRole` for ec2 service)
 * create cross-account role in accountB (`sts:AssumeRole` for aws account)
@@ -1332,11 +1353,21 @@ To use iam policy, you should explicitly add key policy that allows root user ac
 ```
 So you can't create key with empty key policy, at least something should be present.
 There are 3 types of permissions:
-* key policy
-* iam policy
-* grant
+* key policy - required policy, if you remove it, nobody can access CMK
+* iam policy - optional policy, works with combination with key policy
+* grant - temporary policy to allow temporary access for principal
+Both retire/revoke grant - immediately remove permissions for user to use this grant. Only difference is that when you create grant you can set `RetiringPrincipal` - one who can retire it.
+As key owner you can both revoke/retire grant, but can delegate retire to some other user. In below example jack can retire his own grant.
 ```
+# to grant access to user jack you have to either: give user direct permission in key policy or key policy access to root + iam policy access for jack
 aws kms describe-key --key-id=8f150816-0926-426f-baf1-3e5081085f99 --profile=jack
+
+# create grant for user jack (you give user jack ability to describe this CMK and to retire this grant)
+aws kms create-grant --key-id=8f150816-0926-426f-baf1-3e5081085f99 --grantee-principal=arn:aws:iam::{ACCOUNT_ID}:user/jack --retiring-principal=arn:aws:iam::{ACCOUNT_ID}:user/jack --operations=DescribeKey
+# list all current grants
+aws kms list-grants --key-id=8f150816-0926-426f-baf1-3e5081085f99
+# retire gran (here keyId should be full ARN).
+aws kms retire-grant --key-id=arn:aws:kms:us-east-1:{ACCOUNT_ID}:key/8f150816-0926-426f-baf1-3e5081085f99 --grant-id=8ff72ff8f037991672107a8b6982a49c19815f08cfc08c13b434cdaf5c2ddef2
 ```
 As other resource policy, key policy include `Principal` - who is using policy statement, and `Resource` - which is always `*` - which means this CMK. When you create CMK from:
 * cli - if you don't provide any custom policy, default is created which gives full access to root user.
@@ -1384,10 +1415,59 @@ You can view [full list of kms condition keys](https://docs.aws.amazon.com/kms/l
       ]
     }
 ```
-* `kms:GrantIsForAWSResource` - 
+* `kms:KeyOrigin` - allows operation only if kms was created with specified origin AWS_KMS/AWS_CLOUDHSM/EXTERNAL (for example allow create new key only with cloudhsm as origin, or allow to encrypt only if key was created with external origin). You pass origin when you create new key.
+* `kms:GrantIsForAWSResource` - allows aws services to create grans on-behalf of calling user:
+Let's say user `jack` has full ec2 access in his iam policy `{"Effect": "Allow", "Action": "ec2:*", "Resource": "*"}`
+Let's create ec2 with encrypted ebs volume, and stop it. If we try to start it `aws ec2 start-instances --instance-ids=i-04c5da29b4eb9e48d --profile=jack`, ec2 will got into `Pending` state, and then go to `Stopped`
+The reason is since ebs is encrypted, ec2 try to get encryption keys from kms, and decrypt ebs with it. But since user doesn't have kms permissions, he can't start ec2
+We can add `kms:CreateGrant` permission to this user, but that would mean, that he can grant permission to any other ima entity. Instead we could add following key policy
+```
+{
+    "Effect": "Allow",
+    "Principal": {
+        "AWS": "arn:aws:iam::{ACCOUNT_ID}:user/jack"
+    },
+    "Action": "kms:CreateGrant",
+    "Resource": "*",
+    "Condition": {
+        "Bool": {
+            "kms:GrantIsForAWSResource": "true"
+        }
+    }
+}
+```
+Now if we run it again we can see that ec2 is Running. Also if we run `aws kms list-grants --key-id=8f150816-0926-426f-baf1-3e5081085f99` we would see:
+```
+{
+    "Grants": [
+        {
+            "KeyId": "arn:aws:kms:us-east-1:{ACCOUNT_ID}:key/8f150816-0926-426f-baf1-3e5081085f99",
+            "GrantId": "4f8fdf4c96ea2f15549ebca7b9589085f02a6422df9a77a7b8588f8ba4fe0c30",
+            "Name": "e1ec5712-6318-4cd0-b0b6-1df4982db48f",
+            "CreationDate": 1615967170.0,
+            "GranteePrincipal": "arn:aws:sts::{ACCOUNT_ID}:assumed-role/aws:ec2-infrastructure/i-04c5da29b4eb9e48d",
+            "RetiringPrincipal": "ec2.us-east-1.amazonaws.com",
+            "IssuingAccount": "arn:aws:iam::{ACCOUNT_ID}:root",
+            "Operations": [
+                "Decrypt"
+            ],
+            "Constraints": {
+                "EncryptionContextSubset": {
+                    "aws:ebs:id": "vol-0ee6ab7f8571dd5c0"
+                }
+            }
+        }
+    ]
+}
+```
+As you see, ec2 service created grant permission on-behalf of our user, yet user `jack` can't create such a grant himself.
+What is more interesting, is that after some time (or once you terminate instance), ec2 would retire such grant, and `list-grants` api would return empty array.
+* `kms:GrantOperations` - list of kms actions that user can grant when he grant permission to iam entity (For example user can grant only `kms:Encrypt` permission)
+* `kms:GranteePrincipal` - set to whom user can grant permission (can be list of iam entities)
+* `kms:RetiringPrincipal` - set who can be retiring principle, who can retire given grant (can be list of iam entities)
 
 ###### CloudHSM
-Dedicated HSM (Hardware Security Module) instance within aws cloud. You can securely generate/store/manage cryptographic keys. HSM provides secure key storage and cryptographic operations within a tamper-resistant hardware device.
+Dedicated HSM (Hardware Security Module) instance within aws cloud. You can securely generateg/store/manage cryptographic keys. HSM provides secure key storage and cryptographic operations within a tamper-resistant hardware device.
 Cluster - contains multiple devices across AZ/subnet in single region. You can't create single device, only cluster with 1 or more devices. Since devices created in subnets you need to have vpc in order to use CloudHSM.
 You create cluster (it's empty & not initialized). You add first HSM, and then initialize cluster. To communicate with cluster you have to use cloudHSM client software.
 HSM machines located in aws cloudHSM managed vpc, yet it create eni in your vpc, and by this eni you can communicate with machines. Yet you don't talk with them directly, but use special client software.
