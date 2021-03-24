@@ -21,8 +21,6 @@ In real exam I didn't meet any questions regarding `Rekognition`, but there are 
 * [Free questions](https://www.examtopics.com/exams/amazon)
 
 ### TODO
-https://www.blockchaincenter.net/bitcoin-rainbow-chart
-https://www.moonmath.win (save page & compare later)
 * question 23
 * finish off `sa/cloudformation/codepipeline.yml` (build artifacts => to s3, and create deployment from s3 to ec2. And then rebuild it to use codepipelien)
 * ecs + elb with dynamic port mapping (sa/cloudformation/ecs-elb.yml) + add fargate launch type
