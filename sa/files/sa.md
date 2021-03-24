@@ -1402,11 +1402,10 @@ When you create kms key you may choose key material origin:
 * external - you have to upload 256-bit key (until you upload key material you can't encrypt/decrypt using such key):
     * once you import key material, CMK associated with it forever
     * you can set expire date for key material, and key stop working once it expired (you will need to re-import same key material to activate CMK)
-    * you can re-import same material (not another) in case it's expired
+    * you can re-import same material (not another) in case it's expired or you manually delete it
     * you can't enable key rotation, you can do manual key rotation
-    
-    openssl rsautl -encrypt -in PlaintextKeyMaterial.bin -oaep -inkey ImportParameters/wrappingKey_6fbc8ead-0cfd-40ff-8a2c-09dc997cafd2_03231811 -keyform DER -pubin -out EncryptedKeyMaterial.bin
-
+    * use [this guide](https://docs.aws.amazon.com/kms/latest/developerguide/importing-keys-encrypt-key-material.html) to generate & upload key material
+    * there is no way to download key material (yet you can re-import & delete it)
 * cloudHSM - in this case you need to set up CloudHSM cluster with at least 2 nodes in 2 AZ
 When you use kms for every policy (for example read policy for s3) you have to add `kms:Decrypt`, so s3 would have access to kms in order to decrypt data. So if you provide only s3 read without kms, s3 won't decrypt your data and you can't read it.
 cross-account access - you can allow your KMS to be used in another account by adding resource policy to kms with principal as another account or you can also add cross-account role iam access:
