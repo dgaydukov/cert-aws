@@ -21,7 +21,8 @@ In real exam I didn't meet any questions regarding `Rekognition`, but there are 
 * [Free questions](https://www.examtopics.com/exams/amazon)
 
 ### TODO
-* question 23
+https://www.theverge.com/22310188/nft-explainer-what-is-blockchain-crypto-art-faq
+* 29
 * finish off `sa/cloudformation/codepipeline.yml` (build artifacts => to s3, and create deployment from s3 to ec2. And then rebuild it to use codepipelien)
 * ecs + elb with dynamic port mapping (sa/cloudformation/ecs-elb.yml) + add fargate launch type
 * eks + elb with elb path routing to route to eks nodeport

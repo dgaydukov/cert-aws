@@ -78,4 +78,4 @@ Other then that, ML is not covered by that exam, that's why we create separate f
 * https://habr.com/ru/news/t/484264 (Скандал на конкурсе Kaggle)
 * https://www.youtube.com/watch?v=PPLop4L2eGk&list=PLLssT5z_DsK-h9vYZkQkYNWcItqhlRJLN (Andrew Ng's Machine Learning Fundamentals course)
 -----------------------------------------------------------------------------------------------------------------------
-* pass big data cert prep first
+* pass big data cert test first
