@@ -3232,7 +3232,7 @@ aws s3api put-object --bucket=mytests3bucket12 --key=textfile --body=data.txt
 aws s3api put-object --bucket=mytests3bucket12 --key=encrypted --body=data.txt --server-side-encryption=AES256
 aws s3api head-object --bucket=mytests3bucket12 --key=encrypted # you will see that "ServerSideEncryption": "AES256"
 ```
-You can force user to upload only encrypted files by adding following resource policy:
+You can force user to upload only encrypted files by adding following resource policy (so you basically force user to use `x-amz-server-side-encryption` header)
 ```
 {
   "Version": "2012-10-17",
@@ -3367,6 +3367,46 @@ You can configure multiple inventory for single bucket and configure (you can qu
 * generate inventory report daily or weekly
 * specify inventory report to be encrypted
 Inventory report - take snapshot of s3 using eventual consistency, so object may be in report, but removed already. So run `head-object` first, to check state of the object.
+Once you configure inventory (daily or weekly) you will get following files:
+```
+1. manifest.checksum
+7b177565814057540a3189d896a13777
+
+2. manifest.json
+{
+  "sourceBucket" : "mytests3bucket12",
+  "destinationBucket" : "arn:aws:s3:::www.aumingo.com",
+  "version" : "2016-11-30",
+  "creationTimestamp" : "1616889600000",
+  "fileFormat" : "CSV",
+  "fileSchema" : "Bucket, Key, Size, LastModifiedDate, ETag, StorageClass, IsMultipartUploaded, ReplicationStatus, EncryptionStatus, ObjectLockRetainUntilDate, ObjectLockMode, ObjectLockLegalHoldStatus, IntelligentTieringAccessTier",
+  "files" : [ {
+    "key" : "mytests3bucket12/testinventory/data/442b489f-03b8-4320-aace-e501ebf4d823.csv.gz",
+    "size" : 245,
+    "MD5checksum" : "42c5a0c900fff17708c82e6cdbbb8773"
+  } ]
+}
+
+3. 442b489f-03b8-4320-aace-e501ebf4d823.csv.gz
+# download inventory file & unzip it
+zcat 442b489f-03b8-4320-aace-e501ebf4d823.csv.gz > inventory.csv
+
+"mytests3bucket12","dummy.pdf","13264","2021-03-27T10:29:30.000Z","2942bfabb3d05332b66eb128e0842cff","STANDARD","false","","SSE-S3","","","",""
+"mytests3bucket12","encrypted","12","2021-03-27T10:17:14.000Z","6f5902ac237024bdd0c176cb93063dc4","STANDARD","false","","SSE-S3","","","",""
+"mytests3bucket12","textfile","12","2021-03-27T10:17:06.000Z","6f5902ac237024bdd0c176cb93063dc4","STANDARD","false","","NOT-SSE","","","",""
+"mytests3bucket12","yukon.pdf","20597","2021-03-27T10:28:32.000Z","ff71372d153e50f36013168082e78b66","STANDARD","false","","NOT-SSE","","","",""
+```
+You can create s3 batch operation in s3 console `Amazon S3 -> Batch Operations -> Create job`
+Completion report - csv report that would be generated on job completion, you have to choose:
+* destination s3 bucket
+* what to include: either all tasks or failed tasks only
+* create (or select if it already created) new role for `batchoperations.s3.amazonaws.com`
+So if you want to encrypt old unencrypted files:
+* if you have just couple of objects you can manually copy them `aws s3api copy-object --bucket=mytests3bucket12 --key=yukon.pdf --copy-source=mytests3bucket12/yukon.pdf`
+new copy would overwrite existing file, but since encryption activated by defaul, it would also include encryption
+* create inventory of only unencrypted files
+* create & run s3 batch job to copy files with encryption
+
 
 ###### Glacier
 Glacier - low-cost tape-drive storage value with $0.007 per gigabyte per month. Used to store backups that you don't need frequently. Access to data can take from few minutes to a few hours. You store data as archives.

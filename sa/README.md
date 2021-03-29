@@ -22,8 +22,8 @@ In real exam I didn't meet any questions regarding `Rekognition`, but there are 
 
 ### TODO
 https://www.theverge.com/22310188/nft-explainer-what-is-blockchain-crypto-art-faq
-* 29
-* finish off `sa/cloudformation/codepipeline.yml` (build artifacts => to s3, and create deployment from s3 to ec2. And then rebuild it to use codepipelien)
+43
+* finish off `sa/cloudformation/codepipeline.yml` (build artifacts => to s3, and create deployment from s3 to ec2. And then rebuild it to use codepipeline)
 * ecs + elb with dynamic port mapping (sa/cloudformation/ecs-elb.yml) + add fargate launch type
 * eks + elb with elb path routing to route to eks nodeport
 * deploy spring app into ECS and EKS and compare the difference (try fargate too). Try auto scaling in eks/ecs
