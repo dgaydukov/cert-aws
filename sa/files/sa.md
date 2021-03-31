@@ -1667,12 +1667,22 @@ Managed service that provides aws resources inventory, config history, change no
 It provides detailed view of the configuration of AWS resources in your AWS account (how the resources are related and how they were configured in the past so that you can see how the configurations and relationships change over time).
 It integrated with cloudTrail, and record `CloudTrailID` for any resource change. Config Item - point-in-time record of aws resource, that include metadata, attributes, relationships, current configuration, and related events
 Config Rule - desired configuration of resource that is evaluated against actual change (and report in case of mismatch). Conformance Pack - collection of config rules. There are 2 types of rules:
-* managed - use one of many aws predefined rules to build your rule on top of it
-* custom - you create rule from scratch and write your lambda that would be invoked by your rule to evaluate resource
-You have to create config first time you log in to aws config console.
+* managed - use one of many aws predefined rules to build your rule on top of it (when to be invoked may be already defined, you can only choose either time, or type of resource)
+* custom - you create rule from scratch and write your lambda that would be invoked by your rule to evaluate resource and configure when rule would be invoked (this true for both custom & managed):
+    * on config change:
+        * all changes
+        * based on specified resources (like ec2 or vpc)
+        * based on tags
+    * periodic - 1/3/6/12/24 hours
+You don't need CloudWatch Event, your lambda can be called directly by custom config rule. You have to create config first time you log in to aws config console.
 Don't confuse:
 * config - list of all current resource in your account (point-in-time configuration of your aws resources), notify when resource changes, prohibit certain resource changes
 * CloudTrail - list of all api calls (cli & CF templates in the end are transformed into api calls).
+There is no way to call custom rule manually, yet you can run `aws configservice start-config-rules-evaluation` to test your rule after you made some changes. This call won't use latest system config state, but will use last known state of your resources.
+So use this option only for testing purpose, to make sure your config rule is working.
+Configuration Recorder - record all supported resources, yet you can create custom recorder to record only specified set of resources.
+You care charged (0.003 per item when it or it relation changed), to control costs you may stop recorder `aws configservice stop-configuration-recorder --configuration-recorder-name=default`
+When you start the configuration recorder, AWS Config takes an inventory of all AWS resources in your account
 
 ###### CloudTrail
 CT - service that logs activity of your aws account (who made request, what params were passed, when and so on..). It's useful for compliance, when you need to ensure that only certain rules have ever been applied.
@@ -3407,7 +3417,6 @@ new copy would overwrite existing file, but since encryption activated by defaul
 * create inventory of only unencrypted files
 * create & run s3 batch job to copy files with encryption
 
-
 ###### Glacier
 Glacier - low-cost tape-drive storage value with $0.007 per gigabyte per month. Used to store backups that you don't need frequently. Access to data can take from few minutes to a few hours. You store data as archives.
 Vault - same as bucket for s3, actual place where your archives are stored. You control access by using iam identity or vault policy. 
@@ -4168,7 +4177,7 @@ OU (Organization Unit) - group of accounts under one name, can be used to build 
     * create new OU under new parent
     * move all accounts from old OU to new OU
     * remove old OU
-* you can't delete OU if there are children OU or accounts there
+* you can't delete OU if there are children OU or accounts there (you must first delete all children, then delete OU, you can also move accounts into another OU if you don't want to delete them)
 Typical use case is to have 2 accounts (dev + prod) to separate concerns, but to manage them from single one. There are 2 types of policies:
 * SCP (Service Control Policy) - policy you can apply to a group of aws accounts, defines service actions (like run EC2 instance), it follows the same rules as IAM policies. Keep in mind that master account is not affected to SCP.
 You can attach a policy to the root/OU/account. SCP limits IAM permissions (if you create SCP to block ec2 creation for all accounts, even root user form child account won't be able to launch any ec2 except for t2.micro)
@@ -4195,6 +4204,7 @@ RI (Reserved instances) - 2 reports:
 * coverage - how much % of overall instance usage covered by RI. So when it drops below 50% you should investigate which of on-demand instances are running 24/7 and possibly replace it with RI.
 Add new member - there are 2 ways to add new member:
 * create account from scratch - if you remove it from org, you can make it standalone account. When you add this type of account, aws automatically create `OrganizationAccountAccessRole` with `AdministratorAccess` policy
+By default aws generate password for newly created account. You can't extract it, so if you want to singin as root user, you have to go through password recovery.
 * add already existing account. If you are adding already existing account, it's recommended to create there cross-account role with same name as aws automatically create for new account
 Don't confuse:
 * management account (previously called master account) - main account that creates org & invite other accounts or create new accounts for this org
@@ -4295,7 +4305,14 @@ Url-based filter:
 * you can use proxy server and put your ec2 to private subnet. This is best solution, cause in proxy server you can do all type of filtering you want. Plus proxy can have caching, so second time request don't need to go to outside world, it ca be served from proxy cache
 You can only assign one NACL to one subnet, yet you can assign many SG to same ec2. You can't block specific IP with SG (cause there is no deny rules), you need to use NACL.
 Stateful - if you send request to your ec2 you will got response even if SG doesn't have any outbound rules
-If you set up NACL (let's say for ssh) you should also add outbound rules (cause nacl are stateless). But for ssh outbound port is not 22, it's ephemeral port - When a client connects to a server, a random port from the ephemeral port range (1024-65535) becomes the client's source port.
+If you set up NACL (let's say for ssh) you should also add outbound rules (cause nacl are stateless). But for inbound ssh port is not 22, it's EP (ephemeral port) - when a client connects to a server, a random port from the EP range (1024-65535) becomes the client's source port.
+So if ec2 from your subnet wants to communicate with outside server for port 400 you have to:
+* allow outbound NACL for port 400
+* allow inbound NACL for EP
+EP automatically handled by SG, since SG - stateful, but for NACL you have to explicitly enable them
+So if your ec2 is requested, you have to allow following NACL rules:
+* add inbound rule for port 80
+* add outbound rule for 1024-65535
 When you create VPC, default SG created automatically. It allows inbound traffic from instances with default SG (source - SG_ID), and all outbound traffic. 
 That's why if you create ec2 and rds and assign to both of them default SG, ec2 can access rds, cause from rds perspective ec2 SG - source of RDS SG.
 So if you need 2 ec2 to talk with each other you can assign both of them same SG where source is ID of this SG - this means traffic allowed from any instance of the same SG
@@ -5302,6 +5319,10 @@ SM is mostly free (running commands or patch manager), yet some are paid service
 If you want to schedule, there are 2 options:
 * state manager - run scripts on linux/windows, patch instances with software/security updates
 * maintenance window - you define window for disruptive actions like patching, updating drivers. You can use it also for s3/sqs/kms
+Automation document (called runbook) - defines actions that SM runs during automation. Contains steps that run in sequential order, you can:
+* stop/restart ec2 either with approval of iam or without
+* create golden AMI from running ec2 (including/excluding specific packages)
+* recover impaired instances
 
 ###### Cloud9
 Cloud based IDE (integrated development environment) where you can run and execute your code. It basically a separate ec2 where you can install programs, write/build code, and work just like with your laptop.
