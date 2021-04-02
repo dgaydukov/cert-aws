@@ -26,6 +26,7 @@ Other then that, ML is not covered by that exam, that's why we create separate f
     * sleuth tracing when several microservices call each other
     * log4j file appender log rotation
     * deferred response in spring
+    * opentracing with spring (https://github.com/opentracing-contrib/java-spring-jaeger)
 * kafka
     * https://docs.confluent.io/platform/current/schema-registry/index.html
     * kafka poll wait for specified timeout (don't return even if there are already messages)
