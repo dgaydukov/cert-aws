@@ -1238,6 +1238,10 @@ But if you add explicit deny to everybody except from this vpc endpoint, even if
 }
 ```
 Same true for s3. You can create vpc endpoint policy for s3 to allow access to specific bucket + s3 bucket policy to allow access only from specified vpc or vpc endpoint.
+password policy - you can specify settings for passwords for all users (go to `iam => account settings => change password policy`):
+* enforce min password length and require special chars or numbers
+* enable password expiration (user will have to change password, duration between 1 day - 3 years)
+* prevent password reuse (user will have to enter another password, when they update their password)
 
 ###### Cognito
 Cognito - managed user service that add user sign-in/sign-up/management email/phone verification/2FA logic. There are 2 pools:
@@ -1250,8 +1254,8 @@ You can use users from User Pool or Federated Pool (Facebook, Google) as users t
 You pay for MAU (monthly active users) - user who within a month made some identity operation sign-in/sign-up/tokenRefresh/passwordChange.
 Free tier - 50k MAU per month. You can call `AssumeRole` to get temporary credentials. So you can sign-in to user_pool but you can use user_pool id token to get aws credentials from identity_pool.
 There are 3 types of cognito tokens (with accord to OpenID):
-* id token - jwt token that has personal user info (name, email, phone). So you shouldn't use it outside your backend, cause it includes sensitive info. Usually id token = access token + user's personal details.
-* access token - jwt token that includes user's access rights. You can use it outside your backend to get access to other services. Live of id/access token is limited, usually to 1 hour, and that's why you should use refresh token to prolong it.
+* id token (contains claims) - jwt token that has personal user info (name, email, phone). So you shouldn't use it outside your backend, cause it includes sensitive info. Usually id token = access token + user's personal details.
+* access token (contains scopes)- jwt token that includes user's access rights. You can use it outside your backend to get access to other services. Live of id/access token is limited, usually to 1 hour, and that's why you should use refresh token to prolong it.
 * refresh token - use it to retrieve new ID and access tokens
 Example creating users from cli (first run `sa/cloudformation/cognito-iam.yml` as CF stack):
 ```
@@ -1259,7 +1263,7 @@ Example creating users from cli (first run `sa/cloudformation/cognito-iam.yml` a
 aws cognito-idp sign-up --client-id={USER_POOL_CLIENT_ID} --username=john.doe@gmail.com --password=P@1ssword --user-attributes Name="email",Value="john.doe@gmail.com" Name="name",Value="John Doe"
 # confirm user as admin (without confirmation password sent to eamil)
 aws cognito-idp admin-confirm-sign-up --user-pool-id={USER_POOL_ID} --username=john.doe@gmail.com
-# login & get idToken
+# login & get 3 tokens (access/refresh/id-token)
 aws cognito-idp initiate-auth --client-id={USER_POOL_CLIENT_ID} --auth-flow=USER_PASSWORD_AUTH --auth-parameters USERNAME=john.doe@gmail.com,PASSWORD=P@1ssword
 # create cognito identity id
 aws cognito-identity get-id --identity-pool-id={IDENTITY_POOL_ID} --logins cognito-idp.us-east-1.amazonaws.com/{USER_POOL_ID}={ID_TOKEN}
@@ -1276,6 +1280,24 @@ aws sts assume-role-with-web-identity --role-arn={ROLE_ARN} --role-session-name=
 ```
 You can enable unauthenticated access for guest users in identity pool (by setting `AllowUnauthenticatedIdentities: true`). You also would need attach role to `unauthenticated` under `AWS::Cognito::IdentityPoolRoleAttachment`.
 After this guest users would have permission defined by that role.
+Authorization code oauth flow (see `sa/cloudformation/cognito-oauth2.yml`):
+* if you have backend app, you can just call cognito api directly to get tokens. But if you have client app, you have to use oath2 flow
+* main idea, is that you supply `redirect_uri`, to which you would be redirected with code, and later you can use this code to extract tokens
+* go to `App client settings` => `Launch hosted ui` - sign-up or sign-in, and get code
+* Run above command and get 3 tokens (code valid for one time, if you try to run it second time you will get `{"error":"invalid_grant"}`)
+```
+curl -d 'grant_type=authorization_code&client_id={USER_POOL_CLIENT_ID}&code={CODE}&redirect_uri=http://localhost' -H 'Content-Type: application/x-www-form-urlencoded' https://auth-web-client-domain.auth.us-east-1.amazoncognito.com/oauth2/token
+```
+There are 3 types of oauth flow:
+* authorization code - see above
+* implicit - main difference is that client get 3 tokens for redirect_url, so they exposed directly to client (which is not good, so try to avoid this flow, and use code instead)
+* Client credentials - backend-to-backend communication, your cognito_user_pool_client, should have client_secret value
+When you configure cogntio authorizer for API gateway - you have 2 options:
+* use Id token - set `OAuth Scopes` to NONE, and set clams (like `$context.authorizer.claims.email`)
+* use access token - set required `OAuth Scopes`
+You can configure to call lambda on different events (look here for all triggers `sa/files/images/cognito-lambda-triggers.png`):
+* pre sign-up, pre/post-auth
+* custom flow - auth challenge (For example if you want to have captcha). We should pass `--auth-flow=CUSTOM_AUTH` when we start sign-in process
 
 ###### Directory Service
 DS (Directory Service) - hierarchical structure to store/search/manipulate objects, so users can locate resources no matter where they are stored.
@@ -1353,9 +1375,11 @@ So since all aws services use symmetric key, and if you manually rotate key, you
 aws kms encrypt --key-id=8f150816-0926-426f-baf1-3e5081085f99 --plaintext="hello world"
 # encrypt text and put it into binary file
 aws kms encrypt --key-id=8f150816-0926-426f-baf1-3e5081085f99 --plaintext="hello world" --output=text --query=CiphertextBlob | base64 --decode > encrypted.bin
-# for decrypting we must pass binary file, and then decode, cause decryption will return base64
+# for decrypting we must pass binary file, and then decode, cause decryption will return base64 (we don't need to pass key-id for symmetric keys)
 aws kms decrypt --ciphertext-blob=fileb://encrypted.bin --output=text --query=Plaintext | base64 --decode
 ```
+If you need to rotate key every month for s3, create lambda, trigger it with CloudWatch, that would create new kms key each month & update s3 to use new kms.
+Don't delete old keys, cause previously encrypted files would be using old keys to decrypt files (information about key is stored inside encrypted file).
 Yet previous backing key is stored perpetually until you delete cmk, so all data encrypted with previous key can easily be decrypted. But for all new encryption new key is used.
 Data Key (limited to a region) - generated by CMK and used to encrypt data larger than 4KB (CMK can encrypt only less than 4KB) and be used outside KMS.
 Access to key is a combination of key policy (resource policy) + iam policy. Any explicit deny always overwrite allow. Compare to other resources to add access to kms you must add key policy (with or without iam policy).
