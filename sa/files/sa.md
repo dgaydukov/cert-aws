@@ -1276,7 +1276,29 @@ aws cognito-identity get-credentials-for-identity --identity-id={IDENTITY_ID} --
 # option2: get temporary aws credentials using AssumeRoleWithWebIdentity api
 # get open id token that you later use
 aws cognito-identity get-open-id-token --identity-id={IDENTITY_ID} --logins cognito-idp.us-east-1.amazonaws.com/{USER_POOL_ID}={ID_TOKEN}
-aws sts assume-role-with-web-identity --role-arn={ROLE_ARN} --role-session-name=temprole --web-identity-token={OPEN_ID_TOKEN}
+aws sts assume-role-with-web-identity --role-arn={ROLE_ARN} --role-session-name=temprole --web-identity-token={OPEN_ID_TOKEN}\
+```
+CF doesn't support create [mfa userpool](https://github.com/aws/aws-cli/issues/3876#issuecomment-456998093)
+If you try to create userpool with below config, you will got `SMS configuration and Auto verification for phone_number are required when MFA is required/optional`
+```
+MfaConfiguration: OPTIONAL
+EnabledMfas:
+    - SOFTWARE_TOKEN_MFA
+```
+So you have to create mfa userpool in 2 steps:
+* create userpool
+* update userpool with mfa config
+```
+aws cognito-idp set-user-pool-mfa-config --user-pool-id={USER_POOL_ID} --software-token-mfa-configuration=Enabled=true --mfa-configuration=OPTIONAL
+```
+Then use below commands to sing-in with mfa
+```
+# end-to-end flow with 2FA (sign-up => confirm email => sign-in (we need access token to tie-up 2FA) => generate 2FA secret code => confirm 2FA)
+aws cognito-idp sign-up --client-id={USER_POOL_CLIENT_ID} --username=john.doe@mailinator.com --password=P@1ssword --user-attributes Name="email",Value="john.doe@mailinator.com" Name="name",Value="John Doe"
+aws cognito-idp confirm-sign-up --client-id={USER_POOL_CLIENT_ID} --username=john.doe@mailinator.com --confirmation-code={CODE_FROM_EMAIL}
+aws cognito-idp initiate-auth --client-id={USER_POOL_CLIENT_ID} --auth-flow=USER_PASSWORD_AUTH --auth-parameters USERNAME=john.doe@mailinator.com,PASSWORD=P@1ssword
+aws cognito-idp associate-software-token --access-token={ACCESS_TOKEN}
+aws cognito-idp verify-software-token --user-code={CODE_FROM_2FA_DEVICE} --access-token={ACCESS_TOKEN}
 ```
 You can enable unauthenticated access for guest users in identity pool (by setting `AllowUnauthenticatedIdentities: true`). You also would need attach role to `unauthenticated` under `AWS::Cognito::IdentityPoolRoleAttachment`.
 After this guest users would have permission defined by that role.
@@ -1298,6 +1320,10 @@ When you configure cogntio authorizer for API gateway - you have 2 options:
 You can configure to call lambda on different events (look here for all triggers `sa/files/images/cognito-lambda-triggers.png`):
 * pre sign-up, pre/post-auth
 * custom flow - auth challenge (For example if you want to have captcha). We should pass `--auth-flow=CUSTOM_AUTH` when we start sign-in process
+Federation through IdP - you can configure 3 types of IdP and users can sign-in there and then use cognito:
+* Social (Facebook/Google/Amazon/Apple) - you need to provide clientId/clientSecret/ListOfScopes (don't confuse it with set of claims - just user information, while list of scopes - used inside access token to authorize app)
+* SAML - you need to provice providerName/FileWithMetadata
+* OpenID Connect
 
 ###### Directory Service
 DS (Directory Service) - hierarchical structure to store/search/manipulate objects, so users can locate resources no matter where they are stored.
@@ -1559,6 +1585,9 @@ What is more interesting, is that after some time (or once you terminate instanc
 * `kms:GrantOperations` - list of kms actions that user can grant when he grant permission to iam entity (For example user can grant only `kms:Encrypt` permission)
 * `kms:GranteePrincipal` - set to whom user can grant permission (can be list of iam entities)
 * `kms:RetiringPrincipal` - set who can be retiring principle, who can retire given grant (can be list of iam entities)
+Disable key:
+* if you want to delete key, but not sure if anybody use it, you can disable it and see
+* you can disable/enable CMK, but you can't do this with aws managed key (they always enabled)
 
 ###### CloudHSM
 Dedicated HSM (Hardware Security Module) instance within aws cloud. You can securely generate/store/manage cryptographic keys. HSM provides secure key storage and cryptographic operations within a tamper-resistant hardware device.
@@ -1625,6 +1654,7 @@ There are 2 types of assessments (you can configure to run it weekly or run only
 If you need to generate report regarding missing patches (including security patches) you have to use Patch manager for both:
 * generate compliance patch report - you can either runt it now, or schedule (using cron) to send reports regarding patch state
 * install patches to machines
+If you need to monitor security related logging - use CW logs with metrics, which would send alarm when specific messages appeared in logs (near real-time).
 
 ###### Macie
 Managed data security/privacy service that uses ML & pattern matching to discover/protect your sensitive data (PII (personally identifiable information) - names, addresses, and credit card numbers) in aws.
@@ -1634,7 +1664,7 @@ To use it, you have to first enable it from aws console/cli. You can add regular
 It can also identify too permissive or unencrypted buckets. Once it found sensitive data, it creates findings (detailed report of sensitive data in an S3). Macie publish findings in EventBridge and to security hub.
 
 ###### GuardDuty
-Threat management tools that helps to protect aws accounts/workloads/data by analyzing data from cloudTrail/vpcFlowLogs/dnsLogs using ML. It's regional service, so all collected data is aggregated/analyzed within region. 
+Continuous security monitoring service, helps to protect aws accounts/workloads/data by analyzing data from cloudTrail/vpcFlowLogs/dnsLogs using ML. It's regional service, so all collected data is aggregated/analyzed within region. 
 It doesn't store any data, once data is analyzed it discarded. threat intelligence - list of malicious IP addresses maintained by aws and third-party partners. You should first enable GuardDuty, you can also assign admin account (it can assume 2 roles to administer your GuardDuty).
 Since WAF using application layer you can't use it to block other ports (you have to use NACL for this), so you can't use it to block ssh access to ec2. Yet you can use guardDuty to track malicious activity on ssh (like determine who is trying to brute force ssh)
 You can build solution where GuardDuty once find issue, would invoke CW event which would invoke lambda, which would update VPC NACL & web ACL(see `sa/files/images/guardduty-cloudwatch-lambda.png`)
@@ -1679,7 +1709,8 @@ Managed Rule - default rules that automatically updated by AWS Marketplace secur
 In case of rule fail you can configure CloudFront to show error page. Rules take a minute to propagate worldwide. It inspects both HTTP/HTTPS traffic.
 * shield - provides protection against DDoS (Distributed Denial of Service) attack. There are 2 types of this service:
     * standard - free, activated by default for all accounts. Protect all aws infra (layer 3 and 4) against most common attacks like SYN/UDP floods or reflection attacks.
-    * advanced - paid, protect against more sophisticated attacks, like layer 7 HTTP & DNS floods. It constantly monitors network traffic and provides near real-time notifications of suspected DDoS incidents.
+    * advanced - paid, protect against more sophisticated attacks, like layer 7 HTTP & DNS floods. It constantly monitors network traffic and provides near real-time notifications of suspected DDoS incidents. If you need immediate action against DDoS use shield advanced.
+Keep in mind that vpc flow logs & CW logs will not help to catch DDoS attack
 You can use shield to protect on-premise servers. For this use aws endpoint with shield in front of your on-premise server. Shield notify about attack by sending metrics to CloudWatch.
 * FM (Firewall Manager) - tool that makes it easier for you to configure your WAF rules and vpc SG across your accounts. So if you have single account no need to use FM, but if you have aws organization with many accounts
 it's better to use single tool to configure waf across all accounts, cause FM integrated with organization so have a single place to quickly respond to incidents.
@@ -1707,6 +1738,15 @@ So use this option only for testing purpose, to make sure your config rule is wo
 Configuration Recorder - record all supported resources, yet you can create custom recorder to record only specified set of resources.
 You care charged (0.003 per item when it or it relation changed), to control costs you may stop recorder `aws configservice stop-configuration-recorder --configuration-recorder-name=default`
 When you start the configuration recorder, AWS Config takes an inventory of all AWS resources in your account
+2 main use cases for config:
+* find out current configuration
+* check some previous config before incident happened
+```
+# list all services for specific resource (paginated operation)
+aws configservice list-discovered-resources --resource-type=AWS::EC2::VPC
+# view change history, you should provider resource_id from previous call
+aws configservice get-resource-config-history --resource-type=AWS::EC2::VPC --resource-id={RESOURCE_ID}
+```
 
 ###### CloudTrail
 CT - service that logs activity of your aws account (who made request, what params were passed, when and so on..). It's useful for compliance, when you need to ensure that only certain rules have ever been applied.
@@ -3875,7 +3915,7 @@ Troubleshooting:
 
 ###### Lambda
 Lambda - piece of code that can be executed without any server env (just write code in python/javascript and it will run). Lambda can be directly triggered by AWS services such as s3/DynamoDB/Kinesis Streams/SNS/CloudWatch
-Lambda are billed per request, so it's better for some small simple tasks. If you have highload with 10m hits per day, run simple ec2 is cheaper.
+Lambda are billed per request, so it's better for some small simple tasks. If you have highload with 10m hits per day, to run simple ec2 is cheaper.
 When you create lambda you have to provide `role_arn`, the role which lambda assume and use to execute (default permissions include CloudWatch log creation).
 When you create lambda you can specify:
 * Runtime (default `nodejs12.x`) - which programing runtime (java/python/go/nodejs/ruby/dotnetcore) to use. You can also build your own runtime with `provided/provided.al2` which create Amazon Linux & Amazon Linux 2 ami. Custom runtime may run shell script, language included in Amazon Linux or compiled binary
@@ -3905,7 +3945,7 @@ exports.handler = async (event, context, callback)=>{
             new Promise(r=>setTimeout(r, 2000)),
             new Promise((r, rej) => timer = setTimeout(rej, context.getRemainingTimeInMillis()-100, "timeout expired"))
         ]).finally(() => clearTimeout(timer));
-	return "success";
+	    return "success";
     } catch (ex){
         return ex;
     }
