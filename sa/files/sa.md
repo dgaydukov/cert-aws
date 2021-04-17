@@ -1718,7 +1718,8 @@ Key management using cli (you should connect to HSM as CU (crypto user) and star
 It's automated security assessment service that test the network accessibility of your ec2 and apps running on them. Plz note that it designed to ec2 only, so you can't use it to perform security assessment of API gateway, lambda and so on.
 Also you can't assess SG with Inspector, use Trusted Advisor if you wan to assess SG. You install agent on your OS, and it collects data and send it to inspector for analyzing. Assessment template - configuration based on which inspector validates your system.
 There are 2 types of assessments (you can configure to run it weekly or run only once):
-* network (agent is not required) - check if ports reachable outside VPC (if agent installed also found if apps running on this ports)
+* network (agent is not required) - check if ports reachable outside VPC through IGW/NACL/SG/ELB/VPC_peering (if agent installed also found if apps running on this ports). 
+So you get report about potentially malicious access like mismanaged SG/NACL/IGW.
 * host (agent should be install on ec2) - check for vulnerable software installed
 If you need to generate report regarding missing patches (including security patches) you have to use Patch manager for both:
 * generate compliance patch report - you can either runt it now, or schedule (using cron) to send reports regarding patch state
@@ -1736,7 +1737,7 @@ It can also identify too permissive or unencrypted buckets. Once it found sensit
 Continuous security monitoring service, helps to protect aws accounts/workloads/data by analyzing data from cloudTrail/vpcFlowLogs/dnsLogs using ML. It's regional service, so all collected data is aggregated/analyzed within region. 
 It doesn't store any data, once data is analyzed it discarded. threat intelligence - list of malicious IP addresses maintained by aws and third-party partners. You should first enable GuardDuty, you can also assign admin account (it can assume 2 roles to administer your GuardDuty).
 Since WAF using application layer you can't use it to block other ports (you have to use NACL for this), so you can't use it to block ssh access to ec2. Yet you can use guardDuty to track malicious activity on ssh (like determine who is trying to brute force ssh)
-You can build solution where GuardDuty once find issue, would invoke CW event which would invoke lambda, which would update VPC NACL & web ACL(see `sa/files/images/guardduty-cloudwatch-lambda.png`)
+You can build solution where GuardDuty once found issue, would invoke CW event which would invoke lambda, which would update VPC NACL & web ACL(see `sa/files/images/guardduty-cloudwatch-lambda.png`)
 You can configure cw event rule to capture all or specific guardDuty finding types (using `detail: type` - you can specify which types to filter):
 ```
 GuardDuryFindingEvent:
@@ -1750,10 +1751,9 @@ GuardDuryFindingEvent:
           - GuardDuty Finding
         detail:
             type:
-                - "UnauthorizedAccess:EC2/SSHBruteForce"
-                - "UnauthorizedAccess:EC2/TorIPCaller"
-                - "Trojan:EC2/BlackholeTraffic"
-                - "Trojan:EC2/DropPoint"
+                - UnauthorizedAccess:EC2/SSHBruteForce
+                - Trojan:EC2/BlackholeTraffic
+                - Recon:EC2/Portscan
 ```
 GuardDuty generate findings with potential security issues:
 * ec2 - Don't terminate ec2 immediately cause it would remove the state. Investigate potentially compromised instance for malware & remove any detected malware. 
@@ -1761,9 +1761,21 @@ You can use products from aws MarketPlace to identify & remove malware. If you c
 * s3 - finding would include: bucketArn/API_call/source (arn of user/role who made the call).
 First determine if call was authorized (if it iam user, is credential are compromised, if it's api - if ec2 compromised). IF user name `ANONYMOUS_PRINCIPAL` with user type of `AWSAccount` - bucket is public, should it be public?
 * aws credentials - (key starts from: AKIA - long term credentials, ASIA - short term credentials) - check if iam credentials were used legitimately
+So using GuardDuty you can discover:
+* deviation: ec2 communicate using port is has never used before or ec2 communicate extremely large volumes of data it has never transferred before
+* port scan: if your ec2 is being probed from outside (if it 22 or 3389 you can still limit access to this ec2 by NACL/SG), or your ec2 itself do a port scan to other IP (this may be false alarm if your ec2 using software to check other ec2 for open ports), or your ec2 probing a port on large number of public IP
+* bruteforce: if your ssh (RDP in case of windows) port was bruteforced with random password
+* tor: if your ec2 is communicate with tor network (ec2 may be compromised and used by attacker), or s3 api was called from tor exit node
+* pentest: s3 or iam pentested from kali/parrot/pentoo linux using your aws credentials (most probably your credentials were compromised, cause kali linux used for hacking)
+* s3 public access: either block public access at account level was disabled or access to anonym user was given for certain bucket
+* root credentials are used inside aws account (your account may be compromised, cause best practice suggest never use root credentials)
+* password policy was weaken for account (changed to use less chars or not to use special chars)
+* leaked ec2 credentials: aws call was made using ec2 temporary credentials (from ec2 instance profile) outside of this ec2 (probably ec2 is compromised and credentials are stolen)
 Don't confuse:
-* guardDury - perform assessment of network communication and can detect malicious activity (like your ec2 constanly communicate with crypto-related IP addresses)
-* inspector agent - perform network & host assessment for common vulnerabilities of open ports & apps
+* GuardDuty - perform assessment of network communication and can detect malicious activity (like your ec2 constantly communicate with crypto-related IP addresses) using ML
+* macie - search sensitive data in s3 buckets using ML
+* inspector agent - perform network (open access from NACL/SG ec2 ports) & host assessment for common vulnerabilities of open ports & apps. Inspector is do network scan once (or once a week), but guardDuty is monitoring system continuously.
+* Security Hub - aggregate all findings from other security services
 With guardDuty don't forget to subscribe for SNS, so you will get notifications once findings are ready.
 
 ###### Security Hub
@@ -1773,10 +1785,6 @@ When you enable security hub - role with permission to use aws config is created
 Finding - potential security issue. SH aggregates findings from aws & third-party services and provide overview. Finding ingestion event - when finding ingested into SH.
 Insight - collection of related findings. You can use filters to group similar findigns into insights for ease of management. SH analyze findings from GuardDuty/Inspector/FM/Macie/Access Analyzier + it also analyze config rules.
 If you need already existed compliance standard like PCI-DSS, then managed SH is the way to go. Yet if you need custom compliance/security standard - use config conformance pack.
-Don't confuse:
-* macie - search sensitive data in s3 bucket using ML
-* guardDuty - search for security threats in cloudTrail, vpc flow logs, dns logs using ML
-* SH - aggregate all findings from other security services
 
 ###### WAF & Shield
 3 security services joined under single tab in aws:
@@ -1833,20 +1841,19 @@ CT - service that logs activity of your aws account (who made request, what para
 There are 3 types of logs:
 * management events - api calls to modify aws resources (create ec2/s3 and so on...)
 * data events - api calls to modify actual data (s3 get/put/delete object + lambda calls)
-* insights events - CT use ML (Machine Learning) to determine any anomaly (like spike in some api calls) and notify you.
+* insights events - CT use ML (Machine Learning) to determine any anomaly (like spike in some api calls) and notify you
 By default:
-* log files delivered within 15 minutes of account activity. 
-* log files are encrypted using S3-SSE, yet you can choose to encrypt it with KMS (but digest files would always be encrypted with S3-SSE)
+* log files delivered within 15 minutes of account activity
+* log files delivered to s3 are encrypted using S3-SSE by default, yet you can choose to encrypt it with KMS (but digest files would always be encrypted with S3-SSE)
 * logs stored for 90 days and only management events stored. If you need longer you should create trail. Trail stores data in s3, you have to analyze it yourself (usually using Athena)
-* trail viewable in region where it's created. for all-region trail - it's viewable in all regions.
+* trail viewable in region where it's created. for all-region trail - it's viewable in all regions
 * trail collects data from all regions. You can create single region trail [only from cli](https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-create-and-update-a-trail-by-using-the-aws-cli-create-trail.html#cloudtrail-create-and-update-a-trail-by-using-the-aws-cli-examples-single), no way to create single-region trail from console. 
 * trail created with GSE enabled (it's true for both when you create from console and from cli. Although when you create trail from cli you can specify `--no-include-global-service-events` not to include GSE into this trail). 
 When aws launch new region, in case of all region trail - new trail would be created in newly launched region.
-* trail in s3  encrypted using SSE. You can set custom encryption with KMS.
 SNS delivery - you can configure to get notification each time new log file delivered to s3 bucket (not single event, but whole file with many events).
 Cross-account trails (you can configure to deliver CT events from multiple accounts to single s3 bucket):
-* create s3 bucket in account A, accountAMyS3Bucket and add bucket policy to allow cross-account access
-* in account B (or any other) create CT and set bucket name as accountAMyS3Bucket. From now all logs would be delivered to bucket in another account
+* create s3 bucket in account A, `my-cloudtrail-logs` and add bucket policy to allow cross-account access
+* in account B (or any other) create CT and set bucket name as `my-cloudtrail-logs` (CT automatically find account by bucket name). From now all logs would be delivered to bucket in another account
 Log file validation - guaranty that logs were not tampered with. When turn in, CT create a hash for each log file, and every hour store all these hashes in digest file in the same s3 bucket. 
 Once you enable CT would deliver 2 types of files: log file & digest file (put into separate folder).
 Each digest file is signed with private key that generated by CT. You can download public keys with `list-public-keys` command, and validate signed files. But you have no access to private keys - they are managed by CT.
