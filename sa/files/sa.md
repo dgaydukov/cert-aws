@@ -984,6 +984,8 @@ because for short-term without 2FA value=false -> false=false => true, for long-
 Please notice that although 2FA required to login to console, if you are using cli/sdk and you just add access policy without 2FA condition, you can access these resources without 2FA.
 To avoid this, it's better not to assign access policy to user/group, but instead assign them to role, and add `{"Bool": {"aws:MultiFactorAuthPresent": "true"}}` condition to role.
 In this case you have single point of entry - role with 2FA.
+Some condition key with MFA can be [anti-pattern](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_condition-keys.html#condition-keys-multifactorauthage):
+* 
 Multiple conditions - if you define multiple conditions, they are evaluated with `AND`. If you have several values for single condition, they are evaluated with `OR`.
 `key1: [A, B], key2: C` - this condition evaluates to true only if key1 either A or B, and key2 is C. This works fine if your key is single value. But what if your key is array and you want to add condition:
 * ForAllValues - if every value match condition, `ForAllValues:StringEquals: {key: [A, B, C]}` - evaluates to true if every value of key match a list of `[A, B, C]`. So if key is `[A, B]` then condition is true.
@@ -1099,7 +1101,22 @@ Condition operator - use it to set condition to policy:
 Condition key - a key that can be used in condition block:
 * global keys - those started with `aws:` prefix. [List of global condition keys](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_condition-keys.html)
 * service-specific key - started with prefix based on service like `iam:` or `sts:`. [Full list of service-specific condition keys](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_actions-resources-contextkeys.html#context_keys_table)
-`s3:LocationConstraint` - filter s3 bucket by region - you can create policy to deny create bucket outside specified region (keep in mind there is no such key `x-amzn-region`)
+List of most common condition keys:
+* `s3:LocationConstraint` - filter s3 bucket by region - you can create policy to deny create bucket outside specified region (keep in mind there is no such key `x-amzn-region`)
+* `aws:PrincipalOrgID` - filter by orgId. So you can create resource-based policy and filter by org. It's better approach than to specify all accounts inside org. Below is bucket policy to allow access only for users of specific org:
+```
+ {
+  "Version": "2012-10-17",
+  "Statement": {
+    "Effect": "Allow",
+    "Principal": "*",
+    "Action": "s3:PutObject",
+    "Resource": "arn:aws:s3:::mybucket/*",
+    "Condition": {"StringEquals": {"aws:PrincipalOrgID":["o-xxxxxxxxxxx"]}}
+  }
+}
+```
+* `aws:PrincipalAccount` - accountId of principal making request
 ABAC (attribute-based access control) - policy conditions basically allows you to create access control based on attributes.
 Policy version - required if you are using variables (like `${aws:username}`. If you leave version, variables are treated like literal values.
 Custom identity broker - you can generate URL that lets users who sign in to your corporate portal, access the AWS Management Console. 
@@ -1273,7 +1290,6 @@ confused deputy problem:
   }
 }
 ```
-
 
 ###### Cognito
 Cognito - managed user service that add user sign-in/sign-up/management email/phone verification/2FA logic. There are 2 pools:
@@ -1846,6 +1862,7 @@ By default:
 * log files delivered within 15 minutes of account activity
 * log files delivered to s3 are encrypted using S3-SSE by default, yet you can choose to encrypt it with KMS (but digest files would always be encrypted with S3-SSE)
 * logs stored for 90 days and only management events stored. If you need longer you should create trail. Trail stores data in s3, you have to analyze it yourself (usually using Athena)
+* You can deliver CT logs to CloudWatch, in this case CT would deliver logs to s3 & CloudWatch logs
 * trail viewable in region where it's created. for all-region trail - it's viewable in all regions
 * trail collects data from all regions. You can create single region trail [only from cli](https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-create-and-update-a-trail-by-using-the-aws-cli-create-trail.html#cloudtrail-create-and-update-a-trail-by-using-the-aws-cli-examples-single), no way to create single-region trail from console. 
 * trail created with GSE enabled (it's true for both when you create from console and from cli. Although when you create trail from cli you can specify `--no-include-global-service-events` not to include GSE into this trail). 
@@ -1862,7 +1879,23 @@ Each digest file contains:
 * hash of log file (not hash of file name, but of whole file)
 * digital signature of previous digest file (so you can ensure continuity). Current digital signature stored in metadata props.
 Private key is unique for each region within aws account. When you retrieve public keys you specify time range - 1 or more public keys may be returned. Mare sure your s3 bucket has correct write policy, otherwise CT won't be able to store logs there.
-Organization trail - created by master account to log all events in all aws accounts for this organization (can be one/all region). You can deliver CT logs to CloudWatch, in this case CT would deliver logs to s3 & CloudWatch logs.
+Turning on/off trail:
+* you can turn on/off logging for trail using `start-logging/stop-logging`
+* when you create trail from console, logging automatically turned on, when you create from cli, you have to turn on explicitly
+* you can turn off logging from console (go to trail and chose `stop logging`)
+* for multi-region trail `start-logging` should be called from main region, if you call it from shadow trail region - it won't work
+Organization trail:
+* just like normal trail can be single or multi-region
+* org should have all features enabled, master account should have `AWSServiceRoleForOrganizations` role
+* when create trail from console check `Enable for all accounts in my organization` (this checkbox is disabled if your account is not master account), from cli add `--is-organization-trail` param to `aws cloudtrail create-trail`
+* created by master account to log all events in all aws accounts for this organization (can be one/all region)
+* you can modify existing trail in master account & apply it to organization
+* once you create it, trail with same name & role would be created in all accounts inside org
+* member accounts can see the trail, but can't delete/turn off/modify such a trail
+* if new member account join org, trail & role would be added to it, and in case of removal - trail & role would be removed from account (yet logs files will stay in s3 bucket of master account)
+Shadow trail - trail created as part of main trail:
+* multi-region trail - main trail created in region from where you create the trail, and in each other region - shadow trail created
+* org trail - main trail created in master account and in each account shadow trail created
 GSE (Global Service Events) - services like IAM/STS/CloudFront add logs to all trails that support GSE. It's turn on by default. You can turn it off only from cli/sdk.
 * create trail `aws cloudtrail create-trail --name=multiRegionTrail --s3-bucket-name=my-test-s3-bucket-1 --is-multi-region-trail`
 S3 bucket should have both `s3:GetBucketAcl/s3:PutObject` enabled in bucket policy, otherwise you got `Incorrect S3 bucket policy is detected for bucket`.
@@ -4436,6 +4469,11 @@ Connect to ec2 if you lost private key - you can regain access to ec2 in case yo
 * generate new key pair (if you want it to be named same way, remove old key pair first)
 * stop ec2, detach root volume, attach it as non-root to another ec2, manually modify `authorized_keys` file with new public key
 * attach volume back to ec2 and ssh to it with new private key
+Share & use of public AMI:
+* if you share your AMI - make sure you don't leave any credentials anywhere and & remove public keys from `authorized_keys` file
+* if you use public AMI - identify all `authorized_keys` files & remove any unrecognized files. 
+You need to login as root (by either run `sudo su` or run command with `sudo`) and run `find / -name "authorized_keys" -print -exec cat {} \;` to find all files with pub keys.
+Keep in mind that public SSH keys are not guaranteed to be in the `/root/.ssh/authorized_keys` file. For example when you launch new ec2 it has 2 places: `/home/ec2-user/.ssh/authorized_keys` & `/root/.ssh/authorized_keys`
 
 ###### Organizations
 Org - service that allows to link several accounts to master account and centrally manage them (billing, services, policies), so it basically collection of AWS accounts that you can organize into a hierarchy and manage centrally.
@@ -5028,7 +5066,9 @@ You can install agent on both ec2 & on-premise for Linux/Windows. Agent for ec2 
 By default alarm call only ec2 actions (stop/start/terminate/recover). There are 2 ways you can add your logic (see details `sa/cloudformation/cw-alarm-lambda.yml`):
 * create alarm and call lambda through sns (cause you can't call lambda directly from alarm) - execute logic in lambda
 In this case in your lambda you should have only business logic (like add new ec2). Validation logic would be inside alarm (for example when cpu more than 80%), but you are limited for alarms (there is no alarm to validate that port return 200)
-* create scheduled rule and call lambda every minute - in this case you should have business & validation logic inside lambda. Yet you are not limited and can create any type of validation (for example check that port returns 200)
+* create CW Event rule (scheduled) and call lambda every minute - in this case you should have business & validation logic inside lambda. Yet you are not limited and can create any type of validation (for example check that port returns 200)
+So you can create alarm to recover ec2 in case it became broken or underlying hardware failure. Recovered ec2 would have same instanceID/privateIP/ElasticIP/instanceMetadata, yet in-memory data may be lost.
+Not all instance type support recover. Instance should be in vpc & use ebs volume.
 You can create cross-account & cross-region cw dashboard and view your resources (like ec2 metrics) across several regions or accounts:
 * go to `cloudwatch => settings => configure`. From here you can:
     * share data - create role `CloudWatch-CrossAccountSharingRole` with access to this account cw panel (if you use console it would create cf template which you must run)
