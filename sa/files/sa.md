@@ -967,29 +967,48 @@ Yet there are some limitation, [take a look](https://stackoverflow.com/a/1895658
 }
 ```
 You can restrict any resource by 2FA using:
-* MultiFactorAuthPresent (existence) - if user used 2FA. The key is only present when the user authenticates with short-term credentials, for long-term value=null.
-* MultiFactorAuthAge (duration) - numeric value how long ago short-term credentials with 2FA were created. If credentials were created without 2FA, value=null.
-Limit access by number of seconds, when otp code was set. `"Condition":{"NumericLessThan":{"aws:MultiFactorAuthAge":"30"}}` - set restriction that would allow access only if you enter 2FA 30 or less seconds from the time of the api call
-Examples:
-* Allow/`"Condition":{"Bool":{"aws:MultiFactorAuthPresent":"true"}}` - true if user used 2FA
-* Deny /`"Condition":{"BoolIfExists":{"aws:MultiFactorAuthPresent":"false"}}` - true if user not used 2FA
-because for short-term without 2FA value=false -> false=false => true, for long-term without 2FA value=null -> immediately return true
-* Allow/`"Condition":{"Null":{"aws:MultiFactorAuthAge":"false"}}` - null check if condition key is present. true - key doesn't exist. false - key present and not null. This condition allows actions only if condition key is present.
-* Deny /`"Condition":{"Null":{"aws:MultiFactorAuthAge":true}}` - true if 2FA not present. Null evaluates to true if key value is null. This condition deny actions if condition key is not present.
-Anti-pattern:
-* Allow/`"Condition":{"Null":{"aws:MultiFactorAuthPresent":"false"}}` true if request made with temp-credentials (even without 2FA), false for all long-term credentials
-* Deny /`"Condition":{"Bool":{"aws:MultiFactorAuthPresent":"false"}}` true if use not used 2FA with short-term credentials, false with long-term (users would be able to access resources without 2FA with just simple long-term credentials)
-because for short-term without 2FA value=false -> false=false => true, for long-term without 2FA - null!=false => false
-[See here](https://github.com/dgaydukov/cert-spring5/blob/master/files/spring5.md#aws-access-with-2fa) java details.
+* `aws:MultiFactorAuthPresent` (existence) - [java example](https://github.com/dgaydukov/cert-spring5/blob/master/files/spring5.md#aws-access-with-2fa):
+    * long-term credentials - value is null (not present)
+    * short-term credentials:
+        * iam role, federated user, aws console user - value is false
+        * 2FA - value is true
+Good usage of key:
+```
+# if short-term credentials - deny (cause value would be false), if long-term (key is not present) - condition evaluated to true
+"Effect":"Deny",
+"Condition":{"BoolIfExists":{"aws:MultiFactorAuthPresent":"false"}}
+
+# if short-term credentials with 2FA - allow, for short-term without 2FA & long-term - this condition doesn't apply
+"Effect" : "Allow",
+"Condition":{"Bool":{"aws:MultiFactorAuthPresent":"true"}}
+```
+Bad usage of key:
+```
+# if short-term credential without 2FA - deny, but if long-term credentials - allow, cause Bool condition doesn't match if key is not present
+"Effect":"Deny",
+"Condition":{"Bool":{"aws:MultiFactorAuthPresent":"false"}}
+
+# allow if key is present, but key would be present for all short-term credentials, regadless of 2FA (it value would be false, but it would be present)
+"Effect" : "Allow",
+"Condition":{"Null":{"aws:MultiFactorAuthPresent":"false"}}
+```
+* `aws:MultiFactorAuthAge` (duration) - numeric value how long ago short-term credentials with 2FA were created. If credentials were created without 2FA, value=null.
+Compare to `aws:MultiFactorAuthPresent`, this key is either present if 2FA was used, or not present at all, that's why there is no anti-pattern to use with this condition key.
+```
+# allow only if condition key is present (it would be present with numeric value only if user used 2FA)
+"Effect" : "Allow",
+"Condition":{"Null":{"aws:MultiFactorAuthAge":"false"}}
+
+# deny if condition key not present (without 2FA it won't be present in request)
+"Effect" : "Deny",
+"Condition":{"Null":{"aws:MultiFactorAuthAge":true}}
+```
 Please notice that although 2FA required to login to console, if you are using cli/sdk and you just add access policy without 2FA condition, you can access these resources without 2FA.
-To avoid this, it's better not to assign access policy to user/group, but instead assign them to role, and add `{"Bool": {"aws:MultiFactorAuthPresent": "true"}}` condition to role.
-In this case you have single point of entry - role with 2FA.
-Some condition key with MFA can be [anti-pattern](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_condition-keys.html#condition-keys-multifactorauthage):
-* 
+To avoid this, it's better not to assign access policy to user/group, but instead assign them to role, and add 2FA condition to role. In this case you have single point of entry - role with 2FA.
 Multiple conditions - if you define multiple conditions, they are evaluated with `AND`. If you have several values for single condition, they are evaluated with `OR`.
 `key1: [A, B], key2: C` - this condition evaluates to true only if key1 either A or B, and key2 is C. This works fine if your key is single value. But what if your key is array and you want to add condition:
 * ForAllValues - if every value match condition, `ForAllValues:StringEquals: {key: [A, B, C]}` - evaluates to true if every value of key match a list of `[A, B, C]`. So if key is `[A, B]` then condition is true.
-* ForAnyValue - if at least one value match condition, `ForAnyValue:StringEquals: {key: [A, B, C]}` - true if any value from key match a list. So if key is `[A, X]` - since A is match, condtition is true.
+* ForAnyValue - if at least one value match condition, `ForAnyValue:StringEquals: {key: [A, B, C]}` - true if any value from key match a list. So if key is `[A, X]` - since A is match, condition is true.
 Don't confuse:
 * long-term credentials - your aws accessId/accessKey that you generate for iam user. They always stay the same
 * short-term credentials - aws accessId/accessKey/sessionToken - that generated by api `get-session-token/sts-assume-role` and valid for certain duration like 1 hour
@@ -1093,7 +1112,8 @@ so all newly created users would have your predefined boundary, [example](https:
 * ACL (Access control lists) - control which principals in other accounts can access the resource to which the ACL is attached (so they only cross-account, cannot grant permissions to entities within the same account)
 * Session policies - limit the permissions that the role or user's identity-based policies grant to the session
 Condition operator - use it to set condition to policy:
-* `...IfExists` - add it to the end of any condition operator name except `Null`. If key is present - process request as specified, if not - return true
+* `...IfExists` - add it to the end of any condition operator name except `Null`. If key is present - process request as specified, if not - return true. 
+Since if key not present returned value would be true this condition most useful for `Deny` statements.
 * `Null` - if condition value is present. Only 2 values are possible: 
     * true - key doesn't exists (so key is null)
     * false - key exists (so key is not null)
@@ -1116,6 +1136,7 @@ List of most common condition keys:
   }
 }
 ```
+* `aws:PrincipalOrgPaths` - compare OU path of principal who makes request. `"Condition":{"StringEquals":{"aws:PrincipalOrgPaths":["{ORG_ID}/{OU_ID}/"]}}`
 * `aws:PrincipalAccount` - accountId of principal making request
 ABAC (attribute-based access control) - policy conditions basically allows you to create access control based on attributes.
 Policy version - required if you are using variables (like `${aws:username}`. If you leave version, variables are treated like literal values.
@@ -1290,6 +1311,13 @@ confused deputy problem:
   }
 }
 ```
+VPC endpoint policy:
+* you can assign resource policy to vpc endpoint where you can allow/deny access (by default policy that allow all access is given)
+* then you assign policy to resource (s3/dynamoDb) that allow access from vpc endpoint:
+    * for those who support resource policy (like s3) - you add resource policy to allow access from vpc endpoint
+    * for those who doesn't support resource policy (dynamoDB) - you add user/role iam policy with condition to limit access to vpc endpoint
+So if you want to deny access if it not accessed from vpc endpoint add `"Condition":{"StringNotEquals":{"aws:sourceVpce":"vpce-11aa22bb"}}` to resource policy (in case of s3) or to user/role policy in case of dynamoDB
+Since vpc endpoint is interface inside vpc you can assign SG to it and control which port available using this SG.
 
 ###### Cognito
 Cognito - managed user service that add user sign-in/sign-up/management email/phone verification/2FA logic. There are 2 pools:
@@ -1462,9 +1490,11 @@ So since all aws services use symmetric key, and if you manually rotate key, you
 # just encrypt text (you can also pass alias to keyId, --key-id=alias/mykmskey, all aws services uses alias, so you can manually rotate keys)
 aws kms encrypt --key-id=8f150816-0926-426f-baf1-3e5081085f99 --plaintext="hello world"
 # encrypt text and put it into binary file
-aws kms encrypt --key-id=8f150816-0926-426f-baf1-3e5081085f99 --plaintext="hello world" --output=text --query=CiphertextBlob | base64 --decode > encrypted.bin
+aws kms encrypt --key-id=alias/mykmskey --plaintext="hello world" --output=text --query=CiphertextBlob | base64 --decode > encrypted.bin
 # for decrypting we must pass binary file, and then decode, cause decryption will return base64 (we don't need to pass key-id for symmetric keys)
 aws kms decrypt --ciphertext-blob=fileb://encrypted.bin --output=text --query=Plaintext | base64 --decode
+# you can re-encrypt cipther rext with new CMK, used mostly for manual rotation
+aws kms re-encrypt --ciphertext-blob=fileb://myfile --destination-key-id=alias/mykmskey
 ```
 If you need to rotate key every month for s3, create lambda, trigger it with CloudWatch, that would create new kms key each month & update s3 to use new kms.
 Don't delete old keys, cause previously encrypted files would be using old keys to decrypt files (information about key is stored inside encrypted file).
@@ -1664,6 +1694,8 @@ aws kms generate-data-key --key-spec=AES_256 --key-id=alias/mykmskey
 # generate only encrypted data key
 aws kms generate-data-key-without-plaintext --key-spec=AES_256 --key-id=alias/mykmskey
 ```
+You can encrypt data key using `encrypt` operation, but both command to generate data key already return encrypted version of key. Yet you can use `decrypt` to decrypt this version
+Also if you want to use new CMK and need to re-encrypt data key under new CMK use `re-encrypt`
 Since `generate-data-key-without-plaintext` doesn't return plaintext key, it considered safer. One application is HPC where single component create others
 and put data key into each new component, so main component doesn't need to see plaintext key (yet other components can use kms decrypt to decrypt data key).
 Digital signature:
@@ -1851,6 +1883,9 @@ aws configservice list-discovered-resources --resource-type=AWS::EC2::VPC
 # view change history, you should provider resource_id from previous call
 aws configservice get-resource-config-history --resource-type=AWS::EC2::VPC --resource-id={RESOURCE_ID}
 ```
+There are 2 ways you can enforce some rule (for example make sure SG won't open port 22):
+* use config to record changes - once change detected - use SNS+lambda to modify SG
+* use CloudWatch Event rule + CloudTrail to monitor changes - once found invoke lambda to modify SG
 
 ###### CloudTrail
 CT - service that logs activity of your aws account (who made request, what params were passed, when and so on..). It's useful for compliance, when you need to ensure that only certain rules have ever been applied.
@@ -3714,6 +3749,15 @@ Requester Pays:
 * you can configure bucket to be Requester Pays bucket - in this case requester pay for get/put operations, but bucket owner still pay for storage
 * all requests should be authenticated (otherwise aws can't know requester)
 * if requester assume role, account to which role belong is charged
+Don't confuse:
+* SSE-C - server-side encryption using customer key (encryption happened in server side, but key must be supplied by client for each request)
+* client encryption - encryption happened on client side, and already encrypted data transferred to/from s3. There are 2 options:
+    * Encryption SDK or AWS SDK S3 encryption with CMK - in this case for each request new data key would be generated:
+        * putObject - new data key is generated, object encrypted & stored, data key cipherText stored as metadata
+        * getObject - object & metadata received, cipherText send to kms to get plaintext data key, this plaintext key used to decrypt object
+    * Encryption SDK or AWS SDK S3 encryption with client master key - in this case master key stored in client:
+        * putObject - one-time-use symmetric key generated using master key and object encrypted with this one-time-use key, encrypted version of key stored as metadata
+        * getObject - encrypted key is decrypted using master key, object decrypted using plaintext one-time-use key
 
 ###### Glacier
 Glacier - low-cost tape-drive storage value with $0.007 per gigabyte per month. Used to store backups that you don't need frequently. Access to data can take from few minutes to a few hours. You store data as archives.
