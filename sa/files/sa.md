@@ -1138,6 +1138,24 @@ List of most common condition keys:
 ```
 * `aws:PrincipalOrgPaths` - compare OU path of principal who makes request. `"Condition":{"StringEquals":{"aws:PrincipalOrgPaths":["{ORG_ID}/{OU_ID}/"]}}`
 * `aws:PrincipalAccount` - accountId of principal making request
+* `aws:Referer` (access restriction) - you can restrict access to objects in your bucket to specific website, using `referrer` key in condition. In this case only `mysite.com` can access your bucket.
+Key is included only if request made from browser, for direct access value would be null. Be careful cause this header can be easily forged by mailicious user using any custom browser.
+```
+{
+  "Version":"2012-10-17",
+  "Statement":[
+    {
+      "Effect":"Allow",
+      "Principal":"*",
+      "Action":["s3:GetObject"],
+      "Resource":"arn:aws:s3:::mybucket/*",
+      "Condition":{
+        "StringLike":{"aws:Referer":["http://mysite.com/*""]}
+      }
+    }
+  ]
+}
+```
 ABAC (attribute-based access control) - policy conditions basically allows you to create access control based on attributes.
 Policy version - required if you are using variables (like `${aws:username}`. If you leave version, variables are treated like literal values.
 Custom identity broker - you can generate URL that lets users who sign in to your corporate portal, access the AWS Management Console. 
@@ -1227,6 +1245,15 @@ For rds you can use:
 Don't confuse:
 * Version policy - `Version` attribute for a policy
 * policy versioning - when you modify policy (or aws modify it managed policy), aws doesn't overwrite policy, but instead update it version. So you can always rollback to previous policy
+Don't confuse:
+* aws managed policy - policy managed & maintaned by aws
+* customer managed policy - separate policy managed by user (can be assigned to multiple entities)
+* inline policy - policy directly attached to single iam entity (if you remove entity, inline policy would be removed)
+Customer managed policy always preferable to inline policy:
+* can be reused
+* can be central manged 
+* versioning & rollback
+* permission delegation flexibility - you can create limited admin user who can only assign specified policies to other entites (yet he can't modify policy itself)
 Credential report (`aws iam get-credential-report`) - you can generate & download report with all account users with status/password/access_key/MFA. You can generate new report every 4 hours (if you request report, aws check if it was generated within last 4 hours, if yes return old, if no creates new).
 It includes all users with following fields:
 * arn/user_creation_time
@@ -1773,6 +1800,13 @@ If you need to generate report regarding missing patches (including security pat
 * generate compliance patch report - you can either runt it now, or schedule (using cron) to send reports regarding patch state
 * install patches to machines
 If you need to monitor security related logging - use CW logs with metrics, which would send alarm when specific messages appeared in logs (near real-time).
+Rule package - list of security checks that inspector would run against your ec2 (we can't run separate packages, if we choose host assessment all 3 packages would be run):
+* Network assessments (Inspector agent is not required):
+    * Network Reachability - analyze network reachability (SG/NACL) from outside vpc
+* Host assessments (agent is required):
+    * CVEs (Common vulnerabilities and exposures) - checks for publicly knows vulnerabilities and exposures of your ec2 (for example you have some unpatched package that have such vulnerability)
+    * Center for Internet Security (CIS) Benchmarks - well-defined, unbiased, consensus-based industry best practices to help organizations assess and improve their security
+    * Security best practices for Amazon Inspector - determine whether your systems are configured securely
 
 ###### Macie
 Managed data security/privacy service that uses ML & pattern matching to discover/protect your sensitive data (PII (personally identifiable information) - names, addresses, and credit card numbers) in aws.
@@ -1839,8 +1873,9 @@ If you need already existed compliance standard like PCI-DSS, then managed SH is
 * waf (web application firewall) - you add rules that allow/deny/count web requests based on conditions that you define. Conditions are: HTTP header/body, URL string, SQL injection, XSS (for example you can block specific user-agents).
 Underlying service send request to waf, waf validate it based on rules you defined and instruct your service to block/allow request to proceed. It's integrated with CloudFront/ALB/ApiGateway/AppSync.
 You create Web ACL (Access Control List), specify resource, and add rules. Plz note only ALB can be specified, there is no way to add WAF above NLB, cause NLB works on level 4.
-Rate-Base Rule - allows you to set a number of allowed request per IP address during predefined time (100 requests per 5 min - once this IP send 101 request, it would be blocked, until 5 min period ends, and new starts).
-Managed Rule - default rules that automatically updated by AWS Marketplace security Sellers, protects against common known issues. 
+There are 2 types of rules:
+* Managed Rule - default rules that automatically updated by AWS Marketplace security Sellers, protects against common known issues. 
+* Custom rule - you can configure your rule using json config (or waf console ui) or you can just block/count access for specified IP set (should create independently from waf console)
 In case of rule fail you can configure CloudFront to show error page. Rules take a minute to propagate worldwide. It inspects both HTTP/HTTPS traffic.
 * shield - provides protection against DDoS (Distributed Denial of Service) attack. There are 2 types of this service:
     * standard - free, activated by default for all accounts. Protect all aws infra (layer 3 and 4) against most common attacks like SYN/UDP floods or reflection attacks.
@@ -1891,7 +1926,11 @@ There are 2 ways you can enforce some rule (for example make sure SG won't open 
 CT - service that logs activity of your aws account (who made request, what params were passed, when and so on..). It's useful for compliance, when you need to ensure that only certain rules have ever been applied.
 There are 3 types of logs:
 * management events - api calls to modify aws resources (create ec2/s3 and so on...)
-* data events - api calls to modify actual data (s3 get/put/delete object + lambda calls)
+* data events - api calls to modify actual data (not included by default). There are 3 types of events:
+    * S3 - `GetObject/DeleteObject/PutObject`
+    * lambda - `Invoke`
+    * dynamoDB - `GetItem/PutItem/DeleteItem/UpdateItem`
+Just like management events you can either select Read/Write events. You can either choose all s3 (including all future) buckets or select buckets manually
 * insights events - CT use ML (Machine Learning) to determine any anomaly (like spike in some api calls) and notify you
 By default:
 * log files delivered within 15 minutes of account activity
@@ -2004,6 +2043,19 @@ If you system has been compromised:
 * turn off ec2 instance
 * enable CT logs for all regions
 * enable file integrity validation
+Don't confuse:
+* s3 server access log - record of access attempts against all objects on s3 bucket. Includes:
+    * HTTP/REST operation (e.g. GET, PUT, POST, OPTIONS, etc.)
+    * Requester information (including user agent, AWS account, IP)
+    * Resource (bucket or bucket object)
+    * Session information (such as data size, response times, authentication type)
+    * [fields](https://docs.aws.amazon.com/AmazonS3/latest/userguide/LogFormat.html)
+    * doesn't guaranty delivery & you can't rely on it to determine security threats
+* CT Object-Level Logging for s3 - api activity of data events for s3 (you can choose what bucket/prefixes/objects would be audited using advanced selectors). More advanced, includes:
+    * event in json format (compare to string of server access log)
+    * you can see all details like PUT ACL including ACL itself
+    * [fields](https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-event-reference-record-contents.html)
+    * for security/production it's better to use object-level logging, cause it's more reliable and more easily to parse & guarantee delivery
 
 ###### Artifact
 Artifact - portal that provides customers with ability to download AWS security and compliance documents, such as AWS ISO certifications, Payment Card Industry (PCI), and System and Organization Control (SOC) reports.
@@ -3464,6 +3516,8 @@ Bucket key for kms:
 * sse-c - encrypt/decrypt with customer key - you have to provide key for every request get/put and s3 manage encryption (when you put object s3 encrypt it using provided key, when you get object - s3 decrypt object with your key from request). You have to use https + cli/sdk.
 You provide key in [headers for each request](https://docs.aws.amazon.com/AmazonS3/latest/dev/ServerSideEncryptionCustomerKeysSSEUsingRESTAPI.html), when you use cli/sdk you pass `--sse-customer-key` and it automatically transform it into required header.
 So when you have a requirement that customer want to manage key with sse, you have to use this this option. In this case s3 manages encryption/decryption but you manage keys.
+S3 doesn't store client key, it removed from memory after encryption done, only randomly-salted HMAC version is stored to check if you supply correct key to decrypt. So if you lose the key - your object is lost.
+If you enable versioning - you can encrypt each version with new client key.
 Upload with encryption:
 * you don't encrypt s3 bucket, you encrypt objects before they stored on disks in aws data center
 * you can send `--server-side-encryption=AES256` for each put method in order to encrypt individual objects (in this case some objects inside bucket would be encrypted, while others not)
@@ -3593,23 +3647,6 @@ You can download whole file from s3, open and parse yourself using java sdk. But
 * s3 - `s3api select-object-content --expression="select * from table t where t.country=usa"`, run sql on JSON/CSV/Parquet file (you should pass both `input/output-serialization` and specify one of 3 formats)
 * glacier - `s3api restore-object --restore-request=request.json` where you put sql into json file - this is in case you recover data from glacier
 You can also use `glacier initiate-job` and specify sql under `--job-parameters.SelectParameters.Expression={your_sql}`.
-Access restriction - you can restrict access to objects in your bucket to specific website, using `referrer` key in condition. In this case only `mysite.com` can access your bucket.
-```
-{
-  "Version":"2012-10-17",
-  "Statement":[
-    {
-      "Effect":"Allow",
-      "Principal":"*",
-      "Action":["s3:GetObject"],
-      "Resource":"arn:aws:s3:::mybucket/*",
-      "Condition":{
-        "StringLike":{"aws:Referer":["http://mysite.com/*""]}
-      }
-    }
-  ]
-}
-```
 If you have single image (2kx2K pixels) split into number of tiles (40x40), bad practice is to store one big picture - increase size of tiles to max size - in this case you reduce number of `GET` requests to s3 bucket and save costs.
 Access Points - simplify managing data access at scale for shared datasets in S3. If you have hundreds of apps/users use your single s3 bucket, you have to add all access permission into single json and manage it there.
 This is error prone & time consuming, cause every change need to be reviewed carefully & tested. Access point - named network endpoint with separate permission. Each access point enforced customized access and work with conjunction with main bucket policy.
@@ -4686,7 +4723,11 @@ To monitor traffic you can use:
     `2 123456789010 eni-1235b8ca123456789 172.31.16.139 172.31.16.21 20641 22 6 20 4249 1418530010 1418530070 ACCEPT OK` (SSH traffic (destination port 22, TCP protocol) to network interface eni-1235b8ca123456789 in account 123456789010 was allowed)
     As you see there is no actual payload, only fact that somebody try to send some tcp/udp message to someone. If you want actual payload you should use Traffic Mirroring.
     So use it to troubleshoot connectivity and security issues, make sure that the network access rules are working as expected
+Since SG stateful & NACL stateless, if your SG has inbound rule for 22 but has no outbound for 22, you will have 2 log entries with ACCEPT OK.
+But if you NACL allow inbound 22 but doesn't allow outbound you will get 1 entry with ACCEPT OK, and another REJECT OK
 * VPC traffic mirroring (it copies traffic and send it to NLB with a UDP listener, so it includes actual body). Provides deeper insight into the network traffic by analyzing traffic content (payload).
+You can set source as any ENI in vpc, and redirect multiple sources into single target (target can be either: another ENI or NLB with UDP listener)
+On ec2 with target ENI you can use open source tools like Zeek/Suricata to monitor/analyze sniffed traffic.
 VPC peering:
 * you can create peering between VPC in 2 regions or in 2 accounts (in this case one account should accept peering request from another)
 * traffic of peering within same region is not encrypted, but isolated, just like traffic between 2 EC2 in the same VPC, but between different regions is encrypted
@@ -6322,6 +6363,9 @@ CUR saved in s3 using:
 * redshift/quicksight or without any integration - gzip/scv
 * athena - parquet
 As you see format would be either csv or parquet, not json.
+To allow users to view aws usage report you have to add following permissions:
+* `aws-portal:ViewBilling` - allow access to Billing and Cost Management aws console
+* `aws-portal:ViewUsage	` - allow to view usage
 
 ###### Backup
 Aws backup - data storage service (like s3 or storage gateway) specifically designed to store backups. It's centralized backup storage where you can manage backup policy/strategy and add security to all your backups.
