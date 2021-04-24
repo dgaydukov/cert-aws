@@ -150,7 +150,7 @@
 To pass cert and more generally to understand how it works you should get some hands-on experience. But aws can be costly at times, so aws provide so called [free tier](https://aws.amazon.com/free) to play and see how it works.
 Basically there are a few options:
 * always free - services that always would be free
-* 12 month sign-up free - services for free for the first 12 month after sing-up
+* 12 month sign-up free - services for free for the first 12 month after sing-up (like 750 hours free t2.micro ec2 per month for 12 month after sign-up)
 * random proposals - some random limited features that can be available at some time
 So to start I would suggest to create aws account (it's free) and play with free tier. You can use almost 90% of what you need in free tier.
 There are 2 types of billing alarms
@@ -162,7 +162,7 @@ You can go to `Bills` on the left menu and there you would see detailed info on 
 
 ###### Region, AZ, Edge Location
 There are different geographic regions across the globe where aws data centers are located. One region is divided between several AZ (availability zone).
-Each region is completely independent and connected through Internet (no private cables between regions).
+Each region is completely independent and  interconnected with purpose-built, highly available, and low-latency private global network infrastructure.
 Each AZ is isolated within a regions, but connected through low-latency links (not through public Internet).
 AZ name is region + az identifier like `us-east-1a`. AZ consists of one or more discrete data centers. 
 To distribute load equally AZ letter is different for every account (for accountA letter `a` point to AZ1, but for accountB letter `a` point to another AZ2, so by this equal distribution of loads across different AZ is achieved)
@@ -178,8 +178,7 @@ It describes best practices to deliver app to aws cloud, based on 5 pillars:
 * cost optimization - avoiding un-needed costs
 
 ###### What is DevOps
-DevOps is implementation of agile to ops team.
-Before agile developers write code and throw it to ops team. After agile developers started to make more changes, but ops still take a lot of time to go to prod.
+DevOps is implementation of agile to ops team. Before agile, developers write code and throw it to ops team. After agile, developers started to make more changes, but ops still take a lot of time to go to prod.
 Basic concepts of DevOps are:
 * Infrastructure as code (TerraForm or CloudFormation) - treat infrastructure the same way developers treat code
 * ci/cd pipeline (Jenkins or CodeCommit/CodeBuild/CodeDeploy/CodePipeline) - enable the automated deployment of production-ready application code.
@@ -198,15 +197,15 @@ Tags - metadata that describes resources, a simple key-value pair (value can be 
 * automation (start/stop dev env during non-business hours to reduce costs)
 * iam supports tag-based conditions
 Tags should be used consistently, otherwise there is no point.
-Default tag `Name` should be used for every resource for easier cost balance calculation (you can activate it under `Cost allocation tags`)
+Default tag `Name` should be used for every resource for easier cost balance calculation (you can activate it under `My Billing Dashboard => Cost allocation tags`)
 
 ###### AWS LoadBalancer vs App LoadBalancer
-ELB (Elastic Load Balancer) - aws load balancer that includes 3 types
+ELB (Elastic Load Balancer) - aws load balancer that includes 3 types:
 * ALB (Application Load Balancer) - used for http/https request
 * NLB (Network Load Balancer) - used for any tcp request, works on network layer
 * CLB (Classic Load Balancer) - old lb, now mostly outdated
 App loadbalancer (in our case spring app) - is EC2 instance with Eureka (Service Discovery) + Ribbon (Load Balancer) - a separate spring app, that discovers all instances and allows you to use human readable names instead of urls.
-There are 2 types of proxy
+There are 2 types of proxy:
 * forward proxy - sits in front of client and redirect client's request to server, yet client can still directly connect to server. Use cases:
     * protect identity/privacy
     * avoid country/region blocks
@@ -218,15 +217,15 @@ There are 2 types of proxy
 ###### Ingress vs Egress
 Ingress - traffic that enters an entity, so it's a request sent from public Internet to private cloud.
 Egress - traffic that exits an entity, so all traffic (data) that leaves your VPC into public internet, traffic often is translated using NAT in and out of a private network like the cloud.
-So to simplify ingress - request, egress - response.
+So to simplify: ingress - request, egress - response.
 
 ###### Bastion vs JumpServer
-They both serve the same purpose - to separate private network from public traffic. Usually you connect to it through SSH and from there you can connect to any private machine in the network.
-Bastion - outside your security zone (DNS/VPN/FTP server).
-JumpServer - used to manage other servers (only SSH access to JumpServer available).
-But in the essence both are the same as both provide access to internal resources not available to outside users.
-Bastion VPN server - selected users can connect to vpn using IpSec protocol and now they can request all internal resources from their local machine
-Bastion SSH server - selected users can connect using ssh protocol and from this server they can access all internal resources
+They both serve the same purpose - to separate private network from public traffic. Usually you connect to it through SSH and from there you can connect to any private machine in the network:
+* Bastion - outside your security zone (DNS/VPN/FTP server)
+* JumpServer - used to manage other servers (only SSH access to JumpServer available)
+But in the essence both are the same as both provide access to internal resources not available to outside users. There are 2 types of bastion:
+* Bastion VPN server - selected users can connect to vpn using IPSec protocol and now they can request all internal resources from their local machine
+* Bastion SSH server - selected users can connect using ssh protocol and from this server they can access all internal resources
 
 ###### Disaster Recovery
 There are 2 main concepts of DR:
@@ -239,11 +238,11 @@ There are 4 types of DR in aws:
 * multi site - the fastest cause we constantly have complete copy running in another region
 Don't confuse:
 * HA - run some ec2 in another AZ and use elb to forward request to this AZ. In case one AZ fail you can still use your service. Yet this won't protect against whole region failure
-* DR - run some critical stuff in another region and use route53 failover to this region. But major part is restored, once you start DR. When we talk about DR we usually assume entire region goes down.
+* DR - run some critical stuff in another region and use route53 failover to this region. But major part is restored, once you start DR. When we talk about DR we usually assume entire region goes down
 Don't confuse:
 * HA (High availability) - system can recover with short downtime. Example - start new ec2 from ami and use ebs from down ec2 in case of failure.
 * FT (fault tolerance) - system continue provide services even in case of failures. You build FT by introducing redundancy. Example - add elb + asg.
-Availability vs. Durability on ebs example
+Availability vs. Durability on ebs example:
 * Availability - ebs available 99.9% time, but in case of AZ failure it won't be available (cause ebs is linked to subnet/AZ). But when AZ becomes again available your data won't be lost.
 * Durability - ebs 11/9 durable (after dot we have 11 nines), that means if you have 1000 volumes you can expect to lose 1 volume per year.
 
@@ -252,14 +251,14 @@ ENI (elastic network interface) - logical networking component in a VPC that rep
 * primary private IPv4 (from VPC range)
 * public IPv4 (changes after stop/start)
 * elastic IPv4 (static public IP, won't be changed after stop/start)
-* IPv6, mac-address, security groups and so on...
-* it has static mac address. So if your ec2 need static mac address, create eni and assign it to ec2. This would guarantee that if you restart/recreate instance, max address would stay the same.
-Don't confuse it with elastic IP which provide static public IP address, where ENI provides static mac address.
+* IPv6, MAC address, security groups and so on...
+* it has static MAC address. So if your ec2 need static mac address, create eni and assign it to ec2. This would guarantee that if you restart/recreate instance, MAC address would stay the same.
+Don't confuse it with elastic IP which provide static public IP address, where ENI provides static MAC address.
 You can create ENI by going to `EC2 => Network & Security => Network interfaces` and create network interface and attach/detach it to ec2 instance.
-Every instance in VPC has a default ENI - primary network interface, you can't detach it. You can create new and attach. Number of ni that can be attached to ec2 depends on it's size (more computing power - more ni can be attached).
+Every instance in VPC has a default ENI - primary network interface, you can't detach it. You can create new and attach. Number of ENI that can be attached to ec2 depends on it's size (more computing power - more ENI can be attached).
 Both ENA & EFA are ENI that provide some advanced networking:
 * ENA (Elastic Network Adapter) - ENI that provides enhanced networking capabilities. There is a selected [set of instances](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/enhanced-networking-ena.html#ena-requirements) that support ena. 
-You can ssh to ec2 and run `modinfo ena` if you see response your ENI is ENA. When you need several ec2 to have low latency & high network throughput it's better to put them into cluster PG, instead of just adding ENA to each of them.
+You can ssh to ec2 and run `modinfo ena` if you see response your ENI is ENA. When you need several ec2 to have low latency & high network throughput, it's better to put them into cluster PG, instead of just adding ENA to each of them.
 * EFA (Elastic Fabric Adapter) - ENA + OS bypass hardware interface (without involving the instance kernel) that use hardware-provided reliable transport communication.
     * allows HPC applications to communicate to talk with each other with low latency and higher throughput than traditional TCP channels.
     * EFA can only be attached at launch or to stopped instance
@@ -280,7 +279,7 @@ you just can access it from web browser without need to run it and support. Usua
 * PaaS (Platform as a Service) - in this case you develop you application (writing code) and just deploy your code without worry about infrastructure. For example if you are using spring framework, you can use [cloud foundry](https://cloud.spring.io/spring-cloud-cloudfoundry/reference/html)
 and just deploy your code, and it will provide everything else (container, java, spring framework). BeanStalk - good example where you just upload your code and aws provision all required infra for you.
 * IaaS (Infrastructure as a Service) - good example is aws that provides infrastructure (like container/networking/storage/database) as services to end users. Comparing with PaaS/SaaS users of IaaS responsible for managing infrastructure themselves. 
-The best practice is to use IAC (Infrastructure as a code) - an idea that you should code how you want to build your infrastructure. For example to run you microservice app you need to have 3 containers. 
+The best practice to manage infra - IAC (Infrastructure as a code) - an idea that you should code how you want to build your infrastructure. For example to run you microservice app you need to have 3 containers. 
 Of course you can manually create all of them, install all needed software there and deploy it. But you can also add script file that would do it all automatically. Most popular tools are CloudFormation & Terraform.
 
 ###### Virtualization and Containerization
@@ -288,7 +287,7 @@ Hyperviser is VMM (Virtual Machine Monitor), that runs VM. It works as mediator 
 This is the main advantage, cause one OS can run on one hardware only at the same time (cause you can have have several OS installed on disk and run one at a time).
 Originally hypervisors developed to give multiple users simultaneous access to computers that performed batch processing. But over time other solutions for many users/single machine problem appeared including time sharing.
 So virtualization is a simulation of physical hardware for virtual OS.
-Containerization on the other hand is like os-level virtualization. Instead of creating a complete new OS, container share resources with host os, but have it's own file system, and by doing so divide itself from main OS.
+Containerization on the other hand is like os-level virtualization. Instead of creating a complete new OS, container share resources with host os, but have it's own file system, and by doing so separates itself from main OS.
 Hyper-V - Windows Server Virtualization, server computer running Hyper-V can be configured to expose individual virtual machines to one or more networks.
 Virtual machine like ec2 is part of physical machine in aws datacenter. It's isolated from other virtual machines by hypervisor or alike software. 
 Don't confuse:
@@ -299,14 +298,14 @@ Don't confuse:
 With aws serverless you can build complete backend application without writing code(like java) or using any framework (like spring). 
 For example you can use `API Gateway` to set up a few api endpoints. Then you can use `aws lambda` to set up some logic to handle these endpoints. Then you can use `SNS` to send some notification/emails.
 As you see without writing any application code we can have a simple backend application. But the truth is that this is only good for very simple app, usually for POC (proof of concept).
-The reason is once your application become more complex it would be very hard to ensure that everything is working fine, cause you have no tests. 
+The reason is once your application become more complex it would be very hard to ensure that everything is working fine, cause you have no tests & you have to manages hundreds of lambdas.
 So the conclusion is very simple. Use aws serverless only for POC, or when you want quickly to startup, then you can also create a lot of mock api so your team can start to interact with it.
 But once your system become more complex you will definitely need to use some programming like java/spring to have a good software architecture of your product and good test coverage that would ensure that nothing would be broken after changes.
 Moreover it can be expensive in certain cases. Consider situation where you have 1 lambda that need internet access to do some stuff (like captcha verification or ip address check).
 For this you need NAT, cause your lambda can't just get internet access from private subnet inside VPC. So you go and create nat gateway, and your lambda can now access internet.
 But in the end of the month you get a bill for 50 cents for lambda + 35$ for Nat Gateway. The reason is that Nat Gateway price per hour is 0.045$ + you also paying per GB transfer through your Nat, 
 but for the example let's imagine that you transfer tiny amount of 100mb per month. So instead of having cheap serverless you pay 35.5$ per month, just because your lambda sometimes can get internet access.
-When [aws support got pressed](https://forums.aws.amazon.com/thread.jspa?threadID=234959) over the issue, the proposed instead of Nat Gateway create custom Nat Instance (ec2 running with nat), and it would cost only 10$.
+When [aws support got pressed](https://forums.aws.amazon.com/thread.jspa?threadID=234959) over the issue, they proposed instead of Nat Gateway create custom Nat Instance (ec2 running with nat), and it would cost only 10$.
 But this idea to run additional ec2 to have internet access for single lambda upends serverless. Why do you need lambdas in the first place, when you can just put app into ec2 itself?
 
 ###### AMI vs Snapshot
@@ -386,8 +385,7 @@ Name                    Value             Type    Location
 profile               awssa           manual        --profile
 region                us-east-1      config-file    ~/.aws/config
 ```
-And you can run commands from console and default region from config file will be used.
-You can set or unset aws env vars in `~/.bashrc` file.
+And you can run commands from console and default region from config file will be used. You can set or unset aws env vars in `~/.bashrc` file.
 * Get account Id
 ```
 # get arn
@@ -425,8 +423,7 @@ Redirects without changing http method. They basically the same as 301/302 only 
 * 308 (permanent)
 
 ###### crontab
-crontab notation is used in many places, including:
-* ASG scheduled action
+crontab notation is used in many places, including: ASG scheduled action.
 In a crontab command, the fields are: `* * * * *`
 ```
 minute of the hour
@@ -454,10 +451,10 @@ File stored in memory in a sequence of blocks. Each block knows where next is lo
 Usually blocks go one after another, but can be scattered around - fragmentation, in this case performance is donwgraded (that's why there are a lot of tools - defragmentators that may expedite your system).
 If you search column without index, then mysql would extract all rows in table (yup since it's not columnar it would extract all table from disk), filter your column and return result. As you see - highly ineffective.
 Index - create a sorted column representation, and when you search by column for which we have index, only values from that index would be extracted from memory.
-So now most important question on design-ing - on which columns to put indexes. Of course you can put it on all columns, but don't forget that indexes have their own overhead - memory.
+So now most important question on designing - on which columns to put indexes. Of course you can put it on all columns, but don't forget that indexes have their own overhead - memory.
 Best rule - analyze your query pattern and create indexes for all columns that are participate in `WHERE/ORDER BY` clauses.
 Unique index - means after first match mysql won't proceed in searching. MySql support only 1 index per query, so if you have multiple columns in `WHERE` clause - you have to use composite index.
-The order of columns in composite index is very important. It should go from low to high cardinality.
+The order of columns in composite index is very important. It should go high=>low cardinality.
 Suppose we have age and gender. For each age value - on average 100 rows, but for each gender - 5000. So age_gender index is better than gender_age.
 Cause in first case index first filter by age, and leave 100 values, and then filter by gender.
 
@@ -465,7 +462,7 @@ Cause in first case index first filter by age, and leave 100 values, and then fi
 ###### NIC
 NIC (Network interface controller) - hardware component to connect computer to network. It implements electronic circuit that operates on both physical & data link layers using either Ethernet/Wi-Fi protocols.
 If you NIC is inside network that using hub, than hub sends all packets to all pc connected to the network. But your NIC process only those that are intended for it (NIC check MAC address, and if it corresponds to address of NIC it sends frame further to CPU).
-Promiscuous mode - you turn off MAC address check, and all packets that are sent to NIC (regardless of destination MAC address) are forwarded to CPU to process. This mode is turned off by default, can be useful for traffic sniffing.
+Promiscuous mode (doesn't supported by aws) - you turn off MAC address check, and all packets that are sent to NIC (regardless of destination MAC address) are forwarded to CPU to process. This mode is turned off by default, can be useful for traffic sniffing.
 Traffic sniffing - catch all traffic and analyze it, best tool is [WireShark](https://www.wireshark.org).
 You can detect promiscuous mode by sending a ping (ICMP echo request) with the wrong MAC address but the right IP address. In normal mode NIC would drop packet, but in promiscuous - you would get response.
 It is not possible for ec2 running in promiscuous mode to receive/sniff traffic that is intended for a different virtual instance.
@@ -484,7 +481,7 @@ But to operate normally your host should retransmit these packets to their respe
 it has internal table where it store which port takes which mac address, and at first it sends ARP to get mac addresses, but once table is full it just sends packet to desired node. Works on the data link layer (Layer 2) of OSI.
 * Router (маршрутизатор) - small computer that can route the network traffic. Usually used to connect networks such as LAN/WAN. Works on (Layer 3).
 * L3 Switch (L3 коммутатор) - switch that can route traffic, work faster than router.
-There are 2 types of Port
+There are 2 types of Port:
 * Physical port - one inside switch/router is the nest where you plug in your network cable
 * Logical port - one inside OS, and it allows OS to route different protocols for the same IP address
 
@@ -492,7 +489,7 @@ There are 2 types of Port
 Network Topology - is how your computers are arranges and connected with each other. There are 2 types of topology:
 * Physical - how devices are physically connected
 * Logical - how are packets sent inside network
-Types of topology
+Types of topology:
 * Bus (single line) - we have one cable and all computers are connected to it. Disadvantage - if line disruption happens the whole network is broken. Outdated today.
 * Ring - all computers are connected into a ring. Every computer is connected to 2 neighbors. To secure against disruption there is bidirectional-ring network, where all computers connected with 2 cables instead of 1. Outdated today. 
 * Star - all computers are connected to a single switch.
@@ -539,13 +536,15 @@ It uses connectionless service model using UDP. It is implemented with two UDP p
 * SMTP (Simple Mail Transfer Protocol, 25) - send mail to mail server. Don't confuse IMAP/POP3 - read email from mailServer, SMTP - send email to mailServer
 * Telnet (terminal network, 23) - allows to communicate with remote OS by sending unencrypted text data. Nowadays mostly outdated and replaced by ssh
 * SSH (Secure Shell, 22) - like telnet, but exchange encrypted data
-* FTP (File Transfer Protocol, 20) - transfer file to server, unsecured. You can use FTPS (port 21) or FTPS (port 22) for secure file transfer 
+* FTP (File Transfer Protocol, 20) - transfer file to server, unsecured. You can use FTPS (port 21) or SFTP (SSH FTP, port 22) for secure file transfer 
 
 ###### Low Level Protocols
-* ICMP (Internet Control Message Protocol) - located at network layer - error reporting and query service.
-Ping command use ICMP echo to determine availability of some destination
-* Mac address - unique address of every network device, consists of 48 bits (12 symbols), first 24 - set by IEEE, another 24 - by manufacturer (example: 005555.001234).
-* ARP (Address Resolution Protocol) - used to discover link layer address (mac-address) associated with given network layer address (ip-address). Only for IPv4. You can play with in in linux by `arp --help`.
+* ICMP (Internet Control Message Protocol) - located at network layer - error reporting and query service:
+    * connectionless (unlike TCP where 2 device establish connection first) - doesn't allow to target port on machine
+    * if packet data too large for router, it would drop packet & send ICMP error to sender
+    * ping command use ICMP echo to determine availability of some destination
+* Mac address - unique address of every network device, consists of 48 bits (12 symbols), first 24 - set by IEEE, another 24 - by manufacturer (example: 005555.001234)
+* ARP (Address Resolution Protocol) - used to discover link layer address (mac-address) associated with given network layer address (ip-address). Only for IPv4. You can play with in in linux by `arp --help`
 * NDP (Neighbor Discovery Protocol) - same as ARP, only for IPv6
 * NAT (Network Address Translation) - if you have 1 public IP address that's visible to whole world, and also have a private network with lots of computers there, and you want to route specific request to some computer in your network your router will use NAT. 
 It will change headers in packet and resend it to particular IP address inside private network.
@@ -555,12 +554,12 @@ Private networks:
 10.0.0.0 - 10.255.255.255, subnet mask => 255.0.0.0 (10/8, 24 bits), mostly used in work-related networks.
 172.16.0.0 - 172.31.255.255, subnet mask => 255.240.0.0 (172.16/12, 20 bits), mostly not used anywhere.
 192.168.0.0 - 192.168.255.255 subnet mask => 255.255.0.0 (192.168/16, 16 bits), mostly used in home-related networks.
-* Subnet mask - used to divide ip address into 2 parts: network + host. 
+* Subnet mask - used to divide IP address into 2 parts: network + host. 
 192.168.0.0/16 - first 16 bytes - network, last - ip address, totally there can be 2**16=65536 ip addresses.
-192.168.0.0/24 - first 24 bytes - network, last 8 - ip address totally 2**8 = 256 ip addresses.
-192.168.0.0/28 - first 28 bytes - network, last 4 - ip address, totally 2**5 = 16 ip addresses.
+192.168.0.0/24 - first 24 bytes - network, last 8 - ip address totally 2**8=256 ip addresses.
+192.168.0.0/28 - first 28 bytes - network, last 4 - ip address, totally 2**4=16 ip addresses.
 So by knowing subnet mask we can determine if 2 ip addresses are on the same network.
-In every network first/last addresses are: 
+In every network first/last addresses are:
 * first (all zeros, 0) - specifies network
 * last (all ones, 255) - broadcast a message to every host on a network (ARP)
 Gateway - router specified on a host, which links the host's subnet to other networks. For ordinary users gateway - Internet provider, cause it connects them to Internet.
@@ -577,9 +576,9 @@ There are 2 types of networks:
 * CIDR (Classless Inter-Domain Routing) - replace classful network (A-D classes) and allocate ip-addresses without bind it to any class network.
 There are 2 ways how IP address space is assigned within each organization:
 * VLSM (Variable Length Subnet Mask) - when we divide a network into subnet with different length
-* FLSM (Fixed Length Subnet Masks) - all networks within your infra are the same size. So if you have 2 networks and one is 200 and another is 20, both would be /24 size.
-As you already guess most private networks on-premise and on aws vpc are built using CIDR+VLSM
-Suppose we have a network 192.168.0.1/24 - totally 254 addresses(actually total - 256, but first and last are reserved)
+* FLSM (Fixed Length Subnet Masks) - all networks within your infra are the same size. So if you have 2 networks and one is 200 and another is 20, both would be /24 size (and each would have 2**8=256 addresses).
+As you already guess most private networks for on-premise and aws vpc are built using CIDR+VLSM
+Suppose we have a network 192.168.0.0/24 - totally 254 addresses(actually total - 256, but first and last are reserved)
 We need to divide it into 4 subnets with 10, 50, 2 and 20 hosts. Although we can equally divide our network on 4 and have 64 ip-addresses in each, it's better not to give way more than needed
 In this case we can divide it on min power 2. 
 10 => 16(2**4)
@@ -588,10 +587,10 @@ In this case we can divide it on min power 2.
 20 => 32(2**5)
 * Routing table - a list of ip-addresses and subnet masks of all networks connected to the router, stored in router RAM.
 * VPN (Virtual Private Network) - encrypted connection(also called tunnel) over public network (usually Internet) between 2 or more private networks. It encrypt packet, add new headers.
-Split tunnel. By default all traffic (both to external resources like google.com and to on-premise network) goes through vpn tunnel. But this can be a problem, cause it may overload tunnel.
+Split tunnel - by default all traffic (both to external resources like google.com and to on-premise network) goes through vpn tunnel. But this can be a problem, cause it may overload tunnel.
 To solve this issue there is split of tunnel so based on destination packets are go either though vpn tunnel or directly to internet (take a look at `files/images/vpn-split-tunneling.svg`)
 * iSCSI (Internet Small Computer Systems Interface) - transport layer protocol, works above TCP. Initiator (server) packages SCSI commands into network packets, and sends it to Target (remote storage).
-For all subnets you shouldn't use first & last address
+For all subnets you shouldn't use first & last address:
 * first address - network identification (refers to the subnet itself and is used for routing purposes)
 Look at the binary representations for the ip address and the subnet mask. In the process of determining the route they are binary combined with AND. 1&0=0, 1&1=1, 0&0=0. 
 The network part of the address remains unaffected, but the host part becomes all-zero. If you could use the .0 address for a host too, how would you different it from the net?
@@ -602,21 +601,8 @@ But in real network you probably gonna have this 3 ip taken also (but you can al
 
 ###### SOA and CAA
 SOA (Start of Authority) - record in DNS containing administrative info about zone, email, last update time.
-You can use dig (domain information groper) utility to grope(grip/get) information about dns
-You can get it by `dig SOA +multiline google.com`, email is `root@amazon.com`
-```
-amazon.com.		900 IN SOA dns-external-master.amazon.com. root.amazon.com. (
-				2010126527 ; serial
-				180        ; refresh (3 minutes)
-				60         ; retry (1 minute)
-				3024000    ; expire (5 weeks)
-				60         ; minimum (1 minute)
-				)
-```
-CAA (Certification Authority Authorization) - list of authorities who can issue certificates for this domain. You can run `dig CAA +multiline google.com`
-```
-google.com.		86400 IN CAA 0 issue "pki.goog"
-```
+You can use dig (domain information groper) utility to grope(grip/get) information about dns: `dig SOA +multiline amazon.com`
+CAA (Certification Authority Authorization) - list of authorities who can issue certificates for this domain: `dig CAA +multiline aws.amazon.com`
 
 ###### SSL vs TLS vs HTTPS
 SSL (Secure Sockets Layers) - outdated protocol not used today. TLS (Transport Layer Security) - main security protocol used today.
@@ -627,8 +613,8 @@ Certificate prevents man-in-the-middle attack by encrypting all packets sent to 
 There are public (low ubiquity, issues certificates for free, like [Let's encrypt](https://letsencrypt.org/getting-started)) and commercial(high ubiquity, charge you for issuing certificate) CA out there.
 Ubiquity - quantity of internet browsers, other devices and applications which trust a particular CA.
 SSL certificates are verified and issued by a CA. If you are using aws, everything is done inside, and certificate is generated for you.
-But you can also generate public/private keys using `openssl`, and then generate CSR and reqeust CA to issue certificate for you.
-CSR (Certificate sign-ing Request) - request signed with private key that contains vital information about your organization and domain,
+But you can also generate public/private keys using `openssl`, and then generate CSR and request CA to issue certificate for you.
+CSR (Certificate Signing Request) - request signed with private key that contains vital information about your organization and domain,
 so it's an encrypted block of text that includes your organization’s information, such as country, email address, fully qualified domain name, etc. 
 It is sent to the Certificate Authority when applying for an SSL certificate. Most detailed info [here](https://letsencrypt.org/how-it-works)
 
@@ -638,8 +624,7 @@ Routing - process to select path between different networks using one of 5 addre
 * `broadcast` - one-to-all (single datagram from one sender is routed to all of the possibly multiple endpoints associated with the broadcast address)
 * `multicast` - one-to-many (datagrams are routed simultaneously in a single transmission to many recipients)
 * `anycast` - one-to-nearest (datagrams are routed to any single member of a group of potential receivers that are all identified by the same destination address)
-it allows for multiple machines to share same IP address, and send user request based of the user proximity to server.
-So if one datacenter would go offline, anycast would forward user to the next closest datacenter.
+it allows for multiple machines to share same IP address, and send user request based of the user proximity to server. So if one datacenter would go offline, anycast would forward user to the next closest datacenter.
 It's based on BGP and AS. With unicast path would lead to one destination, no matter what distance is.
 * `geocast` - delivery of information to a group of destinations in a network identified by their geographical locations
 Routing protocol:
@@ -649,13 +634,13 @@ BGP is designed to exchange routing and reachability information between AS on t
 AS (Autonomous System) architecture (represented by unique number called an ASN). Each AS controls a collection of connected routing prefixes, representing a range of IP addresses. It then determines the routing policy inside the network.
 
 ###### MTU & Jumbo frame
-PDU (Protocol data unit) - single unit of information transmitted between 2 computers. At each layer PDU has it's own name
+PDU (Protocol data unit) - single unit of information transmitted between 2 computers. At each layer PDU has it's own name:
+* IP - packet
 * TCP - segment
 * UDP - datagram
-* IP - packet
 MTU (Maximum transmission unit) - max size of PDU that can be transferred in single network layer transaction. MTU for Ethernet is 1500 bytes.
 Jumbo frame - ethernet frame with more than 1500 bytes MTU, usually up to 9000. The idea is that it's easy to process the contents of single large frame instead of many smaller frames.
-You can test all of this with `ping` command
+You can test all of this with `ping` command (actual size less for 28 bytes: 20 - IP header, 8 - ICMP header)
 ```
 # by default 84 bytes of data transfered
 ping google.com
@@ -706,7 +691,7 @@ You can check it by `sudo iptables -L -n` - list using numeric notation (IP addr
 There are 3 types of chain:
 * input - control incoming connections (if you want ssh to machine, input chain should have proper record to allow port 22)
 * forward (router/NAT) - control incoming connections not destined for localhost
-* output - control outcoming connections
+* output - control outgoing connections
 Policy can be of 2 types `sudo iptables -L | grep policy`:
 * ACCEPT - accept all connections. You can configure to accept all incoming connections `iptables --policy INPUT ACCEPT`. Then you can deny based on IP or port.
 * DROP - deny all connections
@@ -737,8 +722,8 @@ iptables -A OUTPUT -p tcp --sport 22 -d 10.10.0.0 -m state --state ESTABLISHED -
 ```
 Once you add changes they apply immediately, but when you reboot your pc, they would be scrapped. If you want to add them permanently you should save them explicitly `sudo /sbin/iptables-save`.
 SG vs iptables (from aws cloud there are following hierarchy of security `RouteTable => NACL => SG => iptables`):
-* SG - infra level of security. Be default all closed. Stateful. Takes effect prior to iptables.
-* iptables - os level of security. By default all open. Stateless.
+* SG - infra level of security. Be default all closed. Stateful. Takes effect prior to iptables
+* iptables - os level of security. By default all open. Stateless
 Custom chains - you can create your own custom chains
 ```
 # create new custom chain
@@ -789,14 +774,14 @@ So to summarize - there are 2 ways to block outside access to your exposed docke
 Docker add 2 custom chains `DOCKER-USER & DOCKER` and ensures that all incoming requests are validated by this chain first.
 If you want your rules to be evaluated before docker rules add them to `DOCKER-USER` chain.
 You can run docker with `--iptables=false`, this would prevent docker from modifying iptables. But this will break docker networking.
-There are several networking drivers that you can specify in `network_mode` prop:
+There are several networking drivers that you can specify in `network_mode` prop for docker:
 * bridge - default driver, use when your containers need to communicate with one another. Containers connected to same bridge can communicate with each other, while to be isolated from all other containers.
 * host - use host machine networking. You don't need to use port binding in this case, cause your docker port would be available as host port.
 * overlay - create network between instances run from different docker daemons (or between swarm and standalone docker)
 
 ### Security services
 ###### IAM
-There are 3 types of permission:
+There are 3 types of iam entity:
 * user - permission for single iam entity
 * group - collection of permissions that you can assign. Used to define users. One user can belong to multiple groups. It's a best practice to use group even if you have one user in it.
 * role - collection of permissions for specific aws service (for example ec2 can connect to s3 without any secret key) or other iam entity (user/role can assume role).
@@ -3228,7 +3213,7 @@ Stack policy:
 Don't confuse (see `sa/cloudformation/cf/wait-condition.yml`):
 * WaitCondition (`AWS::CloudFormation::WaitCondition`) - resource wait for some external resource (created outside current CF) to finish and only then mark resource status as complete.
 CF waits until WaitCondition get required number of signals or timeout is over. You use `DependsOn` attr to specify that wait condition created after some resource, and another recourse depends on wait condition.
-`AWS::CloudFormation::WaitConditionHandle` - has no props, but return pre-signed url. You use this url (send HTTP request to it) to notify your handle that outside resource is created.
+`AWS::CloudFormation::WaitConditionHandle` - has no props, but return presigned url. You use this url (send HTTP request to it) to notify your handle that outside resource is created.
 You can also use `signal-resource` cli to complete condition. In this case you don't even need WaitConditionHandle.
 * CreationPolicy (only applied to AutoScalingGroup/Instance/WaitCondition) - resource waits for signal from `cfn-signal` utility that installed on ec2. Use it in case you want CF to mark resource creation complete only after some script would finish execution in `userdata`.
 You add it to one of three above resource, and then use `/opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource Instance --region ${AWS::Region}` to signal that CF can complete with resource creation
@@ -3441,7 +3426,7 @@ Replication of encrypted objects:
 * object encrypted with customer key are not replicated
 * by default s3 doesn't replicate bucket encrypted with kms. You have to explicitly enable such configuration
 * for destination bucket - you have to add kms key (keep in mind that it regional, so if your destination bucket in another region - you have to use different CMK from that region)
-* add permision to replication role (`kms:Decrypt` - for source bucket kms, `kms:Encrypt` - for destination bucket kms)
+* add permission to replication role (`kms:Decrypt` - for source bucket kms, `kms:Encrypt` - for destination bucket kms)
 CORS - ability to load data from `non-static url`. So for example if you use domain name to host content you may get error when try to load html/javascript files from s3. To get rid of error enable cors.
 Below rule allows POST/DELETE cors requests from example.com origin. 
 ```
@@ -6346,7 +6331,7 @@ Don't confuse:
 * live streaming: ec2 that runs streaming server with HLS/HDS used as origin for CF distribution
 
 ###### Billing and Cost Management
-This is where you pay your bills, aws automatically charged credit card that you used on sign-up. You can:
+This is where you pay your bills, aws automatically charges credit card that you used on sign-up. You can:
 * estimate & plan costs with free cost explorer
 * receive alerts if costs exceed some threshold
 * simplify multi-org billing management
@@ -6358,9 +6343,9 @@ Budget report - you can configure sending your reports to a list of email for da
 CUR (Cost and Usage Reports) - after you set it up, billing data would be delivered to s3 bucket. You can receive hourly/daily/monthly report of usage.
 After set up, you will receive monthly report + daily updates to your s3 bucket. For s3 you should modify resource policy by adding `s3:PutObject` for `billingreports.amazonaws.com` service.
 Member account of org can create his report, yet org master account can create SCP to deny `cur:PutReportDefinition`, in this case no member account can create reports.
-You can upload cur to redshift & quicksight to analyze cost & usage. CUR provides `RedshiftCommands.sql` file to upload cost & usage to redshift. 
+You can upload cur to redshift & QuickSight to analyze cost & usage. CUR provides `RedshiftCommands.sql` file to upload cost & usage to redshift. 
 CUR saved in s3 using:
-* redshift/quicksight or without any integration - gzip/scv
+* redshift/QuickSight or without any integration - gzip/scv
 * athena - parquet
 As you see format would be either csv or parquet, not json.
 To allow users to view aws usage report you have to add following permissions:
