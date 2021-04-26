@@ -1844,6 +1844,7 @@ Don't confuse:
 * inspector agent - perform network (open access from NACL/SG ec2 ports) & host assessment for common vulnerabilities of open ports & apps. Inspector is do network scan once (or once a week), but guardDuty is monitoring system continuously.
 * Security Hub - aggregate all findings from other security services
 With guardDuty don't forget to subscribe for SNS, so you will get notifications once findings are ready.
+Guardduty can't work with API gateway, so if you want to implement security monitoring for api gateway it's better to use access logging + CloudWatch Alarms.
 
 ###### Security Hub
 SH - provides comprehensive view of security state within aws account and your compliance with security best practices. To use it you have to first enable it from aws console/cli (note you have to enable config first).
@@ -3393,6 +3394,10 @@ Storage Classes - can be configured at the object level and a single bucket can 
 You can also use S3 Lifecycle policies to:
 * automatically transition objects between storage classes without any application changes
 * remove partially uploaded files (they are not removed by default, so if you don't have this policy you risk being spammed by these files)
+Currently there are 5 lifecycle rules:
+* transition current/previous version between storage class
+* expire (permanently delete) current/previous version
+* delete expired delete marker & incomplete multipart upload
 Storage Class Analysis - filters that helps analyse access pattern for whole bucket or list of objects (go to management->analytics to analyze objects)
 * Standard - low latency, high throughput, 3 AZ replication
 * RRS (Reduced Redundancy Storage) - for non-critical data, durability - 4 nines - 99.99%. !important => s3 standard is cheaper now, so rrs is outdated, don't use it.
@@ -3422,8 +3427,16 @@ s3 replicate into same/another region within 15 min under SLA, using RTC (Replic
 To enable replication, you add replication config to your bucket (you can add filter to such configuration, so only filtered objects would be replicated). There are 2 types or replication:
 * SRR (Same-Region replication)
 * CRR (Cross-Region replication)
+Replication config includes 4 things:
+* source bucket
+* destination bucket (in case of another account - you specify both: accountId & bucket name)
+* replication role - role on behalf of which s3 runs replication (should have read permission to source bucket & write permission and put ACL to destination bucket)
+* both source & dest bucket should enable versioning:
+    * since replication is async and it should replicate each object, so if you upload object & then re-upload same object, original object would be overwritten. So in order for replication to work correctly all objects should be versioning
+    * once you enable versioning - you can't disable it for source bucket. yet you can disable it for dest - in this case replication status would be `FAILED`
+    * once you enable versioning & you use lifecycle policies - consider adding lifecycle policies for previous versions
 Replication of encrypted objects:
-* object encrypted with customer key are not replicated
+* object encrypted with CMK are not replicated
 * by default s3 doesn't replicate bucket encrypted with kms. You have to explicitly enable such configuration
 * for destination bucket - you have to add kms key (keep in mind that it regional, so if your destination bucket in another region - you have to use different CMK from that region)
 * add permission to replication role (`kms:Decrypt` - for source bucket kms, `kms:Encrypt` - for destination bucket kms)
@@ -5049,6 +5062,7 @@ TLS Listener - used by nlb for secure connection. To use it you must:
 * select security policy (TLS negotiation configuration) - combination of protocols and ciphers. Negotiate TLS connections between a client and nlb. Custom policies not supported, everybody use default policy`ELBSecurityPolicy-2016-08`, although elb has a few more.
 Protocol - establish secure connection between nlb and client. Cipher - encryption algorithm. NLB doesn't support TLS renegotiation. NLB doesn't support RSA cert larger than 2048bit
 Security policy doesn't depend on protocol. You can have 10 TLS listeners with different protocols, but 1 security policy with default settings.
+ELB support PFS (perfect forward policy) & use ssl cipher: ECDHE (Elliptic Curve Diffie-Hellman Ephemeral) for default security policy.
 Smart certificate selection - nlb support multiple certificates per tls connection:
 * when you create nlb from console you can specify only default certificate
 * after you can go to `listeners=>View/edit certificates=>add certificate` to add other certificates
@@ -5172,6 +5186,9 @@ There are several tricks you can do with CW Logs:
 * export logs into s3 (kms-encrypted destination bucket is not supported)
 * stream logs into ElasticSearch/lambda/kinesis using real-time subscription with subscription filters (each LG can stream up to 2 destinations)
 * by default logs encrypted with SSE, you can also encrypt it using KMS (only symmetric kms supported). To use kms associate LG with kms key, you can't use console, you have to use cli.
+Alarm based on logs:
+* create metric filter based on some log pattern (like error name)
+* create metric alarm based on number of metric occurrence (like fire alarm if metric happens twice per hour)
 
 ###### Route53
 Route53 - amazon DNS service that help to transform domain name into IP address. Reason for a name, cause 53 - port of DNS.
@@ -5504,6 +5521,9 @@ For example you can return cors headers, in case of some error, so browser won't
 Logging:
 * rest api - you can log into CloudWatch & Kinesis Data Firehose, [AWS::ApiGateway::Stage AccessLogSetting](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-apigateway-stage-accesslogsetting.html)
 * http api - you can log into CloudWatch only [AWS::ApiGatewayV2::Stage AccessLogSettings](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-apigatewayv2-stage-accesslogsettings.html)
+Don't confuse:
+* execution logs - latency, execution errors, where cache hit/miss happen
+* access logs - IP & identity of caller, which method was called and so on
 Client Certificate (2 way ssl) - there are 2 types of certs:
 * server cert - to establish server authority and to encrypt traffic between client-server
 * client cert - to establish client authority (in case you want server to communicate with only single client)
@@ -5530,9 +5550,9 @@ RequestAuthMethod:
         TimeoutInMillis: 1000
 ```
 So if you have some long-running lambda or http backend, you have to use async approach:
-* you send initial request, server generate someID and responds immediately
+* you send initial request, server generate `UUID` and responds immediately
 * server run your task in background
-* you start polling server to check if background task completed by someID
+* you start polling server to check if background task completed by `UUID`
 
 ###### CodePipeline(CodeCommit/CodeBuild/CodeDeploy)
 CodePipeline - aws ci/cd tool, like jenkins. There are following stages:
