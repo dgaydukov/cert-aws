@@ -1153,7 +1153,7 @@ To get aws console url you should:
         * AssumeRoleWithWebIdentity - get temporary credentials for user who authenticated through a public IdP (Amazon/Facebook/Google/Cognito), take a look at `sa/cloudformation/cognito-iam.yml`
         This is open api, anybody can call (you don't need to be iam authenticated to call it). Identity is verified by idToken provided in call. Assumed role should have policy to allow federated access.
         If you provide wrong token or your role has wrong federated access (for example your role `"Principal": { "Federated": "graph.facebook.com" }` but you supply token from google), you get error `Not authorized to perform sts:AssumeRoleWithWebIdentity`
-        You can set duration from 15 min up to max session duration of role (1 hour -12 hour), by default - 1 hour.
+        You can set duration from 15 min up to max session duration of iam role (1 hour -12 hour), by default - 1 hour.
         You can also pass inline permission - result would be intersection between role permission & your inline permission. By doing this you can limit role permission further.
         If you are using amazon cognito IdP, you still need to configure cognito identity pool.
         * AssumeRoleWithSAML - get temporary credentials for user who authenticated with SAML. In the api call you have to provide SAML assertion, encoded in base64, returned by the SAML IdP
@@ -1330,6 +1330,18 @@ VPC endpoint policy:
     * for those who doesn't support resource policy (dynamoDB) - you add user/role iam policy with condition to limit access to vpc endpoint
 So if you want to deny access if it not accessed from vpc endpoint add `"Condition":{"StringNotEquals":{"aws:sourceVpce":"vpce-11aa22bb"}}` to resource policy (in case of s3) or to user/role policy in case of dynamoDB
 Since vpc endpoint is interface inside vpc you can assign SG to it and control which port available using this SG.
+Aws abuse report:
+* you may receive abuse report from AWS Trust & Safety Team to security contact of your account (if you don't have security email, email would be sent to your aws email)
+* you have to review content & logs of abuse report & respond within 24 hours & explain what you take to prevent abuse. If you don't response your account would be blocked
+If you noticed unauthorized activity in your account:
+* change root user password & rotate root credentials
+* enable 2FA for root & iam users
+* delete unauthorized iam users & change password for other iam users:
+    * check all iam users for `AWSExposedCredentialPolicy_DO_NOT_REMOVE` policy (user with such policy added by aws is compromised, after investigation you have to delete it)
+    * aws scrapes public repo for leaked credentials. If it found it will try to protect you by adding `AWSExposedCredentialPolicy_DO_NOT_REMOVE` policy (with deny statement to most critical actions like `iam:CreateUser`)
+    * delete any iam user you didn't create or any compromised user
+    * change password for users you want to keep
+* delete any resource you didn't create
 
 ###### Cognito
 Cognito - managed user service that add user sign-in/sign-up/management email/phone verification/2FA logic. There are 2 pools:
@@ -1449,12 +1461,68 @@ It removes the time-consuming manual process of purchasing/uploading/renewing SS
     * you can manually distribute certificates to other services (like ec2), but ACM still renew your private certificates
     * you have complete control
 ACM Private CA (Certificate Authority) - managed by aws private CA where you can create your private certificates.
+Both CA & PCA are regional services, you can't copy/exports (you can export private cert from ACM) certs into another region. If you want disaster recovery:
+* ACM:
+    * ELB - create 2 ELB in 2 regions & request/import 2 certs into each region with same domain name
+    * CloudFront - create cert in `us-east-1` region, it would propagate to all geographic regions that CF distribution use
+* PCA - create 2 PCA in 2 regions & use them independently within each region.
+Yet if you create PCA you can request private cert from ACM - which you can export.
+So if you have PCA there are 2 ways to create private cert:
+* PCA `IssueCertificate` - cert would be managed inside PCA
+* ACM `RequestCertificate` - you will be able to manage private cert using ACM (you can export it & ACM can automatically review it)
+ACM support automatic renewal (PCA doesn't support this):
+* eligible:
+    * associated with any aws service (ELB, CF)
+    * private cert requested with ACM `RequestCertificate` and exported or associated with aws service
+* not eligible if:
+    * private cert requested with `IssueCertificate` api
+    * cert imported into ACM
+    * already expired
+You can manually renew cert with `aws acm renew-certificate`. For private cert it should either be associate with aws service or you have to export it & manually renew it.
 Private CA handles the issuance/validation/revocation of private certificates within a private network, compose of 2:
 * private certificate
 * CRL (Certificate Revocation List) - resources can check this list, that private certificate is valid one
 Don't confuse:
 * public CA - validate certificates in Internet. Can be used only with ELB/CloudFront/BeanStalk/API Gateway.
 * private CA - validate certificates in private network. Can be used with any aws service (ec2).
+They even have different permission key `acm` vs `acm-pca`, PCA (private certificate authority). Below policy allows both public & private list & create
+```
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "VisualEditor0",
+            "Effect": "Allow",
+            "Action": [
+                "acm:ListCertificates",
+                "acm:GetCertificate",
+                "acm:RequestCertificate",
+                "acm-pca:ListCertificateAuthorities",
+                "acm-pca:GetCertificate",
+                "acm-pca:IssueCertificate",
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+```
+Both support iam entity permission, but PCA also supports [resource-based policy](https://docs.aws.amazon.com/acm-pca/latest/userguide/pca-rbp.html)
+* you can use `aws acm-pca put-policy` cli to add resource policy
+* you can use `aws acm-pca create-permission` to allow only 3 actions `IssueCertificate/GetCertificate/ListPermissions` for principal=`acm.amazonaws.com`, if you want ACM to automatically update certs (cause ACM would need these 3 permissions) that reside in your PCA (only for same account)
+Don't confuse:
+* root CA - best practice suggest to use root CA only to sign subordinate CA & create cert hierarcy (althoug you can also sign end-endity certs)
+* subordinate CA - PCA can have up to 4 level of subordinates under root. Use this CA to sign end-entity certs
+PCA Audit Report:
+* you can create every 30 min audit report & download it from s3 bucket which includes info about all certs, both issued & revoed by your PCA
+* you can use `aws acm-pca create-certificate-authority-audit-report --audit-report-response-format=[JSON,CSV]` (as you see you can choose format between json/csv)
+* both iam user & PCA (`"Principal":{"Service":"acm-pca.amazonaws.com"}`) should have s3 bucket permission to write
+* you can enable bucket encryption if your want report to be encrypted
+* you can use `aws acm-pca get-certificate`, but you need to pass certArn which is returned by `IssueCertificate` command. But except cert creation, there is no way to get arn of all current certs (there is no such command as `list-certificates`)
+But in acm you can get all currently issued public certs using `aws acm list-certificates`, so it's done intentionally, when using PCA - use audit report to list all certs.
+PCA validity period:
+* you should set validity period for PCA hierarchy `sa/files/images/acm-pca-validity-period.png`
+* default for root CA - 10years, for end cert - 13 month (you can call `IssueCertificate` with less than 13 month, but not more)
+* once subordinate CA expired - it can't issue new certs anymore
 Public certificate should have valid dns name, but private can have any desired name. Self-signed certificate - certificate generated manually without CA (so no way to check if it's revoked or valid).
 You can create certificate with multiple domain names or wildcard domain name (*.example.com).
 Since public certificates proves domain identity, Amazon must verify that you own domain before issuing certificate. Aws use 2 types of validation:
@@ -1463,6 +1531,7 @@ If you want to automatically renew your cert you shouldn't remove CNAME token, o
 * email - amazon sends email to the owner of domain that it obtains from whois service
 For successful issuing of public certificate DNS CAA should be empty or include one of: amazon.com/amazontrust.com/awstrust.com/amazonaws.com
 Public certs are free, but private CA - 400$ per month. You also pay for each private cert.
+If you request private cert form PCA using ACM - no need to validate cause your account has PCA.
 ACM internally use KMS (`aws/acm` key that generated first time you request ACM):
 * acm stores all certificate private keys encrypted (acm stores only encrypted version of private key)
 * when you associate acm with service, acm sends certificate & encrypted private key to this service + create kms permission to allow for service to use it to decrypt private key
@@ -6107,7 +6176,17 @@ Keep in mind that cost explorer doesn't state much about usage, it just shows ho
     * SG - checks if rules that allow unrestricted access (0.0.0.0/0) to specific ports
     * EBS/RDS public snapshot - checks permission for EBS/RDS snapshot and alert if any permission are public
     * S3 bucket permissions - checks if list/put/delete permission are public
-    * IAM use - checks that you create 1 or more iam users and use it (instead of using root user) 
+    * IAM use - checks that you create 1 or more iam users and use it (instead of using root user)
+    Other paid tier include:
+    * Exposed Access Keys - under the hood aws checks public repos for any exposed access keys & notify you if found any. Once you get notification delete/rotate access key & change user password.
+    * Security Groups - Unrestricted Access - check all possible ports
+    * AWS CloudTrail Logging - check if CT logs are enabled
+    * ELB Listener Security - check if your listener use secure config. AWS recommends using a secure protocol (HTTPS or SSL), up-to-date security policies, and ciphers and protocols that are secure
+    * ELB Security Groups - check if SG for ELB use some ports unintended to use by ELB
+    * AWS Lambda Functions Using Deprecated Runtimes - if lambda use outdated java/python/node.js version
+    * IAM Access Key Rotation - if any active keys has not been rotated for 90 days
+    * CloudFront SSL Certificate on the Origin Server - check if origin server cert expired or about to expire
+    * CloudFront Custom SSL Certificates in the IAM Certificate Store - if iam cert expired or about to expire
 * fault tolerance
 * service limits
 There are 4 support plans you can use (you must be logged in as root in order to update support plan):
