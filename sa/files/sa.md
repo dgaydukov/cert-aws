@@ -785,6 +785,9 @@ There are 3 types of iam entity:
 * user - permission for single iam entity
 * group - collection of permissions that you can assign. Used to define users. One user can belong to multiple groups. It's a best practice to use group even if you have one user in it.
 * role - collection of permissions for specific aws service (for example ec2 can connect to s3 without any secret key) or other iam entity (user/role can assume role).
+There are 2 types of policy:
+* iam policy
+* trust policy - establish trust of who can assume given role (there is no `Resource` filed for trust policy)
 You can switch role if you are iam user, federated user, ec2 through its instance profile. Root user can't switch roles.
 EC2 role access - you can add (for example bucket write access) role to ec2 instance. Instance Profile - container for an IAM role that you can use to pass role information to an EC2.
 ec2 stores temporary credentials in instance metadata, when you use aws cli/sdk it would automatically fetch temporary credentials from instance metadata. 
@@ -1454,6 +1457,7 @@ Since it's just a proxy, connector doesn't store/cache user credentials & detail
 
 ###### Certificate Manager
 ACM (Amazon Certificate Manager) - service that allows you to create/deploy public/private SSL/TLS certificates.
+ACM certs can be used for: ELB, CloudFront, Elastic Beanstalk, Api Gateway.
 It removes the time-consuming manual process of purchasing/uploading/renewing SSL/TLS certificates. There are 2 types of certificate:
 * public - issued by public CA, trusted by all browser by default. 
 * private - issued by private CA. You can create your own private CA to manage all your private certificates. There are 3 modes to work:
@@ -1861,6 +1865,9 @@ Rule package - list of security checks that inspector would run against your ec2
     * CVEs (Common vulnerabilities and exposures) - checks for publicly knows vulnerabilities and exposures of your ec2 (for example you have some unpatched package that have such vulnerability)
     * Center for Internet Security (CIS) Benchmarks - well-defined, unbiased, consensus-based industry best practices to help organizations assess and improve their security
     * Security best practices for Amazon Inspector - determine whether your systems are configured securely
+There are 2 ways to install inspector:
+* use AMI with pre-installed inspector
+* use Systems Manager Run command with `AmazonInspector-ManageAWSAgent` (ssm agent should be installed on ec2)
 
 ###### Macie
 Managed data security/privacy service that uses ML & pattern matching to discover/protect your sensitive data (PII (personally identifiable information) - names, addresses, and credit card numbers) in aws.
@@ -1872,9 +1879,9 @@ It can also identify too permissive or unencrypted buckets. Once it found sensit
 ###### GuardDuty
 Continuous security monitoring service, helps to protect aws accounts/workloads/data by analyzing data from cloudTrail/vpcFlowLogs/dnsLogs using ML. It's regional service, so all collected data is aggregated/analyzed within region. 
 It doesn't store any data, once data is analyzed it discarded. threat intelligence - list of malicious IP addresses maintained by aws and third-party partners. You should first enable GuardDuty, you can also assign admin account (it can assume 2 roles to administer your GuardDuty).
-Since WAF using application layer you can't use it to block other ports (you have to use NACL for this), so you can't use it to block ssh access to ec2. Yet you can use guardDuty to track malicious activity on ssh (like determine who is trying to brute force ssh)
+Since WAF using application layer you can't use it to block other ports (you have to use NACL for this), so you can't use it to block ssh access to ec2. Yet you can use GuardDuty to track malicious activity on ssh (like determine who is trying to brute force ssh)
 You can build solution where GuardDuty once found issue, would invoke CW event which would invoke lambda, which would update VPC NACL & web ACL(see `sa/files/images/guardduty-cloudwatch-lambda.png`)
-You can configure cw event rule to capture all or specific guardDuty finding types (using `detail: type` - you can specify which types to filter):
+You can configure cw event rule to capture all or specific GuardDuty finding types (using `detail: type` - you can specify which types to filter):
 ```
 GuardDuryFindingEvent:
     Type: AWS::Events::Rule
@@ -1913,7 +1920,11 @@ Don't confuse:
 * inspector agent - perform network (open access from NACL/SG ec2 ports) & host assessment for common vulnerabilities of open ports & apps. Inspector is do network scan once (or once a week), but guardDuty is monitoring system continuously.
 * Security Hub - aggregate all findings from other security services
 With guardDuty don't forget to subscribe for SNS, so you will get notifications once findings are ready.
-Guardduty can't work with API gateway, so if you want to implement security monitoring for api gateway it's better to use access logging + CloudWatch Alarms.
+GuardDuty can't work with API gateway, so if you want to implement security monitoring for api gateway it's better to use access logging + CloudWatch Alarms.
+Trusted IP list & threat list:
+* you can whitelist IP address so GuardDuty doesn't generate findings for this IP (in case you are sure that this IP is trusted)
+* threat list - list of malicious IP & GuardDuty will generate findings based on this list
+* you may have only 1 uploaded trusted IP list & threat list per account (in case of org - only master account can mange these 2 lists)
 
 ###### Security Hub
 SH - provides comprehensive view of security state within aws account and your compliance with security best practices. To use it you have to first enable it from aws console/cli (note you have to enable config first).
@@ -1935,6 +1946,9 @@ In case of rule fail you can configure CloudFront to show error page. Rules take
 * shield - provides protection against DDoS (Distributed Denial of Service) attack. There are 2 types of this service:
     * standard - free, activated by default for all accounts. Protect all aws infra (layer 3 and 4) against most common attacks like SYN/UDP floods or reflection attacks.
     * advanced - paid, protect against more sophisticated attacks, like layer 7 HTTP & DNS floods. It constantly monitors network traffic and provides near real-time notifications of suspected DDoS incidents. If you need immediate action against DDoS use shield advanced.
+DDoS cost protection:
+* shield advanced provides cost protection in case protected resources (EC2/ELB/CloudFront/Global Accelerator/Route53) experienced scale up due to DDoS attack
+* to get compensation request shield advanced credit via regular aws support channel
 Keep in mind that vpc flow logs & CW logs will not help to catch DDoS attack
 You can use shield to protect on-premise servers. For this use aws endpoint with shield in front of your on-premise server. Shield notify about attack by sending metrics to CloudWatch.
 * FM (Firewall Manager) - tool that makes it easier for you to configure your WAF rules and vpc SG across your accounts. So if you have single account no need to use FM, but if you have aws organization with many accounts
@@ -1974,8 +1988,11 @@ aws configservice list-discovered-resources --resource-type=AWS::EC2::VPC
 aws configservice get-resource-config-history --resource-type=AWS::EC2::VPC --resource-id={RESOURCE_ID}
 ```
 There are 2 ways you can enforce some rule (for example make sure SG won't open port 22):
-* use config to record changes - once change detected - use SNS+lambda to modify SG
+* create custom config to record changes - once change detected - use lambda (same lambda that check if SG change is compliant by your rules) to modify SG
 * use CloudWatch Event rule + CloudTrail to monitor changes - once found invoke lambda to modify SG
+Notification of non-compliance:
+* by default config doesn't notify if rule becomes non-compliant
+* you can use CloudWatch Event rule or EventBridge rule with `"detail-type": ["Config Rules Compliance Change"]` and target as SNS to notify when rule becomes non-compliant
 
 ###### CloudTrail
 CT - service that logs activity of your aws account (who made request, what params were passed, when and so on..). It's useful for compliance, when you need to ensure that only certain rules have ever been applied.
@@ -3496,7 +3513,7 @@ s3 replicate into same/another region within 15 min under SLA, using RTC (Replic
 To enable replication, you add replication config to your bucket (you can add filter to such configuration, so only filtered objects would be replicated). There are 2 types or replication:
 * SRR (Same-Region replication)
 * CRR (Cross-Region replication)
-Replication config includes 4 things:
+Replication config includes:
 * source bucket
 * destination bucket (in case of another account - you specify both: accountId & bucket name)
 * replication role - role on behalf of which s3 runs replication (should have read permission to source bucket & write permission and put ACL to destination bucket)
@@ -3504,11 +3521,29 @@ Replication config includes 4 things:
     * since replication is async and it should replicate each object, so if you upload object & then re-upload same object, original object would be overwritten. So in order for replication to work correctly all objects should be versioning
     * once you enable versioning - you can't disable it for source bucket. yet you can disable it for dest - in this case replication status would be `FAILED`
     * once you enable versioning & you use lifecycle policies - consider adding lifecycle policies for previous versions
+* if source & dest are different accounts - you should decide who would be object owner:
+    * by default source account would be owner
+    * if you want dest account to be owner - you can tick `Change object ownership to destination bucket owner` in s3 console when you create replication rule
+    You can also do this from s3 CloudFormation template (for simplicity we omit all other configuration)
+```
+S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+        BucketName: mybucket
+        ReplicationConfiguration: 
+            Rules:
+                - Destination:
+                    AccessControlTranslation:
+                        Owner: Destination
+```
 Replication of encrypted objects:
 * object encrypted with CMK are not replicated
 * by default s3 doesn't replicate bucket encrypted with kms. You have to explicitly enable such configuration
 * for destination bucket - you have to add kms key (keep in mind that it regional, so if your destination bucket in another region - you have to use different CMK from that region)
 * add permission to replication role (`kms:Decrypt` - for source bucket kms, `kms:Encrypt` - for destination bucket kms)
+For success of replication - 2 things should be enabled:
+* destination bucket - make sure that source bucket is allowed to replicate objects
+* source bucket - make sure all objects has owner as source bucket (if object was uploaded from another account without `bucket-owner-full-control` then source bucket is not own them, and can't replicate)
 CORS - ability to load data from `non-static url`. So for example if you use domain name to host content you may get error when try to load html/javascript files from s3. To get rid of error enable cors.
 Below rule allows POST/DELETE cors requests from example.com origin. 
 ```
@@ -3683,7 +3718,8 @@ Statement:
     Resource:
       - arn:aws:s3:::AccountABucketName/*
 ```
-* use s3 acl - use below xml policy to give cross-account access
+* use s3 acl - use below xml policy to give cross-account access. ACL doesn't support deny, only allow statement.
+With ACL you can give access only to accountID (so to whole account), if you want to give access to specific iam user - use bucket policy (there is no way to give access to iam user using ACL)
 ```
 <AccessControlPolicy xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
   <Owner>
@@ -4143,7 +4179,7 @@ You create single lambda in 1 region, and associate it with cf distribution. Aft
 * viewer response - before CF responds to viewer
 You can protect CF data by using:
 * Signed url (like presigned s3 url) - temporary access to CF data. Support both web & RTMP distribution.
-* Signed cookie - you can access multiple CF objects with same signed cookie. So use this method if you want to have access to multiple files with same cookie, and want to use standard url (without any signature as url params). Not supported for RTMP distribution.
+* Signed cookie - you can access multiple CF objects with same signed cookie. So use this method if you want to have access to multiple files with same cookie, and want to use standard url (without any signature as url params). Not supported for RTMP distribution (only for HLS).
 When creating signed url/cookie you can set 3 params:
 * end-datetime   (mandatory) - we need to know when access to particular file is over
 * start-datetime (optional)
@@ -4230,6 +4266,11 @@ Troubleshooting:
 * 502 (bad gateway) - CF can't connect to origin server:
     * for match viewer policy domain name in SSL should correspond to origin domain name
     * SSL on origin is expired/invalid/self-signed
+Pricing - you pay per GB of transferred data (from internet to CF & from CF to origin server) & total number of HTTP(S) request made.
+CloudFront Origin Shield - additional layer in front of origin server that help reduce the load to it:
+* improve cache hit - since it provide additional layer (all locations don't hit origin service directly but through origin shield)
+* reduce origin load - in case of peak load can consolidate multiple simultaneous request into 1
+* better performance - if you configure it in aws region that has lowest latency to your origin
 
 ###### Lambda
 Lambda - piece of code that can be executed without any server env (just write code in python/javascript and it will run). Lambda can be directly triggered by AWS services such as s3/DynamoDB/Kinesis Streams/SNS/CloudWatch
@@ -4788,8 +4829,10 @@ To monitor traffic you can use:
     * network interface - flow logs would be written only for this particular ENI
     `${version} ${account-id} ${interface-id} ${srcaddr} ${dstaddr} ${srcport} ${dstport} ${protocol} ${packets} ${bytes} ${start} ${end} ${action} ${log-status}`
     `2 123456789010 eni-1235b8ca123456789 172.31.16.139 172.31.16.21 20641 22 6 20 4249 1418530010 1418530070 ACCEPT OK` (SSH traffic (destination port 22, TCP protocol) to network interface eni-1235b8ca123456789 in account 123456789010 was allowed)
+    protocol - number from [IANA protocol number](https://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml), in our case 6 - TCP. You can use either default format or create your custom.
     As you see there is no actual payload, only fact that somebody try to send some tcp/udp message to someone. If you want actual payload you should use Traffic Mirroring.
     So use it to troubleshoot connectivity and security issues, make sure that the network access rules are working as expected
+    You can set destination as either s3 or CloudWatch Logs
 Since SG stateful & NACL stateless, if your SG has inbound rule for 22 but has no outbound for 22, you will have 2 log entries with ACCEPT OK.
 But if you NACL allow inbound 22 but doesn't allow outbound you will get 1 entry with ACCEPT OK, and another REJECT OK
 * VPC traffic mirroring (it copies traffic and send it to NLB with a UDP listener, so it includes actual body). Provides deeper insight into the network traffic by analyzing traffic content (payload).
@@ -5160,7 +5203,7 @@ ELB:
           Value: s3_bucket_location
 ```
 TCP pass through (you can configure elb not to terminate ssl traffic):
-* ALB can use only HTTPS listener which terminate ssl traffic using custom certificate and pass http traffic further
+* ALB can use only HTTPS listener which terminate ssl traffic using custom certificate and pass http traffic further (ALB support 1 listener by port, so you can't create 2 HTTPS listener listen the same port)
 * NLB can use TCP/443 listener. In this case NLB won't terminate ssl connection but will just pass traffic further (no need to provide server cert, just configure TCP listener for 443)
 Yet you can use TLS with nlb in this case you have to provide server cert and your nlb would terminate ssl. Keep in mind that by using nlb you can't use: warmup, sticky sessions, path-based routing.
 * classic load balancer can pass through https traffic
@@ -5258,6 +5301,9 @@ There are several tricks you can do with CW Logs:
 Alarm based on logs:
 * create metric filter based on some log pattern (like error name)
 * create metric alarm based on number of metric occurrence (like fire alarm if metric happens twice per hour)
+Don't confuse:
+* alarm - fired based on metric (which based on logs) - so for custom logic - you have to stream logs to CW logs, and then create custom metrics based on these logs
+* event rule - fired by different aws services (CloudTrail/Config/ACM and so on) integrated with event rule (eventBridge use same implementation under-the-hood).
 
 ###### Route53
 Route53 - amazon DNS service that help to transform domain name into IP address. Reason for a name, cause 53 - port of DNS.
@@ -5889,6 +5935,7 @@ Redundant site-to-site vpn - create 2 customer gateways (with 2 separate devices
     * use single VPG and multiple customer gateway for each site and assign unique BGP ASN (Autonomous System Number) for each
     * each site should have non-overlapping IP range (VPG acts as hub and re-advertise these ranges to other sites, so they communicate with each other)
     * create site-to-site vpn for each site but with same virtual gateway (many CGW to single VPG)
+    * to establish redundant connections - create 2 CGW for each site (so if you want to connect 3 sites to vpc - create 6 CGW), but all of them can use single VPG (you don't need create separate VPG for each site, cause VPG already provide redundancy)
 Note that IPSec operates on network layer of osi, so it provide protection/encryption for data in transit, yet source/destination may not be aware of IPSec, so it doesn't provide end-to-end protection.
 VPG (virtual private gateway) terminate IPSec connection and from there on traffic goes unencrypted.
 CGW (Customer Gateway) - to configure vpn, you have to create customer gateway in your on-premise, and then you have to notify aws about this. So from aws side it's just a way to notify aws about your customer gateway device.
