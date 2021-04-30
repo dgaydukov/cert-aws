@@ -14,6 +14,7 @@ Other then that, ML is not covered by that exam, that's why we create separate f
 * [Free ML questions](https://www.examtopics.com/exams/amazon/aws-certified-machine-learning-specialty)
 
 ### TODO
+https://www.cfainstitute.org/en/programs/cfa/exam
 https://www.amazon.com/Options-Futures-Other-Derivatives-9th/dp/0133456315
 https://www.amazon.com/Reminiscences-Stock-Operator-Edwin-Lef%C3%A8vre/dp/0471770884
 * kafka

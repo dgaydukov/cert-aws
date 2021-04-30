@@ -1160,6 +1160,19 @@ To get aws console url you should:
         You can also pass inline permission - result would be intersection between role permission & your inline permission. By doing this you can limit role permission further.
         If you are using amazon cognito IdP, you still need to configure cognito identity pool.
         * AssumeRoleWithSAML - get temporary credentials for user who authenticated with SAML. In the api call you have to provide SAML assertion, encoded in base64, returned by the SAML IdP
+        You can use `SAML:aud` as condition key to ensure that user can use trust policy only to sign-in to aws console
+```
+{
+    "Version": "2012-10-17",
+    "Statement": {
+      "Effect": "Allow",
+      "Action": "sts:AssumeRoleWithSAML",
+      "Principal": {"Federated": "arn:aws:iam::ACCOUNT-ID-WITHOUT-HYPHENS:saml-provider/PROVIDER-NAME"},
+      "Condition": {"StringEquals": {"SAML:aud": "https://signin.aws.amazon.com/saml"}}
+    }
+  }
+
+```
     * GetFederationToken - returns intersection of user permission and passed policy. `DurationSeconds` - specify time from 15 min - 36 hours
     `aws sts get-federation-token --name=bob --policy='{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":"s3:*","Resource":["*"]}]}'`
     * GetSessionToken - returns a set of temporary credentials to an existing IAM user (duration 15min - 36h, default - 12h). Basically same as `GetFederationToken`, but you don't supply policy and get all permission available for calling user.
@@ -1341,7 +1354,7 @@ If you noticed unauthorized activity in your account:
 * enable 2FA for root & iam users
 * delete unauthorized iam users & change password for other iam users:
     * check all iam users for `AWSExposedCredentialPolicy_DO_NOT_REMOVE` policy (user with such policy added by aws is compromised, after investigation you have to delete it)
-    * aws scrapes public repo for leaked credentials. If it found it will try to protect you by adding `AWSExposedCredentialPolicy_DO_NOT_REMOVE` policy (with deny statement to most critical actions like `iam:CreateUser`)
+    * aws scrapes public repo for leaked credentials. If it found it will try to protect you by adding `AWSExposedCredentialPolicy_DO_NOT_REMOVE` policy (with deny statement to most critical actions like `iam:CreateUser`) to user/role for which credentials were leaked
     * delete any iam user you didn't create or any compromised user
     * change password for users you want to keep
 * delete any resource you didn't create
@@ -1900,7 +1913,7 @@ GuardDuryFindingEvent:
 ```
 GuardDuty generate findings with potential security issues:
 * ec2 - Don't terminate ec2 immediately cause it would remove the state. Investigate potentially compromised instance for malware & remove any detected malware. 
-You can use products from aws MarketPlace to identify & remove malware. If you can't find any malware, it's better to terminate ec2.
+You can use products from aws MarketPlace to identify & remove malware. If you can't find any malware - capture memory dump, take snapshot, replace ec2 with new one (if it inside ASG just terminate it, ASG will start new one).
 * s3 - finding would include: bucketArn/API_call/source (arn of user/role who made the call).
 First determine if call was authorized (if it iam user, is credential are compromised, if it's api - if ec2 compromised). IF user name `ANONYMOUS_PRINCIPAL` with user type of `AWSAccount` - bucket is public, should it be public?
 * aws credentials - (key starts from: AKIA - long term credentials, ASIA - short term credentials) - check if iam credentials were used legitimately
@@ -1917,7 +1930,7 @@ So using GuardDuty you can discover:
 Don't confuse:
 * GuardDuty - perform assessment of network communication and can detect malicious activity (like your ec2 constantly communicate with crypto-related IP addresses) using ML
 * macie - search sensitive data in s3 buckets using ML
-* inspector agent - perform network (open access from NACL/SG ec2 ports) & host assessment for common vulnerabilities of open ports & apps. Inspector is do network scan once (or once a week), but guardDuty is monitoring system continuously.
+* inspector agent - perform network (open access from NACL/SG ec2 ports) & host assessment for common vulnerabilities of open ports & apps. Inspector is do network scan once (or once a week), but GuardDuty is monitoring system continuously.
 * Security Hub - aggregate all findings from other security services
 With guardDuty don't forget to subscribe for SNS, so you will get notifications once findings are ready.
 GuardDuty can't work with API gateway, so if you want to implement security monitoring for api gateway it's better to use access logging + CloudWatch Alarms.
@@ -1925,6 +1938,20 @@ Trusted IP list & threat list:
 * you can whitelist IP address so GuardDuty doesn't generate findings for this IP (in case you are sure that this IP is trusted)
 * threat list - list of malicious IP & GuardDuty will generate findings based on this list
 * you may have only 1 uploaded trusted IP list & threat list per account (in case of org - only master account can mange these 2 lists)
+Suppression rule:
+* you can add such rule with existing filter or create new filter so GuardDuty will mark such finding as archive
+* such findings won't go to s3/CloudWatch & stayed in GuardDuty for 90 days
+* you can use `aws guardduty list-findings --finding-criteria service.archived=true` (by default all findings would be retreived)
+* in multi-account system only admin can create suppression rule
+* use case:
+    * Recon:EC2/Portscan - in case your ec2 using vulnerability assessment application
+    * UnauthorizedAccess:EC2/SSHBruteForce - in case ec2 is bastion host (cause it expected that bastion host constantly accessed with ssh)
+Managing multiple accounts:
+* you can manage multiple accounts with GuardDuty from single admin account
+* you can use either:
+    * org - use org master account to register GuardDuty as admin account
+    * invite independent account to be managed under admin account by GuardDuty
+* once you activate GuardDuty admin account - you can manage GuardDuty from single place
 
 ###### Security Hub
 SH - provides comprehensive view of security state within aws account and your compliance with security best practices. To use it you have to first enable it from aws console/cli (note you have to enable config first).
@@ -1951,7 +1978,7 @@ DDoS cost protection:
 * to get compensation request shield advanced credit via regular aws support channel
 Keep in mind that vpc flow logs & CW logs will not help to catch DDoS attack
 You can use shield to protect on-premise servers. For this use aws endpoint with shield in front of your on-premise server. Shield notify about attack by sending metrics to CloudWatch.
-* FM (Firewall Manager) - tool that makes it easier for you to configure your WAF rules and vpc SG across your accounts. So if you have single account no need to use FM, but if you have aws organization with many accounts
+* FM (Firewall Manager) - tool that makes it easier for you to configure your WAF rules, shield advanced, vpc SG across your accounts in one place. So if you have single account no need to use FM, but if you have aws organization with many accounts
 it's better to use single tool to configure waf across all accounts, cause FM integrated with organization so have a single place to quickly respond to incidents.
 WAF sandwich (see `sa/files/images/waf-sandwich.png`) - concept where instead of aws, you use custom software with waf on ec2.
 In this case you have elb -> custom waf with asg -> elb -> ec2 with app. So basically you put your custom waf ec2 into ASG and between 2 elb.
@@ -5290,9 +5317,13 @@ I think under-the-hood both Athena & LI works the same:
 * they both use sql-like query language: athena - pure sql, LI - custom sql-like query language
 You can also open one log group => click `Search All` in the top right => specify time range + keyword and search all log streams for specified time range.
 In the end both search all & logs insights works the same (both can search through all log streams within specified range). Logs insights goes even deeper and allows you to search across up to 20 LG at the same time (search all - only within single LG).
-You can use console/cli to achive this:
+You can use console/cli to achieve this:
 * Logs insights - run query with `start-query` and get queryId => `get-query-results` - to get executed results by queryId (query runs up to 15 min, if it take longer it discarded)
 * Search All - run `filter-log-events`, supply LG, list of log streams (by default all log streams within log group), time range, filter pattern
+So if you want to search you have 3 options:
+* s3 + athena (paid)
+* cw logs + logs insight (same price as athena query)
+* cw search logs - free. So if you want most easiest & cost-effective solution - use this one
 There are several tricks you can do with CW Logs:
 * create metric using metric filter - for example fire alarm when app throw 3 times `NullPointerException`
 * export logs into s3 (kms-encrypted destination bucket is not supported)
@@ -5837,6 +5868,7 @@ When you create ec2 with SM role (this will allow agent running on ec2 to talk w
 * Automation - you can automate most common tasks for a group of aws resources
 you can also update/patch your ami:
 * run command - easy way to manage your ec2 instances without ssh/bastion. All actions made here are recorded by CloudTrail, so you can easily trace what happened
+Run command `aws ssm send-command` like any other aws api call recorded in CloudTrail, so you can view CT for all run commands that has been done with all details (what command, how many instances and so on)
 * session manager - browser cli that allow to interact with ec2 without ssh/bastion/opening inbound ports. 
 It improves security, cause it doesn't require you to open inbound ssh port (22) to talk with ec2. You also don't need to operate bastion host.
 For this to work you should assign a role to ec2 with policy `AmazonEC2RoleforSSM`. Internally ssh manager just ssh you as `ssm-user` with root privilege.
