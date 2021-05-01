@@ -783,16 +783,16 @@ There are several networking drivers that you can specify in `network_mode` prop
 ###### IAM
 There are 3 types of iam entity:
 * user - permission for single iam entity
-* group - collection of permissions that you can assign. Used to define users. One user can belong to multiple groups. It's a best practice to use group even if you have one user in it.
+* group (can't be principal) - collection of permissions that you can assign. Used to define users. One user can belong to multiple groups. It's a best practice to use group even if you have one user in it.
 * role - collection of permissions for specific aws service (for example ec2 can connect to s3 without any secret key) or other iam entity (user/role can assume role).
 There are 2 types of policy:
-* iam policy
-* trust policy - establish trust of who can assume given role (there is no `Resource` filed for trust policy)
+* iam policy - permissions to access aws services (like `s3:GetObjet`)
+* trust policy (only for role) - establish trust of who can assume given role (there is no `Resource` filed for trust policy)
 You can switch role if you are iam user, federated user, ec2 through its instance profile. Root user can't switch roles.
 EC2 role access - you can add (for example bucket write access) role to ec2 instance. Instance Profile - container for an IAM role that you can use to pass role information to an EC2.
 ec2 stores temporary credentials in instance metadata, when you use aws cli/sdk it would automatically fetch temporary credentials from instance metadata. 
 Yet if you want to call aws api outside cli/sdk you have to manually fetch credentials and make a call (`sa/cloudformation/ec2-role.yml`). This security credentials are temporary and ec2 rotate them automatically, new credentials available for 5 min before expiration of old.
-ec2 can assume 1 role at a tile, so `AWS::IAM::InstanceProfile` has `Roles` where you should provide list of roles, you can actually add only 1 role, if you add 2 - syntactically it would be correct, but when CF template would run you would get error: `Roles has too many elements. The limit is 1`.
+ec2 can assume 1 role at a time, so `AWS::IAM::InstanceProfile` has `Roles` where you should provide list of roles, you can actually add only 1 role, if you add 2 - syntactically it would be correct, but when CF template would run you would get error: `Roles has too many elements. The limit is 1`.
 You can run below command to manually extract temporary credentials (where `role-Ec2Role` - your role name)
 ```
 TOKEN=`curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600"` && curl -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/iam/security-credentials/role-Ec2Role
@@ -801,8 +801,7 @@ IAM user - `who am I` & `what can I do`. But role is just `what can I do`. So fo
 When you create ec2 role from console, instance profile automatically created with same name. But if you are using CLI/CloudFormation you have to manually create it `AWS::IAM::InstanceProfile` and assign it to ec2 using `IamInstanceProfile`.
 Entity can assume only 1 role at a time, so if user is assigned to 2 groups he would get all permissions from 2 groups at the same time, but if he assigned 2 roles, he can use only one at a time (by assuming one role)
 There are 2 types of tokens:
-* Access token - combination of Access Key ID (20 chars) + Secret Access Key (40 characters)
-aws prevents replay attack by using timestamp in signature and if request older that 15 min, it's rejected.
+* Access token - combination of Access Key ID (20 chars) + Secret Access Key (40 characters). aws prevents replay attack by using timestamp in signature and if request older that 15 min, it's rejected.
 * Session Token - temporary session token to authenticate
 Policy - define the permissions for a user/group/role. Resource is defined with following format `"arn:aws:service:region:account-id:[resourcetype:]resource"`.
 Resource examples:
@@ -813,7 +812,7 @@ Amazon DynamoDB Table   arn:aws:dynamodb:us-east-1:ACCOUNT_ID:table/myTable
 ```
 Don't confuse:
 * `sts:AssumeRole` - ability of principal to assume other role for himself
-* `iam:PassRole` - ability of principal create resource (lambda/ec2) and pass role to this resource
+* `iam:PassRole` - ability of principal to pass role to resource (lambda/ec2)
 If principal doesn't have `PassRole` permission, and try to create ec2 with role, he will get `is not authorized to perform: iam:PassRole on resource`. 
 Below example of policy to allow principal to create ec2 with only specific role
 ```
@@ -836,23 +835,23 @@ Mobile app access - there are 2 ways to access aws resources from mobile app:
 * TVM (token vending machine - java code run on ec2 that request temporary credentials on behalf of user) - old way to get temporary credentials. Don't use it, better to use cognito.
 It's also not scalable, cause it's implemented on single ec2 - so it's single point of failure.
 Don't confuse:
-* Notaction - opposite of Action, can be used with Allow/Deny.
-Notaction+Allow - add access to all actions except those under Notaction. Good example to allow all actions on s3 except delete bucket
-```
-"Effect": "Allow",
-"NotAction": "s3:DeleteBucket",
-"Resource": "arn:aws:s3:::*",
-```
-NotAction+Deny - deny access to all actions except those under Notaction. Notice that this action doesn't give any rights on actions inside Notaction. You still should add explicit allow. 
-It only explicitly deny to all other actions except those under Notaction.
-* Deny - type of Effect
+* Notaction - opposite of `Action`, can be used with Allow/Deny:
+    * Notaction+Allow - add access to all actions except those under Notaction. Good example to allow all actions on s3 except delete bucket
+    ```
+    "Effect": "Allow",
+    "NotAction": "s3:DeleteBucket",
+    "Resource": "arn:aws:s3:::*",
+    ```
+    * NotAction+Deny - deny access to all actions except those under Notaction. Notice that this action doesn't give any rights on actions inside Notaction. You still should add explicit allow. It only explicitly deny to all other actions except those under Notaction.
+* Deny - type of `Effect`, deny specific action/notaction.
 Same way you can use NotAction/NotResource/NotPrincipal (this means all except - like all principals except those listed in `NotPrincipal`). For example if you want to limit s3 to specific users. 
 Of course you can create deny for all current users, but in this case once somebody add new user with `s3:*` action, he will get access.
 So instead of explicitly deny to all users you can use Deny+NotPrincipal. In this case you would deny to all users except your desired user.
 This approach is bit difficult for roles, cause role principal is defined by 2 arn:
 * role arn -              `arn:aws:iam::ACCOUNT_ID:role/roleName`
-* assumed role user arn - `arn:aws:sts::ACCOUNT_ID:assumed-role/roleName/roleSessionName` (roleSessionName - can be changed depending who is assuming this role)
-The problem is that Principal/NotPrincipal doesn't support wildcard. But you can use conditions
+* assumed role user arn - `arn:aws:sts::ACCOUNT_ID:assumed-role/roleName/roleSessionName` (roleSessionName - can be changed depending who is assuming this role, cause when iam entity assume role it pass `--role-session-name` which can be any value)
+The problem is that Principal/NotPrincipal doesn't support wildcard. But you can use conditions (`aws:userId` for role defined as `UNIQUE-ROLE-ID:ROLE-SESSION-NAME`)
+[Restrict S3 Bucket to specific IAM Role](https://aws.amazon.com/blogs/security/how-to-restrict-amazon-s3-bucket-access-to-a-specific-iam-role)
 ```
 Effect: Deny
 Principal: "*"
@@ -860,14 +859,14 @@ Action: "s3:*"
 Resource: [arn:aws:s3:::MyExampleBucket, arn:aws:s3:::MyExampleBucket/*]
 Condition:
     StringNotLike
-        aws:userId": [AROAEXAMPLEID:*, 111111111111]
+        aws:userId: [roleName:*, 111111111111]
 ```
 Here we set role with wildcard and root, in case role would be deleted (otherwise access to bucket would be lost). You can use both roleId and userId here:
 * get roleId `aws iam get-role --role-name=rolename` - extract Role.RoleId
 * get userId `aws iam get-user --user-name=username` - extract User.UserId
 Role for user:
 * create role `S3Viewer` of type: Another AWS Account (enter desired accountID or your own) and assign policy  `AmazonS3ReadOnlyAccess`
-* create new policy `AssumeS3ViewerRole`
+* create new trust policy `AssumeS3ViewerRole`
 ```
 {
     "Version": "2012-10-17",
@@ -878,10 +877,10 @@ Role for user:
     }
 }
 ```
-* create user `jack` with both console & programmatic access, and  attach `AssumeRoleForS3` & `AmazonEC2ReadOnlyAccess` policies to it
+* create user `jack` with both console & programmatic access, and  attach `AssumeS3ViewerRole` & `AmazonEC2ReadOnlyAccess` policies to it
 * add user to cli `aws configure --profile=jack`
 * You can run `aws ec2 describe-instances --profile=jack` and see results. But if you run `aws s3 ls --profile=jack` you will got error, cause your user has not permission to view buckets
-* You can get temporal credential for role by `aws sts assume-role --role-arn=arn:aws:iam::ACCOUNT_ID:role/S3Viewer --role-session-name=mysession --profile=jack`
+* You can get temporal credential for role by `aws sts assume-role --role-arn=arn:aws:iam::ACCOUNT_ID:role/S3Viewer --role-session-name=mysession --profile=jack` (Note `...` - some secret code)
 ```
 {
     "Credentials": {
@@ -896,7 +895,6 @@ Role for user:
     }
 }
 ```
-Note `...` - some secret code
 * If you need constant access add to `~/.aws/config`
 ```
 [profile jackS3Viewer]
@@ -907,9 +905,9 @@ source_profile = jack
 Now if you run `aws s3 ls --profile=jackS3Viewer` you get a list of buckets, but if you run `aws ec2 describe-instances --profile=jackS3Viewer` you got `UnauthorizedOperation`, cause this role can only view s3 buckets.
 * To use assumed role from SDK you have to use `AWSSecurityTokenService` to get temporary credentials, [example here](https://docs.aws.amazon.com/AmazonS3/latest/dev/AuthUsingTempSessionTokenJava.html)
 So in Spring you just create 2 configs (based on Profile) and in local config add this logic to obtain temporal credentials. This way will allows for local development
-You can also create a policy to forbid deletion of s3 for example. In this case evan administrator/root can't delete a bucket.
+You can also create a policy to forbid deletion of s3 for example. In this case even administrator/root can't delete a bucket.
 When you work with beanstalk, it creates bucket to store files with such a policy. So even if you are admin you can't just delete it.
-If you want to delete it you should go to permission->bucket policy and remove this policy. After this you can easily delete a bucket.
+If you want to delete it you should go to `permission => bucket policy` and remove this policy. After this you can easily delete a bucket.
 ```
 {
     "Effect": "Deny",
@@ -966,7 +964,7 @@ Good usage of key:
 "Effect":"Deny",
 "Condition":{"BoolIfExists":{"aws:MultiFactorAuthPresent":"false"}}
 
-# if short-term credentials with 2FA - allow, for short-term without 2FA & long-term - this condition doesn't apply
+# if short-term credentials with 2FA - allow, for short-term without 2FA - false, long-term - value would be null, Bool condition evaluated to false
 "Effect" : "Allow",
 "Condition":{"Bool":{"aws:MultiFactorAuthPresent":"true"}}
 ```
@@ -1000,13 +998,13 @@ Multiple conditions - if you define multiple conditions, they are evaluated with
 Don't confuse:
 * long-term credentials - your aws accessId/accessKey that you generate for iam user. They always stay the same
 * short-term credentials - aws accessId/accessKey/sessionToken - that generated by api `get-session-token/sts-assume-role` and valid for certain duration like 1 hour
-You can define permissions by assign-ing policies to group/user/role. There are 2 types of policy
+You can define permissions by assigning policies to group/user/role. There are 2 types of policy:
 * aws managed - most common policies created by aws (for example s3/ec2 access and so on...)
 * managed by you - custom policies created by end user
 Permission evaluation:
 * by default deny is applied
 * if any explicit deny found evaluation is stopped and deny applied
-* if any explicit allow found evaluation continue until it's find deny - then deny applied, or not found deny - allow applied
+* if any explicit allow found evaluation continue until deny found - then deny applied, or not found deny - allow applied
 * if neither deny/allow find than default deny applied
 Federation - process to move authentication/authorization into third party to handle, so you get token from user which you verify against third party provider.
 Identity federation - grant to external identities ability to secure access aws (both management console & API) without creating iam users. External identities can be of 3 types (2 created from iam console by adding identity provider, 1 from cognito):
@@ -1028,7 +1026,7 @@ You can either use:
 * iam+google - to get access to aws console for your google users
 * cognito+google - get temporary aws credentials using google users
 FU (Federated user) - user of such external identity who can access aws services but don't have corresponding iam user (so it managed outside aws iam)
-FU can access aws management console in 2 ways
+FU can access aws management console in 2 ways:
 * programmatically request security credentials and put them into sign-in request to the AWS
 * post SAML assertion directly to [AWS sign-in](https://sign-in.aws.amazon.com/saml)
 But both allows federated user to access the console without having to sign in with a user name and password
@@ -1048,10 +1046,10 @@ Below example of resource policy with aws principal for root/user/role (yet you 
   ]
 }
 ```
-To prevent risk of privilege escalating (like you delete user & re-create it), aws internally link user/role to uniqueID of that user/role. So once you re-create it, policy won't work, cause internalID would be different for newly created role/user.
-If you say principal to root, you give access to whole account, yet if some user want to have permission, they would need to have explicit iam permission.
+To prevent risk of privilege escalating (like you delete user & re-create it), aws internally link user/role to uniqueID of that user/role. So once you re-create it, policy won't work, cause internalID would be different for newly created role/user with same name.
+If you set principal to root, you give access to whole account, yet if some user want to have permission, they would need to have explicit iam permission.
 Policy - json file with permission which you attach to IAM identity or aws resource (some resources can have it's own access policy, like s3 bucket policy - where you can define which user which action should take).
-Resource policy - policy for single resource like s3 bucket policy or SQS access control
+Resource policy - policy for single resource like s3 bucket policy or SQS access control or lambda permissions
 Main difference between identity and resource policy is that identity policy doesn't have `Principal` attribute, cause you link it to some iam identity which would be it's principal.
 Contrary to this resource policy have `Principal` attribute where you define to which user/role this policy is applied. 
 Generally you should use identity policies cause you can define access to multiple resources there, where for resource policy access is limited to this resource only.
@@ -1082,7 +1080,7 @@ Effect: Allow
 Action: [ec2:RunInstances, ec2:TerminateInstances, ec2:StopInstances, ec2:StartInstances]
 Resource: arn:aws:ec2:us-east-1:ACCOUNT_ID:instance/*
 ```
-But user still can't launch new instance in us-east-1 (although he can stop/start/terminate) cause he needs permissions to key-pairs, security groups, EBS volumes, ami.
+But user still can't launch new instance in `us-east-1` (although he can stop/start/terminate) cause he needs permissions to key-pairs, security groups, EBS volumes, ami.
 ```
 Effect: Allow
 Action: [ec2:RunInstances]
@@ -1092,7 +1090,7 @@ Resource: ["arn:aws:ec2:us-east-1:ACCOUNT_ID:instance/*",
            "arn:aws:ec2:us-east-1:ACCOUNT_ID:volume/*",
            "arn:aws:ec2:us-east-1::image/ami-*"]
 ```
-This policy will allow launch new instances in us-east-1 region.
+This policy will allow launch new instances in `us-east-1` region.
 You can use tags to segregate prod from dev env. In this case you would like to deny `ec2:CreateTag` & `ec2:DeleteTags` to all users except selected few to ensure tags lock down.
 The idea behind is that you can delegate responsibility to others (you can create policy that would allow identity to create iam users only with certain boundary,
 so all newly created users would have your predefined boundary, [example](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_boundaries.html#access_policies_boundaries-delegate))
@@ -1100,8 +1098,7 @@ so all newly created users would have your predefined boundary, [example](https:
 * ACL (Access control lists) - control which principals in other accounts can access the resource to which the ACL is attached (so they only cross-account, cannot grant permissions to entities within the same account)
 * Session policies - limit the permissions that the role or user's identity-based policies grant to the session
 Condition operator - use it to set condition to policy:
-* `...IfExists` - add it to the end of any condition operator name except `Null`. If key is present - process request as specified, if not - return true. 
-Since if key not present returned value would be true this condition most useful for `Deny` statements.
+* `...IfExists` - add it to the end of any condition operator name except `Null`. If key is present - process request as specified, if not - return true (most useful for `Deny` statements).
 * `Null` - if condition value is present. Only 2 values are possible: 
     * true - key doesn't exists (so key is null)
     * false - key exists (so key is not null)
@@ -1127,7 +1124,7 @@ List of most common condition keys:
 * `aws:PrincipalOrgPaths` - compare OU path of principal who makes request. `"Condition":{"StringEquals":{"aws:PrincipalOrgPaths":["{ORG_ID}/{OU_ID}/"]}}`
 * `aws:PrincipalAccount` - accountId of principal making request
 * `aws:Referer` (access restriction) - you can restrict access to objects in your bucket to specific website, using `referrer` key in condition. In this case only `mysite.com` can access your bucket.
-Key is included only if request made from browser, for direct access value would be null. Be careful cause this header can be easily forged by mailicious user using any custom browser.
+Key is included only if request made from browser, for direct access value would be null. Be careful cause this header can be easily forged by malicious user using any custom browser.
 ```
 {
   "Version":"2012-10-17",
@@ -1145,13 +1142,12 @@ Key is included only if request made from browser, for direct access value would
 }
 ```
 ABAC (attribute-based access control) - policy conditions basically allows you to create access control based on attributes.
-Policy version - required if you are using variables (like `${aws:username}`. If you leave version, variables are treated like literal values.
 Custom identity broker - you can generate URL that lets users who sign in to your corporate portal, access the AWS Management Console. 
-If your organization use IdP compatible with SAML (like AD) or OpenID you don't need to write any code, just enable SAML/OpenID access from aws console/cli.
+If your organization use IdP compatible with SAML (like AD) or OpenID you don't need to write any code, just enable SAML/OpenID identity provider from aws console/cli.
 To get aws console url you should:
 * validate that user is authenticated within your system
 * call one of sts api to get temporary credentials (you can call either global or regional endpoint, in case of regional - you can reduce latency, if you use sdk endpoint is determined automatically):
-    * AssumeRole (recommended) - assume iam role. `DurationSeconds` - specify time from 15 min - max session duration setting for the role. There are 3 types:
+    * AssumeRole (recommended) - assume iam role. `DurationSeconds` - specify time from 15 min - max session duration setting for the role (if you set duration more then specified inside role - you got exception). There are 3 types:
         * AssumeRole - get temporary credentials for existing IAM user
         * AssumeRoleWithWebIdentity - get temporary credentials for user who authenticated through a public IdP (Amazon/Facebook/Google/Cognito), take a look at `sa/cloudformation/cognito-iam.yml`
         This is open api, anybody can call (you don't need to be iam authenticated to call it). Identity is verified by idToken provided in call. Assumed role should have policy to allow federated access.
@@ -1161,24 +1157,23 @@ To get aws console url you should:
         If you are using amazon cognito IdP, you still need to configure cognito identity pool.
         * AssumeRoleWithSAML - get temporary credentials for user who authenticated with SAML. In the api call you have to provide SAML assertion, encoded in base64, returned by the SAML IdP
         You can use `SAML:aud` as condition key to ensure that user can use trust policy only to sign-in to aws console
-```
-{
-    "Version": "2012-10-17",
-    "Statement": {
-      "Effect": "Allow",
-      "Action": "sts:AssumeRoleWithSAML",
-      "Principal": {"Federated": "arn:aws:iam::ACCOUNT-ID-WITHOUT-HYPHENS:saml-provider/PROVIDER-NAME"},
-      "Condition": {"StringEquals": {"SAML:aud": "https://signin.aws.amazon.com/saml"}}
-    }
-  }
-
-```
+        ```
+        {
+            "Version": "2012-10-17",
+            "Statement": {
+              "Effect": "Allow",
+              "Action": "sts:AssumeRoleWithSAML",
+              "Principal": {"Federated": "arn:aws:iam::ACCOUNT-ID-WITHOUT-HYPHENS:saml-provider/PROVIDER-NAME"},
+              "Condition": {"StringEquals": {"SAML:aud": "https://signin.aws.amazon.com/saml"}}
+            }
+          }
+        ```
     * GetFederationToken - returns intersection of user permission and passed policy. `DurationSeconds` - specify time from 15 min - 36 hours
     `aws sts get-federation-token --name=bob --policy='{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":"s3:*","Resource":["*"]}]}'`
     * GetSessionToken - returns a set of temporary credentials to an existing IAM user (duration 15min - 36h, default - 12h). Basically same as `GetFederationToken`, but you don't supply policy and get all permission available for calling user.
 * call federation endpoint and supply the temporary credentials to request a sign-in token:
     * you got json from previous step: `{"sessionId":"", "sessionKey":"", "sessionToken":""}`, so encode it to url to get URL_ENCODED_SESSION
-    * send request to: `https://sign-in.aws.amazon.com/federation?Action=getsign-inToken&SessionDuration=1800&Session={URL_ENCODED_SESSION}`
+    * send request to: `https://sign-in.aws.amazon.com/federation?Action=getsigninToken&SessionDuration=1800&Session={URL_ENCODED_SESSION}`
 * construct console sign-in url and return it to user
 You can use [java example](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_enable-console-custom-url.html#STSConsoleLink_programJava) to get sign-in url
 `DecodeAuthorizationMessage` (sts api call) - in case api call return 403, some api may returned encoded message, it's encoded cause it may have some private info. So to decode you have to use this api, and have permission to use this api.
@@ -1186,7 +1181,7 @@ You can use [java example](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_r
 # try to start ec2 with user that has no permissions to do this
 aws ec2 start-instances --instance-id=i-04ee5711b4afe70d0 --profile=jack
 
-An error occurred (UnauthorizedOperation) when calling the StartInstances operation: You are not authorized to perform this operation. Encoded authorization failure message: xmwNM8Y2qt......
+# An error occurred (UnauthorizedOperation) when calling the StartInstances operation: You are not authorized to perform this operation. Encoded authorization failure message: xmwNM8Y2qt......
 
 You can use sts to decode message
 aws sts decode-authorization-message --encoded-message={ENCODED_MESSAGE}
@@ -1197,7 +1192,7 @@ Cross-account ec2 role (ec2 from accountA can assume role from accountB, take a 
 * create instance profile in accountA (if using aws console it would be created automatically, when you assign role to ec2)
 * go to ec2 (it would already have role from accountA) and configure aws to assume role from accountB, now your ec2 can access accountB resources
 Policy variables - if you don't know exact value when you write policy you can use variable in `Condition/Resource`. If aws can't resolve variable, entire statement is evaluated to false (if you want to evaluate variable only if it present in request use `IfExists...` construction).
-If you want to use policy variables, you must include version into your policy (latest version that support variables - `2012-10-17`, previous versions doesn't support it). 
+Policy version - required if you are using variables, like `${aws:username}`. If you leave version, variables are treated like literal values (latest version that support variables - `2012-10-17`, previous versions doesn't support it).
 Below is example to list buckets only with prefix of username, and get objects only from bucket that named same as user. So variables add more elasticity.
 ```
 {
@@ -1247,14 +1242,14 @@ Don't confuse:
 * Version policy - `Version` attribute for a policy
 * policy versioning - when you modify policy (or aws modify it managed policy), aws doesn't overwrite policy, but instead update it version. So you can always rollback to previous policy
 Don't confuse:
-* aws managed policy - policy managed & maintaned by aws
+* aws managed policy - policy managed & maintained by aws
 * customer managed policy - separate policy managed by user (can be assigned to multiple entities)
 * inline policy - policy directly attached to single iam entity (if you remove entity, inline policy would be removed)
 Customer managed policy always preferable to inline policy:
 * can be reused
-* can be central manged 
+* can be centrally manged 
 * versioning & rollback
-* permission delegation flexibility - you can create limited admin user who can only assign specified policies to other entites (yet he can't modify policy itself)
+* permission delegation flexibility - you can create limited admin user who can only assign specified policies to other entities (yet he can't modify policy itself)
 Credential report (`aws iam get-credential-report`) - you can generate & download report with all account users with status/password/access_key/MFA. You can generate new report every 4 hours (if you request report, aws check if it was generated within last 4 hours, if yes return old, if no creates new).
 It includes all users with following fields:
 * arn/user_creation_time
@@ -1264,8 +1259,7 @@ It includes all users with following fields:
 * cert1_active/cert1_last_rotated -- same for `cert2`
 As you see this report include only users with long-term credentials, it doesn't include roles or SAML identity, for this you can use CloudTrail to see when role was assumed (cause to assume role you call sts api, and it logged in CT)
 To generate & download report you need to have 2 permissions: `iam:GenerateCredentialReport` & `iam:GetCredentialReport`
-Keep in mind that if you need to ensure that some resource can be accessed only from some particular entity, it's better to add explicit deny.
-Consider example where you have private rest api and you want it to be accessed from vpc endpoint you can add
+Keep in mind that if you need to ensure that some resource can be accessed only from some particular entity, it's better to add explicit deny. Consider example where you have private rest api and you want it to be accessed from vpc endpoint you can add
 ```
 {
     "Effect": "Allow",
@@ -1325,9 +1319,9 @@ aws iam list-policies-granting-service-access
 ```
 * for each iam entity (user/group/role/policy)  you can view report which service it was using (you can filter services accessed or not accessed)
 * so you can use this tool to check if your user has excessive permission for services he never uses & accommodate permission according to least principle
-confused deputy problem:
+Confused deputy problem:
 * If you have `A->B->C` where your account A provides cross-account role for account B, which provides cross-account role for account C, account C may assume role from account A, through account B
-* to fight this you have to use `ExternalId`, which generated by B and provides to you), you then use it in your condition policy
+* to fight this you have to use `ExternalId`, which generated by B and provides to you, you then use it in your condition policy in account A
 ```
 {
   "Version": "2012-10-17",
@@ -1341,7 +1335,7 @@ confused deputy problem:
 ```
 VPC endpoint policy:
 * you can assign resource policy to vpc endpoint where you can allow/deny access (by default policy that allow all access is given)
-* then you assign policy to resource (s3/dynamoDb) that allow access from vpc endpoint:
+* then you assign policy to resource like s3, or iam policy for dynamoDb (cause it doesn't support resource policy) that allow access from vpc endpoint:
     * for those who support resource policy (like s3) - you add resource policy to allow access from vpc endpoint
     * for those who doesn't support resource policy (dynamoDB) - you add user/role iam policy with condition to limit access to vpc endpoint
 So if you want to deny access if it not accessed from vpc endpoint add `"Condition":{"StringNotEquals":{"aws:sourceVpce":"vpce-11aa22bb"}}` to resource policy (in case of s3) or to user/role policy in case of dynamoDB
@@ -1360,18 +1354,17 @@ If you noticed unauthorized activity in your account:
 * delete any resource you didn't create
 
 ###### Cognito
-Cognito - managed user service that add user sign-in/sign-up/management email/phone verification/2FA logic. There are 2 pools:
-* User Pool kind of IdP (Identity Provider) - a directory with users' profiles, you can set up password strength
+Managed user service that add user sign-in/sign-up/management email/phone verification/2FA logic. There are 2 pools:
+* User Pool - kind of IdP (Identity Provider) - a directory with users' profiles, you can set up password strength
 You can migrate your users into cognito, but password won't be migrated. If you want to migrate them with password you need to add special logic to your app:
 when user sign-in to your app - you sign-in him within cognito, if user doesn't exist in cognito you sign-up him with username/password.
-Cognito also support SAML or OpenID Connect, social identity providers (such as Facebook, Twitter, Amazon) and you can also integrate your own identity provider.
+Cognito also support SAML or OpenID Connect (Facebook/Twitter/Amazon), social identity providers and you can also integrate your own identity provider.
 * Identity Pool - temporary credentials to access aws services. If your users don't need to access aws resources, you don't need identity pool, user pool would be enough.
 You can use users from User Pool or Federated Pool (Facebook, Google) as users to whom give temporary credentials.
-You pay for MAU (monthly active users) - user who within a month made some identity operation sign-in/sign-up/tokenRefresh/passwordChange.
-Free tier - 50k MAU per month. You can call `AssumeRole` to get temporary credentials. So you can sign-in to user_pool but you can use user_pool id token to get aws credentials from identity_pool.
+You pay for MAU (monthly active users) - user who within a month made some identity operation sign-in/sign-up/tokenRefresh/passwordChange (free tier - 50k MAU per month)
 There are 3 types of cognito tokens (with accord to OpenID):
 * id token (contains claims) - jwt token that has personal user info (name, email, phone). So you shouldn't use it outside your backend, cause it includes sensitive info. Usually id token = access token + user's personal details.
-* access token (contains scopes)- jwt token that includes user's access rights. You can use it outside your backend to get access to other services. Live of id/access token is limited, usually to 1 hour, and that's why you should use refresh token to prolong it.
+* access token (contains scopes)- jwt token that includes user's access rights. You can use it outside your backend to get access to other services. Life of id/access token is limited, usually to 1 hour, and that's why you should use refresh token to prolong it.
 * refresh token - use it to retrieve new ID and access tokens
 Example creating users from cli (first run `sa/cloudformation/cognito-iam.yml` as CF stack):
 ```
@@ -1469,24 +1462,22 @@ Under-the-hood it's dual AZ proxy that connects aws services to on-premises AD. 
 Since it's just a proxy, connector doesn't store/cache user credentials & details. You have to provide a pair of DNS IP, connector use it to locate nearest domain controller.
 
 ###### Certificate Manager
-ACM (Amazon Certificate Manager) - service that allows you to create/deploy public/private SSL/TLS certificates.
-ACM certs can be used for: ELB, CloudFront, Elastic Beanstalk, Api Gateway.
+ACM (Amazon Certificate Manager) - service that allows you to create/deploy public/private SSL/TLS certificates (can be used for: ELB, CloudFront, Elastic Beanstalk, Api Gateway).
 It removes the time-consuming manual process of purchasing/uploading/renewing SSL/TLS certificates. There are 2 types of certificate:
 * public - issued by public CA, trusted by all browser by default. 
 * private - issued by private CA. You can create your own private CA to manage all your private certificates. There are 3 modes to work:
     * you can delegate management to ACM
     * you can manually distribute certificates to other services (like ec2), but ACM still renew your private certificates
     * you have complete control
-ACM Private CA (Certificate Authority) - managed by aws private CA where you can create your private certificates.
-Both CA & PCA are regional services, you can't copy/exports (you can export private cert from ACM) certs into another region. If you want disaster recovery:
+ACM PCA (Private Certificate Authority) - managed by aws private CA where you can create your private certificates.
+Both ACM & PCA are regional services, you can't copy/exports (if you create PCA you can request private cert from ACM - which you can export) certs into another region. If you want disaster recovery:
 * ACM:
     * ELB - create 2 ELB in 2 regions & request/import 2 certs into each region with same domain name
     * CloudFront - create cert in `us-east-1` region, it would propagate to all geographic regions that CF distribution use
 * PCA - create 2 PCA in 2 regions & use them independently within each region.
-Yet if you create PCA you can request private cert from ACM - which you can export.
 So if you have PCA there are 2 ways to create private cert:
 * PCA `IssueCertificate` - cert would be managed inside PCA
-* ACM `RequestCertificate` - you will be able to manage private cert using ACM (you can export it & ACM can automatically review it)
+* ACM `RequestCertificate` - you will be able to manage private cert using ACM (you can export it & ACM can automatically renew it)
 ACM support automatic renewal (PCA doesn't support this):
 * eligible:
     * associated with any aws service (ELB, CF)
@@ -1496,13 +1487,13 @@ ACM support automatic renewal (PCA doesn't support this):
     * cert imported into ACM
     * already expired
 You can manually renew cert with `aws acm renew-certificate`. For private cert it should either be associate with aws service or you have to export it & manually renew it.
-Private CA handles the issuance/validation/revocation of private certificates within a private network, compose of 2:
+PCA handles the issuance/validation/revocation of private certificates within a private network, compose of 2:
 * private certificate
 * CRL (Certificate Revocation List) - resources can check this list, that private certificate is valid one
 Don't confuse:
 * public CA - validate certificates in Internet. Can be used only with ELB/CloudFront/BeanStalk/API Gateway.
 * private CA - validate certificates in private network. Can be used with any aws service (ec2).
-They even have different permission key `acm` vs `acm-pca`, PCA (private certificate authority). Below policy allows both public & private list & create
+They even have different permission key `acm` vs `acm-pca`. Below policy allows both public & private list & create
 ```
 {
     "Version": "2012-10-17",
@@ -1527,28 +1518,26 @@ Both support iam entity permission, but PCA also supports [resource-based policy
 * you can use `aws acm-pca put-policy` cli to add resource policy
 * you can use `aws acm-pca create-permission` to allow only 3 actions `IssueCertificate/GetCertificate/ListPermissions` for principal=`acm.amazonaws.com`, if you want ACM to automatically update certs (cause ACM would need these 3 permissions) that reside in your PCA (only for same account)
 Don't confuse:
-* root CA - best practice suggest to use root CA only to sign subordinate CA & create cert hierarcy (althoug you can also sign end-endity certs)
-* subordinate CA - PCA can have up to 4 level of subordinates under root. Use this CA to sign end-entity certs
+* root CA - best practice suggest to use root CA only to sign subordinate CA & create cert hierarchy (although you can also sign end-entity certs)
+* subordinate CA - PCA can have up to 4 level of subordinates under root. Use this CA to sign end-entity certs or other subordinates
 PCA Audit Report:
-* you can create every 30 min audit report & download it from s3 bucket which includes info about all certs, both issued & revoed by your PCA
+* you can create every 30 min audit report & download it from s3 bucket which includes info about all certs, both issued & revoked by your PCA
 * you can use `aws acm-pca create-certificate-authority-audit-report --audit-report-response-format=[JSON,CSV]` (as you see you can choose format between json/csv)
 * both iam user & PCA (`"Principal":{"Service":"acm-pca.amazonaws.com"}`) should have s3 bucket permission to write
 * you can enable bucket encryption if your want report to be encrypted
-* you can use `aws acm-pca get-certificate`, but you need to pass certArn which is returned by `IssueCertificate` command. But except cert creation, there is no way to get arn of all current certs (there is no such command as `list-certificates`)
+* you can use `aws acm-pca get-certificate`, but you need to pass certArn which is returned by `IssueCertificate` command. But except cert creation, there is no way to get arn of all current certs (there is no such command as `list-certificates` for PCA)
 But in acm you can get all currently issued public certs using `aws acm list-certificates`, so it's done intentionally, when using PCA - use audit report to list all certs.
 PCA validity period:
 * you should set validity period for PCA hierarchy `sa/files/images/acm-pca-validity-period.png`
-* default for root CA - 10years, for end cert - 13 month (you can call `IssueCertificate` with less than 13 month, but not more)
+* default for root CA - 10 years, for end cert - 13 month (you can call `IssueCertificate` with less than 13 month, but not more)
 * once subordinate CA expired - it can't issue new certs anymore
 Public certificate should have valid dns name, but private can have any desired name. Self-signed certificate - certificate generated manually without CA (so no way to check if it's revoked or valid).
 You can create certificate with multiple domain names or wildcard domain name (*.example.com).
 Since public certificates proves domain identity, Amazon must verify that you own domain before issuing certificate. Aws use 2 types of validation:
-* dns - you modify your CNAME by adding some randomly generated token by ACM, that's how you prove that you own domain.
-If you want to automatically renew your cert you shouldn't remove CNAME token, otherwise in order to renew you would have to run dns validation again
+* dns - you modify your CNAME by adding some randomly generated token by ACM, that's how you prove that you own domain. If you want to automatically renew your cert you shouldn't remove CNAME token, otherwise in order to renew you would have to run dns validation again
 * email - amazon sends email to the owner of domain that it obtains from whois service
 For successful issuing of public certificate DNS CAA should be empty or include one of: amazon.com/amazontrust.com/awstrust.com/amazonaws.com
-Public certs are free, but private CA - 400$ per month. You also pay for each private cert.
-If you request private cert form PCA using ACM - no need to validate cause your account has PCA.
+Public certs are free, but private CA - 400$ per month. You also pay for each private cert. If you request private cert form PCA using ACM - no need to validate cause your account has PCA.
 ACM internally use KMS (`aws/acm` key that generated first time you request ACM):
 * acm stores all certificate private keys encrypted (acm stores only encrypted version of private key)
 * when you associate acm with service, acm sends certificate & encrypted private key to this service + create kms permission to allow for service to use it to decrypt private key
@@ -1559,7 +1548,7 @@ IAM certificate:
 * you can't create new cert from iam, but you can upload pre-generated cert
 * you should uce cli/api (currently console not supported cert upload, yet if you create ELB from there you can upload)
 * use commands `UploadServerCertificate` - upload new cert, `ListServerCertificates` - list all certs, `GetServerCertificate` - get cert by id
-* don't confuse server cert with user sign-ing cert `Uploadsign-ingCertificate` - you upload cert for specified user, and this user can make X.509 signed requests
+* don't confuse server cert with user signing cert `UploadsigningCertificate` - you upload cert for specified user, and this user can make X.509 signed requests
 There is no way to migrate cert from IAM to ACM. There is no way to update imported certs after expire date. If you import certs, you have to take care about expire date manually.
 
 ###### KMS
@@ -1567,12 +1556,15 @@ Key Management Service - service for generating/storing/auditing keys. If you ha
 You start working with KMS by creating CMK (customer master keys), or if you are using encryption from other aws resource, it would create CMK automatically for you.
 You can import only symmetric keys. But you can't export symmetric/asymmetric private key.
 KMS keys are region specific (you can't transfer them into another region), so if you create key in one region you can't get it by accessing endpoint for another region.
-CMK Rotation - automatic (once per year) change of underlying backing key without change logical resource:
+CMK Rotation - automatic (once per year, only for symmetric key) change of underlying backing key without change logical resource:
 * aws managed CMK - rotation enabled by default (you can't disable it manually), key rotated every 3 year
 * your CMK - you can enable/disable key rotation, once enabled it would rotate every year
+Automatic key rotation not supported for:
+* asymmetric keys
+* CMK in custom key store
+* CMK with imported key material
 Don't confuse:
-* aws managed CMK - you have no control of key, it always enabled, you can't disable/delete it, rotation enabled (can't disable), you can't modify key policy.
-Key policy for managed key is pre-defined for specific service using `kms:ViaService` condition.
+* aws managed CMK - you have no control of key, it always enabled, you can't disable/delete it, rotation enabled (can't disable), you can't modify key policy. Key policy for managed key is pre-defined for specific service using `kms:ViaService` condition
 * your CMK - you have full control to enable/disable rotation, enable/disable key, delete key, define access control
 Don't confuse:
 * kms key (either CMK or aws managed key) - final key that you used for encrypt/decrypt
@@ -1596,13 +1588,13 @@ aws kms re-encrypt --ciphertext-blob=fileb://myfile --destination-key-id=alias/m
 ```
 If you need to rotate key every month for s3, create lambda, trigger it with CloudWatch, that would create new kms key each month & update s3 to use new kms.
 Don't delete old keys, cause previously encrypted files would be using old keys to decrypt files (information about key is stored inside encrypted file).
-Yet previous backing key is stored perpetually until you delete cmk, so all data encrypted with previous key can easily be decrypted. But for all new encryption new key is used.
+With automatic rotation previous backing key is stored perpetually until you delete cmk, so all data encrypted with previous key can easily be decrypted. But for all new encryption new key is used.
 Data Key (limited to a region) - generated by CMK and used to encrypt data larger than 4KB (CMK can encrypt only less than 4KB) and be used outside KMS.
 Access to key is a combination of key policy (resource policy) + iam policy. Any explicit deny always overwrite allow. Compare to other resources to add access to kms you must add key policy (with or without iam policy).
 Default key policy - created if you don't specify any policy when you create kms, by default all actions `kms:*` allowed to root user only.
 key policy upgrade:
 * when aws introduce new features for kms: for new keys created from scratch new policy would be used, but for existing one you have to update key policy
-* if you create your CMK with default key you can use console upgrade fature (if you use your custom key policy automatic upgrade won't be available)
+* if you create your CMK with default key policy, you can use console upgrade feature (if you use your custom key policy automatic upgrade won't be available, you have to manually modify key policy)
 * if you go to kms console you will see alert to upgrade key, click `Preview and upgrade to the new key policy`, review new default policy & upgrade your key
 * you can always manually modify key policy to include new features
 When new kms feature available, you have to manually add them to existing key policy, if you want to use them (until you do this, if you just add these features from iam, it won't work)
@@ -1617,8 +1609,7 @@ To use iam policy, you should explicitly add key policy that allows root user ac
   "Resource": "*"
 }
 ```
-So you can't create key with empty key policy, at least something should be present.
-So if you want to give user access it should be either:
+So you can't create key with empty key policy, at least something should be present. So if you want to give user access it should be either:
 * key policy with explicit allow for this user
 ```
 {
@@ -1658,18 +1649,17 @@ So if you want to give user access it should be either:
 ```
 There are 3 types of permissions:
 * key policy - required policy, if you remove it, nobody can access CMK
-* iam policy - optional policy, works with combination with key policy
+* iam policy - optional policy, works with combination of iam + key policy
 * grant - temporary policy to allow temporary access for principal
 Both retire/revoke grant - immediately remove permissions for user to use this grant. Only difference is that when you create grant you can set `RetiringPrincipal` - one who can retire it.
 As key owner you can both revoke/retire grant, but can delegate retire to some other user. In below example jack can retire his own grant.
 ```
 # to grant access to user jack you have to either: give user direct permission in key policy or key policy access to root + iam policy access for jack
 aws kms describe-key --key-id=alias/mykmskey --profile=jack
-
 # create grant for user jack (you give user jack ability to describe this CMK and to retire this grant)
-aws kms create-grant --key-id=8f150816-0926-426f-baf1-3e5081085f99 --grantee-principal=arn:aws:iam::{ACCOUNT_ID}:user/jack --retiring-principal=arn:aws:iam::{ACCOUNT_ID}:user/jack --operations=DescribeKey
+aws kms create-grant --key-id=alias/mykmskey --grantee-principal=arn:aws:iam::{ACCOUNT_ID}:user/jack --retiring-principal=arn:aws:iam::{ACCOUNT_ID}:user/jack --operations=DescribeKey
 # list all current grants
-aws kms list-grants --key-id=8f150816-0926-426f-baf1-3e5081085f99
+aws kms list-grants --key-id=alias/mykmskey
 # retire gran (here keyId should be full ARN).
 aws kms retire-grant --key-id=arn:aws:kms:us-east-1:{ACCOUNT_ID}:key/8f150816-0926-426f-baf1-3e5081085f99 --grant-id=8ff72ff8f037991672107a8b6982a49c19815f08cfc08c13b434cdaf5c2ddef2
 ```
@@ -1677,12 +1667,12 @@ As other resource policy, key policy include `Principal` - who is using policy s
 * cli - if you don't provide any custom policy, default is created which gives full access to root user.
 * console - you can choose users/roles from current account or any root user from other aws account which would have full access. Also root user is given full access.
 It's best practice to give root user full access. Cause if you give some user full access, then delete this user, you can't use cmk. You must contact aws support.
+Re-create user with same name won't work, cause under-the-hood key policy using not user-friendly name but uniqueUserId, which would be different if you re-create user.
 So compare to other services cmk doesn't implicitly allow access to root user, you have to add it explicitly.
 Don't confuse:
 * cloudHSM - your personal key encryption hardware in aws cloud. Note that it doesn't provide encryption/decryption services like kms, it only stores keys (so you can't encrypt s3 bucket with it, but you can encrypt it with kms).
-Here you have exclusive access over management, while kms manages key implicitly, with CloudHSM you can do this explicitly (create/delete/import/export).
-So if you need solution where you can manage keys yourself, use cloudHSM.
-* kms - shared hardware tenancy, you have your own partition inside shared with other aws customers. Yet KMS inside runs managed CloudHSM to generate key materials
+Here you have exclusive access over management, while kms manages key implicitly, with CloudHSM you can do this explicitly (create/delete/import/export). So if you need solution where you can manage keys yourself, use cloudHSM.
+* kms - shared hardware tenancy, you have your own partition shared with other aws customers. Yet KMS inside runs managed CloudHSM to generate key materials
 Custom Key Store (standard key store - use shared HSM module under-the-hood):
 * you will use kms service, but all keys would be stored in your cloudHSM cluster (you have to create cluster first). 
 * you may need it for compliance reasons (so you have control over physical HSM), for other cases use default key store.
@@ -1699,25 +1689,26 @@ When you create kms key you may choose key material origin:
     * there is no way to download key material (yet you can re-import & delete it)
 * cloudHSM - in this case you need to set up CloudHSM cluster with at least 2 nodes in 2 AZ
 When you use kms for every policy (for example read policy for s3) you have to add `kms:Decrypt`, so s3 would have access to kms in order to decrypt data. So if you provide only s3 read without kms, s3 won't decrypt your data and you can't read it.
-cross-account access - you can allow your KMS to be used in another account by adding resource policy to kms with principal as another account or you can also add cross-account role iam access:
+Cross-account access - you can allow your KMS to be used in another account by adding resource policy to kms with principal as another account or you can also add cross-account role iam access:
 * in account A add principal of account B to key policy
 * in account B add permissions to access kms resource from account A
 There are 2 types of keys:
 * symmetric - created by default (if you don't specify type), 256-bit encryption key that never leaves kms unencrypted. Almost all aws services integrated with kms support only symmetric key.
 * asymmetric - public & private key pair. Private key never leaves kms, yet you can download public key. Use it mostly for encryption outside aws. If you want encryption inside aws infra - always use symmetric key, cause symmetric encryption is faster.
-2 types of asymmetric key supported: RSA & ECC (Elliptic Curve)
+2 types of asymmetric key supported: RSA (Rivest-Shamir-Adleman) & ECC (Elliptic-curve cryptography)
 AWS Encryption SDK - client-side encryption library (c/java/JS/python) for easy encrypt/decrypt data using industry standards & best practices. You can encrypt/decrypt data using:
 * kms CMK
-* master key generated by your
+* master key generated by you
 * CMK + your offline RSA private key. Then you can decrypt your data using combination of both, or either one alone
 As you see Encryption SDK integrated with KMS, yet it doesn't require it, you can generate your own keys and safely store it on your own.
 Encryption SDK concepts:
 * envelope encryption - you encrypt data with data key (stored where you encrypted data stored), then encrypt data key with master key (stored securely by kms). s3 also use this type of encryption.
-S3 use envelope encryption. It supports only symmetric CMK, cause it faster. We use envelope encryption, cause kms can encrypt/decrypt up to 4KB. So if you need to encrypt 10MB file you create data key, encrypt file with data key & encrypt data key with symmetric CMK.
-KMS support up to 4KB cause in order to encrypt you have to send your data to kms, so it's better to send small files, cause otherwise imagine that you would send 1GB file to kms. Encryption is done by s3, kms - is mere key storage.
+S3 use envelope encryption. It supports only symmetric CMK, cause it faster, [cause generally rsa is slower](https://security.stackexchange.com/questions/57205/why-is-rsa-decryption-slow/57206).
+We use envelope encryption, cause kms can encrypt/decrypt up to 4KB. So if you need to encrypt 10MB file you create data key, encrypt file with data key & encrypt data key with symmetric CMK.
+KMS support up to 4KB cause in order to encrypt you have to send your data to kms, so it's better to send small files, cause otherwise imagine that you would send 1GB file to kms. Encryption is done by s3, kms - is mere key storage & encrypt/decrypt small data keys.
 * encryption context - optional non-secret param (cause you store it in kms key policy in plaintext) that you can include into each encrypt/decrypt. When you encrypt data, security context encrypted with data, so to decrypt you have to pass same param.
 you can also use it for tracking purpose, cause it recorded in CloudTrail. CW log support kms encryption context. It works only with symmetric key, you can't pass encryption context to asymmetric key.
-It also called AAD (additional authenticated data) - non-secret data that is provided to encryption and decryption operations to add an additional integrity and authenticity check on the encrypted data.
+It also called AAD (additional authenticated data) - non-secret data that is provided to encryption/decryption operations to add an additional integrity and authenticity check on the encrypted data.
 When you encrypt file you can pass filename as encryption context. EBS use volumeId as security context. You can add encryption context to policy, in this case you can use kms only with specific context params.
 You can view [full list of kms condition keys](https://docs.aws.amazon.com/kms/latest/developerguide/policy-conditions.html), below most common condition keys:
 * `kms:ViaService` - limit the use of CMK to specific aws service 
@@ -1730,12 +1721,12 @@ You can view [full list of kms condition keys](https://docs.aws.amazon.com/kms/l
       ]
     }
 ```
-* `kms:KeyOrigin` - allows operation only if kms was created with specified origin AWS_KMS/AWS_CLOUDHSM/EXTERNAL (for example allow create new key only with cloudhsm as origin, or allow to encrypt only if key was created with external origin). You pass origin when you create new key.
+* `kms:KeyOrigin` - allows operation only if kms was created with specified origin AWS_KMS/AWS_CLOUDHSM/EXTERNAL (for example allow create new key only with CloudHSM as origin, or allow to encrypt only if key was created with external origin). You pass origin when you create new key.
 * `kms:GrantIsForAWSResource` - allows aws services to create grans on-behalf of calling user:
 Let's say user `jack` has full ec2 access in his iam policy `{"Effect": "Allow", "Action": "ec2:*", "Resource": "*"}`
-Let's create ec2 with encrypted ebs volume, and stop it. If we try to start it `aws ec2 start-instances --instance-ids=i-04c5da29b4eb9e48d --profile=jack`, ec2 will got into `Pending` state, and then go to `Stopped`
+Let's create ec2 with encrypted ebs volume using admin user, and stop it. If we try to start with user jack `aws ec2 start-instances --instance-ids=i-04c5da29b4eb9e48d --profile=jack`, ec2 will got into `Pending` state, and then go to `Stopped`
 The reason is since ebs is encrypted, ec2 try to get encryption keys from kms, and decrypt ebs with it. But since user doesn't have kms permissions, he can't start ec2
-We can add `kms:CreateGrant` permission to this user, but that would mean, that he can grant permission to any other ima entity. Instead we could add following key policy
+We can add `kms:CreateGrant` permission to this user, but that would mean, that he can grant permission to any other iam entity. Instead we could add following key policy
 ```
 {
     "Effect": "Allow",
@@ -1800,7 +1791,7 @@ Digital signature:
 * kms provides api to `sign/verify` message using asymmetric CMK
 * you sign with private key & verify with public key (so you can verify in aws kms or outside kms using public key)
 * use `GetPublicKey` - to download public key from kms
-* you can use `sign` command in `key_mgmt_util` for CloudHSM, but for this you need to setup cluster which is expensive, so kms - cost-effective alternative for sign/verify digital documents
+* you can use `sign` command in `key_mgmt_util` for CloudHSM, but for this you need to setup cluster which is expensive, so kms - cost-effective alternative for `sign/verify` digital documents
 Data key caching - when you use encryption SDK, you can enable data key caching, so when you encrypt/decrypt data, SDK first look in cache, and if not found request new data key from kms
 By using cache, you reduce number of hits to kms, so reduce price. It's optional feature, by default SDK generate new data key for each request, yet if you hit limit of kms, you can enable caching.
 
@@ -1815,7 +1806,7 @@ There are 2 types of sync:
 * keys & policies - synchronized by cloudHSM automatically
 * users - manually update `cloudhsm_mgmt_util` to add new HSM to it
 You can integrate CloudHSM with third-party systems:
-* ssl/tls offload - you can use linux (nignx or apache web server) or windows (IIS) to offload ssl:
+* SSL/TLS offload - you can use linux (nignx or apache web server) or windows (IIS) to offload ssl:
     * create ec2 with nginx installed
     * connect to HSM and import/generate new private key in cloudHSM => then generate certificate using CSR (using `openssl` command)
     * export fake PEM private key (not real private key, but reference to the key stored in HSM)
@@ -1828,16 +1819,17 @@ You can integrate CloudHSM with third-party systems:
 * oracle TDE(transparent data encryption) - some oracle version support TDE:
     * data in columns encrypted with table/tablespace key, these keys encrypted with TDE master key, which is store in HSM
     * you have oracle db in ec2 and it use cloudHSM to store master TDE
-    * it's better than whole ebs encryption, cause in case of TDE you can encrypt single row or column instead of encrypting whole db
-* Microsoft SignTool - cli tool that sign/verify/timestamp files to simplify sign-ing process:
+    * it's better than whole ebs encryption, cause in case of TDE you can encrypt single row or column instead of encrypting underlying HDD
+* Microsoft SignTool - cli tool that sign/verify/timestamp files to simplify signing process:
     * create ec2 with windows server and use HSM to store private keys
 * other third-party services - you can use other solutions (like hashicorp) but store keys in cloudHSM
 Best practice to sync all keys at least in 2 devices in separate AZ. It's built with physical and logical tamper-protection, so it trigger key deletion (zeroization) in case of breach.
 Daily backups are automatically taken and stored in s3 (bucket must be in the same region as cluster). All backups encrypted with 2 types of keys:
-* EBK (ephemeral backup key) - generated inside HSM when backup is taken. Used to encrypt backup. Encrypted backup include encrypted EBK.
-* PBK (persistent backup key) - used by HSM to encrypt EBK. Generated based on 2 other keys:
+* EBK (ephemeral backup key) - generated inside HSM when backup is taken. Used to encrypt backup. Encrypted EBK stored in same s3 bucket with encrypted backup.
+* PBK (persistent backup key) - used by HSM to encrypt/decrypt EBK. Generated based on 2 other keys:
     * MKBK (manufacturer key backup key) - permanently embedded in the HSM hardware by manufacturer
     * AKBK (AWS key backup key) - installed in the HSM during initial setup by aws CloudHSM.
+As you see same envelope encryption applied here with EBK which encrypt/decrypt backup & PBK which encrypt/decrypt EBK.
 CloudHSM classic:
 * old implementation of HSM by aws. It was unmanaged service, customers have to manually patch their HSM devices & maintain HS
 * new version compiles with FIPS 140-2 Level 3, while classic with level 2 only
@@ -1855,17 +1847,16 @@ openssl req -new -x509 -days 3652 -key cloudhsm.key -out customerCA.crt
 openssl x509 -req -days 3652 -in cluster.csr -CA cloudhsm.crt -CAkey cloudhsm.key -CAcreateserial -out cluster.crt
 ```
 Self-signed cert should be named `customerCA.crt`, otherwise when you connect to HSM and try to run `enable_e2e`, you will get error `Error: partition owner certificate doesn't exist at given path.`
-* ssh to ec2 (cloudhsm client already installed) and add IP address of HSM device `sudo /opt/cloudhsm/bin/configure -a 10.100.2.7`
+* ssh to ec2 (CloudHSM client already installed) and add IP address of HSM device `sudo /opt/cloudhsm/bin/configure -a 10.100.2.7`
 * [activate cluster](https://docs.aws.amazon.com/cloudhsm/latest/userguide/activate-cluster.html) (change SG of cluster first, add source as SG of your bastion ec2)
 * after you can use your ec2 to create keys & users
 Key management using cli (you should connect to HSM as CU (crypto user) and start `key_mgmt_util` utility) - you can generate/import/export/delete/share/unshare keys (share/unshare between different CU within same cluster).
 
-###### Inspector 
-It's automated security assessment service that test the network accessibility of your ec2 and apps running on them. Plz note that it designed to ec2 only, so you can't use it to perform security assessment of API gateway, lambda and so on.
+###### Inspector
+Automated security assessment service that test the network accessibility of your ec2 and apps running on it. Plz note that it designed to ec2 only, so you can't use it to perform security assessment of API gateway, lambda and so on.
 Also you can't assess SG with Inspector, use Trusted Advisor if you wan to assess SG. You install agent on your OS, and it collects data and send it to inspector for analyzing. Assessment template - configuration based on which inspector validates your system.
 There are 2 types of assessments (you can configure to run it weekly or run only once):
-* network (agent is not required) - check if ports reachable outside VPC through IGW/NACL/SG/ELB/VPC_peering (if agent installed also found if apps running on this ports). 
-So you get report about potentially malicious access like mismanaged SG/NACL/IGW.
+* network (agent is not required) - check if ports reachable outside VPC through IGW/NACL/SG/ELB/VPC_peering (if agent installed also found if apps running on this ports). So you get report about potentially malicious access like mismanaged SG/NACL/IGW.
 * host (agent should be install on ec2) - check for vulnerable software installed
 If you need to generate report regarding missing patches (including security patches) you have to use Patch manager for both:
 * generate compliance patch report - you can either runt it now, or schedule (using cron) to send reports regarding patch state
@@ -1885,7 +1876,7 @@ There are 2 ways to install inspector:
 ###### Macie
 Managed data security/privacy service that uses ML & pattern matching to discover/protect your sensitive data (PII (personally identifiable information) - names, addresses, and credit card numbers) in aws.
 You are charged based on number of s3 buckets in your account, and amount of processed data. You also have 30 days trial period. Also 1GB of processed data is always for free.
-It's regional service and you have to enable it region-by-region. This guarantees that all analyzed data in same region, and don't cross-region boundaries.
+It's regional service and you have to enable it region-by-region. This guarantees that all analyzed data in same region, and don't cross region boundaries.
 To use it, you have to first enable it from aws console/cli. You can add regular expressions to search for. So it helps you to understand what data do you store in s3 buckets.
 It can also identify too permissive or unencrypted buckets. Once it found sensitive data, it creates findings (detailed report of sensitive data in an S3). Macie publish findings in EventBridge and to security hub.
 
@@ -1914,7 +1905,7 @@ GuardDuryFindingEvent:
 GuardDuty generate findings with potential security issues:
 * ec2 - Don't terminate ec2 immediately cause it would remove the state. Investigate potentially compromised instance for malware & remove any detected malware. 
 You can use products from aws MarketPlace to identify & remove malware. If you can't find any malware - capture memory dump, take snapshot, replace ec2 with new one (if it inside ASG just terminate it, ASG will start new one).
-* s3 - finding would include: bucketArn/API_call/source (arn of user/role who made the call).
+* s3 - finding would include: bucketArn/API_call/source (arn of user/role who made the call). 
 First determine if call was authorized (if it iam user, is credential are compromised, if it's api - if ec2 compromised). IF user name `ANONYMOUS_PRINCIPAL` with user type of `AWSAccount` - bucket is public, should it be public?
 * aws credentials - (key starts from: AKIA - long term credentials, ASIA - short term credentials) - check if iam credentials were used legitimately
 So using GuardDuty you can discover:
@@ -1941,14 +1932,13 @@ Trusted IP list & threat list:
 Suppression rule:
 * you can add such rule with existing filter or create new filter so GuardDuty will mark such finding as archive
 * such findings won't go to s3/CloudWatch & stayed in GuardDuty for 90 days
-* you can use `aws guardduty list-findings --finding-criteria service.archived=true` (by default all findings would be retreived)
+* you can use `aws guardduty list-findings --finding-criteria service.archived=true` (by default all findings would be retrieved)
 * in multi-account system only admin can create suppression rule
 * use case:
     * Recon:EC2/Portscan - in case your ec2 using vulnerability assessment application
     * UnauthorizedAccess:EC2/SSHBruteForce - in case ec2 is bastion host (cause it expected that bastion host constantly accessed with ssh)
 Managing multiple accounts:
-* you can manage multiple accounts with GuardDuty from single admin account
-* you can use either:
+* you can manage multiple accounts with GuardDuty from single admin account, use either:
     * org - use org master account to register GuardDuty as admin account
     * invite independent account to be managed under admin account by GuardDuty
 * once you activate GuardDuty admin account - you can manage GuardDuty from single place
@@ -1958,12 +1948,12 @@ SH - provides comprehensive view of security state within aws account and your c
 You are charged based on number of security checks & number of finding ingestion events per account/region/month. Service is regional, so if you want to use it in another region - you have to explicitly enable it in that region.
 When you enable security hub - role with permission to use aws config is created. You can configure multi-account hierarchy and manage several account under single SH.
 Finding - potential security issue. SH aggregates findings from aws & third-party services and provide overview. Finding ingestion event - when finding ingested into SH.
-Insight - collection of related findings. You can use filters to group similar findigns into insights for ease of management. SH analyze findings from GuardDuty/Inspector/FM/Macie/Access Analyzier + it also analyze config rules.
+Insight - collection of related findings. You can use filters to group similar findings into insights for ease of management. SH analyze findings from GuardDuty/Inspector/FM/Macie/Access Analyzier + it also analyze config rules.
 If you need already existed compliance standard like PCI-DSS, then managed SH is the way to go. Yet if you need custom compliance/security standard - use config conformance pack.
 
 ###### WAF & Shield
 3 security services joined under single tab in aws:
-* waf (web application firewall) - you add rules that allow/deny/count web requests based on conditions that you define. Conditions are: HTTP header/body, URL string, SQL injection, XSS (for example you can block specific user-agents).
+* WAF (web application firewall) - you add rules that allow/deny/count web requests based on conditions that you define. Conditions are: HTTP header/body, URL string, SQL injection, XSS (for example you can block specific user-agents).
 Underlying service send request to waf, waf validate it based on rules you defined and instruct your service to block/allow request to proceed. It's integrated with CloudFront/ALB/ApiGateway/AppSync.
 You create Web ACL (Access Control List), specify resource, and add rules. Plz note only ALB can be specified, there is no way to add WAF above NLB, cause NLB works on level 4.
 There are 2 types of rules:
@@ -1980,8 +1970,7 @@ Keep in mind that vpc flow logs & CW logs will not help to catch DDoS attack
 You can use shield to protect on-premise servers. For this use aws endpoint with shield in front of your on-premise server. Shield notify about attack by sending metrics to CloudWatch.
 * FM (Firewall Manager) - tool that makes it easier for you to configure your WAF rules, shield advanced, vpc SG across your accounts in one place. So if you have single account no need to use FM, but if you have aws organization with many accounts
 it's better to use single tool to configure waf across all accounts, cause FM integrated with organization so have a single place to quickly respond to incidents.
-WAF sandwich (see `sa/files/images/waf-sandwich.png`) - concept where instead of aws, you use custom software with waf on ec2.
-In this case you have elb -> custom waf with asg -> elb -> ec2 with app. So basically you put your custom waf ec2 into ASG and between 2 elb.
+WAF sandwich (see `sa/files/images/waf-sandwich.png`) - concept where instead of aws, you use custom software with waf on ec2. In this case you have elb -> custom waf with asg -> elb -> ec2 with app. So basically you put your custom waf ec2 into ASG and between 2 elb.
 
 ###### Config
 Managed service that provides aws resources inventory, config history, change notification. When you turn it on, it creates config item for each resource.
@@ -2003,8 +1992,8 @@ So if you are interested what was config of particular ec2 2 weeks ago you shoul
 There is no way to call custom rule manually, yet you can run `aws configservice start-config-rules-evaluation` to test your rule after you made some changes. This call won't use latest system config state, but will use last known state of your resources.
 So use this option only for testing purpose, to make sure your config rule is working.
 Configuration Recorder - record all supported resources, yet you can create custom recorder to record only specified set of resources.
-You care charged (0.003 per item when it or it relation changed), to control costs you may stop recorder `aws configservice stop-configuration-recorder --configuration-recorder-name=default`
-When you start the configuration recorder, AWS Config takes an inventory of all AWS resources in your account
+You are charged (0.003 per item when it or it relation changed), to control costs you may stop recorder `aws configservice stop-configuration-recorder --configuration-recorder-name=default`
+When you start the configuration recorder, Config takes an inventory of all AWS resources in your account
 2 main use cases for config:
 * find out current configuration
 * check some previous config before incident happened
@@ -2025,11 +2014,10 @@ Notification of non-compliance:
 CT - service that logs activity of your aws account (who made request, what params were passed, when and so on..). It's useful for compliance, when you need to ensure that only certain rules have ever been applied.
 There are 3 types of logs:
 * management events - api calls to modify aws resources (create ec2/s3 and so on...)
-* data events - api calls to modify actual data (not included by default). There are 3 types of events:
-    * S3 - `GetObject/DeleteObject/PutObject`
+* data events - api calls to modify actual data (not included by default). There are 3 types of events (just like management events you can either select Read/Write events):
+    * S3 - `GetObject/DeleteObject/PutObject` (You can either choose all s3 (including all future) buckets or select buckets manually)
     * lambda - `Invoke`
-    * dynamoDB - `GetItem/PutItem/DeleteItem/UpdateItem`
-Just like management events you can either select Read/Write events. You can either choose all s3 (including all future) buckets or select buckets manually
+    * dynamoDB - `GetItem/PutItem/DeleteItem/UpdateItem` 
 * insights events - CT use ML (Machine Learning) to determine any anomaly (like spike in some api calls) and notify you
 By default:
 * log files delivered within 15 minutes of account activity
@@ -2041,13 +2029,22 @@ By default:
 * trail created with GSE enabled (it's true for both when you create from console and from cli. Although when you create trail from cli you can specify `--no-include-global-service-events` not to include GSE into this trail). 
 When aws launch new region, in case of all region trail - new trail would be created in newly launched region.
 SNS delivery - you can configure to get notification each time new log file delivered to s3 bucket (not single event, but whole file with many events).
-Cross-account trails (you can configure to deliver CT events from multiple accounts to single s3 bucket):
-* create s3 bucket in account A, `my-cloudtrail-logs` and add bucket policy to allow cross-account access
-* in account B (or any other) create CT and set bucket name as `my-cloudtrail-logs` (CT automatically find account by bucket name). From now all logs would be delivered to bucket in another account
+Don't confuse:
+* cross-account trails (you can configure to deliver CT events from multiple accounts to single s3 bucket):
+    * create s3 bucket in account A, `my-cloudtrail-logs` and add bucket policy to allow cross-account access
+    * in account B (or any other) create CT and set bucket name as `my-cloudtrail-logs` (CT automatically find account by bucket name). From now all logs would be delivered to bucket in another account
+* organization trail:
+    * just like normal trail can be single or multi-region
+    * org should have all features enabled, master account should have `AWSServiceRoleForOrganizations` role
+    * when create trail from console check `Enable for all accounts in my organization` (this checkbox is disabled if your account is not master account), from cli add `--is-organization-trail` param to `aws cloudtrail create-trail`
+    * created by master account to log all events in all aws accounts for this organization (can be one/all region)
+    * you can modify existing trail in master account & apply it to organization
+    * once you create it, trail with same name & role would be created in all accounts inside org
+    * member accounts can see the trail, but can't delete/turn off/modify such a trail
+    * if new member account join org, trail & role would be added to it, and in case of removal - trail & role would be removed from account (yet logs files will stay in s3 bucket of master account)
 Log file validation - guaranty that logs were not tampered with. When turn in, CT create a hash for each log file, and every hour store all these hashes in digest file in the same s3 bucket. 
-Once you enable CT would deliver 2 types of files: log file & digest file (put into separate folder).
-Each digest file is signed with private key that generated by CT. You can download public keys with `list-public-keys` command, and validate signed files. But you have no access to private keys - they are managed by CT.
-Each digest file contains:
+Once you enable CT would deliver 2 types of files: log file & digest file (put into separate folder). Each digest file is signed with private key that generated by CT. 
+You can download public keys with `list-public-keys` command, and validate signed files. But you have no access to private keys - they are managed by CT. Each digest file contains:
 * log file name
 * hash of log file (not hash of file name, but of whole file)
 * digital signature of previous digest file (so you can ensure continuity). Current digital signature stored in metadata props.
@@ -2057,15 +2054,6 @@ Turning on/off trail:
 * when you create trail from console, logging automatically turned on, when you create from cli, you have to turn on explicitly
 * you can turn off logging from console (go to trail and chose `stop logging`)
 * for multi-region trail `start-logging` should be called from main region, if you call it from shadow trail region - it won't work
-Organization trail:
-* just like normal trail can be single or multi-region
-* org should have all features enabled, master account should have `AWSServiceRoleForOrganizations` role
-* when create trail from console check `Enable for all accounts in my organization` (this checkbox is disabled if your account is not master account), from cli add `--is-organization-trail` param to `aws cloudtrail create-trail`
-* created by master account to log all events in all aws accounts for this organization (can be one/all region)
-* you can modify existing trail in master account & apply it to organization
-* once you create it, trail with same name & role would be created in all accounts inside org
-* member accounts can see the trail, but can't delete/turn off/modify such a trail
-* if new member account join org, trail & role would be added to it, and in case of removal - trail & role would be removed from account (yet logs files will stay in s3 bucket of master account)
 Shadow trail - trail created as part of main trail:
 * multi-region trail - main trail created in region from where you create the trail, and in each other region - shadow trail created
 * org trail - main trail created in master account and in each account shadow trail created
@@ -2124,7 +2112,7 @@ In this case trail would remain in the region in which it was created, and all i
 * Remove GSE `aws cloudtrail update-trail --name=multiRegionTrail --no-include-global-service-events`
 * Change back to multi-region `aws cloudtrail update-trail --name=multiRegionTrail --is-multi-region-trail`
 You get `Multi-Region trail must include global service events.`. So you should do both `aws cloudtrail update-trail --name=multiRegionTrail --is-multi-region-trail --include-global-service-events`. So You can't remove GSE from multi-region trail.
-cross-account role audit (to check who made cross-account request you have to access both cloudTrail logs):
+Cross-account role audit (to check who made cross-account request you have to access both cloudTrail logs):
 * if your dev account assume role in prod account and call `DeleteBucket` in prod
 * in prod cloudTrail log you will see that `userIdentity` with `type: AssumedRole` and with specific `accessKeyId` called delete bucket api, yet you can't see which user exactly did it
 * in dev cloudTrail log you can see which user called operation `AssumeRole`. Since many users can call this api, to distinguish you may use `accessKeyId`
@@ -2134,7 +2122,6 @@ So there are 2 ways to find out which iam user called delete bucket api:
     * in dev account you extract `accessKeyId` from `responseElementscredentials` (this is important cause in dev account inside `userIdentity` there is another accessKeyId of iam user), and `userName` from `userIdentity` for `AssumeRole` call
     * then you compare `accessKeyId` from both dev & prod cloudTrail logs. If they are the same, then this userName from dev account called your `DeleteBucket` api
 * [Find iam user using sharedEventID](https://aws.amazon.com/blogs/security/aws-cloudtrail-now-tracks-cross-account-activity-to-its-origin)
-    * in prod account you extract `accessKeyId` from `userIdentity` for `DeleteBucket` call
     * in prod account you extract `sharedEventID` from `AssumeRole` call using `userIdentity` from previous step
     * in dev account you extract `userName` from `userIdentity` for `AssumeRole` with same `sharedEventID` as from previous step
     * `sharedEventID` - unique GUID generated for cross-account api calls (AssumeRole/use kms key) that send CloudTrail logs to 2 accounts, by which you can link 2 log entries
@@ -2143,7 +2130,7 @@ If you system has been compromised:
 * enable CT logs for all regions
 * enable file integrity validation
 Don't confuse:
-* s3 server access log - record of access attempts against all objects on s3 bucket. Includes:
+* s3 server access log - record of access attempts against all objects on s3 bucket, includes:
     * HTTP/REST operation (e.g. GET, PUT, POST, OPTIONS, etc.)
     * Requester information (including user agent, AWS account, IP)
     * Resource (bucket or bucket object)
@@ -2164,7 +2151,7 @@ There are 2 types of docs: agreements (you can accept it or terminate, so 2 stat
 RAM - helps securely share your resources across AWS accounts or within your Organization. Shared resources can't be re-shared. To share resources, you create a Resource Share, give it a name, add one or more of your resources to it, and grant access to other AWS accounts.
 Account iam policy & scp applied to shared resource same way they are applied to provisioned resource in that account. There are 2 types of sharing:
 * sharing with organization - share resource with whole organization or with OU. For this to work master account should enable resource sharing within organization. If it's not done you can't share resources with organization, but you can still use individual sharing.
-To enable sharing to to RAM console => setting, and tick `Enable sharing with AWS Organizations`. This would activate sharing for your org.
+To enable sharing to to `RAM console => setting`, and tick `Enable sharing with AWS Organizations`. This would activate sharing for your org.
 * individual sharing - share resource with individual account
 
 ###### Secrets Manager
@@ -2172,10 +2159,10 @@ SM allows you to rotate/manage/retrieve db credentials, API keys, and other secr
 To retrieve secrets, you simply replace secrets in plain text in your app with code to pull in those secrets programmatically using the SM API. You use iam to control which users/roles have access to which stores. SM can store json, so you can store any text up to 64KB. 
 This can be ideal for lambda evn vars, cause they are shown in lambda console. Moreover you can use lambda in private subnet without internet access and still be able to access SM with PrivateLink (create vpc endpoint for SM).
 Key rotation (when you create new secret from SM console, on third step you can optionally configure rotation):
-* SM use lambda to do rotation on the source, you also configure how often do rotation
+* SM uses lambda to do rotation on the source, you also configure how often do rotation
 * supported out-of-the-box for RDS/RedShift/DocumentDB (SM comes with already written lambdas for these 3)
 * for db on ec2 (or just your remote host) - create new lambda that would modify credentials on your source and attach this lambda when you create secret 
-* you can configure cw events to be notified when SM rotate credentials. SM never store plaintext secrets to any persistent layer.
+* you can configure CW events to be notified when SM rotate credentials. SM never store plaintext secrets to any persistent layer.
 To enable key rotation to work with lambda:
 * make sure SM can call lambda (when you create from console - SM create role to be assumed by SM and to call lambda)
 * make sure lambda can communicate with both db and SM:
@@ -2185,23 +2172,22 @@ To enable key rotation to work with lambda:
         * add NAT or vpc endpoint for SM - lambda can communicate with SM
 Some system allow users to change passwords (you need provide old password and new), but some are more restrictive, and only super user can change passwords (so you need to provide password of super user and new password).
 That's why for RDS/RedShift/DocumentDB there are 2 options which secret to use to rotate keys (for otherDB/other services since you write lambda yourself, no option to choose other secret exists):
-* this secret (single-user rotation) - change password using current secret. Single-user credential update:
-    * create new version of existing secret with version `PENDING`
+* this secret (single-user rotation) - change password using current secret (single-user rotation):
+    * create new version of existing secret with version `AWSPENDING`
     * update password in system (at this point sign-in failure may happen, cause password already updated for a system, but not reflected in SM)
     * update version `AWSCURRENT` => `AWSPREVIOUS` (current version becomes old version)
-    * update version `PENDING` => `AWSCURRENT` (new password becomes current password)
-* other secret from SM (multi-user rotation) - you have to select existing secret which would be used to rotate passwords. Use this option if current credentials don't have permission to update or you need high availability
-    Multiple user credential update:
+    * update version `AWSPENDING` => `AWSCURRENT` (new password becomes current password)
+* other secret from SM (multi-user rotation) - you have to select existing secret which would be used to rotate passwords. Use this option if current credentials don't have permission to update or you need high availability:
     * create new version of password with new username (at this point 2 credentials to access resource exists)
     * update tag to use new version (at this stage your app already use second credential set)
     * remove old credentials
 As you see here we don't have any lag, cause we add second username/password, and while we are adding second set, current users use first one.
 Once second is added you can switch to it, and remove first. Of course in this case you have to have master account that can add/delete credentials, this is impossible to do if you need old password to change password.
 Occasional intermittent sign-in failures:
-* when using Single-User rotation, sign-in failure can occur between old password removed & new generated
+* when using single-user rotation, sign-in failure can occur between old password removed & new generated
 * there are 2 ways to solve this problem:
     * app should implement exponential back-off strategy (app will try to sing-in several times, time between each sing-in grows exponentially)
-    * enable Multi-User rotation - separate master credentials used to rotate, old password not removed until new one is ready (this rotation bring zero downtime)
+    * enable multi-user rotation - separate master credentials used to rotate, old password not removed until new one is ready (this rotation bring zero downtime)
 Cross-region replication - since secrets use KMS, they are region-bounded, but you can create replica of secret in another region. SM automatically maintain replica in latest state (if you change primary secret, replica would be updated).
 When you create replica you have to select KMS key in that region. Cross-account access - you can either use role or resource-based policy for SM to allow other principal to call SM.
 Versioning - by default `AWSCURRENT` version is used, during rotation new version is created `AWSPENDING`. Your lambda should run rotation and change versions (so new rotated credentials would be used).
@@ -2243,20 +2229,22 @@ Below is example for iam entity (user/role) to get param from PS:
     ]
 }
 ```
-change history (audit log) - each time you edit param, PS create new version, and retains old (when you create PS assign version 1, and increase it each time you modify param).
-You can view all versions with all param values. You can also specify param version in API. You can create up to 100 versions, once you reach this limit, when you add new version, old is removed.
+Change history (audit log) - each time you edit param, PS create new version, and retains old (when you create PS assign version 1, and increase it each time you modify param).
+You can view all versions with all param values. You can also specify param version in API. You can create up to 100 versions, once you reach this limit, when you add new version, old is removed (like RingBuffer).
 You can attach label to versions, and use this human-friendly label instead of versions in API calls.
 There are 2 data types when you create param:
 * text - any text
 * aws:ec2:image - will ensure that param value you entered is a valid AMI (amazon machine image)
 Don't confuse:
-* parameter store
+* parameter store:
+    * standard PS is free, yet advanced is paid
+    * stores up to 100 versions (each time you modify param, new version created, while old retained)
 * secrets manager:
-    * 0.4$ per secret per month + 0.05$ per 10K api calls - while standard PS is free
+    * 0.4$ per secret per month + 0.05$ per 10K api calls
     * out of the box integration with RDS, with PS you have to manually write logic from RDS
     * store multiple params under single unit using json
     * you don't need to give permission to aws key, only for SM. compare with PS, where in order to encrypt/decrypt you have to give kms permission to calling service
-    * rotation is out-of-the-boxy, yet for PS you can create custom lambda and call it with CloudWatch
+    * rotation is out-of-the-box, yet for PS you can create custom lambda and call it with CloudWatch
     * compare to PS it doesn't have change history
     * [size limit 64KB](https://docs.aws.amazon.com/secretsmanager/latest/userguide/reference_limits.html) compare to 4/8KB for PS
     * when you delete it you can schedule deletion time 7-30 days, so if you accidentally delete it you can restore. PS delete immediately and forever.
