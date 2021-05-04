@@ -1442,7 +1442,7 @@ DS (Directory Service) - hierarchical structure to store/search/manipulate objec
 In software engineering, a directory is a map between names and values. It allows the lookup of named values, similar to a dictionary. DS - is a standard, AD - implementation of DS by microsoft.
 AD (Active Directory) - microsoft DS that additionally provides SSO/LDAP so user can have roles/authentication to access resources, it stores users/computers/printers in company's network and provides access/roles to users.
 AD provides centralize authorization and authentication to network resources, it also stores network resources and users information like computer/printers/users/users groups/organizational units/passwords information.
-LDAP (Lightweight Directory Access Protocol, port 389, don't confuse with RDP - 3389) is an application protocol for querying and modifying items in directory service providers like AD.
+LDAP (Lightweight Directory Access Protocol, port 389, don't confuse with RDP - 3389) is an application protocol for querying and modifying items in directory service providers like AD. LDAP works above SSL, not HTTPS.
 Objects in AD grouped into domains. Tree - collection of one or more domains. Forest - collection of trees that share common global catalog. Domain Controller - windows server that runs AD.
 AWS DS - managed service replicated across multiple AZ. There are 3 types of aws DS:
 * AWS Managed Microsoft AD - microsoft AD completely deployed in cloud and managed there. Trust Relationship - you can build it between aws microsoft AD and your on-premise microsoft AD, and store your users/passwords in your on-premise AD.
@@ -1971,6 +1971,15 @@ You can use shield to protect on-premise servers. For this use aws endpoint with
 * FM (Firewall Manager) - tool that makes it easier for you to configure your WAF rules, shield advanced, vpc SG across your accounts in one place. So if you have single account no need to use FM, but if you have aws organization with many accounts
 it's better to use single tool to configure waf across all accounts, cause FM integrated with organization so have a single place to quickly respond to incidents.
 WAF sandwich (see `sa/files/images/waf-sandwich.png`) - concept where instead of aws, you use custom software with waf on ec2. In this case you have elb -> custom waf with asg -> elb -> ec2 with app. So basically you put your custom waf ec2 into ASG and between 2 elb.
+WAF logging:
+* once you create web ACL you can enable logging for it (`web ACL => Logging and metrics => Enable logging => choose kinesis data firehose`)
+* logs can be output only into kinesis data firehose (name of delivery stream should start with `aws-waf-logs-`)
+* for data firehose - use PUT with s3 or other storage, but don't choose data streams as source for data firehose (cause you may hit throughput & some logs would be missed)
+* by default everything is logged, but you can configure filters & redacted fields (this fields won't show in logs only `XXX`)
+* ELB access logs - would be useless, cause it would show that request was blocked by WAF, but no details why it was blocked would be there
+Web ACL (can be called WAF) is a container, set of rule that you create (inside you can define many rule). So if you want to filter request based on country - create Geo rule & add this rule to web ACL
+Rule group - reusable set of rules that you can add to web ACL as whole. So when you create web ACL you can add to it either separate rules or whole group.
+There is no concept of template for WAF, if you want to apply same set of rules to each web ACL - create rule group & apply it to all web ACL.
 
 ###### Config
 Managed service that provides aws resources inventory, config history, change notification. When you turn it on, it creates config item for each resource.
@@ -2014,11 +2023,16 @@ Notification of non-compliance:
 CT - service that logs activity of your aws account (who made request, what params were passed, when and so on..). It's useful for compliance, when you need to ensure that only certain rules have ever been applied.
 There are 3 types of logs:
 * management events - api calls to modify aws resources (create ec2/s3 and so on...)
+    * exclude AWS KMS events - you can exclude kms api events from management events (cause kms can generate a lot of data, especially api like `generate-data-key` if you have a lot of s3 buckets)
+    You can't disable certain kms api events, either disable all, not (all would be enabled).
 * data events - api calls to modify actual data (not included by default). There are 3 types of events (just like management events you can either select Read/Write events):
     * S3 - `GetObject/DeleteObject/PutObject` (You can either choose all s3 (including all future) buckets or select buckets manually)
     * lambda - `Invoke`
     * dynamoDB - `GetItem/PutItem/DeleteItem/UpdateItem` 
-* insights events - CT use ML (Machine Learning) to determine any anomaly (like spike in some api calls) and notify you
+* insights events (requires management write events to be enabled, cause it use it to analyze) - CT use ML (Machine Learning) to determine any anomaly (like spike in some api calls) and notify you.
+Don't confuse (you can use only 1 of this type of selectors per trail):
+* event selector - you can configure which management event to include/exclude from trail (by default all included)
+* advanced event selector - you can configure what event include based on equals/startWith/endWith and so on (so more elastic)
 By default:
 * log files delivered within 15 minutes of account activity
 * log files delivered to s3 are encrypted using S3-SSE by default, yet you can choose to encrypt it with KMS (but digest files would always be encrypted with S3-SSE)
@@ -2790,7 +2804,13 @@ There are 2 types of backup (since DynamoDb is multi-AZ by default there is no a
 With this you can restore table to any selected date and time (day:hour:minute:second) to a new table. All table settings restored from table at that time (if your WCU is 50, but 2 weeks ago was 500, if you restore table from that time, now your WCU would be 500)
 Cross-region restore - you can recover point-in-time table to another region.
 Security:
-* data-in-rest encryption supported for both dynamoDB & DAX (only kms supported, you can use your CMK, or use aws managed kms `aws/dynamodb`)
+* data-in-rest encryption supported for both dynamoDB & DAX (only kms supported, you can use your CMK, or use aws managed kms `aws/dynamodb`):
+    * server-side encryption - always enabled (you can't disable it):
+        * default - key managed by dynamoDB
+        * user managed CMK - kms key managed by user
+        * aws managed CMK - kms key `aws/dynamodb` managed by aws
+    * client-side encryption - you can use [library](https://github.com/aws/aws-dynamodb-encryption-java) for client-side encryption for end-to-end encryption
+    All data encryption by default including: primary key, local and global secondary indexes, streams, global tables, backups, DAX
 * data-in-transit encryption supported by HTTPS protocol. You can enable vpc endpoint to access dynamoDB from inside VPC only
 
 ###### ElastiCache
@@ -3069,6 +3089,15 @@ If you have need to store data durable with ordering and data should be read wit
 * put data into first sqs, first app read from first sqs and copy data into second sqs for second app (sqs should be of fifo type)
 * use kinesis data stream - this is more appropriate solution, cause first solution require app to make sure that messages would be put into second queue, here no extra coding required (ordering built-in)
 So if you have app that reads from same stream or consume from same stream several hours later you data streams (don't reinvent the wheel with sqs)
+Data streams CloudWatch logs - there are 2 types of metrics:
+* basic stream-level - enabled by default & free, send metric every 5 minute for whole stream
+* enhanced shard-level - disabled by default & paid, send metric every minute, used for troubleshooting, send logs for each shard
+SSE:
+* both kinesis data streams & delivery streams (data firehose) supports server side encryption with kms key
+* when you upload data it get encrypted before & store encrypted & when you get data it decrypted
+* so you achieve encryption at-rest
+* you can only enable encryption after you create data stream (`configuration => encryption => edit => Enable server-side encryption`)
+* there are 2 options: aws managed CMK (`aws/kinesis`) & customer managed CMK
 
 ###### Data Pipeline
 DP - ETL tool that simplify data movement/processing in aws, integrates with on-premise and cloud-based storage systems.
@@ -4239,6 +4268,9 @@ There are 3 ways to limit access to cf:
 * using presigned url/cookie
 * use geo-restriction (whitelist/blacklist specific countries)
 * use WAF for all other restriction (for example whitelist/blacklist by IP)
+Don't confuse:
+* signed url - you want to restrict access to single file, client desn't support cookie
+* signed cookie - you want to restrict access to multiple files (like all HLS videos), client should support cookie
 If you run PCI-compliant or HIPAA-compliant workloads you should:
 * enable cf access logs - save all request to access cf data
 * save all management cf request to CloudTrail
@@ -4286,6 +4318,11 @@ CloudFront Origin Shield - additional layer in front of origin server that help 
 * improve cache hit - since it provide additional layer (all locations don't hit origin service directly but through origin shield)
 * reduce origin load - in case of peak load can consolidate multiple simultaneous request into 1
 * better performance - if you configure it in aws region that has lowest latency to your origin
+CF logging:
+* also called standard logs or access logs
+* once enabled - delivered to s3 bucket within up to 24 hours (some entries may never be delivered)
+* if s3 encrypted - you have to add key policy with allow to `kms:GenerateDataKey` for `delivery.logs.amazonaws.com` principal
+* if request size above 20KB - CF can't parse & log such request
 
 ###### Lambda
 Lambda - piece of code that can be executed without any server env (just write code in python/javascript and it will run). Lambda can be directly triggered by AWS services such as s3/DynamoDB/Kinesis Streams/SNS/CloudWatch
