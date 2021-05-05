@@ -4347,7 +4347,7 @@ exports.handler = async (event, context, callback)=>{
 };
 ```
 * Memory usage (128-10240 MB, default - 128) - you can allocate more memory if lambda does memory-intensive computing. Yet you can't manually configure cpu - it's allocated proportionally your RAM, so more memory allocation - means more cpu would be allocated.
-* Concurrency - number of request lambda can server at the same time. There are limits with up to 3k max (limits based on region from 500-3000). There are 2 types:
+* Concurrency - number of request lambda can serve at the same time. There are limits with up to 3k max (limits based on region from 500-3000). There are 2 types:
     * reserved concurrency - creates a pool of requests that can only be used by its function, prevents using unreserved concurrency
     * provisioned concurrency - initializes a requested number of execution environments so that they are prepared to respond to your function's invocations
 * DB proxy - rds proxy for your lambda that manages pool of connections and pass query to your rds. This can enable high concurrency without exhausting db connections. Once created you have to configure your lambda connect to proxy endpoint instead of rds endpoint.
@@ -4396,7 +4396,7 @@ Lambda inside vpc:
 There are 2 ways you can grant access to lambda:
 * iam permission - add to user/service iam role with permissions to access lambda
 * resource policy - add resource policy directly to lambda with `Principal` - you can easily grant cross-account access (in CF you can use `AWS::Lambda::Permission` which generate lambda resource policy)
-That's why inside `sa/cloudformation/agw-http-auth.yml` you have 2 lambdas and for `InfoLambda` you add resource policy with `AWS::Lambda::Permission`, but for `AuthLambda` you create role for api gateway.
+That's why inside `sa/cloudformation/agw-http-auth.yml` you have 2 policies and for `InfoLambda` you add resource policy with `AWS::Lambda::Permission`, but for `AuthLambda` you create role for api gateway.
 So in first case, api gateway access lambda using resource policy, but in another it assume role, and access lambda with this role.
 Don't confuse:
 * lambda accessing resources inside vpc - just put lambda inside vpc, and it will get access to vpc resources. If your lambda need internet access, create NAT gateway.
@@ -4764,12 +4764,12 @@ SCP hierarchy:
 * explicit deny always overwrites all allows
 * SCP can only filter, it never add permissions
 * at each level intersection happen between parent policy & level policy, and only those present in both are given
-Invitations :
+Invitations:
 * you (any user with proper iam permissions) can send up to 20 invitations per day - only pending invitations are count, if 5 were accepted immediately, you can send 5 more
 * invitation expire after 15 days - you should resend it if you want account to join
 * if user didn't receive invitation email for any reason, you have to cancel invitation & send it again (there is no option to resend)
 Organization activity - tab in iam console, where you can see which org which services are using. You can use this to improve SCP by finding what services are not deny by SCP yet never used by users.
-You can use cli `enerate-organizations-access-report` & `get-organizations-access-report` to get access report from cli.
+You can use cli `generate-organizations-access-report` & `get-organizations-access-report` to get access report from cli.
 By default when you create org with all features, SCP disabled. You should explicitly enable it from aws console/cli. Once you enable, default `FullAWSAccess` SCP attached to root that allow all actions on all resources.
 You can create new SCP and attach it to any OU/account/root. You can also attach default `FullAWSAccess` to any OU/account, but this make no sense, cause since it attached to root, all other OU/accounts inheret it automatically.
 
@@ -4809,14 +4809,14 @@ That is because this RT - is default. If you create new RT and associate subnet 
 Every RT has routes with 2 fields (if you want to get to such destination go to this target). By default every RT has single route with destination=CIDR & target=local, you can't remove it, so all subnets inside RT can communicate with each other.
 Yet you have to make sure that NACL & SG rules allows ec2 in different subnets to communicate with each other.
 * IGW (Internet Gateway) - entry point between your VPC and Internet. It allows EC2 in VPC directly access Internet. You can use public IP or elastic IP(won't change after stop/start) to both communicate with Internet and receive requests from outside web-servers.
-* NAT Gateway - Network address resolution service in private subnet to access the Internet. Instances from private subnets use NAT gateway to access Internet. Nat allows outbound communication, but doesn't allows machines on the Internet to access instances inside VPC.
+* NAT Gateway (only for IPv4) - Network address resolution service located in public subnet to access the Internet from private subnet. Instances from private subnets use NAT gateway to access Internet. Nat allows outbound communication, but doesn't allow machines on the Internet to access instances inside VPC.
 Since Nat GateWay created per AZ for HA it's suggested to create it in every AZ where you have instances. In this case single AZ failure will not block internet access from other private networks. 
 With IGW you have both outbound and inbound access, but with Nat - only outbound (your instance can access Internet, but is unaccessable from Internet).
 You can also use [rollback solution](https://aws.amazon.com/articles/high-availability-for-amazon-vpc-nat-instances-an-example), so in case not whole AZ, but only nat instance failed, script would switch traffic from this AZ to second AZ Nat instance
 Nat gateway/instance can't route traffic through: vpc peering, site-to-site vpn, DX, so it can't be used by resources on the other side of these connections. Moreover vpc peering can't use NAT instance/gateway, IGW or VPG.
 * VPG (Virtual private gateway) - gateway to VPC, you create it and then attach to 1 vpc. You can enter your own ASN or use aws provided ASN. It's used by site-to-site vpn and directly by DX or DXG
 * Peering Connection - create private secure connection between 2 VPC
-* EIGW - egress(going out) only access from VPC to Internet over IPv6. Nat gateway doesn't support IPv6, so if you private ec2 need internet for IPv6 traffic you have to use EIGW.
+* EIGW - egress(going out) only access from VPC to Internet over IPv6. Nat gateway doesn't support IPv6, so if your private ec2 need internet for IPv6 traffic you have to use EIGW.
 EIGW (Egress-only Internet Gateway - highly available/scalable outbound communication component for IPv6 traffic. Just like nat, there is no way to establish inbound connection from the internet.
 Note that nat is outbound only for IPv4, and EIGW is outbound only for IPv6. IPv6 are globally unique, and are therefore public by default. You also need to add route to EIGW from private subnet.
 Old terminology:
@@ -4841,13 +4841,13 @@ SG vs NACL:
 Evaluation order: starting from lowest to highest without overwriting each other. In example once we hit rule #90 it was applied, and later rule #100 will not overwrite it.
 Or you can also think that rules are evaluated in decreasing order by overwriting each other. Suppose you want to allow all traffic except http:
 ```
-90  - tcp - 80    - DENY
+90  - tcp/80      - DENY
 100 - all traffic - ALLOW
 ```
 Url-based filter:
 * note that SG can filter only on IP (there is no way to filter traffic based on url)
 * you can use iptables (which can filter based on URL) + SG. So SG just open port for all IP or for list of predefined IP addresses, and iptables add additional filter based on url
-* you can use proxy server and put your ec2 to private subnet. This is best solution, cause in proxy server you can do all type of filtering you want. Plus proxy can have caching, so second time request don't need to go to outside world, it ca be served from proxy cache
+* you can use proxy server and put your ec2 to private subnet. This is best solution, cause in proxy server you can do all type of filtering you want. Plus proxy can have caching, so second time request don't need to go to outside world, it can be served from proxy cache
 You can only assign one NACL to one subnet, yet you can assign many SG to same ec2. You can't block specific IP with SG (cause there is no deny rules), you need to use NACL.
 Stateful - if you send request to your ec2 you will got response even if SG doesn't have any outbound rules
 If you set up NACL (let's say for ssh) you should also add outbound rules (cause nacl are stateless). But for inbound ssh port is not 22, it's EP (ephemeral port) - when a client connects to a server, a random port from the EP range (1024-65535) becomes the client's source port.
@@ -4869,7 +4869,7 @@ To monitor traffic you can use:
     `${version} ${account-id} ${interface-id} ${srcaddr} ${dstaddr} ${srcport} ${dstport} ${protocol} ${packets} ${bytes} ${start} ${end} ${action} ${log-status}`
     `2 123456789010 eni-1235b8ca123456789 172.31.16.139 172.31.16.21 20641 22 6 20 4249 1418530010 1418530070 ACCEPT OK` (SSH traffic (destination port 22, TCP protocol) to network interface eni-1235b8ca123456789 in account 123456789010 was allowed)
     protocol - number from [IANA protocol number](https://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml), in our case 6 - TCP. You can use either default format or create your custom.
-    As you see there is no actual payload, only fact that somebody try to send some tcp/udp message to someone. If you want actual payload you should use Traffic Mirroring.
+    As you see there is no actual payload, only fact that somebody try to send some tcp/udp message to your vpc & response from your vpc. If you want actual payload you should use Traffic Mirroring.
     So use it to troubleshoot connectivity and security issues, make sure that the network access rules are working as expected
     You can set destination as either s3 or CloudWatch Logs
 Since SG stateful & NACL stateless, if your SG has inbound rule for 22 but has no outbound for 22, you will have 2 log entries with ACCEPT OK.
@@ -4886,12 +4886,12 @@ So if A has a peering with B, and B has a peering with C, A has no access to C, 
 It's good when you need to connect 2 or 3 vpc, but in case you have to connect 10 vpc, that means you would have to create `n*(n-1)/2` peering connection between each and every vpc.
 Good news is that peering can be cross-account and cross-region. Basic CloudFormation example here `CloudFormation/advanced-networking/vpc-peering.yml`. If you want just to connect 2 ec2 from 2 vpc without exposing all other services you should use PrivateLink.
 * transit vpc (2016) - a way to connect multiple vpc (form different regions) and your on-premises data center without creating hundreds of peering connections. 
-It's not aws service, it's just a concept or architecture how you should design such a transit vpc that would connect all other vpc with each other.
+It's not aws service, it's just a concept/architecture how you should design such a transit vpc that would connect all other vpc with each other.
 The idea is to create one vpc with ec2 and IGW and install there some software from Cisco/Aviatrix (software is commercial, you buy ami with Cisco Cloud Services Router 1000V Series).
 Implicit drawback is cost: since you pay for every traffic exiting (egress) your VPC, if you use transit vpc as single internet gateway, all other vpc would access internet from it. So fo each internet access you would pay twice
 first - egress traffic from vpc (that goes to transit vpc), second - egress traffic from transit vpc itself (from there it goes to public internet).
 underneath it's all these vpc and on-premises centers are connected to each other through vpn and transit vpc basically works as vpn server and routing this vpn traffic.
-* transit gateway (2018) - it's aws managed service that works like transit vpc, but don't have all it's complexity of installing and configuring. 
+* transit gateway (2018) - it's aws managed service that works like transit vpc, but doesn't have all its complexity of installing and configuring. 
 You create TGW and then just attach VPC/VPN configurations and add route tables. VPN ECMP (Equal Cost Multipath) support - you can enable when you create TGW, vpn connection must use dynamic routing
 Connect vpc to on-premise network (2 ways):
 * site-to-site VPN. Route propagation allows a VPG to automatically propagate routes to the route tables - so you don't need to manually update RT (works for both static & dynamic routing)
@@ -4906,7 +4906,7 @@ Route propagation rules:
 Actually in both cases you provide BGP ASN (take a look at `sa/cloudformation/advanced-networking/site-to-site-vpn.yml`), only difference that when you create it from aws console, for static, default number is provided.
 Yet for vpn connection you have to explicitly set `StaticRoutesOnly: false` and provide customer gateway with dynamic routing, or false & CGW with static routing.
 Don't confuse (site-to-site vpn routing for customer gateway device):
-* dynamic - use if your customer gateway supports BGP. You don't need static routing, cause your device uses BGP to advertise it routes to VPG
+* dynamic - if your customer gateway supports BGP. You don't need static routing, cause your device uses BGP to advertise it routes to VPG
 * static - if customer gateway doesn't support BGP, you have to manually enter routes (static IP) that would be communicated to your VPG
 When you create customer gateway you should specify:
 * BGP ASN if you use dynamic routing (for static from aws console default value would be set)
@@ -4941,7 +4941,7 @@ echo '3.237.1.182 52.6.121.143: PSK "wCfcjn4X6xF895fHM3Tgq6XvSPiEuBcp"' > /etc/i
 service ipsec restart
 ```
 * DX (Direct Connect) - private connection between aws region and you (aws router to your on-premise router) or your ISP (internet service provider). For HA use redundant second connection, in case first failed.
-    DX vs VPN:
+    DX vs site-to-site VPN:
     * dx - private connection between on-premise and aws region. Use it if you need high bandwidth.
     * vpn - IPSec connection over the Internet between on-premise and vpc. It's slower than dx since it use public internet. But secure/cheaper & can be setup very quickly. 
 You can use vpn above dx, but it's redundant, cause dx is already secured. Best practice to configure vpn as failover for dx (in case it failed).
@@ -4987,9 +4987,8 @@ You can change subnet setting `Actions=>Modify auto-assign IP settings` and in t
 Don't confuse:
 * vpc endpoint - entry point inside vpc that allows private connection to aws service
 * vpc privatelink - technology that provides private connectivity inside vpc
-So to some degree these 2 are interchangeable
 VPC Endpoint Security:
-* endpoint policy (supported only for those services that support resource policy) - you can create resource policy for endpoint, by default whole service is open
+* endpoint policy - resource policy for endpoint, by default whole service is open
 Let's consider s3 example (you would have to modify 2 policy):
 * endpoint policy - allow access from anywhere (it's safe cause endpoint would be accessible only from vpc)
 ```
@@ -5022,6 +5021,9 @@ Let's consider s3 example (you would have to modify 2 policy):
   ]
 }
 ```
+For dynamoDb:
+* add endpoint policy to restrict access
+* since dynamoDb doesn't support resource policy - add iam policy to user/role with condition to allow only from vpc endpoint
 You can also use condition based on vpc like `"StringNotEquals": {"aws:sourceVpc": "vpc-123"}`
 Keep in mind that you can't allow/deny based on sourceIP condition, cause from now on your bucket accessed not from ec2, but from endpoint and sourceIP would be IP of endpoint
 * endpoint SG - you can associate any SG with endpoint, if you don't associate any, default SG would be associated
@@ -5032,9 +5034,9 @@ EC2 Tenancy - you can set it for individual ec2:
 * shared (accessible only if vpc tenancy = multi-tenant) - instance runs on shared hardware using pool of resources (like cpu). When you terminate such ec2, it returns resources back to pool.
 * DI (dedicated instance) - instance runs on single-tenant hardware. After launch you can change only from dedicated to host and vice versa.
 * DH (dedicated host) - instance runs on a Dedicated Host, which is an isolated server with configurations that you can control
-DH is very similar to DI, yet there are few difference:
+DH is very similar to DI, yet there are some differences:
 * with DH you have more control over which physical host exactly you use (you have visibility to the number of sockets and physical cores)
-* you can allocate Dedicated Host and put all your ec2 into this host (when you allocate you select host family like C3/R5/M5 and you pay on-demand for such family, even if you don't run ec2 on it)
+* you can allocate DH and put all your ec2 into this host (when you allocate you select host family like C3/R5/M5 and you pay on-demand for such family, even if you don't run ec2 on it)
 * you can create host resource group (from licence manager console) and control you licences
 * except control over physical server - there is no performance/security/physical difference
 Conclusion: if you need dedicated ec2 only for compliance reason - use DI, if you need to put all ec2 on same physical host - use DH
@@ -5044,7 +5046,7 @@ Don't confuse:
 3 layers of security:
 * vpc layer - route tables define which traffic to allow
 * subnet layer - NACL decide which traffic to allow
-* ec2 layer - SG
+* ec2 layer - SG + iptables inside linux
 PG (Placement group) - create ec2 in underlying hardware in such a way as to avoid correlated failures:
 * cluster - packs instances close together inside AZ (good when you need high speed node-to-node communication, used in HPC apps). t2.micro can't be placed into cluster PG. Also you can't span it into several AZ, it should be only within same AZ.
 Capacity error - if you have instances in your PG and try to launch one more you may get this error. The problem is that underlying hardware has no capacity for one more instance.
