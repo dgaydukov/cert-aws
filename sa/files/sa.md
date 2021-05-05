@@ -2575,7 +2575,7 @@ If you need another access pattern, like find all authors by book, you add anoth
 By doing this you add even more duplication, yet now you have 2 access pattern by either author or book.
 This idea of storing data called - adjacency list - way to represent graph data (nodes and edges) in flat model. Suppose we have a bunch of people and want to represent them as friends. We can use graph representation.
 But can use java, if we create `Map<String, List<String>>` where key is person and value is list of this friends. This will add some redundancy/duplication 
-(if Mike & Bob friends, then under key Mark Bob would be inside list of friends, and under kye Bob, Mark would be inside list of friends)
+(if Mike & Bob friends, then under key Mark, Bob would be inside list of friends, and under key Bob, Mark would be inside list of friends)
 Yet this duplication in space guarantees instant result, you can get list of friends of anybody within O(1) - cause we are using Map.
 PartitionKey should have a large number of distinct values relative to the number of items in the table (customerId for orders table - there are many distinct customers comparing to total number of orders).
 This is because max RCU (read capacity unit) - 3000, WCU (write capacity unit) - 1000 per partition. So if you choose wrong PartitionKey and make a lot of request to single partition you will get `ProvisionedThroughputExceededException`.
@@ -2923,7 +2923,7 @@ RedShift - relational (based on industry-standard PostgreSQL) data warehouse, fu
 It delivers fast query and I/O performance for virtually any size dataset by using columnar storage technology while parallelizing and distributing queries across multiple nodes.
 It's fully transactional but implements only serializable isolation level (just like dynamoDB). So if you have big workflow that do lot's of modification, wrap it into transaction, cause otherwise redshift will use new transaction for every change.
 Columnar storage more faster for aggregation operations. If you need to do sum/average in row storage you have to scan all pages to get result, it's a lot of IO, but with columnar you get single IO to get whole column.
-Zone maps - in-memory data structures that store column's min/max value, so when you make query, it checks can data possibly be in this block, if not block is not scanned.
+Zone maps - in-memory data structures that store column's min/max value, so when you make query, it checks can data possibly be in this block, if not - block is not scanned.
 Column data persisted to 1MB immutable blocks. Data sorting used to optimize zone maps, columns that you use for filtering should have low cardinality. 
 So if you have column with high cardinality (timestamp with millisec) there is no point to add such column to SortKey, it won't improve performance.
 Redshift only supports Single-AZ deployments. It uses MPP (Massively Parallel Processing) by automatically distribute data/query load across all nodes.
@@ -2936,8 +2936,11 @@ For every 24 hours of running cluster you accrue 1 hour of free transient cluste
 Just like rds, RedShift supports snapshots (both automatic and manual). Internally each node using ebs to store data, but you can create s3 backups.
 Cross-Region Snapshot - automated or manual copy of data into another aws region. If you created encrypted db (select KMS encryption when you create cluster), you can't transfer keys between regions (KMS bound to region where it was created).
 In this case you have to configure snapshot copy grant - redshift would create snapshot, decrypt it, then copy to another region and encrypt it with KMS key from that region.
-There are 2 option to encrypt cluster:
-* kms - use either aws/redshift key or CMK, or CMK from another account (it should have appropriate key policy for your account)
+There are 3 option to encrypt cluster:
+* disabled - by default no encryption applied
+* kms - use either aws/redshift key or CMK, or CMK from another account (it should have appropriate key policy for your account):
+    * use aws managed kms `aws/redsifht`
+    * use CMK from current or any other account
 * cloudHSM - you can encrypt redshift cluster using HSM module
 For encryption it uses four-tier hierarchy of encryption keys. These keys are: master/cluster/database/data encryption keys
 encryption using kms - 4 keys are:
@@ -2950,14 +2953,14 @@ So it basically allows you to separate storage & compute. You can also use it to
 Under the hood there is a fleet of thousands Redshift Spectrum nodes spread across multiple AZ. Query is submitted to leader node of your Redshift cluster, which optimize/compile/push the query to the compute nodes.
 Compute nodes submit requests to redshift spectrum, spectrum create thousands of ec2 and query data from s3 and return it back to cluster. So with spectrum you can store frequently access data in redshift and IA data in s3 and create join of these 2 datasets.
 Distribution style (`DISTSTYLE` - primary goal in selecting it, to evenly distribute the data throughout the cluster for parallel processing) - when you load data into table, redshift distributes the rows to each of the compute nodes:
-* AUTO - start with ALL style, if table grows beyond certain limit, switch to EVEN.
-* ALL - copy of the entire table is distributed to every node. It is for small tables, less than 3million records.
+* AUTO - start with ALL style, if table grows beyond certain limit, switch to EVEN
+* ALL - copy of the entire table is distributed to every node. It is for small tables, less than 3M records
 * EVEN - leader node distributes the rows across the slices in a round-robin fashion. Use it when a table does not participate in joins or when there is not a clear choice between KEY/ALL distribution
 * KEY - rows are distributed according to the values in one column (this column must be defined as a `DISTKEY`), leader node places matching values on the same node slice. This similar to partitionKey in dynamoDB.
 Key is good if you have some foreign key (like departmentId in employee table) and so all employees for particular department would be stored in single slice.
 Don't confuse:
-* redshift vpc endpoint - endpoint for `com.amazonaws.us-east-1.redshift` to access redshift from inside vpc without internet, all traffic from your vpc to redshift stays inside vpc, you can also access redshift from private subnet
-* enhanced VPC routing - traffic (`COPY/UNLOAD` commands) between redshift and s3 stays inside vpc. you must configure routes, otherwise if you just enable it, but s3 is not accessible your `copy` would fail
+* redshift vpc endpoint (inbound traffic to redshift)- endpoint for `com.amazonaws.us-east-1.redshift` to access redshift from inside vpc without internet, all traffic from your vpc to redshift stays inside vpc, you can also access redshift from private subnet
+* enhanced VPC routing (outbound traffic from redshift) - traffic (`COPY/UNLOAD` commands) between redshift and s3 stays inside vpc. you must configure routes, otherwise if you just enable it, but s3 is not accessible your `copy` would fail
 There are 3 ways you can configure pathway for enhanced routing:
 * vpc endpoint for s3 - now s3 can be accessed from inside vpc without traversing internet
 * nat gateway - connect to s3 from private subnet using nat
@@ -2995,10 +2998,10 @@ You can also create vpc endpoint for data api (this is separate endpoint `com.am
 With standard redshift - you have to connect to cluster with sql client tool, and run queries.
 
 ###### EMR
-EMR (Elastic Map Reduce) - highly distributed computing framework for data processing and storing, using Apache Hadoop as its distributed data processing engine.
-It's good if you have some stored data in s3 and want to process it. If you have real-time data stream it's better to use kinesis.
-It's open source java framework supports data-intensive distributed apps running on large clusters of commodity hardware. Hive/Pig/HBase are packages that run on top of Hadoop.
-It reduces large workload into smaller jobs and distribute it between EC2 instances of Hadoop cluster (good for big data analyses).
+EMR (Elastic Map Reduce) - highly distributed computing framework for data processing and storing, using Apache Hadoop as its distributed data processing engine:
+* good if you have some stored data in s3 and want to process it. If you have real-time data stream it's better to use kinesis
+* open source java framework supports data-intensive distributed apps running on large clusters of commodity hardware. Hive/Pig/HBase are packages that run on top of Hadoop
+* reduces large workload into smaller jobs and distribute it between EC2 instances of Hadoop cluster (good for big data analyses)
 Hadoop is basically 2 things: HDFS + Computation/Processing framework (MapReduce - hadoop api name)
 There are 2 types of storage:
 * HDFS (Hadoop Distributed File System) - data replicated across several instances. Data can be stored on EBS or instance store
@@ -3025,6 +3028,14 @@ Presto faster than spark cause it doesn't care about fault-tolerance. If one of 
 Spark supports mid-query fault-tolerance and can recover from such a situation but in order to do that, it needs to do some extra bookkeeping and essentially "plan for failure". That overhead results in slower performance when your cluster does not experience any faults.
 Spark Streaming - solution to process/analyze data in real-time. On aws if you want to use it you have to provision: kinesis data streams + emr with spark streaming and apache zeppelin
 You can create security configuration (`AWS::EMR::SecurityConfiguration`) where you can enable both data-in-rest (available for both EBS & EMRFS on S3) & data-in-transit encryption, and then assign this config to cluster.
+Encryption - both type supported:
+* data-in-rest - use s3 or ebs disk encryption
+* data-in-transit - use open source TLS encryption library
+Security Configuration - you can create security config and apply it to multiple clusters:
+* enable s3 encryption
+* local disk encryption (of underlying ebs)
+* data in transit encryption
+* authentication & authorization & iam roles
 
 ###### ElasticSearch & CloudSearch
 ES - open source search service, it's usually a part of ELK stack. You store data on ebs that attached to ES nodes.
@@ -3045,9 +3056,8 @@ Fluentd vs LogStash:
 
 ###### Kinesis
 It is a platform for streaming data/media on AWS, making it easy to load and analyze streaming data.
-With Kinesis, you can ingest real-time data such as application logs, website clickstreams, IoT telemetry into your databases, data lakes, and data warehouses, or build your own real-time applications using this data
-* kineiss firehose (near real time) - load massive volumes of streaming data into AWS (you can configure lambda to transform you data before loading). Receives stream data and stores it in s3/RedShift/ElasticSearch
-It's near real time because it takes data from data streams in real time, buffer them and then sends batches of data into storage (s3/dynamoDB).
+With Kinesis, you can ingest real-time data such as application logs, website clickstreams, IoT telemetry into your databases, data lakes, and data warehouses, or build your own real-time applications using this data:
+* kineiss firehose (near real time) - load massive volumes of streaming data into AWS (you can configure lambda to transform you data before loading). Receives stream data and stores it in s3/RedShift/ElasticSearch. It's near real time because it takes data from data streams in real time, buffer them and then sends batches of data into storage (s3/dynamoDB).
 * kineiss streams (real time, it's also data storage - data stored there durable for specified period) - ability to process the data in the stream. 
 Streams can't load data directly to s3/redshift - additional processing required, firehose - for storing data directly in s3/redshift
 Just like fifo/groupId when you send message to kinesis you add partitionKey - determined into which shard to put your record
@@ -3129,6 +3139,9 @@ Don't confuse:
 Workflow - set of related jobs/crawlers/triggers in glue that execute as single entity. You can design complex multi-job ETL activity.
 During run of each component workflow record execution/status and provide overview for you. Event triggered inside workflow can be fired by job/crawlers to start job/crawler
 If you need completely managed solution for ETL + query data with SQL: use glue + athena. Although emr or ecs cluster can do similar job, they are not fully managed.
+Encryption - you can configure in setting with kms for:
+* metadata encryption - you can encrypt you data catalog
+* encrypt connection passwords - you can use kms to encrypt passwords
 
 ###### Lake Formation
 DL (Data Lake) - scalable central repository of large quantities and varieties of data, both structured and unstructured. There are 2 steps:
@@ -3184,7 +3197,7 @@ For video processing you can use:
 * `GetFaceDetection/GetLabelDetection/GetCelebrityDetection` - use jobId from above operation to get results
 real-time face recognition:
 * upload video to kinesis video using `PutMedia`
-* crete stream in rekognition using `CreateStreamProcessor` and provide 4 params:
+* create stream in rekognition using `CreateStreamProcessor` and provide 4 params:
     * input - kinesis video stream
     * output - kinesis data stream to store processed results (places separate json file for each analyzed frame). You can use KCL from ec2 (with asg) to read from stream and do some processing.
     * settings - `CollectionId` where you store faces to compare and `FaceMatchThreshold` (default 80%)
@@ -3231,7 +3244,7 @@ If you are still confuse you can take a look at [java is still free](https://www
 It's aws solution to IAC. There are 2 concepts:
 * template - json/yaml file with describe desired infrastructure
 * stack - template deployed to cloud (you can run commands like describe/list/create/update stack). If you create/update stack and errors occur all changes would be rolled back and you can be notified by SNS
-SAM (Serverless Application Model) - framework to build serverless apps, provide a shorthand syntax to write IAC using yaml templates. Later it anyway transformed into CF full template, so you can just learn CF and stick with it.
+SAM (Serverless Application Model) - framework to build serverless apps, provides a shorthand syntax to write IAC using yaml templates. Later it anyway transformed into CF full template, so you can just learn CF and stick with it.
 [sam local](https://github.com/aws/aws-sam-cli) - cli tool to test lambda locally, simulate s3/dynamoDB/kinesis/sns, it uses built-in CodeBuild/CodeDeploy to build and deploy app to cloud.
 SAM templates are similar to CF, yet it starts from `Serverless`, like `AWS::Serverless::Api/AWS::Serverless::Function/AWS::Serverless::SimpleTable`
 Supported formats are JSON/YAML. Resource naming is supported not for all product, this is due to possible naming conflicts (when you update template, some resources would be recreated, but if names are not updated error would happen).
@@ -3246,7 +3259,7 @@ But you can assign IAM role to CF, and in this case it would use permissions fro
 If you don't specify `role-arn`, aws will use previous role. If it first time it will use temporary session that is generated from user (one who is creating the stack) credentials.
 For multi-env deployment (where you have dev/prod env or more) you should use single reusable template file (don't create new template file for each env, cause you will end up in a mess). 
 You can achieve reusability by adding params/mappings/conditions section into your template. Then you just create 2 stacks with different names (dev/prod) and different params but with single template file.
-Use dynamic references, never store secrets in your stack template. If you need secrets you should store them in aws secrets and just reference them from your template by using `'{{resolve:service-name:reference-key}}'`.
+Use dynamic references, never store secrets in your stack template. If you need secrets you should store them in Secrets Manager and just reference them from your template by using `'{{resolve:service-name:reference-key}}'`.
 Good practice is to set params constraints, by using `AllowedValues`. In this way you are guarantee that param would be some expected value.
 You can create rules with CF Guard (cfn-guard - open source CLI tool) that can ensure that your stack is compliant (for example: all ebs volumes should be only encrypted). In case rule failed, stack won't be created.
 Best practice is to divide your infra into several stacks. There are 2 approaches:
@@ -3412,6 +3425,9 @@ You can upload/download file by parts:
             * `ListParts` - list already uploaded parts
             * `AbortMultipartUpload` - abort mpu, after this no parts can be uploaded with `UploadId`, space takes by already uploaded files would be freed
     * if you don't call complete, only partial uploads would be stored in s3, so it's a good practice to create lifecycle policy to drop MPU that wasn't completed after 1 month using `AbortIncompleteMultipartUpload` action
+    * if you using encryption - requester should have all 3 `kms:GenerateDataKey` & `kms:Encrypt` & `kms:Decrypt` permission, cause:
+        * all chunks when uploaded encrypted with same data key (so chunks stored encrypted)
+        * once you complete upload - all chunks must be decrypted => assembled into single file => encrypted again
 * partial download - use `Range` HTTP header in a GET request, you can retrieve a specific range of bytes from s3
 ```
 # return full page => <h1>Hello world</h1>
@@ -3427,23 +3443,22 @@ curl -r 0-1 https://my-test-s3-bucket-1.s3.amazonaws.com/index.html
 # < Content-Length: 2
 ```
 S3 security:
-* use s3/custom encryption to encrypt data before storing them on s3 and decrypt them when you download them
+* use s3 custom encryption to encrypt data before storing them on s3 and decrypt them when you download them
 * use versioning to preserve, retrieve, and restore every version of every object stored in your Amazon S3 bucket
 * enable mfa delete for bucket - it's part of versioning. So you can just enable versioning or enable versioning + mfa delete (you can't enable mfa delete without enable versioning).
 mfa delete can be enabled only from cli (currently no way to enable it from web console). You should use root account (so you should activate mfa first for root account) cause only the bucket owner (root account) can enable MFA Delete.
 `aws s3api put-bucket-versioning --bucket=my2fadeletebucket --versioning-configuration Status=Enabled,MFADelete=Enabled --mfa "arn:aws:iam::ACCOUNT_ID:mfa/root-account-mfa-device 123456" --profile=root`
-If you use cli, don't forget to clean it after you set up mfa delete. Since mfa delete automatically enable versioning, if you just delete file it adds additional version with delete marker. If you want permanently delete file you have to delete specific version.
+If you use cli, don't forget to clean root credentials after you set up mfa delete. Since mfa delete automatically enable versioning, if you just delete file it adds additional version with delete marker. If you want permanently delete file you have to delete specific version.
 You can't delete version from console, if you try you get `You can’t delete object versions because Multi-factor authentication (MFA) delete is enabled for this bucket. To modify MFA delete settings, use the AWS CLI, AWS SDK, or the Amazon S3 REST API.`. 
 If you try to delete from cli without 2fa you will get `An error occurred (AccessDenied) when calling the DeleteObject operation: Mfa Authentication must be used for this request`. 
 If you supply 2fa and run `aws s3api delete-object --bucket=my2fadeletebucket --key=dummy.pdf --version-id=hZaCTAcGEMX9tzF6MUfAq4obRq_AhWk8 --mfa="arn:aws:iam::ACCOUNT_ID:mfa/user2fa 547063" --profile=user2fa`
 you will get `An error occurred (AccessDenied) when calling the DeleteObject operation: This operation may only be performed by the bucket owner`. So only root user can delete versions from now on.
 Bucket can be in 1 of 3 state:
 * unversioned (the default)
-* versioning-enabled - once you enable versioning, you can't disable it, you can only suspend and bucket would be in versioning-suspended status.
-Once you enable versioning existing objects get version `null`.
-* versioning-suspended - for each put `null` version is added for object, if you add second time object with same name, it just overwrite object with `null` version
+* versioning-enabled - once you enable versioning, you can't disable it, you can only suspend and bucket would be in versioning-suspended status. Once you enable versioning existing objects get version `null`.
+* versioning-suspended - for each put `null` version is added for object (older version stayed), if you add second time object with same name, it just overwrite object with `null` version
 Example of file upload/remove for different stage:
-* unversioned: - upload - file1/file2 (no versions, if we remove object we actually remove object)
+* unversioned: upload - file1/file2 (no versions, if we remove object we actually remove object)
 * enable versioning: upload - file3. Now file1/file2 - versionID - null, file3 - `8Vj9YCaBwERBxRv2SmwuwE12P3HVUv8o`
 Reupload file1/file3 and delete file2. Now all files has 2 versions:
     * file1 - null & current
@@ -3451,11 +3466,11 @@ Reupload file1/file3 and delete file2. Now all files has 2 versions:
     * file3 - `8Vj9YCaBwERBxRv2SmwuwE12P3HVUv8o` & current
 * suspend versioning. Reupload file1 -  some versionId & null as current version. You can delete only object whose version is null. If you delete object with some other versionID - delete marker with `null` versionID is added
 So the key is if you change state of s3 bucket, existing objects not changed, what changes - how s3 treat put/get/delete operations.
-* use access logging to track who/which bucket/what action was executed on s3
+* use access logging to track who, which bucket, what action was executed on s3
 Although s3 is object-based storage, you can easily emulate OS by creating objects like `path1/path2/file1`
-S3/S3_IA/Glacier - replicate data across 3 AZ go guarantee data won't be lost in case of emergency.
+S3/S3_IA/Glacier - replicate data across 3 AZ to guarantee data won't be lost in case of emergency.
 There are 3 ways to secure buckets:
-* use ACL (old feature) - to use this user should have permission to `s3:PutBucketAcl`.
+* use ACL (old feature) - to use this user should have permission to `s3:PutBucketAcl`. 
 acl can be applied to bucket or object. To read object you should apply acl directly to object, bucket acl are not inherited to objects automatically.
 acl can only add list/read/write access, no way to set deny. If you use acl + bucket policy, explicit deny overwrites all allows and acl too.
 * use bucket policy (json file with policies)
@@ -3525,9 +3540,9 @@ Currently there are 5 lifecycle rules:
 * transition current/previous version between storage class
 * expire (permanently delete) current/previous version
 * delete expired delete marker & incomplete multipart upload
-Storage Class Analysis - filters that helps analyse access pattern for whole bucket or list of objects (go to management->analytics to analyze objects)
+Storage Class Analysis - filters that helps analyse access pattern for whole bucket or list of objects (`choose s3 bucket => metrics => Storage Class Analysis => Create analytics configuration`)
 * Standard - low latency, high throughput, 3 AZ replication
-* RRS (Reduced Redundancy Storage) - for non-critical data, durability - 4 nines - 99.99%. !important => s3 standard is cheaper now, so rrs is outdated, don't use it.
+* RRS (Reduced Redundancy Storage) - for non-critical data, durability - 4 nines - 99.99%. !important => s3 standard is cheaper now, so RRS is outdated, don't use it.
 * Intelligent - when you don't know access pattern. It has 2 access types - frequent/infrequent, and based on access pattern moves objects between these 2 types and save money
 * Standard-IA
 * Single-Zone-IA - store data only inside single AZ
@@ -3578,10 +3593,8 @@ S3Bucket:
                         Owner: Destination
 ```
 Replication of encrypted objects:
-* object encrypted with CMK are not replicated
-* by default s3 doesn't replicate bucket encrypted with kms. You have to explicitly enable such configuration
 * for destination bucket - you have to add kms key (keep in mind that it regional, so if your destination bucket in another region - you have to use different CMK from that region)
-* add permission to replication role (`kms:Decrypt` - for source bucket kms, `kms:Encrypt` - for destination bucket kms)
+* add permission to replication role (`kms:Decrypt` - for source bucket kms, `kms:Encrypt` - for destination bucket kms) or add key policy for 2 CMK (for source & destination CMK in case 2 buckets in different region or belong to 2 diff accounts)
 For success of replication - 2 things should be enabled:
 * destination bucket - make sure that source bucket is allowed to replicate objects
 * source bucket - make sure all objects has owner as source bucket (if object was uploaded from another account without `bucket-owner-full-control` then source bucket is not own them, and can't replicate)
@@ -3610,35 +3623,6 @@ You can retrieve (restoration) objects in s3 console (not glacier console, cause
 * standard - 3-5 hours
 * expedited - 1-5 min, most expensive
 When you restore object you should specify: number of days the restored copy is available - during this time, when you go to object you would be able to download it using it normal url.
-Policy to allow cloudTrail write
-```
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Principal": {
-                "Service": "cloudtrail.amazonaws.com"
-            },
-            "Action": "s3:GetBucketAcl",
-            "Resource": "arn:aws:s3:::my-test-s3-bucket-1"
-        },
-        {
-            "Effect": "Allow",
-            "Principal": {
-                "Service": "cloudtrail.amazonaws.com"
-            },
-            "Action": "s3:PutObject",
-            "Resource": "arn:aws:s3:::my-test-s3-bucket-1/*",
-            "Condition": {
-                "StringEquals": {
-                    "s3:x-amz-acl": "bucket-owner-full-control"
-                }
-            }
-        }
-    ]
-}
-```
 `x-amz-acl` - special header that give full control to owner of account. So you have to call putObject with `aws s3 cp example.jpg s3://awsexamplebucket --acl bucket-owner-full-control`.
 Versioning - if turn on, when you make any operation update/delete it create new version:
 * update - old object stored with some version, new object created with new version. If you run get - you will get latest version, if you run get with version - you got your object.
@@ -3856,11 +3840,10 @@ Completion report - csv report that would be generated on job completion, you ha
 * what to include: either all tasks or failed tasks only
 * create (or select if it already created) new role for `batchoperations.s3.amazonaws.com`
 So if you want to encrypt old unencrypted files:
-* if you have just couple of objects you can manually copy them `aws s3api copy-object --bucket=mytests3bucket12 --key=yukon.pdf --copy-source=mytests3bucket12/yukon.pdf`
-new copy would overwrite existing file, but since encryption activated by default, it would also include encryption
+* if you have just couple of objects you can manually copy them `aws s3api copy-object --bucket=mytests3bucket12 --key=yukon.pdf --copy-source=mytests3bucket12/yukon.pdf`. New copy would overwrite existing file, but since encryption activated by default, it would also include encryption
 * create inventory of only unencrypted files
 * create & run s3 batch job to copy files with encryption
-Cross-account file upload (if you don't bucket owner full control, it can't get object, and can't delegate permission to other accounts/users to get object, yet it can delete object):
+Cross-account file upload (if you are not bucket owner, you can't get object, and can't delegate permission to other accounts/users to get object, yet it can delete object):
 * create bucket in acc1 `acc1crossaccountbucket`, with following policy
 ```
 {
@@ -3932,13 +3915,14 @@ Requester Pays:
 * if requester assume role, account to which role belong is charged
 Don't confuse:
 * SSE-C - server-side encryption using customer key (encryption happened in server side, but key must be supplied by client for each request)
-* client encryption - encryption happened on client side, and already encrypted data transferred to/from s3. There are 2 options:
-    * Encryption SDK or AWS SDK S3 encryption with CMK - in this case for each request new data key would be generated:
+* client encryption - encryption happened on client side, and already encrypted data transferred to/from s3. You can use Encryption SDK or AWS SDK S3 encryption:
+    *  with CMK - in this case for each request new data key would be generated:
         * putObject - new data key is generated, object encrypted & stored, data key cipherText stored as metadata
         * getObject - object & metadata received, cipherText send to kms to get plaintext data key, this plaintext key used to decrypt object
-    * Encryption SDK or AWS SDK S3 encryption with client master key - in this case master key stored in client:
+    *  with client master key - in this case master key stored in client:
         * putObject - one-time-use symmetric key generated using master key and object encrypted with this one-time-use key, encrypted version of key stored as metadata
         * getObject - encrypted key is decrypted using master key, object decrypted using plaintext one-time-use key
+data-in-transit between s3 & Glacier for lifecycle policy is transferred using TLS.
 
 ###### Glacier
 Glacier - low-cost tape-drive storage value with $0.007 per gigabyte per month. Used to store backups that you don't need frequently. Access to data can take from few minutes to a few hours. You store data as archives.
@@ -3970,20 +3954,24 @@ aws glacier list-jobs --account-id=- --vault-name=test
 aws glacier get-job-output --account-id=- --vault-name=test --job-id={JOB_ID} result.json
 ```
 There is no lifecycle rules for glacier, they only available in s3.
+Encryption:
+* data-in-rest - automatically encrypted with aws managed key (no way to use your own CMK or disable encryption)
+* data-in-transit - encrypted with SSL cause you transfer data to-and-from using `https` protocol
+* end-to-end - you can use client encryption (using Encryption SDK) & transfer already encrypted data (when you read you would need to use same SDK to decrypt data)
 
 ###### EFS
 EFS (Elastic File System) - delivers simple network filesystem for EC2. It supports NFSv4/4.1 (Network file system).
 System size is grow as you add more files to file system. It allows parallel access from multiple EC2 within the same region. 
 If you want cross-region access you have to use vpc peering or vpn if you want to access EFS from on-premise.
 It accessed by EC2 using mount targets which are created by AZ. If you need temporary storage EFS not the best option, look at EC2 Local Instance Store.
-Mount helper - `amazon-efs-utils` utility that defines a new network file system type, called efs, which you can use with `mount` command
+Mount helper - `amazon-efs-utils` utility that defines a new network file system type, called `efs`, which you can use with `mount` command
 There are 2 performance modes - can be chosen during creation, and can't be changed after (plz note that they both equivalent in term of price, so you can choose any, no price effect):
 * General (if you need less then 7k file operation per second) - better to use if you need low latency
 * Max I/O (if thousands of ec2 access same efs) - provide high I/O for trade-off of latency - not best scenario if low latency is required
 There are 2 throughput modes:
 * bursting - throughput scales as your efs size grows. You also earns credit and when you have load pikes you can use credit
 * provisioned (1 - 1024 MB/s) - you can provision desired throughput regardless of efs size (use it if amount of data is low, but access is high)
-When you create efs it creates mount target in each az. Instances in each az talk to efs by using this mount targets.
+When you create efs, it creates mount target in each az. Instances in each az talk to efs by using this mount targets.
 To mount efs to ec2, mount helper should be installed and running `sudo yum install -y amazon-efs-utils`. You can mount it by `sudo mount -t efs fs-bc0a413f:/ ./mnt`.
 For some AMI (Amazon Linux/RHEL/Ubuntu) it's already installed, you just need to start it. You can check the status by `sudo service nfs status`
 By default anybody can read, but root (UID 0) user can write. You can also use Access Points to create dirs in your efs for different users to read/write.
@@ -4023,7 +4011,7 @@ fs-a1bee823.efs.us-east-1.amazonaws.com:/  on  /mnt/efs     type  nfs4      (rw,
 As you see it mounted on port `port=20391`, which is port of stunnel.
 IAM access:
 * by default efs open to anybody
-* you can set efs resource policy to deny all access and create iam role to allow (role would overwrite resource policy) and then assign this role to specific ec2
+* you can set efs resource policy to deny all except special role
 * You must use tls when access with iam: `sudo mount -t efs -o tls,iam file-system-id efs-mount-point/`
 You can set up resource policy so you can mount only with tls enabled
 ```
@@ -4085,7 +4073,7 @@ share snapshot:
 * you can make publicly available only unencrypted snapshot
 * if you share encrypted snapshot you should also share kms key (with following permissions `kms:DescribeKey/kms:CreateGrant/kms:GenerateDataKey/kms:ReEncrypt`), otherwise other party can't decrypt it
 * snapshot constrained to region where it created, to share with other region create copy first
-* aws prevents sharing snapshot encrypted with default kms key (so you don't have to share it with other). To share encrypt your snapshot with new CMK
+* aws prevents sharing snapshot encrypted with default kms key (cause you can't modify key policy for aws managed CMK for ebs). To share - encrypt your snapshot with your CMK
 3 steps to use encrypted snapshot from another account:
 * share ebs snapshot
 * copy shared snapshot & re-encrypt it with different kms key
@@ -4112,7 +4100,7 @@ It has a platter and actuator arm that moves around platter and read/write (just
 Nitro Card for EBS - provides same speed for both encrypted & unencrypted volumes. So there is no trade-off between speed & security.
 Since you can't encrypt volume after you attached it to ec2, so in order to create encrypted volume for running ec2 you have to:
 1. take snapshot of unencrypted volume
-2. create copy and tick `encryption option`
+2. create copy and tick `encryption option` - encrypted copy of snapshot would be created
 3. create ami from encrypted snapshot
 4. run new ec2 from created ami & remove current ec2
 Root ebs is already mounted, but if you add second/third and so on... you have to manually mount them (instance store is mounted automatically although root is still ebs)
@@ -4160,15 +4148,16 @@ If you remove B - nothing would be removed, cause 4GB of B is still used by late
 ebs encryption:
 * you can encrypt your volume using KMS (if you don't have any CMK then default `aws/ebs` key would be used)
 * encryption happens on servers that host ec2, so data-at-rest & data-in-transit (between ec2 and attached ebs) are encrypted
+    * data-in-transit encrypted, cause data first encrypted on ec2 & then sent to ebs over network as encrypted
 * you can attach both encrypted & unencrypted volumes to same ec2 simultaneously
 * volume encrypted by data key, data key encrypted with CMK and stored on same disk. On decryption first data key decrypted, than all data decrypted by data key
 * encryption handled by hypervisor, plaintext data key stored in hypervisor memory to run encrypt I/O to ebs
-* so you can delete kms key, and as long as ec2 is running it would have no effect. Yet if you stop it and try to start you would fail, cause no key found to decrypt data keys
+* so you can delete kms key, and as long as ec2 is running it would have no effect (cause plaintext data key stored in memory). Yet if you stop it and try to start you would fail, cause data key would need to be decrypted by CMK which is deleted
 
 ###### EC2 Instance Store
 Similar to EBS, but located on the same machine as EC2 (EBS connected through network), available only during lifetime of EC2. So it's not durable, once EC2 instance stop/restart/fail all data would be lost. 
 It's not available for all ec2 types, only for [some of them](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/InstanceStorage.html#instance-store-volumes)
-You still have to use at lease 1 EBS + additional instance store. For some types you can select to remove instance store, but ebs should be present always.
+You still have to use at least 1 EBS + additional instance store. For some types you can select to remove instance store, but ebs should be present always.
 There are a few limitations compared to ebs:
 * you can't create ec2 with only ephemeral storage without ebs
 * differ from EBS cause it's directly attach to machine (ebs connected via network), so it provides lowest latency
@@ -4197,10 +4186,9 @@ Origin server can be:
 Origin must be internet-accessable:
 * for ec2 - it should have public IP (you can't route to private ec2)
 * for elb - it should be internet-facing (cf can't route to internal elb)
-Later when user request this link CF check the closest edge location for data, and if found in cache - return, if not request it from origin server and cache it.
 To ensure origin availability you can add backup origin and configure CF in case it get 4xx/5xx response from main origin, to use backup origin.
 Edge cache is smart, it can remove less popular content to make room for other data.
-You can also use Geo Restriction to specify at which countries content should be 403 (Forbidden), you can also add custom error code and message.
+You can also use Geo Restriction to specify at which countries content should be 403 (Forbidden), you can also add custom error code and message. You can also add web ACL in front of CF with geo restriction.
 You can control expire date (when CF will check origin server for new version) by setting cache control header (by default 24 hours).
 You can delete item from CF by:
 * delete it from origin server, and when expire date come it would be deleted from CF
@@ -4219,8 +4207,10 @@ You create single lambda in 1 region, and associate it with cf distribution. Aft
 * origin response - when CF receive response from origin server
 * viewer response - before CF responds to viewer
 You can protect CF data by using:
-* Signed url (like presigned s3 url) - temporary access to CF data. Support both web & RTMP distribution.
-* Signed cookie - you can access multiple CF objects with same signed cookie. So use this method if you want to have access to multiple files with same cookie, and want to use standard url (without any signature as url params). Not supported for RTMP distribution (only for HLS).
+* Signed url (like presigned s3 url) - temporary access to CF data. Support both web & RTMP distribution. You want to restrict access to single file, client doesn't support cookie
+* Signed cookie - you can access multiple CF objects with same signed cookie. So use this method if you want to have access to multiple files with same cookie, and want to use standard url (without any signature as url params). 
+    * not supported for RTMP distribution (only for HLS)
+    * you want to restrict access to multiple files (like all HLS videos), client should support cookie
 When creating signed url/cookie you can set 3 params:
 * end-datetime   (mandatory) - we need to know when access to particular file is over
 * start-datetime (optional)
@@ -4265,9 +4255,6 @@ There are 3 ways to limit access to cf:
 * using presigned url/cookie
 * use geo-restriction (whitelist/blacklist specific countries)
 * use WAF for all other restriction (for example whitelist/blacklist by IP)
-Don't confuse:
-* signed url - you want to restrict access to single file, client desn't support cookie
-* signed cookie - you want to restrict access to multiple files (like all HLS videos), client should support cookie
 If you run PCI-compliant or HIPAA-compliant workloads you should:
 * enable cf access logs - save all request to access cf data
 * save all management cf request to CloudTrail
@@ -4285,7 +4272,7 @@ Origin Failover - ability to fail over to second origin in case first origin is 
 * you can configure cf request timeout (by default 3 times for 10 sec each)
 There are 2 types of ssl for cf:
 * Default CloudFront Certificate (*.cloudfront.net) - use it if you want to access your distribution using cf domain name (like `https://d111111abcdef8.cloudfront.net/logo.jpg`)
-* SNI Custom SSL Certificate (choose once from ACM) - use if if you want to access your distribution using custom domain name (like `https://www.example.com/logo.jpg`)
+* SNI Custom SSL Certificate (choose once from ACM, you should create ACM cert in `us-east-1` region) - use if if you want to access your distribution using custom domain name (like `https://www.example.com/logo.jpg`)
 If you want to use custom domain name + cf you should:
 * provision SNI custom ssl certificate 
 * configure route53 alias record to cf distribution
