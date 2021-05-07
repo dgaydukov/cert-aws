@@ -15,8 +15,8 @@ There are 2 main reasons to get it
 2. It may help your career
 
 ### Taken certs
-* [AWS Certified Solutions Architect](https://github.com/dgaydukov/cert-aws/tree/master/sa)
+* [AWS Solutions Architect & Security Specialty certification](https://github.com/dgaydukov/cert-aws/tree/master/sa)
     * [SAA Cert](https://github.com/dgaydukov/cert-aws/tree/master/sa/cert/saa.pdf)
     * [SAP Cert](https://github.com/dgaydukov/cert-aws/tree/master/sa/cert/sap.pdf)
-* [AWS Certified Security Specialty](https://github.com/dgaydukov/cert-aws/tree/master/sa)
+    * [SCS Cert](https://github.com/dgaydukov/cert-aws/tree/master/sa/cert/scs.pdf)
 * [AWS Certified Machine Learning Specialty](https://github.com/dgaydukov/cert-aws/tree/master/ml)
