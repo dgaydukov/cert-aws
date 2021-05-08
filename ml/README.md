@@ -1,26 +1,26 @@
-# AWS Certified Machine Learning Specialty
+# AWS Big Data & Machine Learning certification
 
 ### Description
-Here is my experience of taking data machine learning specialty exam
+Here is my experience of taking machine learning specialty exam
 * [MLS-C01](https://aws.amazon.com/certification/certified-machine-learning-specialty)
 For ML we use separate file, cause Solutions Architect (both associate & pro) don't cover ML at all. There are a few questions about Polly in associate exam and some regarding Rekognition in professional. 
 Other then that, ML is not covered by that exam, that's why we create separate folder & tips file for ML.
+You can use this document to pass one of thee:
+* aws big data specialty (deprecated & currently unavailable)
+* aws data analytics specialty
+* aws machine learning specialty
+Bug again although you can take one of these 3 straight away, I would strongly encourage you to take SAA & SAP first. These 2 will give you deep understanding of what is cloud & how it works.
+So if you data scientist or ML expert you should take at least SAA, but if you want more, take both, and then you can dive into any other certs.
 
 ### Contents
-* [Machine Learning Tips](https://github.com/dgaydukov/cert-aws/blob/master/ml/files/ml.md)
+* [Big Data & Machine Learning Tips](https://github.com/dgaydukov/cert-aws/blob/master/ml/files/ml.md)
 
 ### Useful Links
 * [Mock exam ML](https://www.whizlabs.com/aws-certified-machine-learning-specialty)
 * [Free ML questions](https://www.examtopics.com/exams/amazon/aws-certified-machine-learning-specialty)
 
 ### TODO
-https://www.cfainstitute.org/en/programs/cfa/exam
-https://www.amazon.com/Options-Futures-Other-Derivatives-9th/dp/0133456315
-https://www.amazon.com/Reminiscences-Stock-Operator-Edwin-Lef%C3%A8vre/dp/0471770884
-* kafka
-    * https://docs.confluent.io/platform/current/schema-registry/index.html
-    * kafka poll wait for specified timeout (don't return even if there are already messages)
-    * kafka cluster docker example
+* divide ocp document into low-latency section & move everything under it from misc section
 * core java videos
     * compare chronicle-logger vs async log4j with jmh (implement testing like it high-throughput trading system)
     * https://www.youtube.com/watch?v=CnRtbtis79U (Алексей Шипилёв — Shenandoah: сборщик мусора, который смог)
@@ -40,6 +40,10 @@ https://www.amazon.com/Reminiscences-Stock-Operator-Edwin-Lef%C3%A8vre/dp/047177
     * aeron vs aeron-cluster
     * netty for low latency (how it compares to lmax/aeron)
     * chronicle queue/map (how it works inside)
+* kafka
+    * https://docs.confluent.io/platform/current/schema-registry/index.html
+    * kafka poll wait for specified timeout (don't return even if there are already messages)
+    * kafka cluster docker example
 * aws
     * finish off `sa/cloudformation/codepipeline.yml` (build artifacts => to s3, and create deployment from s3 to ec2. And then rebuild it to use codepipeline)
     * ecs + elb with dynamic port mapping (sa/cloudformation/ecs-elb.yml) + add fargate launch type
@@ -76,15 +80,6 @@ https://www.amazon.com/Reminiscences-Stock-Operator-Edwin-Lef%C3%A8vre/dp/047177
     * deferred response in spring
     * opentracing with spring (https://github.com/opentracing-contrib/java-spring-jaeger)
 -----------------------------------------------------------------------------------------------------------------------
-* https://javarevisited.blogspot.com/2019/04/top-10-hadoop-tutorials-for-big-data-developers.html
-* https://www.youtube.com/watch?v=7Er4oGWpmWs
-* Hadoop The Definitive Guide
-* Hadoop Application Architectures
-* High Performance Spark
-* HBase in Action
-* https://dev.to/scrummastert/aws-certified-data-analytics-vs-big-data-what-s-the-difference-5aol
-* https://dev.to/scrummastert/re-invent-2020-part-ii-data-sessions-reviewed-1n47
------------------------------------------------------------------------------------------------------------------------
 * create cf redshift enhanced vpc routing and send data inside vpc between redhshift & s3 and view vpc flow logs (you have 2 month free trial)
 * create redshift data api and compare to standard redshift access
 * create glue workflow `AWS::Glue::Workflow` and call aws batch when etl complete
@@ -96,6 +91,15 @@ https://www.amazon.com/Reminiscences-Stock-Operator-Edwin-Lef%C3%A8vre/dp/047177
 * try emr on t2 (with different engines hive/hbase/presto/spark)
 * kinesis firehose real example (with cf template)
 * use kinesis sdk and try java data streaming. In all example firehose consume data from data streams, but can we directly send data to it without data streams?
+-----------------------------------------------------------------------------------------------------------------------
+* https://javarevisited.blogspot.com/2019/04/top-10-hadoop-tutorials-for-big-data-developers.html
+* https://www.youtube.com/watch?v=7Er4oGWpmWs
+* Hadoop The Definitive Guide
+* Hadoop Application Architectures
+* High Performance Spark
+* HBase in Action
+* https://dev.to/scrummastert/aws-certified-data-analytics-vs-big-data-what-s-the-difference-5aol
+* https://dev.to/scrummastert/re-invent-2020-part-ii-data-sessions-reviewed-1n47
 -----------------------------------------------------------------------------------------------------------------------
 * The Hundred-Page Machine Learning Book
 * create account in https://www.kaggle.com

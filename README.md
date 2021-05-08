@@ -19,4 +19,4 @@ There are 2 main reasons to get it
     * [SAA Cert](https://github.com/dgaydukov/cert-aws/tree/master/sa/cert/saa.pdf)
     * [SAP Cert](https://github.com/dgaydukov/cert-aws/tree/master/sa/cert/sap.pdf)
     * [SCS Cert](https://github.com/dgaydukov/cert-aws/tree/master/sa/cert/scs.pdf)
-* [AWS Certified Machine Learning Specialty](https://github.com/dgaydukov/cert-aws/tree/master/ml)
+* [AWS Big Data & Machine Learning certification](https://github.com/dgaydukov/cert-aws/tree/master/ml)
