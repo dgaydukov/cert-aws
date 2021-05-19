@@ -22,7 +22,8 @@ So if you data scientist or ML expert you should take at least SAA, but if you w
 ### TODO
 * spring
     * kafka (since kafka is third-party it's better kafka topic to be under spring project)
-        * org.apache.zookeeper.ZooKeeper create/getData & other situations where we can use zookeeper with java
+        * org.apache.zookeeper.ZooKeeper use create/getData/exists to implement DR system, when we have 2 instances, and secondary always check if first failed, then it promote itself to be primary.
+         Check other situations where we can use zookeeper with java
         * https://docs.confluent.io/platform/current/schema-registry/index.html
         * kafka poll wait for specified timeout (don't return even if there are already messages)
         * kafka cluster docker example
