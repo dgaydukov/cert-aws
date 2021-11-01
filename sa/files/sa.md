@@ -4401,6 +4401,17 @@ So in first case, api gateway access lambda using resource policy, but in anothe
 Don't confuse:
 * lambda accessing resources inside vpc - just put lambda inside vpc, and it will get access to vpc resources. If your lambda need internet access, create NAT gateway.
 * access lambda from within vpc - create vpc endpoint for lambda
+Lambda layer - .zip archive that contain additional code or data (promotes code sharing & separation of responsibility).
+You can use layer only with lambdas that where deployed as .zip archive. When you upload layer, lambda load it into local `/opt` dir.
+Layers can have multiple versions, you may share layer between functions (so use single dependency across several lambdas) within or across the aws accounts (yet they can be used only within same region).
+You can include up to 5 layers into lambda. So in case of node.js app if you have dependencies, you can bundle them into lambda .zip archive, or you can install it as separate layer.
+problems of layers:
+* local development - it may be hard to debug locally if your dependencies lives on the server
+    * hard to test
+    * can't build local for static languages like C#/Java, cause you won't be able to compile without code from layers
+advantages  layers:
+* deploy large dependencies less frequently - before you have to include all dependencies into lambda zip file, now you can just deploy dependency once, and use it multiple times
+* smaller size of lambdas - again if you deploy all your dependencies as part of zip file, your size is big
 
 ###### Step Functions
 Step Functions - visual tool that allows you to build complex logic based on lambda and EC2 calls. They can also help overcome lambda max 900sec execution time, by joining several lambdas into one execution flow.
