@@ -2505,6 +2505,12 @@ This metric unavailable for aurora, cause you don't set size for aurora, it just
 Since for aurora you don't set storage size, by default it 10, and it will grow automatically by 10GB chunks until 128TB), there are 2 metrics to get size:
 * `AuroraVolumeBytesLeftTotal` (aurora mysql) - how much data is left (from 128TB). As data grows, this value decreases.
 * `VolumeBytesUsed` (aurora) - how much data is actually used. As data grows, this value increases.
+CDC (change data capture) - process where we capture any change happened to database and stream it into another system. 3 ways exists:
+* constant select (invasive) - downstream system constantly checks db to identify if any changes happened. If found then it stream changes to itself
+* sql triggers (invasive) - you add triggers on update for desired tables and each time update happens, changes sent to downstream app
+* native db log - each database has internal log where all transaction goes, from that log all changes applied to db. So this log can be used to send data to downstream app
+for aurora, we have [aurora streams](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/DBActivityStreams.Overview.html#DBActivityStreams.Overview.how-they-work)
+that already integrated with aws kinesis streams, where it pushed all changes from change log. Then it up to you how to process them, use either kinesis or send them to any downstream app.
 
 ###### Aurora
 Aurora - mysql/postgres compatible (most app that works with mysql/postgres would switch with no problem to aurora) aws database solution. 
