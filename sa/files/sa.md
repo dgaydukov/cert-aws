@@ -2325,7 +2325,7 @@ When you change dynamic param, change applied immediately, when you change stati
     oracle options (many):
     * S3_INTEGRATION - required if you want your oracle rds to read/write data from s3 + you need IAM role. So as you see just adding IAM role is not enough, you need to add this option.
 You can set encryption only on creating, once created you can set it to use encryption, also if you created encrypted you can disable it.
-So if you create unencrypted db and want to turn on encryption you have to take snapshot encrypt it and create new encrypted db from it, then remove old db.
+So if you create unencrypted db and want to turn on encryption you have to take snapshot, encrypt it and create new encrypted db from it, then remove old db.
 If encryption is enabled you can't disable it after db creation, yet you can create unencrypted db from scratch. Same holds true for read replica. For encrypted db only encrypted read replica is possible (there is no way to have encrypted read-replica for unencrypted db or vice versa).
 Not all ec2 types [support encryption](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Overview.Encryption.html#Overview.Encryption.Availability)
 IAM db auth - you can add db user and use iam user to authenticate to your db. You still have your initial username/password and can use them to access db, and you use it to create user who can be authenticated with iam.
@@ -2511,6 +2511,9 @@ CDC (change data capture) - process where we capture any change happened to data
 * native db log - each database has internal log where all transaction goes, from that log all changes applied to db. So this log can be used to send data to downstream app
 for aurora, we have [aurora streams](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/DBActivityStreams.Overview.html#DBActivityStreams.Overview.how-they-work)
 that already integrated with aws kinesis streams, where it pushed all changes from change log. Then it up to you how to process them, use either kinesis or send them to any downstream app.
+Don't confuse:
+* db backup - when you manually use backup tools like `pg_admin` or `mysqldump`, they create sql file with instructions to re-create db
+* rds snapshot - use ebs snapshot to take snapshot of ebs volume, that's why it freezes db to take it
 
 ###### Aurora
 Aurora - mysql/postgres compatible (most app that works with mysql/postgres would switch with no problem to aurora) aws database solution. 
