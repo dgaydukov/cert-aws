@@ -5199,6 +5199,12 @@ TG:
       Value: 600
 ```
 ELB (except NLB) has sticky session - you can bind user's session to specific ec2 and every time this user hits elb he goes to the same ec2. To use this send `AWSELB` cookie and elb remember to which ec2 instance to route request.
+There are 2 types of sticky session on ALB:
+* Application-based stickiness - your appp issue cookie, then ALB take it, encrypt and generate their own cookie, and send 2 cookies to client.
+in subsequent request client should send both cookies to ALB, and it based on second cookie route request to specified ec2.
+if this ec2 unhealthy, then it send it to another healthy ec2
+* Duration-based stickiness - if your app, doesn't send cookie, you can enable this. In this case ALB will generate 2 cookie 
+`AWSALB` and `AWSALBCORS` with `SameSite=None; Secure`  for cors request. Then client should send this cookie on each request, and based on it ALB route request to specified ec2
 There is no concept of sticky session on NLB, cause on level 4 there is no cookies, so no way to track connections. Yet nlb selects target group using a flow hash algorithm. It bases the algorithm on:
 * protocol
 * source IP address and source port
