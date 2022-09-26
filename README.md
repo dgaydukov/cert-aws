@@ -15,8 +15,9 @@ There are 2 main reasons to get it
 2. It may help your career
 
 ### Taken certs
+* [Digital badges](https://www.credly.com/users/dmitriy-gaydukov/badges)
 * [AWS Solutions Architect & Security Specialty certification](https://github.com/dgaydukov/cert-aws/tree/master/sa)
     * [SAA Cert](https://github.com/dgaydukov/cert-aws/tree/master/sa/cert/saa.pdf)
     * [SAP Cert](https://github.com/dgaydukov/cert-aws/tree/master/sa/cert/sap.pdf)
     * [SCS Cert](https://github.com/dgaydukov/cert-aws/tree/master/sa/cert/scs.pdf)
-* [AWS Big Data & Machine Learning certification](https://github.com/dgaydukov/cert-aws/tree/master/ml)
+* [AWS Certified Machine Learning Specialty](https://github.com/dgaydukov/cert-aws/tree/master/ml)
