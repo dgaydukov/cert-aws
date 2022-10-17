@@ -1448,6 +1448,7 @@ Auth best practices:
 * use SRP (Secure Remote Password protocol)
     * you send password only once for signUp
     * during all singIn you just send the proof that you own password using similar to public/private key algorithms
+    * this algorithm implemented in aws amplify js and it's already integrated with cognito, so using aws you get it out-of-the-box
 
 ###### Directory Service
 DS (Directory Service) - hierarchical structure to store/search/manipulate objects, so users can locate resources no matter where they are stored.
