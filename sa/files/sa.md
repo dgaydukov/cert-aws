@@ -1436,6 +1436,18 @@ Federation through IdP - you can configure 3 types of IdP and users can sign-in 
 Cognito groups:
 * you can divide users into different groups within same user pool
 * you can assign different iam roles to different groups, so manage access pattern
+Auth best practices:
+* use JWT to validate user
+    * it has limited interval, so once generated valid for 1 hour, then you need to re-generate
+    * it use private/public key, so it's impossible to spoof it, unless you know private key
+    But with public key, any server can download public key and validate your user
+    * if man-in-the-middle intercept your JWT, he would be able to impersonate you but with limited time
+    * jwt is not a session, so there is no way to invalidate it (in order to do it you need DB or cache to store all tokens and mark them as valid, 
+    but this break whole point of jwt, cause with jwt you don't need main server, anybody can use public key to validate token)
+    * so if you need token invalidation use good old sessions, store them in DB, to validate session on each request go to db and validate it
+* use SRP (Secure Remote Password protocol)
+    * you send password only once for signUp
+    * during all singIn you just send the proof that you own password using similar to public/private key algorithms
 
 ###### Directory Service
 DS (Directory Service) - hierarchical structure to store/search/manipulate objects, so users can locate resources no matter where they are stored.
