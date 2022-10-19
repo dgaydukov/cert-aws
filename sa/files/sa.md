@@ -2527,6 +2527,24 @@ that already integrated with aws kinesis streams, where it pushed all changes fr
 Don't confuse:
 * db backup - when you manually use backup tools like `pg_admin` or `mysqldump`, they create sql file with instructions to re-create db
 * rds snapshot - use ebs snapshot to take snapshot of ebs volume, that's why it freezes db to take it
+partitioning:
+* splitting large table into smaller one using some attribute 
+* after partition nothing changes from app, you still access single table, yet under the hood db engine go to exact table based on query params
+* for postgres there are 2 ways to partition
+    * old way via inheritance
+    * new way declarative partition supported out-of-the-boxy by postgres engine from v 10
+* there are 3 main ways to create partitioned tables
+* do it manually each time you need to create new partition
+* create cron job
+* use trigger - add logic to create new partition on each 1 millions rows (just example)
+* sharding - specific type of partitioning where you split data across several db instances (with classical partitioning you split large talbe into many tables in the same db instance)
+* shard key - special key by which db knows at which server to look for your required data
+* there are 2 types of:
+    * HP (Horizontal Partitioning) - sharding, divide data between several instances
+    * VP (Vertical Partitioning) - divide data between tables inside single instance
+Don't confuse:
+* replication - create second instance for readonly, so you write into one and read from another
+* sharding - horizontally split your large table/db into several instances (you read/wrote to all instances)
 
 ###### Aurora
 Aurora - mysql/postgres compatible (most app that works with mysql/postgres would switch with no problem to aurora) aws database solution. 
