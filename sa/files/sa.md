@@ -139,6 +139,7 @@
 * 7.60 [Migration Hub](#migration-hub)
 * 7.61 [WorkLink](#worklink)
 * 7.62 [Cloud Map](#cloud-map)
+* 7.63 [Architecture Icons](#architecture-icons)
 
 
 
@@ -6650,4 +6651,28 @@ Don't confuse:
 You can query CM over:
 * dns - if your service has IP:port combination
 * http - if you only have IP/URL/ARN
-Health check - you can configure how to run health checks including: type (regular/path-based), optional path to check, number of retry after we consider resource unhealthy.
+Health check - you can configure how to run health checks including: type (regular/path-based), optional path to check, 
+
+###### Architecture Icons
+Special tool that resembles UML, and allows you to draw diagram of aws infrastrucutre
+UML (Unified Modeling Language) - general-purpose modelling language in software architecture desgin, where you can express your system as set of modules connected with each other.
+Most common types:
+* Class diagram - this is diagram of classes, their members and relations between classes
+    visibility of class members:
+    `+` - public
+    `-` - private
+    `#` - protected
+    `~` - package
+    scope of class members:
+    * instance
+    * member (static in java) - underlined in uml diagram
+    Classes can also be connected through (For each of those special line is used to describe this relation):
+    * inheritance
+    * association
+    * dependency
+* Component diagram - how different component (usually microservices) of a big system connected with each other
+* Deployment diagram - model physical deployments of artifacts on the nodes. Maybe a little outdated with nowdays pipelines & containerization, yet still can be useful for devops team
+to understand how deployment work, and which component and where is deployed
+Overall conclusion - UML can be a really useful thing, and by it you can describe you whole system, starting from classes & members and ending up with microservices relations
+and deployment plan. Just stick to instruction and draw connection by UML standards, and then any new guy joined the company, can look at your diagram, look at UML specs if he doesn't 
+understand some relation meaning, and quickly get the whole picture how your software work.
