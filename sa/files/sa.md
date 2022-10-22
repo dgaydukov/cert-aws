@@ -1450,6 +1450,9 @@ Auth best practices:
     * you send password only once for signUp
     * during all singIn you just send the proof that you own password using similar to public/private key algorithms
     * this algorithm implemented in aws amplify js and it's already integrated with cognito, so using aws you get it out-of-the-box
+Keep in mind that this is aws solution, you can't download it and run locally, if you need local solution you can use:
+* [Gravity](https://docs.usegravity.app) - node.js backend application, which you can run locally
+* [Keycloak](https://www.keycloak.org) - Identity and Access Management solution, you download it and run locally, all users' info stored on your local servers.
 
 ###### Directory Service
 DS (Directory Service) - hierarchical structure to store/search/manipulate objects, so users can locate resources no matter where they are stored.
