@@ -5523,6 +5523,19 @@ Simple AD dns resolving (you can set-up on-premise-to-vpc connection using AD + 
 [Unbound](https://nlnetlabs.nl/projects/unbound/about) - software to forward dns requests:
 * you can use it to forward dns request from on-premise to vpc dns server, and from any ec2 to on-premise dns server
 As you see you can use simple AD, unbound, route53 resolver to resolve dns between on-premise & vpc.
+Email basics:
+Normal paper email can consist of 2 parts, envelope and letter itself, what's is more important you can write different sender in both
+in envelope you can have valid sender (cause probably mail service will check your identity), but in letter itself, which would be inside enveloper you can write anything you want
+so by this you can try to spoof recipient.
+Same true for email. it consists of 2 parts:
+* envelope - information that communicated within SMTP between client/server, where client send email with sender, called `MAIL FROM` inside protocol.
+At this stage, server will check IP address, MX & FQDN records to make sure that sender is actually from this domain.
+* letter - consists of 2 parts:
+    * header - metadata (sender name & email, date, subject and others...)
+    * body - raw body of email message
+Since email clients display only letter, not envelope, sender can spoof sender's email & name. That's why email server should check this using SPF/DMARC, and don't send email to client
+if spoofing is detected (again cause clients doesn't display envelope fields, only from letter itself).
+email Message ID - each email has unique message id with format (`id@provider` like `12345@gmail.com`)
 
 ###### SQS
 SQS (Simple Queue Service) - managed service that provide asynchronous decoupling and publisher/subscriber (queue) model. There are 2 types:
