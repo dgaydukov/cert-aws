@@ -1811,6 +1811,36 @@ Digital signature:
 * you can use `sign` command in `key_mgmt_util` for CloudHSM, but for this you need to setup cluster which is expensive, so kms - cost-effective alternative for `sign/verify` digital documents
 Data key caching - when you use encryption SDK, you can enable data key caching, so when you encrypt/decrypt data, SDK first look in cache, and if not found request new data key from kms
 By using cache, you reduce number of hits to kms, so reduce price. It's optional feature, by default SDK generate new data key for each request, yet if you hit limit of kms, you can enable caching.
+Don't confuse:
+* pgp (Pretty Good Privacy) - private software using RSA algorithm and the IDEA encryption algorithm
+* gpg (Gnu Privacy Guard) - public linux software compatible with OpenPGP, use AES instead of IDEA
+```
+echo "hello world" > myfile.txt
+# generate gpg key
+gpg --gen-key
+# encrypt file with (you need to supply either public key or name of gpg key that you created on the first step)
+gpg --encrypt --recipient 02B219B0CE34830EF1B1516BAF6E0F6C382AED91 myfile.txt
+# decrypt file
+gpg --out decrypted.txt --decrypt myfile.txt.gpg
+```
+SOPS (Secrets OPerationS) - file encryption utility:
+* used to encrypt/decrypt files with YAML, JSON, ENV, INI and BINARY
+* mostly used by devops to encrypt secrets like db passwords, in combination with kubernetes helm chart variables
+* secrets are encrypted and pushed into repository, but since only devops has private key, anybody can clone repo, but he would never be able to discover real values
+* when you encrypt you need to pass key, and it stored in the file, so when you decrypt, no key name should be passed
+```
+echo "ms:
+        test:
+          app.db_username: user
+          app.db_password: user" > test.yaml
+# download sops https://github.com/mozilla/sops/releases
+mv sops-v3.7.3.linux sops && chmod +x sops
+# encrypt by changing original file with gpg key
+# as you can see in original file we got some additional info, this is sops stores key info (like gpg, kms)
+./sops --encrypt --in-place --pgp 02B219B0CE34830EF1B1516BAF6E0F6C382AED91 test.yaml
+# decrypt
+./sops --decrypt test.yaml
+```
 
 ###### CloudHSM
 Dedicated HSM (Hardware Security Module) instance within aws cloud. You can securely generate/store/manage cryptographic keys. HSM provides secure key storage and cryptographic operations within a tamper-resistant hardware device.
